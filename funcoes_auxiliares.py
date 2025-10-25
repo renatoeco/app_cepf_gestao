@@ -3,10 +3,17 @@ from pymongo import MongoClient
 
 @st.cache_resource
 def conectar_mongo_cepf_gestao():
-    cliente = MongoClient(
-    st.secrets["senhas"]["senha_mongo_portal_ispn"])
-    db_portal_ispn = cliente["ISPN_Hub"]                   
-    return db_portal_ispn
+    # CONEXÃO LOCAL
+    cliente = MongoClient("mongodb://localhost:27017/")
+    db_cepf_gestao = cliente["cepf_gestao"] 
+    return db_cepf_gestao
+
+
+    # REMOTO NO ATLAS
+    # cliente = MongoClient(
+    # st.secrets["senhas"]["senha_mongo_portal_ispn"])
+    # db_portal_ispn = cliente["ISPN_Hub"]                   
+    # return db_portal_ispn
 
 
 @st.cache_resource

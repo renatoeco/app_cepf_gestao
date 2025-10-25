@@ -21,7 +21,7 @@ st.set_page_config(layout="wide")
 db = conectar_mongo_cepf_gestao()
 
 # Define a coleção a ser utilizada
-colaboradores = db["pessoas"]
+col_pessoas = db["pessoas"]
 
 
 ##############################################################################################################
@@ -29,8 +29,8 @@ colaboradores = db["pessoas"]
 ##############################################################################################################
 
 
-def encontrar_usuario_por_email(colaboradores, email_busca):
-    usuario = colaboradores.find_one({"e_mail": email_busca})
+def encontrar_usuario_por_email(pessoas, email_busca):
+    usuario = pessoas.find_one({"e_mail": email_busca})
     if usuario:
         return usuario.get("nome_completo"), usuario  # Retorna o nome e os dados do usuário
     return None, None  # Caso não encontre
@@ -43,7 +43,7 @@ def enviar_email(destinatario, codigo):
     senha = st.secrets["senhas"]["senha_email"]
 
     # Conteúdo do e_mail
-    assunto = f"Código de Verificação - Colab ISPN: {codigo}"
+    assunto = f"Código de Verificação - CEPF Gestão: {codigo}"
     corpo = f"""
     <html>
         <body>
@@ -94,21 +94,22 @@ def recuperar_senha_dialog():
 
             if st.form_submit_button("Enviar código de verificação", icon=":material/mail:"):
                 if email:
-                    nome, verificar_colaboradores = encontrar_usuario_por_email(colaboradores, email)
+                    nome, verificar_colaboradores = encontrar_usuario_por_email(col_pessoas, email)
                     if verificar_colaboradores:
 
                         if verificar_colaboradores.get("status", "").lower() != "ativo":
-                            st.error("Usuário inativo. Entre em contato com o renato@ispn.org.br.")
+                            st.error("Usuário inativo. Entre em contato com o administrador do sistema.")
                             return
                         
                         codigo = str(random.randint(100, 999))  # Gera um código aleatório
-                        if enviar_email(email, codigo):  # Envia o código por e-mail
-                            st.session_state.codigo_verificacao = codigo
-                            st.session_state.codigo_enviado = True
-                            st.session_state.email_verificado = email
-                            st.success(f"Código enviado para {email}.")
-                        else:
-                            st.error("Erro ao enviar o e-mail. Tente novamente.")
+                        with st.spinner(f"Enviando código para {email}..."):
+                            if enviar_email(email, codigo):  # Envia o código por e-mail
+                                st.session_state.codigo_verificacao = codigo
+                                st.session_state.codigo_enviado = True
+                                st.session_state.email_verificado = email
+                                st.success(f"Código enviado para {email}.")
+                            else:
+                                st.error("Erro ao enviar o e-mail. Tente novamente.")
                     else:
                         st.error("E-mail não encontrado. Tente novamente.")
                 else:
@@ -145,7 +146,7 @@ def recuperar_senha_dialog():
                 if nova_senha == confirmar_senha and nova_senha.strip():
                     email = st.session_state.email_verificado
 
-                    usuario = colaboradores.find_one({"e_mail": email})
+                    usuario = col_pessoas.find_one({"e_mail": email})
 
                     if usuario:
                         try:
@@ -153,7 +154,7 @@ def recuperar_senha_dialog():
                             hash_senha = bcrypt.hashpw(nova_senha.encode("utf-8"), bcrypt.gensalt())
 
                             # Atualiza no banco o hash, não a senha em texto puro
-                            result = colaboradores.update_one(
+                            result = col_pessoas.update_one(
                                 {"e_mail": email},
                                 {"$set": {"senha": hash_senha}}
                             )
@@ -197,12 +198,26 @@ def login():
     
     # Exibe o logo
     container_logo = st.container(horizontal=True, horizontal_alignment="center")
-    container_logo.image("images/logo_ISPN_horizontal_ass.png", width=300)
+    container_logo.image("images/ieb_logo.svg", width=300)
 
+    st.write('')
+    st.write('')
+    st.write('')
+    st.write('')
+    st.write('')
 
+    # CSS para centralizar e estilizar
+    st.markdown(
+        """
+        <h2 style='text-align: center; color: slategray;'>
+            Plataforma de Gestão de Projetos do CEPF Brasil
+        </h2>
+        """,
+        unsafe_allow_html=True
+    )
 
-    # Pula 10 linhas
-    for _ in range(9):
+    # Pula 7 linhas
+    for _ in range(7):
         st.write('')
 
 
@@ -210,64 +225,12 @@ def login():
 
         # Coluna da esquerda
         with st.container():
-            
-            st.write('')
-            st.write('')
-            st.write('')
 
             cols = st.columns([1, 3])
 
-            # Exibe o logo - TESTE DE LOGOS
-
-            # cols[1].write("Teste de logos. Quero opiniões!")
-
-            cols[1].image("images/colab_rounded_THIN.png", width=400)
+            cols[1].image("images/cepf_logo.png", width=400)
             cols[1].write('')
             cols[1].write('')
-
-            # cols[1].image("images/colab_fauna_THIN.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-            
-            # cols[1].image("images/COLAB_caderno_THIN.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-            
-            # cols[1].image("images/colab_onca_THIN.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-                        
-            # cols[1].image("images/colab_onca_round_THIN.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-            
-            # cols[1].image("images/colab_onca_round_caderno_THIN.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-
-            # cols[1].image("images/colab_onca_office_THIN.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-
-            # cols[1].image("images/colab_26_1_CUT.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-
-            # cols[1].image("images/colab_26_2_CUT.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-            
-            # cols[1].image("images/colab_26_4_CUT.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-            
-            # cols[1].image("images/colab_26_5_CUT.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
-            
-            # cols[1].image("images/colab_26_6_cut.png", width=400)
-            # cols[1].write('')
-            # cols[1].write('')
 
             st.write('')
             st.write('')
@@ -275,13 +238,8 @@ def login():
             st.write('')
 
         # Coluna da direita
- 
         with st.container():
-
-            st.write('')
-            st.write('')
-            st.write('')
-
+ 
             with st.form("login_form", border=False):
                 # Campo de e-mail
                 email_input = st.text_input("E-mail", width=300)
@@ -291,7 +249,7 @@ def login():
 
                 if st.form_submit_button("Entrar", type="primary"):
                     # Busca apenas pelo e-mail
-                    usuario_encontrado = colaboradores.find_one({
+                    usuario_encontrado = col_pessoas.find_one({
                         "e_mail": {"$regex": f"^{email_input.strip()}$", "$options": "i"}
                     })
 
@@ -307,13 +265,13 @@ def login():
                                 st.error("Usuário inativo. Entre em contato com o renato@ispn.org.br.")
                                 st.stop()
 
-                            tipo_usuario = [x.strip() for x in usuario_encontrado.get("tipo de usuário", "").split(",")]
+                            tipo_usuario = [x.strip() for x in usuario_encontrado.get("tipo_usuario", "").split(",")]
 
                             # Autentica
                             st.session_state["logged_in"] = True
                             st.session_state["tipo_usuario"] = tipo_usuario
                             st.session_state["nome"] = usuario_encontrado.get("nome_completo")
-                            st.session_state["cpf"] = usuario_encontrado.get("CPF")
+                            # st.session_state["cpf"] = usuario_encontrado.get("CPF")
                             st.session_state["id_usuario"] = usuario_encontrado.get("_id")
                             st.rerun()
                         else:
@@ -322,12 +280,11 @@ def login():
                     else:
                         st.error("E-mail ou senha inválidos!", width=300)
 
+            st.write('')
+            st.write('')
+            st.write('')
+
             # Botão para recuperar senha
-            st.write('')
-            st.write('')
-
-
-            st.write('')
             st.button(
                 "Esqueci a senha", 
                 key="forgot_password", 
@@ -351,43 +308,26 @@ def login():
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login()  # Mostra tela de login
 
+# Quando logado
 else:
 
-    # pg = st.navigation([
-    #     st.Page("Institucional.py", title="Institucional", icon=":material/account_balance:"),
-    #     # st.Page("Estratégia.py", title="Estratégia", icon=":material/tactic:"),
-    #     st.Page("Indicadores.py", title="Indicadores", icon=":material/monitoring:"),
-    #     # st.Page("Programas e Áreas.py", title="Programas e Áreas", icon=":material/team_dashboard:"),
-    #     # st.Page("Pessoas.py", title="Pessoas", icon=":material/groups:"),
-    #     # st.Page("Doadores.py", title="Doadores", icon=":material/all_inclusive:"),
-    #     # st.Page("Projetos.py", title="Projetos", icon=":material/book:"),
-    #     st.Page("Fundo Ecos.py", title="Fundo Ecos", icon=":material/owl:"),
-    #     # st.Page("Redes e Articulações.py", title="Redes e Articulações", icon=":material/network_node:"),
-    #     # st.Page("Monitor de PLs.py", title="Monitor de PLs", icon=":material/balance:"),
-    #     # st.Page("Clipping de Notícias.py", title="Clipping de Notícias", icon=":material/attach_file:"),
-    #     # st.Page("Viagens.py", title="Viagens", icon=":material/travel:"),
-    #     # st.Page("Férias e recessos.py", title="Férias e Recessos", icon=":material/beach_access:"),
-    #     # st.Page("Manuais.py", title="Manuais", icon=":material/menu_book:"),
-    # ])
-    # pg.run()
+    # Roteamento de usuários
+    if set(st.session_state.tipo_usuario) & {"admin", "monitor"}:
 
-    pg = st.navigation([
-        st.Page("Institucional.py", title="Institucional", icon=":material/account_balance:"),
-        # st.Page("Estratégia.py", title="Estratégia", icon=":material/tactic:"),
-        st.Page("Indicadores.py", title="Indicadores", icon=":material/monitoring:"),
-        # st.Page("Programas e Áreas.py", title="Programas e Áreas", icon=":material/team_dashboard:"),
-        # st.Page("Pessoas.py", title="Pessoas", icon=":material/groups:"),
-        # st.Page("Doadores.py", title="Doadores", icon=":material/all_inclusive:"),
-        st.Page("Projetos.py", title="Projetos", icon=":material/book:"),
-        st.Page("Fundo Ecos.py", title="Fundo Ecos", icon=":material/owl:"),
-        # st.Page("Redes e Articulações.py", title="Redes e Articulações", icon=":material/network_node:"),
-        # st.Page("Monitor de PLs.py", title="Monitor de PLs", icon=":material/balance:"),
-        # st.Page("Clipping de Notícias.py", title="Clipping de Notícias", icon=":material/attach_file:"),
-        # st.Page("Viagens.py", title="Viagens", icon=":material/travel:"),
-        st.Page("Férias e recessos.py", title="Férias e Recessos", icon=":material/beach_access:"),
-        # st.Page("Manuais.py", title="Manuais", icon=":material/menu_book:"),
-    ])
-    pg.run()
+        pages = {
+            "Editais": [
+                st.Page("editais.py", title="Consultar", icon=":material/assignment:"),
+                st.Page("criar_edital.py", title="Novo edital", icon=":material/campaign:"),
+            ],
+            "Projetos": [
+                st.Page("projetos.py", title="Consultar", icon=":material/list:"),
+                st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+            ],
+        }
+
+    
+        pg = st.navigation(pages)
+        pg.run()
 
 
 
