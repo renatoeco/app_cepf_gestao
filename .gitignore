@@ -1,0 +1,3 @@
+env_cepf_gestao
+.streamlit/secrets.toml
+__pycache__/funcoes_auxiliares.cpython-312.pyc
