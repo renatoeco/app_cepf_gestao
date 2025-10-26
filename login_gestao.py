@@ -316,12 +316,13 @@ else:
 
         pages = {
             "Editais": [
-                st.Page("editais.py", title="Consultar", icon=":material/assignment:"),
-                st.Page("criar_edital.py", title="Novo edital", icon=":material/campaign:"),
+                st.Page("editais.py", title="Editais", icon=":material/assignment:"),
+                st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
             ],
             "Projetos": [
-                st.Page("projetos.py", title="Consultar", icon=":material/list:"),
+                st.Page("projetos.py", title="Projetos", icon=":material/list:"),
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+                st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
             ],
         }
 

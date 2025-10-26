@@ -22,7 +22,7 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 
 
 ###########################################################################################################
-# CONEXÃO COM O BANCO DE DADOS MONGODB
+# CONFIGURAÇÃO DE LOCALE
 ###########################################################################################################
 
 
@@ -140,6 +140,8 @@ fig = px.pie(
     color=labels,
     color_discrete_map=mapa_cores_status
 )
+
+
 
 # Exibir no Streamlit
 col1.plotly_chart(fig)
