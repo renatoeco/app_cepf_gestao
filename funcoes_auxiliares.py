@@ -1,5 +1,90 @@
 import streamlit as st
 from pymongo import MongoClient
+import time
+
+@st.fragment
+def cadastrar_parcelas(colecao):
+
+    # Se session_state.cadastrando_parcela existir e for diferente de 'finalizado', mostra o formulário
+    if 'cadastrando_parcela' in st.session_state and st.session_state['cadastrando_parcela'] != 'finalizado':
+
+        st.write('**Cadastre as parcelas**')
+
+        # Escolhe o número de parcelas, para
+        parcelas = st.number_input("Quantidade de parcelas:", min_value=1, max_value=100, value=1, step=1, width=150)
+
+        # Formulário de parcelas
+        with st.form(key="parcelas", border=False):
+
+            parcelas_data = []  # Lista para armazenar as parcelas
+
+            for i in range(1, parcelas + 1):
+                st.write('')
+                st.write(f"**Parcela {i}:**")
+
+                with st.container():
+                    data_inicio_parcela = st.date_input(
+                        f"Data prevista", 
+                        key=f"data_parcela_{i}", 
+                        format="DD/MM/YYYY"
+                    )
+                    valor_parcela = st.number_input(
+                        f"Valor (R$)", 
+                        key=f"valor_parcela_{i}", 
+                        min_value=0.0, 
+                        value=0.0, 
+                        step=0.01
+                    )
+
+                    # Adiciona os dados à lista (convertendo date para string)
+                    parcelas_data.append({
+                        "parcela": i,
+                        "data_prevista": data_inicio_parcela.strftime("%d/%m/%Y"),
+                        "valor": float(valor_parcela)
+                    })
+
+            st.write('')
+            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary", width=200)
+
+            # Após o submit, salvar no MongoDB
+            if submit:
+
+                # Verifica se existe um código de projeto salvo na sessão
+                if "cadastrando_projeto_codigo" not in st.session_state or not st.session_state.cadastrando_projeto_codigo:
+                    st.error("Código do projeto não encontrado na sessão.")
+                else:
+                    codigo = st.session_state.cadastrando_projeto_codigo
+
+                    # Busca documento no MongoDB
+                    projeto = colecao.find_one({"codigo": codigo})
+
+                    if not projeto:
+                        st.error(f"Projeto com código '{codigo}' não encontrado no banco.")
+                    else:
+                        # Atualiza documento adicionando ou sobrescrevendo 'parcelas'
+                        colecao.update_one(
+                            {"codigo": codigo},
+                            {"$set": {"parcelas": parcelas_data}}
+                        )
+
+                        st.session_state.cadastrando_parcelas = 'Finalizado'
+
+                        st.success("Parcelas cadastradas com sucesso!")
+                        time.sleep(3)
+                        st.rerun()
+
+    # Se session_state.cadastrando_parcelas existir e for igual a 'finalizado': 
+    # significa que já foi preenchido o passo 2, segue para o passo 3:
+    else:
+        st.success("Passo 2 concluido! Continue para o passo 3.")
+
+
+
+
+
+
+
+
 
 @st.cache_resource
 def conectar_mongo_cepf_gestao():

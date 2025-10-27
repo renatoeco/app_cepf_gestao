@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, cadastrar_parcelas # Funções personalizadas
 import pandas as pd
 import locale
 import re
@@ -360,289 +360,319 @@ with tab_projeto:
 
     # nro_parcelas = st.number_input("Nro de Parcelas:", min_value=1, value=1, width=200)
 
+    try:
+        st.write(f"**Cadastrando o projeto {st.session_state.cadastrando_projeto_codigo} - {st.session_state.cadastrando_projeto_sigla}**")
+    except:
+        pass
 
-    # PASSO 1: Informações cadastrais
+    # PASSO 1: Informações cadastrais ---------------------------------------
     with st.expander("**Passo 1: Informações cadastrais**", expanded=False):
 
-        with st.form(key="projeto_passo_1", border=False):
+        # Se o projeto ainda não foi cadastrado, mostra o formulário
+        # Se session_state.cadastrando_projeto_codigo não existir ou estiver vazio, mostra o formulário:
+        if 'cadastrando_projeto_codigo' not in st.session_state or not st.session_state.cadastrando_projeto_codigo:
 
-            # EDITAL        
-            # Obtém a lista de editais e ordena pela coluna data_lancamento
-            editais = col_editais.find().sort("data_lancamento", -1)
-            editais = [edital['codigo_edital'] for edital in editais]
-            # Lista editais
-            edital = st.selectbox("Edital", editais)
+            with st.form(key="projeto_passo_1", border=False):
 
-            # ORGANIZAÇÃO
-            # Obtém a lista de organizações
-            organizacoes = col_organizacoes.find().sort("sigla_organizacao", 1)
-            siglas_organizacoes = [organizacao['sigla_organizacao'] for organizacao in organizacoes]
-            # Lista organizações
-            organizacao = st.selectbox("Organização:", siglas_organizacoes)
+                # EDITAL        
+                # Obtém a lista de editais e ordena pela coluna data_lancamento
+                editais = col_editais.find().sort("data_lancamento", -1)
+                editais = [edital['codigo_edital'] for edital in editais]
+                # Lista editais
+                edital = st.selectbox("Edital", editais)
 
-            # CÓDIGO DO PROJETO
-            codigo_projeto = st.text_input("Código do Projeto:")
+                # ORGANIZAÇÃO
+                # Obtém a lista de organizações
+                organizacoes = col_organizacoes.find().sort("sigla_organizacao", 1)
+                siglas_organizacoes = [organizacao['sigla_organizacao'] for organizacao in organizacoes]
+                # Lista organizações
+                organizacao = st.selectbox("Organização:", siglas_organizacoes)
 
-            # SIGLA DO PROJETO
-            sigla_projeto = st.text_input("Sigla do Projeto:")
+                # CÓDIGO DO PROJETO
+                codigo_projeto = st.text_input("Código do Projeto:")
 
-            # NOME DO PROJETO
-            nome_projeto = st.text_input("Nome do Projeto:")
+                # SIGLA DO PROJETO
+                sigla_projeto = st.text_input("Sigla do Projeto:")
 
-            # LATITUDE
-            latitude = st.text_input("Latitude: (ex: -19.015224)")
+                # NOME DO PROJETO
+                nome_projeto = st.text_input("Nome do Projeto:")
 
-            # LONGITUDE
-            longitude = st.text_input("Longitude: (ex: -47.856324)")
+                # LATITUDE
+                latitude = st.text_input("Latitude: (ex: -19.015224)")
 
-            # DURAÇÃO DO PROJETO EM MESES
-            duracao_projeto = st.number_input(
-                "Duração do Projeto (em meses):",
-                min_value=1,
-                step=1,
-                format="%d"
-            )
+                # LONGITUDE
+                longitude = st.text_input("Longitude: (ex: -47.856324)")
 
-            # DATA DE INÍCIO DO CONTRATO
-            data_inicio_contrato = st.date_input("Data de Início do Contrato:", format="DD/MM/YYYY")
+                # DURAÇÃO DO PROJETO EM MESES
+                duracao_projeto = st.number_input(
+                    "Duração do Projeto (em meses):",
+                    min_value=1,
+                    step=1,
+                    format="%d"
+                )
 
-            # DATA DE FIM DO CONTRATO
-            data_fim_contrato = st.date_input("Data de Fim do Contrato:", format="DD/MM/YYYY")
+                # DATA DE INÍCIO DO CONTRATO
+                data_inicio_contrato = st.date_input("Data de Início do Contrato:", format="DD/MM/YYYY")
 
-            # # VALOR DO CONTRATO
-            # valor_contrato = st.number_input("Valor do Contrato:", format="%f")
+                # DATA DE FIM DO CONTRATO
+                data_fim_contrato = st.date_input("Data de Fim do Contrato:", format="DD/MM/YYYY")
 
-            # Padrinho/Madrinha
-            # Filtrar nomes que contenham a palavra "monitor" na coluna tipo_usuario
-            padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
+                # # VALOR DO CONTRATO
+                # valor_contrato = st.number_input("Valor do Contrato:", format="%f")
 
-            # Selectbox com a lista filtrada
-            padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
+                # Padrinho/Madrinha
+                # Filtrar nomes que contenham a palavra "monitor" na coluna tipo_usuario
+                padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
 
-            # Responsável
-            responsaveis = df_pessoas[df_pessoas['tipo_usuario'].str.contains("beneficiario", case=False, na=False)]['nome_completo'].tolist()
-            responsavel = st.selectbox("Responsável:", responsaveis)
+                # Selectbox com a lista filtrada
+                padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
 
-            # Temas
-            temas = df_temas['tema'].tolist()
-            temas = st.multiselect("Temas", temas)
+                # Responsável
+                responsaveis = df_pessoas[df_pessoas['tipo_usuario'].str.contains("beneficiario", case=False, na=False)]['nome_completo'].tolist()
+                responsavel = st.selectbox("Responsável:", responsaveis)
 
-            # Público
-            publicos = df_publicos['publico'].tolist()
-            publicos = st.multiselect("Público", publicos)
+                # Temas
+                temas = df_temas['tema'].tolist()
+                temas = st.multiselect("Temas", temas)
 
-            # Objetivo geral
-            objetivo_geral = st.text_area("Objetivo geral:")
+                # Público
+                publicos = df_publicos['publico'].tolist()
+                publicos = st.multiselect("Público", publicos)
 
-
-
-
-            # Geografia ------------------------------------------------------------------------------------------------------
-
-            #  ESTADOS E MUNICÍPIOS -----------------------
-            col1, col2, col3 = st.columns(3)
-
-            ufs_selecionadas = col1.multiselect(
-                "Estados",
-                options=list(uf_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            municipios_selecionadas = col2.multiselect(
-                "Municípios",
-                options=list(municipios_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            # biomas_selecionados = col3.multiselect(
-            #     "Biomas",
-            #     options=list(biomas_codigo_para_label.values()),
-            #     placeholder=""
-            # )
-
-            #  TERRAS INDÍGENAS -----------------------
-            col1, col2 = st.columns(2)
-
-            tis_selecionadas = col1.multiselect(
-                "Terras Indígenas",
-                options=list(ti_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            #  UNIDADES DE CONSERVAÇÃO -----------------------
-            ucs_selecionadas = col2.multiselect(
-                "Unidades de Conservação",
-                options=list(uc_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            #  ASSENTAMENTOS -----------------------
-            col1, col2 = st.columns(2)
-            assentamentos_selecionados = col1.multiselect(
-                "Assentamentos",
-                options=list(assent_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            #  QUILOMBOS -----------------------
-            quilombos_selecionados = col2.multiselect(
-                "Quilombos",
-                options=list(quilombo_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            #  BACIAS HIDROGRÁFICAS -----------------------
-            col1, col2, col3 = st.columns(3)
-
-            bacias_macro_sel = col1.multiselect(
-                "Bacias Hidrográficas - Macro",
-                options=list(bacia_macro_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            bacias_meso_sel = col2.multiselect(
-                "Bacias Hidrográficas - Meso",
-                options=list(bacia_meso_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            bacias_micro_sel = col3.multiselect(
-                "Bacias Hidrográficas - Micro",
-                options=list(bacia_micro_codigo_para_label.values()),
-                placeholder=""
-            )
-
-            st.write('')
+                # Objetivo geral
+                objetivo_geral = st.text_area("Objetivo geral:")
 
 
 
-            # --- Botão de salvar ---
-            submit = st.form_submit_button("Cadastrar projeto", icon=":material/save:", width=200, type="primary")
-            
-            if submit:
 
-                # Lista de campos obrigatórios com nome e valor
-                campos_obrigatorios = {
-                    "Edital": edital,
-                    "Código do Projeto": codigo_projeto,
-                    "Sigla do Projeto": sigla_projeto,
-                    "Organização": organizacao,
-                    "Nome do Projeto": nome_projeto,
-                    "Objetivo Geral": objetivo_geral,
-                    "Duração do Projeto": duracao_projeto,
-                    "Data de Início": data_inicio_contrato,
-                    "Data de Fim": data_fim_contrato,
-                    # "Valor do Contrato": valor_contrato,
-                    "Padrinho/Madrinha": padrinho,
-                    "Responsável": responsavel,
-                    "Temas": temas,
-                    "Públicos": publicos,
-                    "Latitude": latitude,
-                    "Longitude": longitude,
-                    "Estados (UF)": ufs_selecionadas,
-                    "Municípios": municipios_selecionadas
-                }
+                # Geografia ------------------------------------------------------------------------------------------------------
 
-                # Verificar se algum campo está vazio
-                campos_faltando = [nome for nome, valor in campos_obrigatorios.items() if not valor]
+                #  ESTADOS E MUNICÍPIOS -----------------------
+                col1, col2, col3 = st.columns(3)
 
-                if campos_faltando:
-                    st.error(f"Preencha os campos obrigatórios: {', '.join(campos_faltando)}")
-                else:
+                ufs_selecionadas = col1.multiselect(
+                    "Estados",
+                    options=list(uf_codigo_para_label.values()),
+                    placeholder=""
+                )
 
-                    # --- Validar unicidade de sigla e código ---
-                    sigla_existente = (
-                        False if df_projetos.empty or "sigla_projeto" not in df_projetos.columns 
-                        else (df_projetos["sigla_projeto"] == sigla_projeto).any()
-                    )
+                municipios_selecionadas = col2.multiselect(
+                    "Municípios",
+                    options=list(municipios_codigo_para_label.values()),
+                    placeholder=""
+                )
 
-                    codigo_existente = (
-                        False if df_projetos.empty or "codigo_projeto" not in df_projetos.columns
-                        else (df_projetos["codigo_projeto"] == codigo_projeto).any()
-                    )
+                # biomas_selecionados = col3.multiselect(
+                #     "Biomas",
+                #     options=list(biomas_codigo_para_label.values()),
+                #     placeholder=""
+                # )
+
+                #  TERRAS INDÍGENAS -----------------------
+                col1, col2 = st.columns(2)
+
+                tis_selecionadas = col1.multiselect(
+                    "Terras Indígenas",
+                    options=list(ti_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                #  UNIDADES DE CONSERVAÇÃO -----------------------
+                ucs_selecionadas = col2.multiselect(
+                    "Unidades de Conservação",
+                    options=list(uc_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                #  ASSENTAMENTOS -----------------------
+                col1, col2 = st.columns(2)
+                assentamentos_selecionados = col1.multiselect(
+                    "Assentamentos",
+                    options=list(assent_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                #  QUILOMBOS -----------------------
+                quilombos_selecionados = col2.multiselect(
+                    "Quilombos",
+                    options=list(quilombo_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                #  BACIAS HIDROGRÁFICAS -----------------------
+                col1, col2, col3 = st.columns(3)
+
+                bacias_macro_sel = col1.multiselect(
+                    "Bacias Hidrográficas - Macro",
+                    options=list(bacia_macro_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                bacias_meso_sel = col2.multiselect(
+                    "Bacias Hidrográficas - Meso",
+                    options=list(bacia_meso_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                bacias_micro_sel = col3.multiselect(
+                    "Bacias Hidrográficas - Micro",
+                    options=list(bacia_micro_codigo_para_label.values()),
+                    placeholder=""
+                )
+
+                st.write('')
 
 
-                    if sigla_existente:
-                        st.warning(f"A sigla '{sigla_projeto}' já está cadastrada em outro projeto.")
-                    elif codigo_existente:
-                        st.warning(f"O código '{codigo_projeto}' já está cadastrado em outro projeto.")
+
+                # --- Botão de salvar ---
+                submit = st.form_submit_button("Cadastrar projeto", icon=":material/save:", width=200, type="primary")
+                
+                if submit:
+
+                    # Lista de campos obrigatórios com nome e valor
+                    campos_obrigatorios = {
+                        "Edital": edital,
+                        "Código do Projeto": codigo_projeto,
+                        "Sigla do Projeto": sigla_projeto,
+                        "Organização": organizacao,
+                        "Nome do Projeto": nome_projeto,
+                        "Objetivo Geral": objetivo_geral,
+                        "Duração do Projeto": duracao_projeto,
+                        "Data de Início": data_inicio_contrato,
+                        "Data de Fim": data_fim_contrato,
+                        # "Valor do Contrato": valor_contrato,
+                        "Padrinho/Madrinha": padrinho,
+                        "Responsável": responsavel,
+                        "Temas": temas,
+                        "Públicos": publicos,
+                        "Latitude": latitude,
+                        "Longitude": longitude,
+                        "Estados (UF)": ufs_selecionadas,
+                        "Municípios": municipios_selecionadas
+                    }
+
+                    # Verificar se algum campo está vazio
+                    campos_faltando = [nome for nome, valor in campos_obrigatorios.items() if not valor]
+
+                    if campos_faltando:
+                        st.error(f"Preencha os campos obrigatórios: {', '.join(campos_faltando)}")
                     else:
-                        # --- Criar ObjectIds ---
-                        projeto_id = bson.ObjectId()
 
-                        # ----------------------------------------------------------
-                        # MONTAR LISTA DE REGIÕES DE ATUAÇÃO PARA SALVAR NO MONGODB
-                        # ----------------------------------------------------------
+                        # --- Validar unicidade de sigla e código ---
+                        sigla_existente = (
+                            False if df_projetos.empty or "sigla_projeto" not in df_projetos.columns 
+                            else (df_projetos["sigla_projeto"] == sigla_projeto).any()
+                        )
 
-                        # Função auxiliar
-                        def get_codigo_por_label(dicionario, valor):
-                            return next((codigo for codigo, label in dicionario.items() if label == valor), None)
-
-                        regioes_atuacao = []
-
-                        # Tipos simples com lookup
-                        for tipo, selecionados, dicionario in [
-                            ("uf", ufs_selecionadas, uf_codigo_para_label),
-                            ("municipio", municipios_selecionadas, municipios_codigo_para_label),
-                            # ("bioma", biomas_selecionados, biomas_codigo_para_label),
-                            ("terra_indigena", tis_selecionadas, ti_codigo_para_label),
-                            ("uc", ucs_selecionadas, uc_codigo_para_label),
-                            ("assentamento", assentamentos_selecionados, assent_codigo_para_label),
-                            ("quilombo", quilombos_selecionados, quilombo_codigo_para_label),
-                            ("bacia_micro", bacias_micro_sel, bacia_micro_codigo_para_label),
-                            ("bacia_meso", bacias_meso_sel, bacia_meso_codigo_para_label),
-                            ("bacia_macro", bacias_macro_sel, bacia_macro_codigo_para_label),
-                        ]:
-                            for item in selecionados:
-                                codigo_atuacao = get_codigo_por_label(dicionario, item)
-                                if codigo_atuacao:
-                                    regioes_atuacao.append({"tipo": tipo, "codigo": codigo_atuacao})
-
-                        # ----------------------------------------------------------
-
-                        # --- Montar documento ---
-                        doc = {
-                            "_id": projeto_id,
-                            "edital": edital,
-                            "codigo": codigo_projeto,
-                            "sigla": sigla_projeto,
-                            "organizacao": organizacao,
-                            "nome_do_projeto": nome_projeto,
-                            "objetivo_geral": objetivo_geral,
-                            "duracao": duracao_projeto,
-                            "data_inicio_contrato": data_inicio_contrato.strftime("%d/%m/%Y"),
-                            "data_fim_contrato": data_fim_contrato.strftime("%d/%m/%Y"),
-                            # "valor": valor_contrato,
-                            # "valor_da_contrapartida_em_r$": float_to_br(contrapartida),
-                            "padrinho": padrinho,
-                            "responsavel": responsavel,
-                            "temas": temas,
-                            "publicos": publicos,
-                            "latitude": latitude,
-                            "longitude": longitude,
-                            "regioes_atuacao": regioes_atuacao,
-
-                        }
-
-                        # --- Inserir no MongoDB ---
-                        col_projetos.insert_one(doc)
-
-                        st.session_state.cadastrando_projeto_codigo = codigo_projeto
-                        st.session_state.cadastrando_projeto_sigla = sigla_projeto
-
-                        st.success("Projeto cadastrado com sucesso!")
-                        time.sleep(3)
-                        st.rerun()
+                        codigo_existente = (
+                            False if df_projetos.empty or "codigo_projeto" not in df_projetos.columns
+                            else (df_projetos["codigo_projeto"] == codigo_projeto).any()
+                        )
 
 
-    # PASSO 2: Parcelas
+                        if sigla_existente:
+                            st.warning(f"A sigla '{sigla_projeto}' já está cadastrada em outro projeto.")
+                        elif codigo_existente:
+                            st.warning(f"O código '{codigo_projeto}' já está cadastrado em outro projeto.")
+                        else:
+                            # --- Criar ObjectIds ---
+                            projeto_id = bson.ObjectId()
+
+                            # ----------------------------------------------------------
+                            # MONTAR LISTA DE REGIÕES DE ATUAÇÃO PARA SALVAR NO MONGODB
+                            # ----------------------------------------------------------
+
+                            # Função auxiliar
+                            def get_codigo_por_label(dicionario, valor):
+                                return next((codigo for codigo, label in dicionario.items() if label == valor), None)
+
+                            regioes_atuacao = []
+
+                            # Tipos simples com lookup
+                            for tipo, selecionados, dicionario in [
+                                ("uf", ufs_selecionadas, uf_codigo_para_label),
+                                ("municipio", municipios_selecionadas, municipios_codigo_para_label),
+                                # ("bioma", biomas_selecionados, biomas_codigo_para_label),
+                                ("terra_indigena", tis_selecionadas, ti_codigo_para_label),
+                                ("uc", ucs_selecionadas, uc_codigo_para_label),
+                                ("assentamento", assentamentos_selecionados, assent_codigo_para_label),
+                                ("quilombo", quilombos_selecionados, quilombo_codigo_para_label),
+                                ("bacia_micro", bacias_micro_sel, bacia_micro_codigo_para_label),
+                                ("bacia_meso", bacias_meso_sel, bacia_meso_codigo_para_label),
+                                ("bacia_macro", bacias_macro_sel, bacia_macro_codigo_para_label),
+                            ]:
+                                for item in selecionados:
+                                    codigo_atuacao = get_codigo_por_label(dicionario, item)
+                                    if codigo_atuacao:
+                                        regioes_atuacao.append({"tipo": tipo, "codigo": codigo_atuacao})
+
+                            # ----------------------------------------------------------
+
+                            # --- Montar documento ---
+                            doc = {
+                                "_id": projeto_id,
+                                "edital": edital,
+                                "codigo": codigo_projeto,
+                                "sigla": sigla_projeto,
+                                "organizacao": organizacao,
+                                "nome_do_projeto": nome_projeto,
+                                "objetivo_geral": objetivo_geral,
+                                "duracao": duracao_projeto,
+                                "data_inicio_contrato": data_inicio_contrato.strftime("%d/%m/%Y"),
+                                "data_fim_contrato": data_fim_contrato.strftime("%d/%m/%Y"),
+                                # "valor": valor_contrato,
+                                # "valor_da_contrapartida_em_r$": float_to_br(contrapartida),
+                                "padrinho": padrinho,
+                                "responsavel": responsavel,
+                                "temas": temas,
+                                "publicos": publicos,
+                                "latitude": latitude,
+                                "longitude": longitude,
+                                "regioes_atuacao": regioes_atuacao,
+
+                            }
+
+                            # --- Inserir no MongoDB ---
+                            col_projetos.insert_one(doc)
+
+                            st.session_state.cadastrando_projeto_codigo = codigo_projeto
+                            st.session_state.cadastrando_projeto_sigla = sigla_projeto
+
+                            st.success("Projeto cadastrado com sucesso!")
+                            time.sleep(3)
+                            st.rerun()
+
+        # Se session_state.cadastrando_projeto_codigo existir e não estiver vazio, 
+        # significa que já foi preenchido o passo 1, segue para o passo 2:
+        else:
+            st.success("Passo 1 concluido! Continue para o passo 2.")
+
+
+    # PASSO 2: Cadastro de Parcelas ---------------------------------------
     with st.expander("**Passo 2: Parcelas**", expanded=False):
 
-        with st.form(key="projeto_passo_2", border=False):
+        # with st.form(key="projeto_passo_2", border=False):
 
-            st.write('Cadastre as parcelas')
 
-            st.write(st.session_state)
+
+
+        st.write('')
+
+        cadastrar_parcelas(col_projetos)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             
 
