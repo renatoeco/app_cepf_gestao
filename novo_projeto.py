@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, cadastrar_parcelas # Funções personalizadas
+from funcoes_auxiliares import conectar_mongo_cepf_gestao # Funções personalizadas
 import pandas as pd
 import locale
 import re
@@ -648,33 +648,254 @@ with tab_projeto:
             st.success("Passo 1 concluido! Continue para o passo 2.")
 
 
+    # ?????????????????????????/
+    st.write(st.session_state)
+
+
+
+
+
+
     # PASSO 2: Cadastro de Parcelas ---------------------------------------
     with st.expander("**Passo 2: Parcelas**", expanded=False):
 
-        # with st.form(key="projeto_passo_2", border=False):
+        # Inicializando a variável session_state.cadastrando_parcela
+        if 'cadastrando_parcela' not in st.session_state:
+            st.session_state['cadastrando_parcela'] = None                                                                                                                                                                                                                                  
+
+        # Se não preencheu o passo 1, dá um aviso
+        if 'cadastrando_projeto_codigo' not in st.session_state:
+            st.warning("Conclua o passo 1 antes de prosseguir para o passo 2.")
+
+        @st.fragment
+        def cadastrar_parcelas(colecao):
+
+            # Se session_state.cadastrando_parcela existir e for diferente de 'finalizado', mostra o formulário
+            if 'cadastrando_parcela' in st.session_state and st.session_state['cadastrando_parcela'] != 'finalizado':
+
+                st.write('**Cadastre as parcelas**')
+
+                # Escolhe o número de parcelas, para
+                parcelas = st.number_input("Quantidade de parcelas:", min_value=1, max_value=100, value=1, step=1, width=150)
+
+                # Formulário de parcelas
+                with st.form(key="parcelas", border=False):
+
+                    parcelas_data = []  # Lista para armazenar as parcelas
+
+                    for i in range(1, parcelas + 1):
+                        st.write('')
+                        st.write(f"**Parcela {i}:**")
+
+                        with st.container():
+                            data_inicio_parcela = st.date_input(
+                                f"Data prevista", 
+                                key=f"data_parcela_{i}", 
+                                format="DD/MM/YYYY"
+                            )
+                            valor_parcela = st.number_input(
+                                f"Valor (R$)", 
+                                key=f"valor_parcela_{i}", 
+                                min_value=0.0, 
+                                value=0.0, 
+                                step=0.01
+                            )
+
+                            # Adiciona os dados à lista (convertendo date para string)
+                            parcelas_data.append({
+                                "parcela": i,
+                                "data_prevista": data_inicio_parcela.strftime("%d/%m/%Y"),
+                                "valor": float(valor_parcela)
+                            })
+
+                    st.write('')
+                    submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary", width=200)
+
+                    # Após o submit, salvar no MongoDB
+                    if submit:
+
+                        # Verifica se existe um código de projeto salvo na sessão
+                        if "cadastrando_projeto_codigo" not in st.session_state or not st.session_state.cadastrando_projeto_codigo:
+                            st.error("Código do projeto não encontrado na sessão.")
+                        else:
+                            codigo = st.session_state.cadastrando_projeto_codigo
+
+                            # Busca documento no MongoDB
+                            projeto = colecao.find_one({"codigo": codigo})
+
+                            if not projeto:
+                                st.error(f"Projeto com código '{codigo}' não encontrado no banco.")
+                            else:
+                                # Atualiza documento adicionando ou sobrescrevendo 'parcelas'
+                                colecao.update_one(
+                                    {"codigo": codigo},
+                                    {"$set": {"parcelas": parcelas_data}}
+                                )
+
+                                st.session_state.cadastrando_parcelas = 'Finalizado'
+
+                                st.success("Parcelas cadastradas com sucesso!")
+                                time.sleep(3)
+                                st.rerun()
+
+            # Se session_state.cadastrando_parcelas existir e for igual a 'finalizado': 
+            # significa que já foi preenchido o passo 2, segue para o passo 3:
+            else:
+                st.success("Passo 2 concluido! Continue para o passo 3.")
+
+
+            # Chama a função para cadastrar parcelas
+        
+            cadastrar_parcelas(col_projetos)
 
 
 
 
-        st.write('')
-
-        cadastrar_parcelas(col_projetos)
 
 
+    # PASSO 3: Cadastro de Locais ---------------------------------------
+    with st.expander("**Passo 3: Locais**", expanded=False):
+
+        # Inicializando a variável session_state.cadastrando_locais
+        if 'cadastrando_locais' not in st.session_state:
+            st.session_state['cadastrando_locais'] = None                                                                                                                                                                                                                                  
+
+        # Se não preencheu o passo 2, dá um aviso        
+        if "cadastrando_parcelas" not in st.session_state or st.session_state.cadastrando_parcelas != 'Finalizado':
+            st.warning("Conclua o passo 2 antes de prosseguir para o passo 3.")
 
 
+        @st.fragment
+        def cadastrar_locais(colecao):
+
+            # Se session_state.cadastrando_locais existir e for diferente de 'finalizado', mostra o formulário
+            # if 'cadastrando_locais' in st.session_state and st.session_state['cadastrando_locais'] != 'Finalizado':
+
+            st.write('**Cadastre as localidades em que o projeto irá atuar**')
+
+            # lista_locais = []  # Lista para armazenar os locais
 
 
+            # Formulário de locais
+
+            opcao_local = st.radio("", ("Inserir link do Google Maps", "Inserir Latitude e Logitude"), key="local")
+
+            nome_local = st.text_input("Nome do local")
 
 
+            if opcao_local == "Inserir link do Google Maps":
+                link_google_maps = st.text_input("Link do Google Maps")
+
+                def extrair_lat_long_google_maps(link):
+                    try:
+                        # Extrai a parte após o "@"
+                        coordenadas = link.split("@")[1].split(",")
+                        latitude = coordenadas[0]
+                        longitude = coordenadas[1]
+                        return latitude, longitude
+                    except (IndexError, AttributeError):
+                        return None, None
 
 
+                # Extrai a latitude e longitude do link do google maps
+                latitude, longitude = extrair_lat_long_google_maps(link_google_maps)
+
+                with st.container(horizontal=True):
+
+                    if st.button("Salvar local", key="local_google_maps", type="primary", icon=":material/save:"):
+                        # Salva o local no banco de dados, atualizando o documento que tem o código == st.session_state.cadastrando_projeto_codigo. Deve criar a chave locais (uma lista de dicionários) e adicionar o novo local
+                        colecao.update_one(
+                            {"codigo": st.session_state.cadastrando_projeto_codigo},
+                            {"$push": {"locais": {"nome": nome_local, "latitude": latitude, "longitude": longitude}}}
+                        )
+
+                        st.success("Local cadastrado com sucesso!")
+                        # time.sleep(3)
+                        # st.rerun()
+
+                    if st.button("Finalizar cadastro de locais", key="finalizar_locais_google_maps", type="secondary", icon=":material/check:"):
+                        st.session_state.cadastrando_locais = 'Finalizado'
+                        st.success("Cadastro de locais concluido!")
+                        time.sleep(3)
+                        st.rerun(
+                    )
 
 
+            elif opcao_local == "Inserir Latitude e Logitude":
+                latitude = st.text_input("Latitude (exemplo: -23.5505)")
+                longitude = st.text_input("Longitude (exemplo: -46.6333)")
 
+                # Regex para validar número decimal (aceita sinal e ponto)
+                regex_decimal = r"^-?\d+(\.\d+)?$"
 
+                # Função para validar formato numérico
+                def validar_formato(valor):
+                    return bool(re.match(regex_decimal, valor.strip()))
 
-            
+                # Função para validar intervalo geográfico
+                def validar_intervalo(lat, lon):
+                    try:
+                        lat = float(lat)
+                        lon = float(lon)
+                        return -90 <= lat <= 90 and -180 <= lon <= 180
+                    except ValueError:
+                        return False
+
+                # --------------------------------------------------------------------------------
+                # BOTÃO DE SALVAR
+                # --------------------------------------------------------------------------------
+
+                with st.container(horizontal=True):
+
+                    if st.button("Salvar local", type="primary", icon=":material/save:"):
+
+                        # Etapa 1 — Validação de preenchimento
+                        if not nome_local or not latitude or not longitude:
+                            st.warning("⚠️ Preencha todos os campos antes de salvar.")
+                        else:
+                            erro = False
+
+                            # Etapa 2 — Validação de formato
+                            if not validar_formato(latitude):
+                                st.error("❌ Latitude inválida. Use apenas números e ponto decimal (ex: -23.5505)")
+                                erro = True
+                            if not validar_formato(longitude):
+                                st.error("❌ Longitude inválida. Use apenas números e ponto decimal (ex: -46.6333)")
+                                erro = True
+
+                            # Etapa 3 — Validação de intervalo geográfico
+                            if not erro and not validar_intervalo(latitude, longitude):
+                                st.error("❌ Coordenadas fora do intervalo válido (-90 ≤ lat ≤ 90, -180 ≤ lon ≤ 180)")
+                                erro = True
+
+                            # Etapa 4 — Se tudo estiver ok, salvar no banco
+                            if not erro:
+                                try:
+                                    colecao.update_one(
+                                        {"codigo": st.session_state.cadastrando_projeto_codigo},
+                                        {"$push": {
+                                            "locais": {
+                                                "nome": nome_local.strip(),
+                                                "latitude": latitude,
+                                                "longitude": longitude
+                                            }
+                                        }},
+                                        upsert=True  # cria o documento se não existir
+                                    )
+
+                                    st.success("Local salvo com sucesso!")
+
+                                except Exception as e:
+                                    st.error(f"❌ Erro ao salvar no banco de dados: {e}")
+
+                    if st.button("Finalizar cadastro de locais", key="finalizar_locais_lat_long", type="secondary", icon=":material/check:"):
+                        st.session_state.cadastrando_locais = 'Finalizado'
+                        st.success("Cadastro de locais concluido!")
+                        time.sleep(3)
+                        st.rerun(
+                    )
+
+        cadastrar_locais(col_projetos)
 
 
 
