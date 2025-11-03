@@ -377,7 +377,8 @@ with tab_projeto:
         pass
 
     # PASSO 1: Informações cadastrais ---------------------------------------
-    with st.expander("**Passo 1: Informações cadastrais**", expanded=False):
+    expand_passo_1 = False
+    with st.expander("**Passo 1: Informações cadastrais**", expanded=expand_passo_1):
 
         # Se o projeto ainda não foi cadastrado, mostra o formulário
         # Se session_state.cadastrando_projeto_codigo não existir ou estiver vazio, mostra o formulário:
@@ -567,6 +568,7 @@ with tab_projeto:
 
                     if campos_faltando:
                         st.error(f"Preencha os campos obrigatórios: {', '.join(campos_faltando)}")
+                        expand_passo_1 = True
                     else:
 
                         # --- Validar unicidade de sigla e código ---
@@ -650,6 +652,8 @@ with tab_projeto:
                             st.session_state.cadastrando_projeto_sigla = sigla_projeto
                             st.session_state.expand_parcelas = True
 
+                            expand_passo_1 = False
+
                             st.success("Projeto cadastrado com sucesso!")
                             time.sleep(3)
                             st.rerun()
@@ -719,7 +723,7 @@ with tab_projeto:
                                 # Adiciona os dados à lista (convertendo date para string)
                                 parcelas_data.append({
                                     "parcela": i,
-                                    "data_prevista": data_inicio_parcela.strftime("%d/%m/%Y"),
+                                    "data_parcela_prevista": data_inicio_parcela.strftime("%d/%m/%Y"),
                                     "valor": float(valor_parcela)
                                 })
 
@@ -935,7 +939,7 @@ with tab_projeto:
         # Se preecheu o passo 3, segue para o passo 4
         else:
             @st.fragment
-            def cadastrar_contatos(colecao):
+            def cadastrar_contatos():
 
                 # Se session_state.cadastrando_contatos existir e for diferente de 'finalizado', mostra o formulário
                 if 'cadastrando_contatos' in st.session_state and st.session_state['cadastrando_contatos'] != 'Finalizado':
@@ -994,4 +998,4 @@ with tab_projeto:
                         except Exception as e:
                             st.error(f"Erro ao salvar contatos: {e}")
 
-            cadastrar_contatos(col_projetos)
+            cadastrar_contatos()

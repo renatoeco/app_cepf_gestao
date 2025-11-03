@@ -314,17 +314,26 @@ else:
     # Roteamento de usuários
     if set(st.session_state.tipo_usuario) & {"admin", "monitor"}:
 
-        pages = {
-            "Editais": [
-                st.Page("editais.py", title="Editais", icon=":material/assignment:"),
-                st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-            ],
-            "Projetos": [
-                st.Page("projetos.py", title="Projetos", icon=":material/list:"),
-                st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+        pages = [
+                st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
                 st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-            ],
-        }
+                st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+                st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+        ]
+
+
+
+        # pages = {
+        #     "Editais": [
+        #         st.Page("editais.py", title="Editais", icon=":material/assignment:"),
+        #         st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+        #     ],
+        #     "Projetos": [
+        #         st.Page("projetos.py", title="Projetos", icon=":material/list:"),
+        #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+        #         st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+        #     ],
+        # }
 
     
         pg = st.navigation(pages)
