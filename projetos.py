@@ -34,7 +34,7 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 ###########################################################################################################
 
 
-# CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS (Ajuste conforme seu SO)
+# CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS
 try:
     # Tenta a configuração comum em sistemas Linux/macOS
     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
@@ -341,7 +341,10 @@ else:
                 (df_filtrado['edital'] == edital_selecionado) & (df_filtrado['status'] == 'Atrasado')
             ]
 
+
+
             if not projetos_atrasados.empty:
+                projetos_atrasados = projetos_atrasados.copy()
                 projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso'] * -1
                 projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'dias_atraso']]
                 projetos_atrasados = projetos_atrasados.rename(columns={
@@ -350,6 +353,9 @@ else:
                     'padrinho': 'Padrinho/Madrinha',
                     'dias_atraso': 'Dias de atraso'
                 })
+
+
+
                 projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
                 st.dataframe(projetos_atrasados)
             else:

@@ -262,7 +262,9 @@ def login():
                         # Forma segura: só aceita hashes válidos (bytes)
                         if isinstance(senha_hash, bytes) and bcrypt.checkpw(password.encode("utf-8"), senha_hash):
                             if usuario_encontrado.get("status", "").lower() != "ativo":
-                                st.error("Usuário inativo. Entre em contato com o renato@ispn.org.br.")
+                                with st.container(width=300):
+                                    st.error("Usuário inativo. Entre em contato com o a equipe do CEPF.")
+    
                                 st.stop()
 
                             tipo_usuario = [x.strip() for x in usuario_encontrado.get("tipo_usuario", "").split(",")]
@@ -288,15 +290,10 @@ def login():
             st.button(
                 "Esqueci a senha", 
                 key="forgot_password", 
-                type="secondary", 
+                type="tertiary", 
                 on_click=recuperar_senha_dialog
             )
 
-            # Informação adicional
-            st.markdown(
-                "<div style='color: #007ad3;'><br>É o seu primeiro acesso?<br>Clique em \"Esqueci a senha\".</div>",
-                unsafe_allow_html=True
-            )
 
 
 ##############################################################################################################
@@ -312,6 +309,8 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 else:
 
     # Roteamento de usuários
+
+    # Equipe
     if set(st.session_state.tipo_usuario) & {"admin", "monitor"}:
 
         pages = [
@@ -319,7 +318,28 @@ else:
                 st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
                 st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+                st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
         ]
+
+    # Beneficiários
+    elif set(st.session_state.tipo_usuario) & {"beneficiario"}:
+
+        pages = [
+                # st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
+                # st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+                # st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+                st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+                st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
+        ]
+
+
+
+    pg = st.navigation(pages)
+    pg.run()
+
+
+
+
 
 
 
@@ -334,10 +354,3 @@ else:
         #         st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
         #     ],
         # }
-
-    
-        pg = st.navigation(pages)
-        pg.run()
-
-
-
