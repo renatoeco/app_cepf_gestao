@@ -149,84 +149,6 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 
 
 
-# def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
-#     """Atualiza df_projetos com colunas 'status' e 'dias_atraso' com base nas regras."""
-
-#     # Garante que as colunas existam
-#     if 'status' not in df_projetos.columns:
-#         df_projetos['status'] = None
-#     if 'dias_atraso' not in df_projetos.columns:
-#         df_projetos['dias_atraso'] = None
-
-#     hoje = datetime.datetime.now().date()
-
-
-#     def avaliar_projeto(projeto):
-#         # Se já está cancelado, mantém
-#         if projeto.get("status") == "Cancelado":
-#             return "Cancelado", None
-
-#         codigo = projeto.get("codigo", "Sem código")
-#         sigla = projeto.get("sigla", "Sem sigla")
-
-#         parcelas = projeto.get("parcelas", [])
-#         if not isinstance(parcelas, list):
-#             parcelas = []
-
-# # ?????????????????????????????//
-#         st.write(parcelas)
-
-#         # Se não há parcelas cadastradas
-#         if len(parcelas) == 0:
-#             st.warning(f"O projeto {codigo} - {sigla} não tem parcelas cadastradas. Não é possível determinar o status.")
-#             return None, None
-
-#         status = None
-#         dias_atraso = None
-
-#         # Busca a primeira parcela sem relatório realizado
-#         parcela_sem_relatorio = next(
-#             (p for p in parcelas if isinstance(p, dict)
-#              and "data_relatorio_prevista" in p
-#              and "data_relatorio_realizada" not in p),
-#             None
-#         )
-
-#         if parcela_sem_relatorio:
-#             try:
-#                 data_prev = datetime.datetime.strptime(
-#                     parcela_sem_relatorio["data_relatorio_prevista"], "%d/%m/%Y"
-#                 ).date()
-#                 diff = (data_prev - hoje).days
-#                 dias_atraso = diff
-#                 status = "Em dia" if diff >= 0 else "Atrasado"
-#             except Exception:
-#                 status = "Erro na data prevista"
-#         else:
-#             # Todas as parcelas têm relatório
-#             ultima_parcela = parcelas[-1]
-#             if "data_monitoramento" in ultima_parcela:
-#                 status = "Concluído"
-#                 dias_atraso = 0
-#             else:
-#                 try:
-#                     data_fim = datetime.datetime.strptime(
-#                         projeto["data_fim_contrato"], "%d/%m/%Y"
-#                     ).date()
-#                     diff = (data_fim - hoje).days
-#                     dias_atraso = diff
-#                     status = "Em dia" if diff >= 0 else "Atrasado"
-#                 except Exception:
-#                     status = "Erro na data fim"
-
-#         return status, dias_atraso
-
-#     resultados = df_projetos.apply(lambda row: avaliar_projeto(row), axis=1)
-#     df_projetos['status'], df_projetos['dias_atraso'] = zip(*resultados)
-
-#     return df_projetos
-
-
 
 
 ###########################################################################################################
@@ -442,6 +364,19 @@ else:
     # ============================================
     # ABA 2: PROJETOS (tabela com colunas + botão)
     # ============================================
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
     with tab2:
 
         larguras_colunas = [1, 2, 5, 2, 2, 2, 2]  # Código, Sigla, Organização, Padrinho, Próxima parcela, Status, Botão
@@ -475,233 +410,12 @@ else:
             # Status
             cols[5].write(projeto.get('status', ""))
 
+
+            # Botão para ver projeto
             # Botão
             if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
                 st.write(f"Você clicou em Ver projeto: {projeto['codigo']} - {projeto['sigla']}")
 
 
-
-
-
-# # SELEÇÃO DO EDITAL #################################################################################
-
-# lista_editais = df_editais['codigo_edital'].tolist()
-
-# edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
-# st.write('')
-
-# # Nome do edital
-# st.subheader(f'{edital_selecionado} - {df_editais[df_editais["codigo_edital"] == edital_selecionado]["nome_edital"].values[0]}')
-# # st.write('')
-
-
-# # Toggle para ver somente os meus projetos
-# with st.container(horizontal=True, horizontal_alignment="right"):
-#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
-
-
-# # Filtra projetos se o toggle estiver ativo para ver somente os meus projetos
-# df_filtrado = df_projetos.copy()  # cria uma cópia para não alterar o original
-# if ver_meus_projetos:
-#     df_filtrado = df_filtrado[df_filtrado['padrinho'] == st.session_state.nome]
-
-
-
-# # Verifica se o DataFrame filtrado está vazio
-# if ver_meus_projetos and df_filtrado.empty:
-#     st.warning(f'Nenhum projeto cadastrado com o padrinho/madrinha {st.session_state.nome}.')
-# else:
-#     # Abas
-#     tab1, tab2 = st.tabs(["Visão geral", "Projetos"])
-
-#     with tab1:
-#         # Contagem de projetos no edital selecionado
-#         st.metric("Projetos", len(df_filtrado[df_filtrado['edital'] == edital_selecionado]))
-#         st.write('')
-
-#         col1, espaco, col2 = st.columns([6, 1, 3])
-
-#         # Lista de projetos atrasados
-#         with col1:
-#             st.write('**Projetos atrasados**')
-#             st.write('')
-
-#             projetos_atrasados = df_filtrado[
-#                 (df_filtrado['edital'] == edital_selecionado) & (df_filtrado['status'] == 'Atrasado')
-#             ]
-
-#             if not projetos_atrasados.empty:
-#                 # Inverte o sinal de dias_atraso
-#                 projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso'] * -1
-
-#                 # Seleciona e renomeia colunas
-#                 projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'dias_atraso']]
-#                 projetos_atrasados = projetos_atrasados.rename(columns={
-#                     'codigo': 'Código',
-#                     'sigla': 'Sigla',
-#                     'padrinho': 'Padrinho/Madrinha',
-#                     'dias_atraso': 'Dias de atraso'
-#                 })
-
-#                 # Ordena
-#                 projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
-
-#                 st.dataframe(projetos_atrasados)
-#             else:
-#                 st.info("Não há projetos atrasados no momento.")
-
-#         # Gráfico de pizza e cronograma de contratos
-#         with col2:
-#             st.write('**Status dos projetos**')
-            
-#             mapa_cores_status = {
-#                 'Concluído': '#74a7e4',   # Azul
-#                 'Em dia': '#aedddd',      # Verde
-#                 'Atrasado': '#ffbfb0',    # Vermelho
-#                 'Cancelado': '#bbb'         # Cinza
-#                 }
-
-#             # Labels e valores (exemplo – substitua pelos seus dados reais)
-#             status = df_projetos['status'].unique().tolist()
-#             contagem_status = df_projetos['status'].value_counts().tolist()
-
-#             # Gráfico de pizza com cores personalizadas
-#             fig = px.pie(
-#                 names=status,
-#                 values=contagem_status,
-#                 # title="Status dos Projetos",
-#                 color=status,
-#                 color_discrete_map=mapa_cores_status,
-#                 height=350
-#             )
-
-
-
-#             # Exibir no Streamlit
-#             st.plotly_chart(fig)
-
-
-
-#         # Cronograma de contratos -----------------------------------------------------------------------------
-
-#         st.write("**Cronograma de contratos**")
-
-#         # Gráfico de gantt cronograma 
-
-#         # Organizando o df por ordem de data_fim_contrato
-
-#         df_projetos_filtrados = df_projetos.sort_values(by='data_fim_contrato', ascending=False)
-
-
-#         # ??????????????????
-#         # st.write(df_projetos_filtrados)
-
-
-#         # Tentando calcular a altura do gráfico dinamicamente
-#         altura_base = 400  # altura mínima
-#         altura_extra = sum([10 / (1 + i * 0.01) for i in range(len(df_projetos))])
-#         altura = int(altura_base + altura_extra)
-
-
-#         # Configuração do gráfico
-#         fig = px.timeline(
-#             df_projetos,
-#             x_start='data_inicio_contrato_dtime',
-#             x_end='data_fim_contrato_dtime',
-#             y='codigo',
-#             color='status',
-#             color_discrete_map = mapa_cores_status,
-#             height=altura,  
-#             labels={
-#                 'codigo': 'Projeto',
-#                 # 'status': 'Situação',
-#                 'data_inicio_contrato_dtime': 'Início',
-#                 'data_fim_contrato_dtime': 'Fim'
-#             },
-#         )
-
-#         fig.update_traces(
-#             hovertemplate=(
-#                 '<b>Projeto:</b> %{y}<br>' +
-#                 '<b>Início:</b> %{customdata[0]}<br>' +
-#                 '<b>Fim:</b> %{customdata[1]}<br>' +
-#                 '<extra></extra>'
-#             ),
-#             customdata=df_projetos[['data_inicio_contrato', 'data_fim_contrato']].values
-#         )
-
-#         # Adiciona a linha vertical para o dia de hoje
-#         fig.add_vline(
-#             x=datetime.datetime.today(),
-#             line_width=2,
-#             line_dash="dash",
-#             line_color="red",
-#         )
-
-#         # Ajusta layout
-#         fig.update_layout(
-#             showlegend=False,     # ← esconde a legenda
-#             yaxis=dict(
-#                 title=None,
-#                 side="right"       # coloca labels do eixo Y à direita
-#             ),
-#             xaxis=dict(
-#                 showgrid=True,
-#                 gridcolor='lightgray',
-#                 tickmode='linear',
-#                 dtick="M1",        # Mostra 1 tick por ano (12 meses)
-#                 tickformat="%m/%Y"
-#             )
-#         )
-
-#         st.plotly_chart(fig)
-
-
-
-
-
-
-
-
-#     with tab2:
-
-#         # Define as larguras das colunas em uma variável
-#         larguras_colunas = [1, 2, 5, 2, 2, 2, 2]  # [Código, Sigla, Organização, Padrinho, Próxima parcela, Status, Botão]
-
-#         # Cabeçalhos das colunas
-#         col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
-
-#         # Cria a linha de cabeçalhos
-#         cols = st.columns(larguras_colunas)
-#         for i, label in enumerate(col_labels):
-#             cols[i].markdown(f"**{label}**")
-#         st.write('')
-
-#         # Preenche as linhas com os dados do DataFrame
-#         for index, projeto in df_projetos.iterrows():
-#             cols = st.columns(larguras_colunas)
-#             cols[0].write(projeto['codigo'])
-#             cols[1].write(projeto['sigla'])
-#             cols[2].write(projeto['organizacao'])
-#             cols[3].write(projeto['padrinho'])
-            
-#             # Próxima parcela: calcula a primeira parcela sem data_parcela_realizada
-#             prox_parcela = ""
-#             parcelas = projeto.get('parcelas', [])
-#             if isinstance(parcelas, list) and len(parcelas) > 0:
-#                 # Ordena as parcelas pelo número
-#                 parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get('parcela', 0))
-#                 for p in parcelas_ordenadas:
-#                     if 'data_parcela_realizada' not in p:
-#                         prox_parcela = p.get('parcela')
-#                         break
-#             cols[4].write(str(prox_parcela))
-
-#             # Status
-#             cols[5].write(projeto.get('status', ""))
-
-#             # Botão “Ver projeto” com key única
-#             if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
-#                 st.write(f"Você clicou em Ver projeto: {projeto['codigo']} - {projeto['sigla']}")
-
+        st.write(st.session_state)
 

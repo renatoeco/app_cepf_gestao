@@ -6,6 +6,7 @@ import smtplib
 from email.mime.text import MIMEText  
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
 import bcrypt
+import textwrap
 
 
 # Configurar o streamlit para tela wide
@@ -267,7 +268,8 @@ def login():
     
                                 st.stop()
 
-                            tipo_usuario = [x.strip() for x in usuario_encontrado.get("tipo_usuario", "").split(",")]
+                            tipo_usuario = usuario_encontrado.get("tipo_usuario", [])
+
 
                             # Autentica
                             st.session_state["logged_in"] = True
@@ -275,6 +277,7 @@ def login():
                             st.session_state["nome"] = usuario_encontrado.get("nome_completo")
                             # st.session_state["cpf"] = usuario_encontrado.get("CPF")
                             st.session_state["id_usuario"] = usuario_encontrado.get("_id")
+                            st.session_state["projetos"] = usuario_encontrado.get("projetos", [])
                             st.rerun()
                         else:
                             # Senha inválida ou não hashada corretamente
@@ -301,6 +304,18 @@ def login():
 ##############################################################################################################
 
 
+import os
+import shutil
+import streamlit as st
+
+
+
+
+
+# Caminho base do app
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 # Se o usuário ainda não estiver logado
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login()  # Mostra tela de login
@@ -321,21 +336,72 @@ else:
                 st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
         ]
 
-    # Beneficiários
+
+        pg = st.navigation(pages)
+        pg.run()
+
+
+
+    # -------------------------------------------------------------------
+    # BLOCO: Beneficiário
+    # -------------------------------------------------------------------
     elif set(st.session_state.tipo_usuario) & {"beneficiario"}:
+        usuario_encontrado = col_pessoas.find_one({"_id": st.session_state["id_usuario"]})
 
-        pages = [
-                # st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
-                # st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-                # st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-                st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-                st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-        ]
+        projetos = usuario_encontrado.get("projetos", []) if usuario_encontrado else []
+        if not isinstance(projetos, list):
+            projetos = []
+
+        # Caminho base e pasta temporária
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        temp_dir = os.path.join(BASE_DIR, "temp_pages")
+
+        # 🔄 Remove e recria o diretório para garantir limpeza total
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+
+        # Caminho do arquivo base de detalhes
+        detalhe_path = os.path.join(BASE_DIR, "detalhe_projeto.py").replace("\\", "\\\\")
+
+        # Cria páginas temporárias para cada projeto
+        for sigla in projetos:
+            safe_sigla = sigla.replace(" ", "_").replace("/", "_").replace("\\", "_")
+            page_filename = f"detalhe_projeto_{safe_sigla}.py"
+            temp_path = os.path.join(temp_dir, page_filename)
+
+            # Escapa aspas e injeta a variável no session_state
+            sigla_escaped = sigla.replace("'", "\\'")
+            content = textwrap.dedent(f"""
+                import streamlit as st
+                st.session_state['sigla_atual'] = '{sigla_escaped}'
+                import runpy
+                runpy.run_path(r'{detalhe_path}', run_name='__main__')
+            """)
+
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+        # Cria as páginas no menu lateral
+        pages = []
+        for sigla in projetos:
+            safe_sigla = sigla.replace(" ", "_").replace("/", "_").replace("\\", "_")
+            page_filename = f"detalhe_projeto_{safe_sigla}.py"
+
+            pages.append(
+                st.Page(
+                    os.path.join("temp_pages", page_filename),
+                    title=f"{sigla}",
+                    icon=":material/folder:",
+                )
+            )
+
+        # Cria e executa o sistema de navegação
+        pg = st.navigation(pages)
+        pg.run()
 
 
 
-    pg = st.navigation(pages)
-    pg.run()
 
 
 
@@ -343,14 +409,146 @@ else:
 
 
 
-        # pages = {
-        #     "Editais": [
-        #         st.Page("editais.py", title="Editais", icon=":material/assignment:"),
-        #         st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-        #     ],
-        #     "Projetos": [
-        #         st.Page("projetos.py", title="Projetos", icon=":material/list:"),
-        #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-        #         st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-        #     ],
-        # }
+
+
+
+
+
+    # # Beneficiários
+    # elif set(st.session_state.tipo_usuario) & {"beneficiario"}:
+    #     usuario_encontrado = col_pessoas.find_one(
+    #         {"_id": st.session_state["id_usuario"]}
+    #     )
+
+    #     projetos = usuario_encontrado.get("projetos", []) if usuario_encontrado else []
+    #     if not isinstance(projetos, list):
+    #         projetos = []
+
+    #     # Inicializa lista de páginas (sem "Meus projetos")
+    #     pages = []
+
+    #     # Caminho base e diretório temporário
+    #     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    #     temp_dir = os.path.join(BASE_DIR, "temp_pages")
+
+    #     # Limpa e recria o diretório temp_pages
+    #     if os.path.exists(temp_dir):
+    #         shutil.rmtree(temp_dir)
+    #     os.makedirs(temp_dir, exist_ok=True)
+
+    #     # Cria uma cópia de detalhe_projeto.py para cada projeto
+
+    #     # Recriar páginas temporárias se desejar forçar atualização
+
+    #     recriar_paginas_temp = False  # dev: True para reescrever sempre
+
+    #     for sigla in projetos:
+    #         safe_sigla = sigla.replace(" ", "_").replace("/", "_").replace("\\", "_")
+    #         page_filename = f"detalhe_projeto_{safe_sigla}.py"
+    #         temp_path = os.path.join(temp_dir, page_filename)
+
+    #         if recriar_paginas_temp or not os.path.exists(temp_path):
+    #             sigla_escaped = sigla.replace("'", "\\'")
+    #             detalhe_path = os.path.join(BASE_DIR, "detalhe_projeto.py").replace("\\", "\\\\")
+    #             content = textwrap.dedent(f"""
+    #                 import streamlit as st
+    #                 st.session_state['sigla_atual'] = '{sigla_escaped}'
+
+    #                 # Executa o arquivo original como script — garante execução fresca
+    #                 import runpy
+    #                 runpy.run_path(r'{detalhe_path}', run_name='__main__')
+    #             """)
+
+    #             with open(temp_path, "w", encoding="utf-8") as f:
+    #                 f.write(content)
+
+    #         pages.append(
+    #             st.Page(
+    #                 os.path.join("temp_pages", page_filename),
+    #                 title=f"{sigla}",
+    #                 icon=":material/folder:",
+    #             )
+    #         )
+
+
+    #     # Cria a navegação
+    #     pg = st.navigation(pages)
+
+
+    #     # Executa a navegação
+    #     pg.run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # # Beneficiários
+    # elif set(st.session_state.tipo_usuario) & {"beneficiario"}:
+    #     usuario_encontrado = col_pessoas.find_one(
+    #         {"_id": st.session_state["id_usuario"]}
+    #     )
+
+    #     projetos = usuario_encontrado.get("projetos", []) if usuario_encontrado else []
+    #     if not isinstance(projetos, list):
+    #         projetos = []
+
+    #     pages = [
+    #         st.Page("meus_projetos.py", title="Meus projetos", icon=":material/map:")
+    #     ]
+
+    #     # Caminho base e diretório temporário
+    #     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    #     temp_dir = os.path.join(BASE_DIR, "temp_pages")
+
+    #     # Limpa e recria o diretório temp_pages de forma segura
+    #     if os.path.exists(temp_dir):
+    #         shutil.rmtree(temp_dir)
+    #     os.makedirs(temp_dir, exist_ok=True)
+
+    #     # Cria uma cópia de detalhe_projeto.py para cada projeto
+    #     for sigla in projetos:
+    #         page_filename = f"detalhe_projeto_{sigla.replace(' ', '_')}.py"
+    #         temp_path = os.path.join(temp_dir, page_filename)
+
+    #         # Copia o arquivo base detalhe_projeto.py
+    #         shutil.copyfile(os.path.join(BASE_DIR, "detalhe_projeto.py"), temp_path)
+
+    #         # Adiciona a página correspondente
+    #         pages.append(
+    #             st.Page(
+    #                 os.path.join("temp_pages", page_filename),
+    #                 title=f"Projeto {sigla}",
+    #                 icon=":material/folder:",
+    #             )
+    #         )
+
+    #     # Navegação dinâmica
+    #     pg = st.navigation(pages)
+
+    #     # Guarda o título da página ativa (para o detalhe_projeto.py saber qual projeto exibir)
+    #     try:
+    #         current_page = pg.get_current_page()
+    #         if current_page and hasattr(current_page, "title"):
+    #             st.session_state["current_page_title"] = current_page.title
+    #     except Exception:
+    #         pass
+
+    #     pg.run()
+
+
+
