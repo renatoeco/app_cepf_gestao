@@ -94,6 +94,19 @@ df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
 
 
 
+###########################################################################################################
+# INTERFACE PRINCIPAL DA PÁGINA
+###########################################################################################################
+
+# Roteamento da página
+
+
+
+st.session_state.pagina_atual = 'novo_projeto'
+
+
+
+
 
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
@@ -107,6 +120,13 @@ st.logo("images/cepf_logo.png", size='large')
 
 # Título da página
 st.header("Novo projeto")
+
+
+
+
+
+
+
 
 
 tab_organizacao, tab_projeto = st.tabs(["Cadastrar Organização", "Cadastrar Projeto"])

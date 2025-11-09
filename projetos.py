@@ -414,6 +414,8 @@ else:
             # Botão para ver projeto
             # Botão
             if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
+
+                st.session_state.pagina_atual = f"projeto_{projeto['codigo']}"
                 st.write(f"Você clicou em Ver projeto: {projeto['codigo']} - {projeto['sigla']}")
 
 
