@@ -194,32 +194,78 @@ st.write('')
 
 
 
-
-
 # ============================================
 # SELEÇÃO DO EDITAL
 # ============================================
 
+# Lista de editais disponíveis
 lista_editais = df_editais['codigo_edital'].tolist()
+
+# Seletor de edital
 edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
 st.write('')
 
-# Nome do edital
-nome_edital = df_editais.loc[df_editais["codigo_edital"] == edital_selecionado, "nome_edital"].values[0]
+# Nome do edital selecionado
+nome_edital = df_editais.loc[
+    df_editais["codigo_edital"] == edital_selecionado, "nome_edital"
+].values[0]
 st.subheader(f'{edital_selecionado} - {nome_edital}')
 
-# Toggle para ver somente os meus projetos
+# Toggle para ver somente os projetos do usuário logado
 with st.container(horizontal=True, horizontal_alignment="right"):
     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
 
-# Filtra projetos de acordo com o toggle
-df_filtrado = df_projetos.copy()
-if ver_meus_projetos:
-    df_filtrado = df_filtrado[df_filtrado['padrinho'] == st.session_state.nome]
 
-# Verifica se o DataFrame filtrado está vazio
+# ============================================
+# FILTRO PRINCIPAL DE PROJETOS
+# ============================================
+
+# Base: todos os projetos
+df_filtrado = df_projetos.copy()
+
+# Filtrar pelo edital selecionado
+df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
+
+# Se o toggle estiver ativo, filtra apenas os projetos do padrinho/madrinha logado
+if ver_meus_projetos:
+    df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
+
+# Caso não existam projetos após o filtro
 if df_filtrado.empty:
-    st.warning(f'Nenhum projeto cadastrado com o padrinho/madrinha {st.session_state.nome}.')
+    st.warning(f"Nenhum projeto encontrado para o edital **{edital_selecionado}**.")
+    st.stop()
+
+
+
+
+
+
+
+
+# # ============================================
+# # SELEÇÃO DO EDITAL
+# # ============================================
+
+# lista_editais = df_editais['codigo_edital'].tolist()
+# edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
+# st.write('')
+
+# # Nome do edital
+# nome_edital = df_editais.loc[df_editais["codigo_edital"] == edital_selecionado, "nome_edital"].values[0]
+# st.subheader(f'{edital_selecionado} - {nome_edital}')
+
+# # Toggle para ver somente os meus projetos
+# with st.container(horizontal=True, horizontal_alignment="right"):
+#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
+
+# # Filtra projetos de acordo com o toggle
+# df_filtrado = df_projetos.copy()
+# if ver_meus_projetos:
+#     df_filtrado = df_filtrado[df_filtrado['padrinho'] == st.session_state.nome]
+
+# # Verifica se o DataFrame filtrado está vazio
+# if df_filtrado.empty:
+#     st.warning(f'Nenhum projeto cadastrado com o padrinho/madrinha {st.session_state.nome}.')
 else:
 
     # ============================================
@@ -243,6 +289,9 @@ else:
         with col1:
             st.write('**Projetos atrasados**')
             st.write('')
+
+            # ???????????????
+            st.write(df_filtrado)
 
             projetos_atrasados = df_filtrado[
                 (df_filtrado['edital'] == edital_selecionado) & (df_filtrado['status'] == 'Atrasado')
@@ -277,8 +326,13 @@ else:
                 'Cancelado': '#bbb'       # Cinza
             }
 
-            status = df_filtrado['status'].unique().tolist()
-            contagem_status = df_filtrado['status'].value_counts().tolist()
+            contagens = df_filtrado['status'].value_counts(dropna=True)
+            status = contagens.index.tolist()
+            contagem_status = contagens.values.tolist()
+
+
+            # status = df_filtrado['status'].unique().tolist()
+            # contagem_status = df_filtrado['status'].value_counts().tolist()
 
             fig = px.pie(
                 names=status,

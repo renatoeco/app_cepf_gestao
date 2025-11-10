@@ -212,87 +212,87 @@ with tab_projeto:
     def carregar_municipios(ano=2024):
         return read_municipality(year=ano)
 
-    @st.cache_data(show_spinner="Carregando terras indígenas...")
-    def carregar_terras_indigenas(data=201907):
-        return read_indigenous_land(date=data)
+    # @st.cache_data(show_spinner="Carregando terras indígenas...")
+    # def carregar_terras_indigenas(data=201907):
+    #     return read_indigenous_land(date=data)
 
-    @st.cache_data(show_spinner="Carregando unidades de conservação...")
-    def carregar_uc(data=201909):
-        return read_conservation_units(date=data)
+    # @st.cache_data(show_spinner="Carregando unidades de conservação...")
+    # def carregar_uc(data=201909):
+    #     return read_conservation_units(date=data)
 
-    @st.cache_data(show_spinner="Carregando biomas...")
-    def carregar_biomas(ano=2019):
-        return read_biomes(year=ano)
+    # @st.cache_data(show_spinner="Carregando biomas...")
+    # def carregar_biomas(ano=2019):
+    #     return read_biomes(year=ano)
 
-    @st.cache_data(show_spinner="Carregando assentamentos...")
-    def carregar_assentamentos():
-        return gpd.read_file("shapefiles/Assentamentos-SAB-INCRA.shp")
+    # @st.cache_data(show_spinner="Carregando assentamentos...")
+    # def carregar_assentamentos():
+    #     return gpd.read_file("shapefiles/Assentamentos-SAB-INCRA.shp")
 
-    @st.cache_data(show_spinner="Carregando quilombos...")
-    def carregar_quilombos():
-        return gpd.read_file("shapefiles/Quilombos-SAB-INCRA.shp")
+    # @st.cache_data(show_spinner="Carregando quilombos...")
+    # def carregar_quilombos():
+    #     return gpd.read_file("shapefiles/Quilombos-SAB-INCRA.shp")
 
-    @st.cache_data(show_spinner="Carregando bacias hidrográficas (micro)...")
-    def carregar_bacias_micro():
-        return gpd.read_file("shapefiles/micro_RH.shp")
+    # @st.cache_data(show_spinner="Carregando bacias hidrográficas (micro)...")
+    # def carregar_bacias_micro():
+    #     return gpd.read_file("shapefiles/micro_RH.shp")
 
-    @st.cache_data(show_spinner="Carregando bacias hidrográficas (meso)...")
-    def carregar_bacias_meso():
-        return gpd.read_file("shapefiles/meso_RH.shp")
+    # @st.cache_data(show_spinner="Carregando bacias hidrográficas (meso)...")
+    # def carregar_bacias_meso():
+    #     return gpd.read_file("shapefiles/meso_RH.shp")
 
-    @st.cache_data(show_spinner="Carregando bacias hidrográficas (macro)...")
-    def carregar_bacias_macro():
-        return gpd.read_file("shapefiles/macro_RH.shp")
+    # @st.cache_data(show_spinner="Carregando bacias hidrográficas (macro)...")
+    # def carregar_bacias_macro():
+    #     return gpd.read_file("shapefiles/macro_RH.shp")
 
-    # CARREGAR DADOS -----------------------------------------------------------------
+    # # CARREGAR DADOS -----------------------------------------------------------------
 
     dados_ufs = carregar_ufs()
     dados_municipios = carregar_municipios()
-    dados_ti = carregar_terras_indigenas()
-    dados_uc = carregar_uc()
-    dados_assentamentos = carregar_assentamentos()
-    dados_quilombos = carregar_quilombos()
-    dados_bacias_macro = carregar_bacias_macro()
-    dados_bacias_meso = carregar_bacias_meso()
-    dados_bacias_micro = carregar_bacias_micro()
+    # dados_ti = carregar_terras_indigenas()
+    # dados_uc = carregar_uc()
+    # dados_assentamentos = carregar_assentamentos()
+    # dados_quilombos = carregar_quilombos()
+    # dados_bacias_macro = carregar_bacias_macro()
+    # dados_bacias_meso = carregar_bacias_meso()
+    # dados_bacias_micro = carregar_bacias_micro()
 
 
-    # --- Padronizar nomes das colunas das bacias ---
-    dados_bacias_macro = dados_bacias_macro.rename(columns={"cd_macroRH": "codigo", "nm_macroRH": "nome"})
-    dados_bacias_meso = dados_bacias_meso.rename(columns={"cd_mesoRH": "codigo", "nm_mesoRH": "nome"})
-    dados_bacias_micro = dados_bacias_micro.rename(columns={"cd_microRH": "codigo", "nm_microRH": "nome"})
+    # # --- Padronizar nomes das colunas das bacias ---
+    # dados_bacias_macro = dados_bacias_macro.rename(columns={"cd_macroRH": "codigo", "nm_macroRH": "nome"})
+    # dados_bacias_meso = dados_bacias_meso.rename(columns={"cd_mesoRH": "codigo", "nm_mesoRH": "nome"})
+    # dados_bacias_micro = dados_bacias_micro.rename(columns={"cd_microRH": "codigo", "nm_microRH": "nome"})
 
-    # Padronizar assentamentos e quilombos (ajuste conforme seus shapefiles)
-    if "cd_sipra" in dados_assentamentos.columns:
-        dados_assentamentos = dados_assentamentos.rename(columns={"cd_sipra": "codigo", "nome_proje": "nome"})
-    if "id" in dados_quilombos.columns:
-        dados_quilombos = dados_quilombos.rename(columns={"id": "codigo", "name": "nome"})
+    # # Padronizar assentamentos e quilombos (ajuste conforme seus shapefiles)
+    # if "cd_sipra" in dados_assentamentos.columns:
+    #     dados_assentamentos = dados_assentamentos.rename(columns={"cd_sipra": "codigo", "nome_proje": "nome"})
+    # if "id" in dados_quilombos.columns:
+    #     dados_quilombos = dados_quilombos.rename(columns={"id": "codigo", "name": "nome"})
         
-    # --- Ordenar alfabeticamente pelo nome ---
-    dados_ti = dados_ti.sort_values(by="terrai_nom", ascending=True, ignore_index=True) if "terrai_nom" in dados_ti.columns else dados_ti
-    dados_uc = dados_uc.sort_values(by="name_conservation_unit", ascending=True, ignore_index=True) if "name_conservation_unit" in dados_uc.columns else dados_uc
-    # dados_biomas = dados_biomas.sort_values(by="name_biome", ascending=True, ignore_index=True) if "name_biome" in dados_biomas.columns else dados_biomas
-    dados_bacias_macro = dados_bacias_macro.sort_values(by="nome", ascending=True, ignore_index=True)
-    dados_bacias_meso = dados_bacias_meso.sort_values(by="nome", ascending=True, ignore_index=True)
-    dados_bacias_micro = dados_bacias_micro.sort_values(by="nome", ascending=True, ignore_index=True)
-    dados_assentamentos = dados_assentamentos.sort_values(by="nome", ascending=True, ignore_index=True)
-    dados_quilombos = dados_quilombos.sort_values(by="nome", ascending=True, ignore_index=True)
-    dados_municipios = dados_municipios.sort_values(by="name_muni", ascending=True, ignore_index=True) if "name_muni" in dados_municipios.columns else dados_municipios
-    dados_ufs = dados_ufs.sort_values(by="name_state", ascending=True, ignore_index=True) if "name_state" in dados_ufs.columns else dados_ufs
+    # # --- Ordenar alfabeticamente pelo nome ---
+    # dados_ti = dados_ti.sort_values(by="terrai_nom", ascending=True, ignore_index=True) if "terrai_nom" in dados_ti.columns else dados_ti
+    # dados_uc = dados_uc.sort_values(by="name_conservation_unit", ascending=True, ignore_index=True) if "name_conservation_unit" in dados_uc.columns else dados_uc
+    # # dados_biomas = dados_biomas.sort_values(by="name_biome", ascending=True, ignore_index=True) if "name_biome" in dados_biomas.columns else dados_biomas
+    # dados_bacias_macro = dados_bacias_macro.sort_values(by="nome", ascending=True, ignore_index=True)
+    # dados_bacias_meso = dados_bacias_meso.sort_values(by="nome", ascending=True, ignore_index=True)
+    # dados_bacias_micro = dados_bacias_micro.sort_values(by="nome", ascending=True, ignore_index=True)
+    # dados_assentamentos = dados_assentamentos.sort_values(by="nome", ascending=True, ignore_index=True)
+    # dados_quilombos = dados_quilombos.sort_values(by="nome", ascending=True, ignore_index=True)
+    # dados_municipios = dados_municipios.sort_values(by="name_muni", ascending=True, ignore_index=True) if "name_muni" in dados_municipios.columns else dados_municipios
+    # dados_ufs = dados_ufs.sort_values(by="name_state", ascending=True, ignore_index=True) if "name_state" in dados_ufs.columns else dados_ufs
 
-    # --- Corrigir tipos de código para int (sem casas decimais) ---
-    def corrigir_codigo(df, colunas):
-        for col in colunas:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: int(x) if pd.notna(x) else None)
-        return df
+    # # --- Corrigir tipos de código para int (sem casas decimais) ---
+    # def corrigir_codigo(df, colunas):
+    #     for col in colunas:
+    #         if col in df.columns:
+    #             df[col] = df[col].apply(lambda x: int(x) if pd.notna(x) else None)
+    #     return df
 
-    dados_ufs = corrigir_codigo(dados_ufs, ["code_state"])
-    dados_municipios = corrigir_codigo(dados_municipios, ["code_muni"])
-    # dados_biomas = corrigir_codigo(dados_biomas, ["code_biome"])
+    # dados_ufs = corrigir_codigo(dados_ufs, ["code_state"])
+    # dados_municipios = corrigir_codigo(dados_municipios, ["code_muni"])
+    # # dados_biomas = corrigir_codigo(dados_biomas, ["code_biome"])
 
 
-    # Mapeamentos de código para label
+    # # Mapeamentos de código para label
     
     # Estados
     uf_codigo_para_label = {
@@ -306,45 +306,45 @@ with tab_projeto:
         for _, row in dados_municipios.iterrows()
     }
 
-    # Terras Indígenas
-    ti_codigo_para_label = {
-        str(row["code_terrai"]): f"{row['terrai_nom']} ({int(row['code_terrai'])})"
-        for _, row in dados_ti.iterrows()
-    }
+    # # Terras Indígenas
+    # ti_codigo_para_label = {
+    #     str(row["code_terrai"]): f"{row['terrai_nom']} ({int(row['code_terrai'])})"
+    #     for _, row in dados_ti.iterrows()
+    # }
 
-    # Unidades de Conservação
-    uc_codigo_para_label = {
-        str(row["code_conservation_unit"]): f"{row['name_conservation_unit']} ({row['code_conservation_unit']})"
-        for _, row in dados_uc.iterrows()
-    }
+    # # Unidades de Conservação
+    # uc_codigo_para_label = {
+    #     str(row["code_conservation_unit"]): f"{row['name_conservation_unit']} ({row['code_conservation_unit']})"
+    #     for _, row in dados_uc.iterrows()
+    # }
 
-    # Assentamentos
-    assent_codigo_para_label = {
-        str(row["codigo"]): f"{row['nome']} ({row['codigo']})"
-        for _, row in dados_assentamentos.iterrows()
-    }
+    # # Assentamentos
+    # assent_codigo_para_label = {
+    #     str(row["codigo"]): f"{row['nome']} ({row['codigo']})"
+    #     for _, row in dados_assentamentos.iterrows()
+    # }
 
-    # Quilombos
-    quilombo_codigo_para_label = {
-        str(row["codigo"]): f"{row['nome']} ({row['codigo']})"
-        for _, row in dados_quilombos.iterrows()
-    }
+    # # Quilombos
+    # quilombo_codigo_para_label = {
+    #     str(row["codigo"]): f"{row['nome']} ({row['codigo']})"
+    #     for _, row in dados_quilombos.iterrows()
+    # }
     
-    # Bacias Hidrográficas
-    bacia_micro_codigo_para_label = {
-        str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_micro.iterrows()
-    }
+    # # Bacias Hidrográficas
+    # bacia_micro_codigo_para_label = {
+    #     str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_micro.iterrows()
+    # }
 
-    bacia_meso_codigo_para_label = {
-        str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_meso.iterrows()
-    }
+    # bacia_meso_codigo_para_label = {
+    #     str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_meso.iterrows()
+    # }
 
-    bacia_macro_codigo_para_label = {
-        str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_macro.iterrows()
-    }
+    # bacia_macro_codigo_para_label = {
+    #     str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_macro.iterrows()
+    # }
 
 
-    # FIM DA PREPARAÇÃO DA GEOGRAFIA -------------------------------------------------------------------------------------
+    # # FIM DA PREPARAÇÃO DA GEOGRAFIA -------------------------------------------------------------------------------------
 
 
 
@@ -355,7 +355,8 @@ with tab_projeto:
 
 
     # ???????????????///
-    st.write(st.session_state)
+    # st.write(st.session_state)
+
 
     # Iniciando variárveis no session_state para controlar a abertura dos expanders após cada passo
     if 'expand_parcelas' not in st.session_state:
@@ -370,6 +371,9 @@ with tab_projeto:
         st.write(f"**Cadastrando o projeto {st.session_state.cadastrando_projeto_codigo} - {st.session_state.cadastrando_projeto_sigla}**")
     except:
         pass
+
+
+    st.write('Antes de cadastrar o projeto, cadastre as pessoas que estarão envolvidas.')
 
     # PASSO 1: Informações cadastrais ---------------------------------------
     expand_passo_1 = False
@@ -429,14 +433,17 @@ with tab_projeto:
 
                 # Padrinho/Madrinha
                 # Filtrar nomes que contenham a palavra "monitor" na coluna tipo_usuario
-                padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
+                # padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
+                # padrinhos = df_pessoas[df_pessoas["tipo_usuario"] == "monitor"]["nome_completo"].tolist()
+                padrinhos = df_pessoas[df_pessoas["tipo_usuario"].isin(["monitor", "admin"])]["nome_completo"].tolist()
 
                 # Selectbox com a lista filtrada
                 padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
 
                 # Responsável
-                responsaveis = df_pessoas[df_pessoas['tipo_usuario'].str.contains("beneficiario", case=False, na=False)]['nome_completo'].tolist()
-                responsavel = st.selectbox("Responsável:", responsaveis)
+                responsiveis = df_pessoas[df_pessoas['tipo_usuario'].str.contains("beneficiario", case=False, na=False)]['nome_completo'].tolist()
+                responsiveis.insert(0, "")
+                responsavel = st.selectbox("Responsável:", responsiveis, index=0)
 
                 # Temas
                 temas = df_temas['tema'].tolist()
@@ -469,63 +476,63 @@ with tab_projeto:
                     placeholder=""
                 )
 
-                # biomas_selecionados = col3.multiselect(
-                #     "Biomas",
-                #     options=list(biomas_codigo_para_label.values()),
+                # # biomas_selecionados = col3.multiselect(
+                # #     "Biomas",
+                # #     options=list(biomas_codigo_para_label.values()),
+                # #     placeholder=""
+                # # )
+
+                # #  TERRAS INDÍGENAS -----------------------
+                # col1, col2 = st.columns(2)
+
+                # tis_selecionadas = col1.multiselect(
+                #     "Terras Indígenas",
+                #     options=list(ti_codigo_para_label.values()),
                 #     placeholder=""
                 # )
 
-                #  TERRAS INDÍGENAS -----------------------
-                col1, col2 = st.columns(2)
+                # #  UNIDADES DE CONSERVAÇÃO -----------------------
+                # ucs_selecionadas = col2.multiselect(
+                #     "Unidades de Conservação",
+                #     options=list(uc_codigo_para_label.values()),
+                #     placeholder=""
+                # )
 
-                tis_selecionadas = col1.multiselect(
-                    "Terras Indígenas",
-                    options=list(ti_codigo_para_label.values()),
-                    placeholder=""
-                )
+                # #  ASSENTAMENTOS -----------------------
+                # col1, col2 = st.columns(2)
+                # assentamentos_selecionados = col1.multiselect(
+                #     "Assentamentos",
+                #     options=list(assent_codigo_para_label.values()),
+                #     placeholder=""
+                # )
 
-                #  UNIDADES DE CONSERVAÇÃO -----------------------
-                ucs_selecionadas = col2.multiselect(
-                    "Unidades de Conservação",
-                    options=list(uc_codigo_para_label.values()),
-                    placeholder=""
-                )
+                # #  QUILOMBOS -----------------------
+                # quilombos_selecionados = col2.multiselect(
+                #     "Quilombos",
+                #     options=list(quilombo_codigo_para_label.values()),
+                #     placeholder=""
+                # )
 
-                #  ASSENTAMENTOS -----------------------
-                col1, col2 = st.columns(2)
-                assentamentos_selecionados = col1.multiselect(
-                    "Assentamentos",
-                    options=list(assent_codigo_para_label.values()),
-                    placeholder=""
-                )
+                # #  BACIAS HIDROGRÁFICAS -----------------------
+                # col1, col2, col3 = st.columns(3)
 
-                #  QUILOMBOS -----------------------
-                quilombos_selecionados = col2.multiselect(
-                    "Quilombos",
-                    options=list(quilombo_codigo_para_label.values()),
-                    placeholder=""
-                )
+                # bacias_macro_sel = col1.multiselect(
+                #     "Bacias Hidrográficas - Macro",
+                #     options=list(bacia_macro_codigo_para_label.values()),
+                #     placeholder=""
+                # )
 
-                #  BACIAS HIDROGRÁFICAS -----------------------
-                col1, col2, col3 = st.columns(3)
+                # bacias_meso_sel = col2.multiselect(
+                #     "Bacias Hidrográficas - Meso",
+                #     options=list(bacia_meso_codigo_para_label.values()),
+                #     placeholder=""
+                # )
 
-                bacias_macro_sel = col1.multiselect(
-                    "Bacias Hidrográficas - Macro",
-                    options=list(bacia_macro_codigo_para_label.values()),
-                    placeholder=""
-                )
-
-                bacias_meso_sel = col2.multiselect(
-                    "Bacias Hidrográficas - Meso",
-                    options=list(bacia_meso_codigo_para_label.values()),
-                    placeholder=""
-                )
-
-                bacias_micro_sel = col3.multiselect(
-                    "Bacias Hidrográficas - Micro",
-                    options=list(bacia_micro_codigo_para_label.values()),
-                    placeholder=""
-                )
+                # bacias_micro_sel = col3.multiselect(
+                #     "Bacias Hidrográficas - Micro",
+                #     options=list(bacia_micro_codigo_para_label.values()),
+                #     placeholder=""
+                # )
 
                 st.write('')
 
@@ -549,11 +556,11 @@ with tab_projeto:
                         "Data de Fim": data_fim_contrato,
                         # "Valor do Contrato": valor_contrato,
                         "Padrinho/Madrinha": padrinho,
-                        "Responsável": responsavel,
+                        # "Responsável": responsavel,
                         "Temas": temas,
                         "Públicos": publicos,
-                        "Latitude": latitude,
-                        "Longitude": longitude,
+                        # "Latitude": latitude,
+                        # "Longitude": longitude,
                         "Estados (UF)": ufs_selecionadas,
                         "Municípios": municipios_selecionadas
                     }
@@ -566,23 +573,42 @@ with tab_projeto:
                         expand_passo_1 = True
                     else:
 
-                        # --- Validar unicidade de sigla e código ---
-                        sigla_existente = (
-                            False if df_projetos.empty or "sigla_projeto" not in df_projetos.columns 
-                            else (df_projetos["sigla_projeto"] == sigla_projeto).any()
-                        )
-
-                        codigo_existente = (
-                            False if df_projetos.empty or "codigo_projeto" not in df_projetos.columns
-                            else (df_projetos["codigo_projeto"] == codigo_projeto).any()
-                        )
-
+                        # --- Validar unicidade de sigla e código diretamente no MongoDB ---
+                        sigla_existente = col_projetos.find_one({"sigla": sigla_projeto})
+                        codigo_existente = col_projetos.find_one({"codigo": codigo_projeto})
 
                         if sigla_existente:
                             st.warning(f"A sigla '{sigla_projeto}' já está cadastrada em outro projeto.")
                         elif codigo_existente:
                             st.warning(f"O código '{codigo_projeto}' já está cadastrado em outro projeto.")
                         else:
+
+
+
+
+
+
+                        # # --- Validar unicidade de sigla e código ---
+                        # sigla_existente = (
+                        #     False if df_projetos.empty or "sigla_projeto" not in df_projetos.columns 
+                        #     else (df_projetos["sigla_projeto"] == sigla_projeto).any()
+                        # )
+
+                        # codigo_existente = (
+                        #     False if df_projetos.empty or "codigo_projeto" not in df_projetos.columns
+                        #     else (df_projetos["codigo_projeto"] == codigo_projeto).any()
+                        # )
+
+
+                        # if sigla_existente:
+                        #     st.warning(f"A sigla '{sigla_projeto}' já está cadastrada em outro projeto.")
+                        # elif codigo_existente:
+                        #     st.warning(f"O código '{codigo_projeto}' já está cadastrado em outro projeto.")
+                        # else:
+
+
+
+
                             # --- Criar ObjectIds ---
                             projeto_id = bson.ObjectId()
 
@@ -601,13 +627,13 @@ with tab_projeto:
                                 ("uf", ufs_selecionadas, uf_codigo_para_label),
                                 ("municipio", municipios_selecionadas, municipios_codigo_para_label),
                                 # ("bioma", biomas_selecionados, biomas_codigo_para_label),
-                                ("terra_indigena", tis_selecionadas, ti_codigo_para_label),
-                                ("uc", ucs_selecionadas, uc_codigo_para_label),
-                                ("assentamento", assentamentos_selecionados, assent_codigo_para_label),
-                                ("quilombo", quilombos_selecionados, quilombo_codigo_para_label),
-                                ("bacia_micro", bacias_micro_sel, bacia_micro_codigo_para_label),
-                                ("bacia_meso", bacias_meso_sel, bacia_meso_codigo_para_label),
-                                ("bacia_macro", bacias_macro_sel, bacia_macro_codigo_para_label),
+                                # ("terra_indigena", tis_selecionadas, ti_codigo_para_label),
+                                # ("uc", ucs_selecionadas, uc_codigo_para_label),
+                                # ("assentamento", assentamentos_selecionados, assent_codigo_para_label),
+                                # ("quilombo", quilombos_selecionados, quilombo_codigo_para_label),
+                                # ("bacia_micro", bacias_micro_sel, bacia_micro_codigo_para_label),
+                                # ("bacia_meso", bacias_meso_sel, bacia_meso_codigo_para_label),
+                                # ("bacia_macro", bacias_macro_sel, bacia_macro_codigo_para_label),
                             ]:
                                 for item in selecionados:
                                     codigo_atuacao = get_codigo_por_label(dicionario, item)
@@ -763,160 +789,314 @@ with tab_projeto:
             cadastrar_parcelas(col_projetos)
 
 
-
-
-
-
     # PASSO 3: Cadastro de Locais ---------------------------------------
     with st.expander("**Passo 3: Locais**", expanded=st.session_state.expand_locais):
 
-        # Inicializando a variável session_state.cadastrando_locais
-        if 'cadastrando_locais' not in st.session_state:
-            st.session_state['cadastrando_locais'] = None                                                                                                                                                                                                                                  
+        # Inicializa variáveis de estado
+        if "cadastrando_locais" not in st.session_state:
+            st.session_state["cadastrando_locais"] = None
 
-        # Se não preencheu o passo 2, dá um aviso        
-        if st.session_state.cadastrando_parcelas != 'Finalizado':
+        # Bloqueia se o passo 2 não foi concluído
+        if st.session_state.cadastrando_parcelas != "Finalizado":
             st.warning("Conclua o passo 2 antes de prosseguir para o passo 3.")
-
-        # Se preecheu o passo 2, segue para o passo 3
         else:
+
             @st.fragment
             def cadastrar_locais(colecao):
+                if st.session_state.get("cadastrando_locais") != "Finalizado":
+                    st.write("**Cadastre as localidades em que o projeto irá atuar**")
+                    st.write("Você pode cadastrar vários locais.")
 
-                # Se session_state.cadastrando_locais existir e for diferente de 'finalizado', mostra o formulário
-                if 'cadastrando_locais' in st.session_state and st.session_state['cadastrando_locais'] != 'Finalizado':
+                    # Escolha do tipo de cadastro
+                    opcao_local = st.radio(
+                        "",
+                        ("Inserir link do Google Maps", "Inserir Latitude e Longitude"),
+                        key="opcao_local",
+                    )
 
-                    st.write('**Cadastre as localidades em que o projeto irá atuar**')
-
-                    # lista_locais = []  # Lista para armazenar os locais
-
-
-                    # Formulário de locais
-
-                    opcao_local = st.radio("", ("Inserir link do Google Maps", "Inserir Latitude e Logitude"), key="local")
-
-                    nome_local = st.text_input("Nome do local")
-
-
+                    # FORM 1 — Google Maps
                     if opcao_local == "Inserir link do Google Maps":
-                        link_google_maps = st.text_input("Link do Google Maps")
+                        with st.form("form_google_maps", clear_on_submit=True):
+                            nome_local = st.text_input("Nome do local")
+                            link_google_maps = st.text_input("Link do Google Maps")
 
-                        def extrair_lat_long_google_maps(link):
-                            try:
-                                # Extrai a parte após o "@"
-                                coordenadas = link.split("@")[1].split(",")
-                                latitude = coordenadas[0]
-                                longitude = coordenadas[1]
-                                return latitude, longitude
-                            except (IndexError, AttributeError):
-                                return None, None
-
-
-                        # Extrai a latitude e longitude do link do google maps
-                        latitude, longitude = extrair_lat_long_google_maps(link_google_maps)
-
-                        with st.container(horizontal=True):
-
-                            # Botão para salvar o local do google maps
-                            if st.button("Salvar local", key="local_google_maps", type="primary", icon=":material/save:"):
-                                # Salva o local no banco de dados, atualizando o documento que tem o código == st.session_state.cadastrando_projeto_codigo. Deve criar a chave locais (uma lista de dicionários) e adicionar o novo local
-                                colecao.update_one(
-                                    {"codigo": st.session_state.cadastrando_projeto_codigo},
-                                    {"$push": {"locais": {"nome": nome_local, "latitude": latitude, "longitude": longitude}}}
-                                )
-
-                                st.success("Local cadastrado com sucesso!")
-                                # time.sleep(3)
-                                # st.rerun()
-
-                            if st.button("Finalizar cadastro de locais", key="finalizar_locais_google_maps", type="secondary", icon=":material/check:"):
-                                st.session_state.cadastrando_locais = 'Finalizado'
-                                st.session_state.expand_locais = False
-                                st.session_state.expand_contatos = True
-                                st.success("Cadastro de locais concluido!")
-                                time.sleep(3)
-                                st.rerun(
+                            submit = st.form_submit_button(
+                                "Salvar local", icon=":material/save:", type="primary"
                             )
 
+                            if submit:
+                                def extrair_lat_long_google_maps(link):
+                                    try:
+                                        coordenadas = link.split("@")[1].split(",")
+                                        latitude = coordenadas[0]
+                                        longitude = coordenadas[1]
+                                        return latitude, longitude
+                                    except (IndexError, AttributeError):
+                                        return None, None
 
-                    elif opcao_local == "Inserir Latitude e Logitude":
-                        latitude = st.text_input("Latitude (exemplo: -23.5505)")
-                        longitude = st.text_input("Longitude (exemplo: -46.6333)")
+                                latitude, longitude = extrair_lat_long_google_maps(link_google_maps)
 
-                        # Regex para validar número decimal (aceita sinal e ponto)
-                        regex_decimal = r"^-?\d+(\.\d+)?$"
-
-                        # Função para validar formato numérico
-                        def validar_formato(valor):
-                            return bool(re.match(regex_decimal, valor.strip()))
-
-                        # Função para validar intervalo geográfico
-                        def validar_intervalo(lat, lon):
-                            try:
-                                lat = float(lat)
-                                lon = float(lon)
-                                return -90 <= lat <= 90 and -180 <= lon <= 180
-                            except ValueError:
-                                return False
-
-                        # Botão para salvar o local pela coordenada
-                        with st.container(horizontal=True):
-
-                            if st.button("Salvar local", type="primary", icon=":material/save:"):
-
-                                # Etapa 1 — Validação de preenchimento
                                 if not nome_local or not latitude or not longitude:
-                                    st.warning("⚠️ Preencha todos os campos antes de salvar.")
+                                    st.warning("⚠️ Preencha corretamente o nome e o link do Google Maps.")
                                 else:
-                                    erro = False
+                                    colecao.update_one(
+                                        {"codigo": st.session_state.cadastrando_projeto_codigo},
+                                        {"$push": {
+                                            "locais": {
+                                                "nome": nome_local.strip(),
+                                                "latitude": latitude,
+                                                "longitude": longitude
+                                            }
+                                        }},
+                                        upsert=True
+                                    )
+                                    st.success(":material/check: Local cadastrado com sucesso!")
 
-                                    # Etapa 2 — Validação de formato
-                                    if not validar_formato(latitude):
-                                        st.error("❌ Latitude inválida. Use apenas números e ponto decimal (ex: -23.5505)")
-                                        erro = True
-                                    if not validar_formato(longitude):
-                                        st.error("❌ Longitude inválida. Use apenas números e ponto decimal (ex: -46.6333)")
-                                        erro = True
+                        # Botão de finalizar
+                        if st.button("Finalizar cadastro de locais", key="finalizar_google", type="secondary", icon=":material/check:"):
+                            st.session_state.cadastrando_locais = "Finalizado"
+                            st.session_state.expand_locais = False
+                            st.session_state.expand_contatos = True
+                            st.success("Cadastro de locais concluído!")
+                            time.sleep(2)
+                            st.rerun()
 
-                                    # Etapa 3 — Validação de intervalo geográfico
-                                    if not erro and not validar_intervalo(latitude, longitude):
-                                        st.error("❌ Coordenadas fora do intervalo válido (-90 ≤ lat ≤ 90, -180 ≤ lon ≤ 180)")
-                                        erro = True
+                    # FORM 2 — Latitude e Longitude
+                    elif opcao_local == "Inserir Latitude e Longitude":
+                        with st.form("form_lat_lon", clear_on_submit=True):
+                            nome_local = st.text_input("Nome do local")
+                            latitude = st.text_input("Latitude (exemplo: -23.5505)")
+                            longitude = st.text_input("Longitude (exemplo: -46.6333)")
 
-                                    # Etapa 4 — Se tudo estiver ok, salvar no banco
-                                    if not erro:
-                                        try:
-                                            colecao.update_one(
-                                                {"codigo": st.session_state.cadastrando_projeto_codigo},
-                                                {"$push": {
-                                                    "locais": {
-                                                        "nome": nome_local.strip(),
-                                                        "latitude": latitude,
-                                                        "longitude": longitude
-                                                    }
-                                                }},
-                                                upsert=True  # cria o documento se não existir
-                                            )
-
-                                            st.success("Local salvo com sucesso!")
-
-                                        except Exception as e:
-                                            st.error(f"❌ Erro ao salvar no banco de dados: {e}")
-
-                            if st.button("Finalizar cadastro de locais", key="finalizar_locais_lat_long", type="secondary", icon=":material/check:"):
-                                st.session_state.cadastrando_locais = 'Finalizado'
-                                st.session_state.expand_locais = False
-                                st.session_state.expand_contatos = True
-                                st.success("Cadastro de locais concluido!")
-                                time.sleep(3)
-                                st.rerun(
+                            submit = st.form_submit_button(
+                                "Salvar local", icon=":material/save:", type="primary"
                             )
+
+                            if submit:
+                                erro = False
+                                regex_decimal = r"^-?\d+(\.\d+)?$"
+
+                                def validar_formato(valor):
+                                    return bool(re.match(regex_decimal, valor.strip()))
+
+                                def validar_intervalo(lat, lon):
+                                    try:
+                                        lat = float(lat)
+                                        lon = float(lon)
+                                        return -90 <= lat <= 90 and -180 <= lon <= 180
+                                    except ValueError:
+                                        return False
+
+                                # Etapa 1 — Validação
+                                if not nome_local or not latitude or not longitude:
+                                    st.warning("Preencha todos os campos antes de salvar.")
+                                    erro = True
+                                elif not validar_formato(latitude) or not validar_formato(longitude):
+                                    st.error("Use apenas números e ponto decimal.")
+                                    erro = True
+                                elif not validar_intervalo(latitude, longitude):
+                                    st.error("Coordenadas fora do intervalo válido.")
+                                    erro = True
+
+                                if not erro:
+                                    colecao.update_one(
+                                        {"codigo": st.session_state.cadastrando_projeto_codigo},
+                                        {"$push": {
+                                            "locais": {
+                                                "nome": nome_local.strip(),
+                                                "latitude": latitude,
+                                                "longitude": longitude
+                                            }
+                                        }},
+                                        upsert=True
+                                    )
+                                    st.success(":material/check: Local salvo com sucesso!")
+
+                        # Botão de finalizar
+                        if st.button("Finalizar cadastro de locais", key="finalizar_lat_lon", type="secondary", icon=":material/check:"):
+                            st.session_state.cadastrando_locais = "Finalizado"
+                            st.session_state.expand_locais = False
+                            st.session_state.expand_contatos = True
+                            st.success("Cadastro de locais concluído!")
+                            time.sleep(2)
+                            st.rerun()
 
                 else:
-                    st.success("Locais cadastrados com sucesso!.")
+                    st.success("✅ Locais cadastrados com sucesso!")
 
-
+            # Chama o fragment
             cadastrar_locais(col_projetos)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # # PASSO 3: Cadastro de Locais ---------------------------------------
+    # with st.expander("**Passo 3: Locais**", expanded=st.session_state.expand_locais):
+
+    #     # Inicializando a variável session_state.cadastrando_locais
+    #     if 'cadastrando_locais' not in st.session_state:
+    #         st.session_state['cadastrando_locais'] = None                                                                                                                                                                                                                                  
+
+    #     # Se não preencheu o passo 2, dá um aviso        
+    #     if st.session_state.cadastrando_parcelas != 'Finalizado':
+    #         st.warning("Conclua o passo 2 antes de prosseguir para o passo 3.")
+
+    #     # Se preecheu o passo 2, segue para o passo 3
+    #     else:
+    #         @st.fragment
+    #         def cadastrar_locais(colecao):
+
+    #             # Se session_state.cadastrando_locais existir e for diferente de 'finalizado', mostra o formulário
+    #             if 'cadastrando_locais' in st.session_state and st.session_state['cadastrando_locais'] != 'Finalizado':
+
+    #                 st.write('**Cadastre as localidades em que o projeto irá atuar**')
+
+    #                 # lista_locais = []  # Lista para armazenar os locais
+
+
+    #                 # Formulário de locais
+
+    #                 opcao_local = st.radio("", ("Inserir link do Google Maps", "Inserir Latitude e Logitude"), key="local")
+
+    #                 nome_local = st.text_input("Nome do local")
+
+
+    #                 if opcao_local == "Inserir link do Google Maps":
+
+    #                     link_google_maps = st.text_input("Link do Google Maps")
+
+    #                     def extrair_lat_long_google_maps(link):
+    #                         try:
+    #                             # Extrai a parte após o "@"
+    #                             coordenadas = link.split("@")[1].split(",")
+    #                             latitude = coordenadas[0]
+    #                             longitude = coordenadas[1]
+    #                             return latitude, longitude
+    #                         except (IndexError, AttributeError):
+    #                             return None, None
+
+
+    #                     # Extrai a latitude e longitude do link do google maps
+    #                     latitude, longitude = extrair_lat_long_google_maps(link_google_maps)
+
+    #                     with st.container(horizontal=True):
+
+    #                         # Botão para salvar o local do google maps
+    #                         if st.button("Salvar local", key="local_google_maps", type="primary", icon=":material/save:"):
+    #                             # Salva o local no banco de dados, atualizando o documento que tem o código == st.session_state.cadastrando_projeto_codigo. Deve criar a chave locais (uma lista de dicionários) e adicionar o novo local
+    #                             colecao.update_one(
+    #                                 {"codigo": st.session_state.cadastrando_projeto_codigo},
+    #                                 {"$push": {"locais": {"nome": nome_local, "latitude": latitude, "longitude": longitude}}}
+    #                             )
+
+    #                             st.success("Local cadastrado com sucesso!")
+    #                             # time.sleep(3)
+    #                             # st.rerun()
+
+    #                         if st.button("Finalizar cadastro de locais", key="finalizar_locais_google_maps", type="secondary", icon=":material/check:"):
+    #                             st.session_state.cadastrando_locais = 'Finalizado'
+    #                             st.session_state.expand_locais = False
+    #                             st.session_state.expand_contatos = True
+    #                             st.success("Cadastro de locais concluido!")
+    #                             time.sleep(3)
+    #                             st.rerun(
+    #                         )
+
+
+    #                 elif opcao_local == "Inserir Latitude e Logitude":
+    #                     latitude = st.text_input("Latitude (exemplo: -23.5505)")
+    #                     longitude = st.text_input("Longitude (exemplo: -46.6333)")
+
+    #                     # Regex para validar número decimal (aceita sinal e ponto)
+    #                     regex_decimal = r"^-?\d+(\.\d+)?$"
+
+    #                     # Função para validar formato numérico
+    #                     def validar_formato(valor):
+    #                         return bool(re.match(regex_decimal, valor.strip()))
+
+    #                     # Função para validar intervalo geográfico
+    #                     def validar_intervalo(lat, lon):
+    #                         try:
+    #                             lat = float(lat)
+    #                             lon = float(lon)
+    #                             return -90 <= lat <= 90 and -180 <= lon <= 180
+    #                         except ValueError:
+    #                             return False
+
+    #                     # Botão para salvar o local pela coordenada
+    #                     with st.container(horizontal=True):
+
+    #                         if st.button("Salvar local", type="primary", icon=":material/save:"):
+
+    #                             # Etapa 1 — Validação de preenchimento
+    #                             if not nome_local or not latitude or not longitude:
+    #                                 st.warning("⚠️ Preencha todos os campos antes de salvar.")
+    #                             else:
+    #                                 erro = False
+
+    #                                 # Etapa 2 — Validação de formato
+    #                                 if not validar_formato(latitude):
+    #                                     st.error("❌ Latitude inválida. Use apenas números e ponto decimal (ex: -23.5505)")
+    #                                     erro = True
+    #                                 if not validar_formato(longitude):
+    #                                     st.error("❌ Longitude inválida. Use apenas números e ponto decimal (ex: -46.6333)")
+    #                                     erro = True
+
+    #                                 # Etapa 3 — Validação de intervalo geográfico
+    #                                 if not erro and not validar_intervalo(latitude, longitude):
+    #                                     st.error("❌ Coordenadas fora do intervalo válido (-90 ≤ lat ≤ 90, -180 ≤ lon ≤ 180)")
+    #                                     erro = True
+
+    #                                 # Etapa 4 — Se tudo estiver ok, salvar no banco
+    #                                 if not erro:
+    #                                     try:
+    #                                         colecao.update_one(
+    #                                             {"codigo": st.session_state.cadastrando_projeto_codigo},
+    #                                             {"$push": {
+    #                                                 "locais": {
+    #                                                     "nome": nome_local.strip(),
+    #                                                     "latitude": latitude,
+    #                                                     "longitude": longitude
+    #                                                 }
+    #                                             }},
+    #                                             upsert=True  # cria o documento se não existir
+    #                                         )
+
+    #                                         st.success("Local salvo com sucesso!")
+
+    #                                     except Exception as e:
+    #                                         st.error(f"❌ Erro ao salvar no banco de dados: {e}")
+
+    #                         if st.button("Finalizar cadastro de locais", key="finalizar_locais_lat_long", type="secondary", icon=":material/check:"):
+    #                             st.session_state.cadastrando_locais = 'Finalizado'
+    #                             st.session_state.expand_locais = False
+    #                             st.session_state.expand_contatos = True
+    #                             st.success("Cadastro de locais concluido!")
+    #                             time.sleep(3)
+    #                             st.rerun(
+    #                         )
+
+    #             else:
+    #                 st.success("Locais cadastrados com sucesso!.")
+
+
+    #         cadastrar_locais(col_projetos)
 
 
 
