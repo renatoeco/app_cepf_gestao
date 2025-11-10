@@ -100,8 +100,6 @@ df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
-# Define o layout da página como largura total
-st.set_page_config(layout="wide")
 
 # Logo do sidebar
 st.logo("images/cepf_logo.png", size='large')

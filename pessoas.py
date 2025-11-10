@@ -133,6 +133,8 @@ def editar_pessoa(_id: str):
 ###########################################################################################################
 
 
+# Logo do sidebar
+st.logo("images/cepf_logo.png", size='large')
 
 st.header('Pessoas')
 
@@ -215,9 +217,7 @@ with aba_beneficiarios:
 
     # Separando só os beneficiários
     df_benef = df_pessoas[
-        df_pessoas["Tipo de usuário"].apply(
-            lambda tipos: isinstance(tipos, list) and any(t in tipos for t in ["beneficiario"])
-        )
+        df_pessoas["Tipo de usuário"] == "beneficiario"
     ]
 
     st.write('')
@@ -271,23 +271,11 @@ with aba_beneficiarios:
         col4.write(row["Telefone"])
 
 
-        # TIPO DE USUARIO -----------------
-        # Tratando a coluna Tipo de usuário
-        tipo_usuario = str(row.get("Tipo de usuário", ""))
-
-        # Garante que é uma lista de strings legíveis
-        if isinstance(tipo_usuario, list):
-            tipos = [str(t).strip() for t in tipo_usuario if str(t).strip()]
-        else:
-            tipos = []
+        # TIPO DE USUÁRIO -----------------
+        tipo_usuario = str(row.get("Tipo de usuário", "")).strip()
 
         # Exibição
-        if not tipos:
-            col5.write("")  # ou "" se quiser vazio
-        elif len(tipos) == 1:
-            col5.write(tipos[0])
-        else:
-            col5.write(", ".join(tipos))
+        col5.write(tipo_usuario)
 
 
         # STATUS -----------------       

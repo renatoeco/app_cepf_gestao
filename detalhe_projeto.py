@@ -1,19 +1,19 @@
-import streamlit as st
+# import streamlit as st
 
 
-st.write(st.session_state)
+# st.write(st.session_state)
 
-# Recupera a sigla da sessão
-sigla = st.session_state.get("sigla_atual", "Desconhecido")
+# # Recupera a sigla da sessão
+# sigla = st.session_state.get("sigla_atual", "Desconhecido")
 
-st.title(f"Detalhes do projeto {sigla}")
+# st.title(f"Detalhes do projeto {sigla}")
 
 
 
-with st.sidebar:
-    st.write(f"Projeto selecionado: {sigla}")
+# with st.sidebar:
+#     st.write(f"Projeto selecionado: {sigla}")
 
-    st.write('teste 555')
+#     st.write('teste 555')
 
 
 

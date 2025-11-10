@@ -25,8 +25,7 @@ db = conectar_mongo_cepf_gestao()
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
-# Define o layout da página como largura total
-st.set_page_config(layout="wide")
+
 
 # Logo do sidebar
 st.logo("images/cepf_logo.png", size='large')
@@ -35,6 +34,29 @@ st.logo("images/cepf_logo.png", size='large')
 st.header(f"Projeto {st.session_state.projeto_atual}")
 
 
-if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
-    st.session_state.pagina_atual = 'home_admin'
-    st.rerun()
+# ???????????????????????
+# st.write(st.session_state)
+
+
+
+
+# Botão de voltar para a home_interna só para admin, monitor e visitante
+if st.session_state.tipo_usuario in ['admin', 'monitor', 'visitante']:
+
+    if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+        
+        if st.session_state.tipo_usuario == 'admin':
+            st.session_state.pagina_atual = 'home_admin'
+            st.rerun()
+
+        elif st.session_state.tipo_usuario == 'monitor':
+            st.session_state.pagina_atual = 'home_monitor'
+            st.rerun()
+
+
+# Botão de voltar para a ben_selec_projeto só beneficiario
+if st.session_state.tipo_usuario == 'beneficiario':
+    if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+        st.session_state.pagina_atual = 'ben_selec_projeto'
+        st.session_state.projeto_atual = None
+        st.rerun()

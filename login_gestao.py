@@ -341,12 +341,12 @@ else:
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
             st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/group:"),
         ],
-        "beneficiario": [
-            st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
-            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
+        "ben_selec_projeto": [
+            st.Page("ben_selec_projeto.py", title="Selecione o projeto", icon=":material/assignment:"),
+            # st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+            # st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+            # st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+            # st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
         ],
         "visitante": [
             st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
@@ -370,7 +370,7 @@ else:
     # tipo_usuario = set(st.session_state.get("tipo_usuario", []))
     tipo_usuario = st.session_state.get("tipo_usuario", "")
 
-
+    # ROTEAMENTO DO ADMIN ---------------------------------
     if tipo_usuario == "admin":
         
         # Página inicial do admin 
@@ -388,6 +388,68 @@ else:
         # Admin visita projetos
         elif st.session_state.pagina_atual == "ver_projeto":
             pages = pags_por_tipo["ver_projeto"]
+
+
+
+
+    # ROTEAMENTO DO MONITOR ---------------------------------
+    elif tipo_usuario == "monitor":
+        
+        # Primeira execução: 
+        # se pagina_atual == None, a pagina atual será home_monitor
+        if st.session_state.pagina_atual is None:
+            st.session_state.pagina_atual = "home_monitor"
+
+        # Demais execuções
+        # Home do monitor
+        if st.session_state.pagina_atual == "home_monitor":
+            pages = pags_por_tipo["home_monitor"]
+
+        # Monitor visita projetos
+        elif st.session_state.pagina_atual == "ver_projeto":
+            pages = pags_por_tipo["ver_projeto"]
+
+
+
+
+    # ROTEAMENTO DO BENEFICIÁRIO ---------------------------------
+    elif tipo_usuario == "beneficiario":
+
+        projetos = st.session_state.get("projetos", [])
+
+        # Primeira execução: 
+        # se pagina_atual == None, a pagina atual dependerá se o beneficiário tem mais de um projeto
+        if st.session_state.pagina_atual is None:
+
+            # ????????????????????
+            # st.write(st.session_state)
+            
+            # Verifica quantos projetos o beneficiário tem
+            
+            if len(projetos) == 1:
+                st.session_state.pagina_atual = "ver_projeto"
+
+            else:
+                st.session_state.pagina_atual = "ben_selec_projeto"
+
+
+        # Demais execuções
+        # Beneficiário tem apenas um projeto
+
+        if st.session_state.pagina_atual == "ver_projeto":
+            # Só define o projeto atual se ainda não tiver sido escolhido
+            if not st.session_state.get("projeto_atual"):
+                st.session_state.projeto_atual = projetos[0]
+
+            pages = pags_por_tipo["ver_projeto"]
+
+
+        # Beneficiário tem mais de um projeto
+        elif st.session_state.pagina_atual == "ben_selec_projeto":
+            pages = pags_por_tipo["ben_selec_projeto"]
+
+
+
 
 
     # Cria e executa a navegação
