@@ -54,9 +54,13 @@ if st.session_state.tipo_usuario in ['admin', 'monitor', 'visitante']:
             st.rerun()
 
 
-# Botão de voltar para a ben_selec_projeto só beneficiario
-if st.session_state.tipo_usuario == 'beneficiario':
+# Botão de voltar para beneficiário — apenas se tiver mais de um projeto
+if (
+    st.session_state.get("tipo_usuario") == "beneficiario"
+    and len(st.session_state.get("projetos", [])) > 1
+):
     if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
-        st.session_state.pagina_atual = 'ben_selec_projeto'
+        st.session_state.pagina_atual = "ben_selec_projeto"
         st.session_state.projeto_atual = None
         st.rerun()
+
