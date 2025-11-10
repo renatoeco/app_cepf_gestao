@@ -55,7 +55,6 @@ except locale.Error:
 
 
 
-
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
@@ -94,17 +93,6 @@ df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
 
 
 
-###########################################################################################################
-# INTERFACE PRINCIPAL DA PÁGINA
-###########################################################################################################
-
-# Roteamento da página
-
-
-
-st.session_state.pagina_atual = 'novo_projeto'
-
-
 
 
 
@@ -123,11 +111,7 @@ st.header("Novo projeto")
 
 
 
-
-
-
-
-
+# ABAS
 
 tab_organizacao, tab_projeto = st.tabs(["Cadastrar Organização", "Cadastrar Projeto"])
 
@@ -274,13 +258,6 @@ with tab_projeto:
     dados_bacias_meso = carregar_bacias_meso()
     dados_bacias_micro = carregar_bacias_micro()
 
-    # dados_biomas = carregar_biomas()
-    # # Remover linha "Sistema Costeiro" e ordenar alfabeticamente
-    # dados_biomas = (
-    #     dados_biomas[dados_biomas["name_biome"] != "Sistema Costeiro"]
-    #     .sort_values(by="name_biome", ascending=True)
-    #     .reset_index(drop=True)
-    # )
 
     # --- Padronizar nomes das colunas das bacias ---
     dados_bacias_macro = dados_bacias_macro.rename(columns={"cd_macroRH": "codigo", "nm_macroRH": "nome"})

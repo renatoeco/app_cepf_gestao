@@ -32,8 +32,9 @@ st.set_page_config(layout="wide")
 st.logo("images/cepf_logo.png", size='large')
 
 # Título da página
-# st.header("Meus projetos")
+st.header(f"Projeto {st.session_state.projeto_atual}")
 
-with st.sidebar:
-    st.write("## Meus projetos")
 
+if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+    st.session_state.pagina_atual = 'home_admin'
+    st.rerun()

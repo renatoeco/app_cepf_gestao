@@ -5,7 +5,6 @@ import pandas as pd
 import datetime
 import locale
 
-
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################
@@ -148,9 +147,6 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 
 
 
-
-
-
 ###########################################################################################################
 # TRATAMENTO DE DADOS   
 ###########################################################################################################
@@ -180,14 +176,6 @@ df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
 )
 
 
-# ??????????????????????????
-# st.write(df_projetos)
-st.session_state.nome = "Renato Araujo"
-# st.write(st.session_state)
-
-
-
-
 
 
 ###########################################################################################################
@@ -208,10 +196,7 @@ st.write('')
 
 
 
-import streamlit as st
-import pandas as pd
-import datetime
-import plotly.express as px
+
 
 # ============================================
 # SELEÇÃO DO EDITAL
@@ -238,10 +223,12 @@ if ver_meus_projetos:
 if df_filtrado.empty:
     st.warning(f'Nenhum projeto cadastrado com o padrinho/madrinha {st.session_state.nome}.')
 else:
+
     # ============================================
     # ABAS
     # ============================================
     tab1, tab2 = st.tabs(["Visão geral", "Projetos"])
+
 
     # ============================================
     # ABA 1: VISÃO GERAL
@@ -262,8 +249,6 @@ else:
             projetos_atrasados = df_filtrado[
                 (df_filtrado['edital'] == edital_selecionado) & (df_filtrado['status'] == 'Atrasado')
             ]
-
-
 
             if not projetos_atrasados.empty:
                 projetos_atrasados = projetos_atrasados.copy()
@@ -361,21 +346,13 @@ else:
 
         st.plotly_chart(fig)
 
+
+
+
     # ============================================
     # ABA 2: PROJETOS (tabela com colunas + botão)
     # ============================================
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
+      
    
     with tab2:
 
@@ -412,12 +389,12 @@ else:
 
 
             # Botão para ver projeto
-            # Botão
             if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
 
-                st.session_state.pagina_atual = f"projeto_{projeto['codigo']}"
-                st.write(f"Você clicou em Ver projeto: {projeto['codigo']} - {projeto['sigla']}")
+                st.session_state.pagina_atual = "ver_projeto"
+                st.session_state.projeto_atual = f"{projeto['codigo']}"
 
+                st.rerun()
 
         st.write(st.session_state)
 

@@ -15,19 +15,28 @@ db = conectar_mongo_cepf_gestao()
 
 # Pessoas
 col_pessoas = db["pessoas"]
-df_pessoas = pd.DataFrame(list(col_pessoas.find()))
-# Converte objectId para string
-df_pessoas['_id'] = df_pessoas['_id'].astype(str)
-# Drop coluna
-df_pessoas = df_pessoas.drop(columns=['senha'])
+
+
+
+###########################################################################################################
+# TRATAMENTO DOS DADOS
+###########################################################################################################
+
+# Busca todos os documentos, mas exclui o campo "senha"
+df_pessoas = pd.DataFrame(list(col_pessoas.find({}, {"senha": 0})))
+
+# Converte ObjectId para string
+df_pessoas["_id"] = df_pessoas["_id"].astype(str)
+
 # Renomeia as colunas
-df_pessoas = df_pessoas.rename(columns={'nome_completo': 'Nome',
-                                        'tipo_usuario': 'Tipo de usuário',
-                                        'e_mail': 'E-mail',
-                                        'telefone': 'Telefone',
-                                        'status': 'Status',
-                                        'projetos': 'Projetos'
-                                      })
+df_pessoas = df_pessoas.rename(columns={
+    "nome_completo": "Nome",
+    "tipo_usuario": "Tipo de usuário",
+    "e_mail": "E-mail",
+    "telefone": "Telefone",
+    "status": "Status",
+    "projetos": "Projetos"
+})
 
 
 # Projetos
@@ -64,24 +73,25 @@ def editar_pessoa(_id: str):
     telefone = st.text_input("Telefone", value=pessoa.get("telefone", ""))
 
 
-    # tipo_usuario  --------------
-    tipo_usuario_raw = pessoa.get("tipo_usuario", [])
+    # tipo_usuario --------------
+    tipo_usuario_raw = pessoa.get("tipo_usuario", "")
 
+    # Compatibilidade: se ainda for lista no banco, pega o primeiro valor
     if isinstance(tipo_usuario_raw, list):
-        # já é uma lista — só normaliza espaços e garante que são strings
-        tipo_usuario_default = [str(t).strip() for t in tipo_usuario_raw if str(t).strip()]
+        tipo_usuario_default = tipo_usuario_raw[0] if tipo_usuario_raw else ""
     elif isinstance(tipo_usuario_raw, str):
-        # caso raro: veio como string separada por vírgulas
-        tipo_usuario_default = [t.strip() for t in tipo_usuario_raw.split(",") if t.strip()]
+        tipo_usuario_default = tipo_usuario_raw.strip()
     else:
-        tipo_usuario_default = []
+        tipo_usuario_default = ""
 
-    tipo_usuario = st.multiselect(
+    # Campo de seleção único
+    tipo_usuario = st.selectbox(
         "Tipo de usuário",
         options=["admin", "monitor", "beneficiario", "visitante"],
-        default=tipo_usuario_default
+        index=["admin", "monitor", "beneficiario", "visitante"].index(tipo_usuario_default)
+        if tipo_usuario_default in ["admin", "monitor", "beneficiario", "visitante"]
+        else 0
     )
-    # -----------
 
     status = st.selectbox(
         "Status",
@@ -123,6 +133,7 @@ def editar_pessoa(_id: str):
 ###########################################################################################################
 
 
+
 st.header('Pessoas')
 
 st.write('')
@@ -133,13 +144,8 @@ with aba_equipe:
 
     # Separando só os monitores e administradores
     df_equipe = df_pessoas[
-        df_pessoas["Tipo de usuário"].apply(
-            lambda tipos: isinstance(tipos, list) and any(t in tipos for t in ["admin", "monitor"])
-        )
+        df_pessoas["Tipo de usuário"].isin(["admin", "monitor"])
     ]
-
-    # Reordenando as colunas
-    # df_equipe = df_equipe[['_id', 'Projetos', 'Nome', 'E-mail', 'Telefone','Tipo de usuário', 'Status']]
 
 
     st.write('')
@@ -192,25 +198,10 @@ with aba_equipe:
         # TELEFONE -----------------
         col4.write(row["Telefone"])
 
+        # TIPO DE USUÁRIO -----------------
+        tipo_usuario = row.get("Tipo de usuário", "").strip()
 
-        # TIPO DE USUARIO -----------------
-        # Tratando a coluna Tipo de usuário, que pode ter múltiplos valores
-        tipo_usuario = row.get("Tipo de usuário", [])
-
-        # Garante que é uma lista de strings legíveis
-        if isinstance(tipo_usuario, list):
-            tipos = [str(t).strip() for t in tipo_usuario if str(t).strip()]
-        else:
-            tipos = []
-
-        # Exibição
-        if not tipos:
-            col5.write("")  # ou "" se quiser vazio
-        elif len(tipos) == 1:
-            col5.write(tipos[0])
-        else:
-            col5.write(", ".join(tipos))
-
+        col5.write(tipo_usuario)
 
         # STATUS -----------------       
         col6.write(row["Status"])
@@ -228,10 +219,6 @@ with aba_beneficiarios:
             lambda tipos: isinstance(tipos, list) and any(t in tipos for t in ["beneficiario"])
         )
     ]
-
-    # Reordenando as colunas
-    # df_benef = df_benef[['_id', 'Projetos', 'Nome', 'E-mail', 'Telefone','Tipo de usuário', 'Status']]
-
 
     st.write('')
 
@@ -285,8 +272,8 @@ with aba_beneficiarios:
 
 
         # TIPO DE USUARIO -----------------
-        # Tratando a coluna Tipo de usuário, que pode ter múltiplos valores
-        tipo_usuario = row.get("Tipo de usuário", [])
+        # Tratando a coluna Tipo de usuário
+        tipo_usuario = str(row.get("Tipo de usuário", ""))
 
         # Garante que é uma lista de strings legíveis
         if isinstance(tipo_usuario, list):

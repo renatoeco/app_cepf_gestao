@@ -26,12 +26,12 @@ db = conectar_mongo_cepf_gestao()
 ###########################################################################################################
 
 # Define o layout da página como largura total
-# st.set_page_config(layout="wide")
+st.set_page_config(layout="wide")
 
 # Logo do sidebar
 st.logo("images/cepf_logo.png", size='large')
 
 # Título da página
-st.header("Mapa de projetos")
+st.header("Administração")
 
 

@@ -25,6 +25,9 @@ db = conectar_mongo_cepf_gestao()
 col_pessoas = db["pessoas"]
 
 
+
+
+
 ##############################################################################################################
 # FUNÇÕES AUXILIARES
 ##############################################################################################################
@@ -268,7 +271,8 @@ def login():
     
                                 st.stop()
 
-                            tipo_usuario = usuario_encontrado.get("tipo_usuario", [])
+                            # tipo_usuario = usuario_encontrado.get("tipo_usuario", [])
+                            tipo_usuario = usuario_encontrado.get("tipo_usuario", "")
 
 
                             # Autentica
@@ -303,232 +307,90 @@ def login():
 # EXECUÇÃO PRINCIPAL: VERIFICA LOGIN E NAVEGA ENTRE PÁGINAS
 ##############################################################################################################
 
+# Verifica se está logado
 
-
-
-
-
-
-# Caminho base do app
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-import streamlit as st
-
-def set_pagina_inicial(tipo_usuario):
-    if "admin" in tipo_usuario:
-        return "dashboard_admin"
-    elif "monitor" in tipo_usuario:
-        return "painel_monitor"
-    elif "beneficiario" in tipo_usuario:
-        return None  # Beneficiário não precisa de página inicial específica
-    return None
-
-# Login
+# Não logado:
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login()  # Mostra tela de login
+
+
+# Logado:
 else:
+
+    # Define as páginas disponíveis para cada tipo de usuário
+    pags_por_tipo = {
+        "home_admin": [
+            st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
+            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
+            st.Page("administracao.py", title="Administração", icon=":material/admin_panel_settings:")
+        ],
+        "home_monitor": [
+            st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
+            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
+        ],
+        "ver_projeto": [
+            st.Page("projeto_visao_geral.py", title="Visão geral", icon=":material/assignment:"),
+            st.Page("projeto_atividades.py", title="Atividades", icon=":material/add_circle:"),
+            st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/campaign:"),
+            st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
+            st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/group:"),
+        ],
+        "beneficiario": [
+            st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
+            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
+        ],
+        "visitante": [
+            st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
+            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+        ]
+    }
+
+
     # Inicializa a página atual se não existir
     if "pagina_atual" not in st.session_state:
         st.session_state.pagina_atual = None
 
+    # Inicializa a projeto atual se não existir
+    if "projeto_atual" not in st.session_state:
+        st.session_state.projeto_atual = None
+
+# ????????????????
+    # st.write(st.session_state)
+
     # Garante que tipo_usuario existe
-    tipo_usuario = set(st.session_state.get("tipo_usuario", []))
+    # tipo_usuario = set(st.session_state.get("tipo_usuario", []))
+    tipo_usuario = st.session_state.get("tipo_usuario", "")
 
-    # Define as páginas disponíveis para cada tipo de usuário
-    pags_por_tipo = {
-        "admin": [
-            st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
-            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-        ],
-        "monitor": [
-            st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
-            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-        ],
-        "beneficiario": [
-            st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
-            st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-            st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-            st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-        ],
-    }
 
-    # Define a página inicial se ainda não houver
-    if st.session_state.pagina_atual is None:
-        st.session_state.pagina_atual = set_pagina_inicial(tipo_usuario)
+    if tipo_usuario == "admin":
+        
+        # Página inicial do admin 
 
-    # Seleciona as páginas de acordo com o tipo de usuário
-    if "admin" in tipo_usuario:
-        pages = pags_por_tipo["admin"]
-    elif "monitor" in tipo_usuario:
-        pages = pags_por_tipo["monitor"]
-    elif "beneficiario" in tipo_usuario:
-        pages = pags_por_tipo["beneficiario"]
-    else:
-        st.error("Tipo de usuário não reconhecido.")
-        st.stop()
+        # Primeira execução: 
+        # se pagina_atual == None, a pagina atual será home_admin
+        if st.session_state.pagina_atual is None:
+            st.session_state.pagina_atual = "home_admin"
+
+        # Demais execuções
+        # Home do admin
+        if st.session_state.pagina_atual == "home_admin":
+            pages = pags_por_tipo["home_admin"]
+
+        # Admin visita projetos
+        elif st.session_state.pagina_atual == "ver_projeto":
+            pages = pags_por_tipo["ver_projeto"]
+
 
     # Cria e executa a navegação
     pg = st.navigation(pages)
     pg.run()
-
-    # Atualiza a página atual sempre que o usuário muda de aba
-    st.session_state.pagina_atual = pg.current_page
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # # Roteamento de usuários
-
-    # # Inicializa a página atual se não existir
-    # if "pagina_atual" not in st.session_state:
-    #     st.session_state.pagina_atual = None
-
-    # # Verifica o tipo de usuário
-    # tipo_usuario = set(st.session_state.tipo_usuario)
-
-    # if tipo_usuario & {"admin", "monitor"}:
-
-    #     # Define a página inicial
-    #     if st.session_state.pagina_atual is None:
-    #         st.session_state.pagina_atual = "painel_monitor"
-
-    #     if st.session_state.pagina_atual == "painel_monitor":
-
-    #         # Lista de páginas disponíveis para admins/monitores
-    #         pages = [
-    #             st.Page("projetos.py", title="Projetos", icon=":material/assignment:"),
-    #             st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-    #             st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-    #             st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-    #             st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-    #         ]
-
-    #         # Cria e executa a navegação
-    #         pg = st.navigation(pages)
-    #         pg.run()
-
-    # elif tipo_usuario & {"beneficiario"}:
-
-    #     # Lista de páginas disponíveis para beneficiários
-    #     pages = [
-    #         st.Page("meus_projetos.py", title="Meus Projetos", icon=":material/assignment:"),
-    #         st.Page("perfil.py", title="Perfil", icon=":material/account_circle:"),
-    #     ]
-
-    #     # Cria e executa a navegação
-    #     pg = st.navigation(pages)
-    #     pg.run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # # -------------------------------------------------------------------
-    # # BLOCO: Beneficiário
-    # # -------------------------------------------------------------------
-    # elif set(st.session_state.tipo_usuario) & {"beneficiario"}:
-    #     usuario_encontrado = col_pessoas.find_one({"_id": st.session_state["id_usuario"]})
-
-    #     projetos = usuario_encontrado.get("projetos", []) if usuario_encontrado else []
-    #     if not isinstance(projetos, list):
-    #         projetos = []
-
-    #     # Caminho base e pasta temporária
-    #     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    #     temp_dir = os.path.join(BASE_DIR, "temp_pages")
-
-    #     # 🔄 Remove e recria o diretório para garantir limpeza total
-    #     if os.path.exists(temp_dir):
-    #         shutil.rmtree(temp_dir)
-    #     os.makedirs(temp_dir, exist_ok=True)
-
-    #     # Caminho do arquivo base de detalhes
-    #     detalhe_path = os.path.join(BASE_DIR, "detalhe_projeto.py").replace("\\", "\\\\")
-
-    #     # Cria páginas temporárias para cada projeto
-    #     for sigla in projetos:
-    #         safe_sigla = sigla.replace(" ", "_").replace("/", "_").replace("\\", "_")
-    #         page_filename = f"detalhe_projeto_{safe_sigla}.py"
-    #         temp_path = os.path.join(temp_dir, page_filename)
-
-    #         # Escapa aspas e injeta a variável no session_state
-    #         sigla_escaped = sigla.replace("'", "\\'")
-    #         content = textwrap.dedent(f"""
-    #             import streamlit as st
-    #             st.session_state['sigla_atual'] = '{sigla_escaped}'
-    #             import runpy
-    #             runpy.run_path(r'{detalhe_path}', run_name='__main__')
-    #         """)
-
-    #         with open(temp_path, "w", encoding="utf-8") as f:
-    #             f.write(content)
-
-    #     # Cria as páginas no menu lateral
-    #     pages = []
-    #     for sigla in projetos:
-    #         safe_sigla = sigla.replace(" ", "_").replace("/", "_").replace("\\", "_")
-    #         page_filename = f"detalhe_projeto_{safe_sigla}.py"
-
-    #         pages.append(
-    #             st.Page(
-    #                 os.path.join("temp_pages", page_filename),
-    #                 title=f"{sigla}",
-    #                 icon=":material/folder:",
-    #             )
-    #         )
-
-    #     # Cria e executa o sistema de navegação
-    #     pg = st.navigation(pages)
-    #     pg.run()
-
-
-
-
-
-
-
-
-
-
-
-
-
 
