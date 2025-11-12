@@ -87,9 +87,9 @@ def editar_pessoa(_id: str):
     # Campo de seleção único
     tipo_usuario = st.selectbox(
         "Tipo de usuário",
-        options=["admin", "monitor", "beneficiario", "visitante"],
-        index=["admin", "monitor", "beneficiario", "visitante"].index(tipo_usuario_default)
-        if tipo_usuario_default in ["admin", "monitor", "beneficiario", "visitante"]
+        options=["admin", "equipe", "beneficiario", "visitante"],
+        index=["admin", "equipe", "beneficiario", "visitante"].index(tipo_usuario_default)
+        if tipo_usuario_default in ["admin", "equipe", "beneficiario", "visitante"]
         else 0
     )
 
@@ -144,9 +144,9 @@ aba_equipe, aba_beneficiarios = st.tabs(["Equipe", "Beneficiários"])
 
 with aba_equipe:
 
-    # Separando só os monitores e administradores
+    # Separando só a equipe e administradores
     df_equipe = df_pessoas[
-        df_pessoas["Tipo de usuário"].isin(["admin", "monitor"])
+        df_pessoas["Tipo de usuário"].isin(["admin", "equipe"])
     ]
 
 

@@ -40,8 +40,8 @@ st.header(f"Projeto {st.session_state.projeto_atual}")
 
 
 
-# Botão de voltar para a home_interna só para admin, monitor e visitante
-if st.session_state.tipo_usuario in ['admin', 'monitor', 'visitante']:
+# Botão de voltar para a home_interna só para admin, equipe e visitante
+if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
 
     if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
         
@@ -49,8 +49,8 @@ if st.session_state.tipo_usuario in ['admin', 'monitor', 'visitante']:
             st.session_state.pagina_atual = 'home_admin'
             st.rerun()
 
-        elif st.session_state.tipo_usuario == 'monitor':
-            st.session_state.pagina_atual = 'home_monitor'
+        elif st.session_state.tipo_usuario == 'equipe':
+            st.session_state.pagina_atual = 'home_equipe'
             st.rerun()
 
 

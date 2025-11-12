@@ -322,12 +322,12 @@ else:
         "home_admin": [
             st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
             st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-            st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
+            st.Page("novo_edital.py", title="Cadastrar edital", icon=":material/campaign:"),
             st.Page("mapa.py", title="Mapa", icon=":material/map:"),
             st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
             st.Page("administracao.py", title="Administração", icon=":material/admin_panel_settings:")
         ],
-        "home_monitor": [
+        "home_equipe": [
             st.Page("home_interna.py", title="Projetos", icon=":material/assignment:"),
             st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
             st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
@@ -392,20 +392,20 @@ else:
 
 
 
-    # ROTEAMENTO DO MONITOR ---------------------------------
-    elif tipo_usuario == "monitor":
+    # ROTEAMENTO DA EQUIPE ---------------------------------
+    elif tipo_usuario == "equipe":
         
         # Primeira execução: 
-        # se pagina_atual == None, a pagina atual será home_monitor
+        # se pagina_atual == None, a pagina atual será home_equipe
         if st.session_state.pagina_atual is None:
-            st.session_state.pagina_atual = "home_monitor"
+            st.session_state.pagina_atual = "home_equipe"
 
         # Demais execuções
-        # Home do monitor
-        if st.session_state.pagina_atual == "home_monitor":
-            pages = pags_por_tipo["home_monitor"]
+        # Home da equipe
+        if st.session_state.pagina_atual == "home_equipe":
+            pages = pags_por_tipo["home_equipe"]
 
-        # Monitor visita projetos
+        # Equipe visita projetos
         elif st.session_state.pagina_atual == "ver_projeto":
             pages = pags_por_tipo["ver_projeto"]
 

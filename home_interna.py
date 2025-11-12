@@ -291,7 +291,7 @@ else:
             st.write('')
 
             # ???????????????
-            st.write(df_filtrado)
+            # st.write(df_filtrado)
 
             projetos_atrasados = df_filtrado[
                 (df_filtrado['edital'] == edital_selecionado) & (df_filtrado['status'] == 'Atrasado')
@@ -313,7 +313,7 @@ else:
                 projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
                 st.dataframe(projetos_atrasados)
             else:
-                st.info("Não há projetos atrasados no momento.")
+                st.write("Não há projetos atrasados.")
 
         # Gráfico de pizza do status
         with col2:
@@ -339,7 +339,7 @@ else:
                 values=contagem_status,
                 color=status,
                 color_discrete_map=mapa_cores_status,
-                height=350
+                height=300
             )
             st.plotly_chart(fig)
 

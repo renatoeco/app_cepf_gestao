@@ -435,7 +435,7 @@ with tab_projeto:
                 # Filtrar nomes que contenham a palavra "monitor" na coluna tipo_usuario
                 # padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
                 # padrinhos = df_pessoas[df_pessoas["tipo_usuario"] == "monitor"]["nome_completo"].tolist()
-                padrinhos = df_pessoas[df_pessoas["tipo_usuario"].isin(["monitor", "admin"])]["nome_completo"].tolist()
+                padrinhos = df_pessoas[df_pessoas["tipo_usuario"].isin(["equipe", "admin"])]["nome_completo"].tolist()
 
                 # Selectbox com a lista filtrada
                 padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
@@ -583,28 +583,6 @@ with tab_projeto:
                             st.warning(f"O código '{codigo_projeto}' já está cadastrado em outro projeto.")
                         else:
 
-
-
-
-
-
-                        # # --- Validar unicidade de sigla e código ---
-                        # sigla_existente = (
-                        #     False if df_projetos.empty or "sigla_projeto" not in df_projetos.columns 
-                        #     else (df_projetos["sigla_projeto"] == sigla_projeto).any()
-                        # )
-
-                        # codigo_existente = (
-                        #     False if df_projetos.empty or "codigo_projeto" not in df_projetos.columns
-                        #     else (df_projetos["codigo_projeto"] == codigo_projeto).any()
-                        # )
-
-
-                        # if sigla_existente:
-                        #     st.warning(f"A sigla '{sigla_projeto}' já está cadastrada em outro projeto.")
-                        # elif codigo_existente:
-                        #     st.warning(f"O código '{codigo_projeto}' já está cadastrado em outro projeto.")
-                        # else:
 
 
 
