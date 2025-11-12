@@ -57,6 +57,79 @@ df_projetos['_id'] = df_projetos['_id'].astype(str)
 ###########################################################################################################
 
 
+# Diálogo para cadastrar uma nova pessoa
+@st.dialog("Cadastrar Pessoa", width="medium")
+def cadastrar_pessoa():
+    """Abre o diálogo para cadastrar uma nova pessoa"""
+
+    # Campos de entrada
+    nome = st.text_input("Nome completo")
+    email = st.text_input("E-mail")
+    telefone = st.text_input("Telefone")
+
+    # Tipo de usuário
+    tipo_usuario = st.selectbox(
+        "Tipo de usuário",
+        options=["admin", "equipe", "beneficiario", "visitante"]
+    )
+
+    # Tipo de beneficiário — só aparece se tipo_usuario == beneficiario
+    tipo_beneficiario = None
+    if tipo_usuario == "beneficiario":
+        tipo_beneficiario = st.selectbox(
+            "Tipo de beneficiário",
+            options=["técnico", "financeiro"]
+        )
+
+    # Status
+    status = st.selectbox(
+        "Status",
+        options=["ativo", "inativo"],
+        index=0
+    )
+
+    # Projetos — pode começar vazio
+    projetos = st.multiselect(
+        "Projetos",
+        options=df_projetos["sigla"].tolist()
+    )
+
+    st.write("")
+
+    # Botão de salvar
+    if st.button("Salvar pessoa", icon=":material/person_add:", type="primary"):
+        if not nome:
+            st.warning("⚠️ O campo **Nome completo** é obrigatório.")
+            return
+
+        # Montar documento base
+        doc = {
+            "_id": ObjectId(),
+            "nome_completo": nome.strip(),
+            "e_mail": email.strip(),
+            "telefone": telefone.strip(),
+            "tipo_usuario": tipo_usuario,
+            "status": status,
+            "projetos": projetos,
+        }
+
+        # Adiciona tipo_beneficiario se aplicável
+        if tipo_beneficiario:
+            doc["tipo_beneficiario"] = tipo_beneficiario
+
+        # Inserir no banco
+        col_pessoas.insert_one(doc)
+
+        st.success("Pessoa cadastrada com sucesso!")
+        time.sleep(2)
+        st.rerun()
+
+
+
+
+
+
+
 # Diálogo para editar uma pessoa
 @st.dialog("Editar Pessoa", width="medium")
 def editar_pessoa(_id: str):
@@ -134,90 +207,10 @@ def editar_pessoa(_id: str):
         col_pessoas.update_one({"_id": ObjectId(_id)}, {"$set": update_data})
 
         st.success("Pessoa atualizada com sucesso!")
-        time.sleep(1.5)
+        time.sleep(2)
         st.rerun()
 
 
-
-
-
-# # Diálogo para editar uma pessoa
-# @st.dialog("Editar Pessoa", width="medium")
-# def editar_pessoa(_id: str):
-#     """Abre o diálogo para editar uma pessoa"""
-    
-#     # Busca a pessoa no banco pelo _id
-#     pessoa = col_pessoas.find_one({"_id": ObjectId(_id)})
-#     if not pessoa:
-#         st.error("Pessoa não encontrada.")
-#         return
-
-#     # Inputs pré-carregados com os dados atuais
-
-#     nome = st.text_input("Nome", value=pessoa.get("nome_completo", ""))
-
-#     email = st.text_input("E-mail", value=pessoa.get("e_mail", ""))
-
-#     telefone = st.text_input("Telefone", value=pessoa.get("telefone", ""))
-
-
-#     # tipo_usuario --------------
-#     tipo_usuario_raw = pessoa.get("tipo_usuario", "")
-
-#     if isinstance(tipo_usuario_raw, str):
-#         tipo_usuario_default = tipo_usuario_raw.strip()
-#     else:
-#         tipo_usuario_default = ""
-
-#     # Campo de seleção único
-#     tipo_usuario = st.selectbox(
-#         "Tipo de usuário",
-#         options=["admin", "equipe", "beneficiario", "visitante"],
-#         index=["admin", "equipe", "beneficiario", "visitante"].index(tipo_usuario_default)
-#         if tipo_usuario_default in ["admin", "equipe", "beneficiario", "visitante"]
-#         else 0
-#     )
-
-#     # Se o tipo_usuario for beneficiario, pode ser técnico ou financeiro
-
-#     if tipo_usuario == "beneficiario":
-#         tipo_beneficiario = st.selectbox(
-#             "Tipo de beneficiário",
-#             options=["técnico", "financeiro"],
-#         )
-
-#     status = st.selectbox(
-#         "Status",
-#         options=["ativo", "inativo"],
-#         index=0 if pessoa.get("status", "ativo") == "ativo" else 1
-#     )
-
-#     projetos = st.multiselect(
-#         "Projetos",
-#         options=df_projetos["sigla"].tolist(),
-#         default=pessoa.get("projetos", []),
-#     )
-
-#     st.write('')
-
-#     # Botão de salvar ---------
-#     if st.button("Salvar alterações", icon=":material/save:"):
-#         # Atualiza o registro no MongoDB
-#         col_pessoas.update_one(
-#             {"_id": ObjectId(_id)},
-#             {"$set": {
-#                 "nome_completo": nome,
-#                 "e_mail": email,
-#                 "telefone": telefone,
-#                 "tipo_usuario": tipo_usuario,
-#                 "status": status,
-#                 "projetos": projetos
-#             }}
-#         )
-
-#         st.success("Pessoa atualizada com sucesso!")
-#         time.sleep(3)
-#         st.rerun() 
 
 
 
@@ -233,6 +226,8 @@ st.header('Pessoas')
 
 st.write('')
 
+
+# ABAS
 aba_equipe, aba_beneficiarios, aba_visitantes = st.tabs(["Equipe", "Beneficiários", "Visitantes"])
 
 with aba_equipe:
