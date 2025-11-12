@@ -435,10 +435,10 @@ with tab_projeto:
                 # Filtrar nomes que contenham a palavra "monitor" na coluna tipo_usuario
                 # padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
                 # padrinhos = df_pessoas[df_pessoas["tipo_usuario"] == "monitor"]["nome_completo"].tolist()
-                padrinhos = df_pessoas[df_pessoas["tipo_usuario"].isin(["equipe", "admin"])]["nome_completo"].tolist()
+                # padrinhos = df_pessoas[df_pessoas["tipo_usuario"].isin(["equipe", "admin"])]["nome_completo"].tolist()
 
                 # Selectbox com a lista filtrada
-                padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
+                # padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
 
                 # Responsável
                 responsiveis = df_pessoas[df_pessoas['tipo_usuario'].str.contains("beneficiario", case=False, na=False)]['nome_completo'].tolist()
@@ -555,7 +555,7 @@ with tab_projeto:
                         "Data de Início": data_inicio_contrato,
                         "Data de Fim": data_fim_contrato,
                         # "Valor do Contrato": valor_contrato,
-                        "Padrinho/Madrinha": padrinho,
+                        # "Padrinho/Madrinha": padrinho,
                         # "Responsável": responsavel,
                         "Temas": temas,
                         "Públicos": publicos,
@@ -634,7 +634,7 @@ with tab_projeto:
                                 "data_fim_contrato": data_fim_contrato.strftime("%d/%m/%Y"),
                                 # "valor": valor_contrato,
                                 # "valor_da_contrapartida_em_r$": float_to_br(contrapartida),
-                                "padrinho": padrinho,
+                                # "padrinho": padrinho,
                                 "responsavel": responsavel,
                                 "temas": temas,
                                 "publicos": publicos,
