@@ -329,7 +329,7 @@ else:
             ],
             "Editais": [
                 st.Page("editais_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("novo_edital_chamada.py", title="Edital / Chamada", icon=":material/add_circle:"),
+                st.Page("gerenciar_editais.py", title="Gerenciar", icon=":material/settings:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
 
@@ -359,7 +359,7 @@ else:
             ],
             "Editais": [
                 st.Page("editais_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("novo_edital_chamada.py", title="Edital / Chamada", icon=":material/add_circle:"),
+                st.Page("gerenciar_editais.py", title="Edital / Chamada", icon=":material/settings:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
 
