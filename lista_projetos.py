@@ -22,10 +22,9 @@ df_pessoas = pd.DataFrame(list(col_pessoas.find()))
 col_projetos = db["projetos"]
 df_projetos = pd.DataFrame(list(col_projetos.find()))
 
-# Editais
-col_editais = db["editais"]
-df_editais = pd.DataFrame(list(col_editais.find()))
-
+# Chamadas
+col_chamadas = db["chamadas"]
+df_chamadas = pd.DataFrame(list(col_chamadas.find()))
 
 
 ###########################################################################################################
@@ -195,57 +194,99 @@ st.write('')
 
 
 # ============================================
-# SELEÇÃO DO EDITAL
+# SELEÇÃO DA CHAMADA
 # ============================================
 
-# Lista de editais disponíveis
-lista_editais = df_editais['codigo_edital'].tolist()
+# Lista de chamadas disponíveis
+lista_chamadas = sorted(df_chamadas['codigo_chamada'].unique().tolist())
 
-# Seletor de edital
-edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
-# st.write('')
+# Adiciona "Todas" no início
+lista_chamadas = ["Todas"] + lista_chamadas
+
+# Selectbox de chamada
+chamada_selecionada = st.selectbox("Selecione a chamada", lista_chamadas, width=300)
 
 
-# Nome do edital selecionado
-nome_edital = df_editais.loc[
-    df_editais["codigo_edital"] == edital_selecionado, "nome_edital"
-].values[0]
-st.subheader(f'{edital_selecionado} - {nome_edital}')
+# TÍTULO + TOGGLE no mesmo container
 
-# Toggle para ver somente os projetos do usuário logado
-with st.container(horizontal=True, horizontal_alignment="right"):
-    ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
+with st.container(horizontal=True):
+    
+    # Colunas lado a lado dentro do container
+    col_titulo, col_toggle = st.columns([4, 1])
+
+    # --- TÍTULO ---
+    with col_titulo:
+        if chamada_selecionada == "Todas":
+            st.subheader("Todas as chamadas")
+        else:
+            nome_chamada = df_chamadas.loc[
+                df_chamadas["codigo_chamada"] == chamada_selecionada,
+                "nome_chamada"
+            ].values[0]
+
+            st.subheader(f"{chamada_selecionada} — {nome_chamada}")
+
+    # --- TOGGLE ---
+    with col_toggle:
+        st.write('')
+        ver_meus_projetos = st.toggle(
+            "Ver somente os meus projetos",
+            False,
+        )
+
+
+
+
+
+# # Título
+# if chamada_selecionada == "Todas":
+#     st.subheader("Todas as chamadas")
+# else:
+#     nome_chamada = df_chamadas.loc[
+#         df_chamadas["codigo_chamada"] == chamada_selecionada, "nome_chamada"
+#     ].values[0]
+
+#     st.subheader(f"{chamada_selecionada} — {nome_chamada}")
+
+
+# # ============================================
+# # TOGGLE "Ver somente meus projetos"
+# # ============================================
+
+# with st.container(horizontal=True, horizontal_alignment="right"):
+#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
 
 
 # ============================================
-# FILTRO PRINCIPAL DE EDITAL
+# FILTRO PRINCIPAL
 # ============================================
 
-# Base: todos os projetos
 df_filtrado = df_projetos.copy()
 
-# Filtrar pelo edital selecionado
-df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
+# Filtrar pela chamada selecionada
+if chamada_selecionada != "Todas":
+    df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
 
-# Se o toggle estiver ativo, filtra apenas os projetos do padrinho/madrinha logado
+# Filtrar somente os projetos do padrinho logado
 if ver_meus_projetos:
     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
 
-# Caso não existam projetos após o filtro
+
+# Se nenhum projeto encontrado
 if df_filtrado.empty:
-    st.warning(f"Nenhum projeto encontrado para o edital **{edital_selecionado}**.")
+    st.divider()
+    st.warning("Nenhum projeto encontrado.")
     st.stop()
 
 
-# ============================================
-# INTERFACE
-# ============================================
 
+# ============================================
+# INTERFACE - LISTAGEM DE PROJETOS
+# ============================================
 
 st.divider()
 
-
-larguras_colunas = [1, 2, 5, 2, 2, 2, 2]  # Código, Sigla, Organização, Padrinho, Próxima parcela, Status, Botão
+larguras_colunas = [1, 2, 5, 2, 2, 2, 2]
 col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
 
 # Cabeçalhos
@@ -254,9 +295,15 @@ for i, label in enumerate(col_labels):
     cols[i].markdown(f"**{label}**")
 st.write('')
 
-# Linhas de projetos
+
+# --------------------------------------------
+# Listagem linha por linha
+# --------------------------------------------
+
 for index, projeto in df_filtrado.iterrows():
+    
     cols = st.columns(larguras_colunas)
+
     cols[0].write(projeto['codigo'])
     cols[1].write(projeto['sigla'])
     cols[2].write(projeto['organizacao'])
@@ -264,25 +311,126 @@ for index, projeto in df_filtrado.iterrows():
 
     # Próxima parcela
     prox_parcela = ""
-    parcelas = projeto.get('parcelas', [])
-    if isinstance(parcelas, list) and len(parcelas) > 0:
-        parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get('parcela', 0))
+    parcelas = projeto.get("parcelas", [])
+    if isinstance(parcelas, list) and parcelas:
+        parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get("parcela", 0))
         for p in parcelas_ordenadas:
-            if 'data_parcela_realizada' not in p:
-                prox_parcela = p.get('parcela')
+            if "data_parcela_realizada" not in p:
+                prox_parcela = p.get("parcela")
                 break
+
     cols[4].write(str(prox_parcela))
 
     # Status
-    cols[5].write(projeto.get('status', ""))
+    cols[5].write(projeto.get("status", ""))
 
-
-    # Botão para ver projeto
+    # Botão “Ver projeto”
     if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
-
         st.session_state.pagina_atual = "ver_projeto"
-        st.session_state.projeto_atual = f"{projeto['codigo']}"
-
+        st.session_state.projeto_atual = projeto["codigo"]
         st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # ============================================
+# # SELEÇÃO DO EDITAL
+# # ============================================
+
+# # Lista de editais disponíveis
+# lista_editais = df_editais['codigo_edital'].tolist()
+
+# # Seletor de edital
+# edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
+# # st.write('')
+
+
+# # Nome do edital selecionado
+# nome_edital = df_editais.loc[
+#     df_editais["codigo_edital"] == edital_selecionado, "nome_edital"
+# ].values[0]
+# st.subheader(f'{edital_selecionado} - {nome_edital}')
+
+# # Toggle para ver somente os projetos do usuário logado
+# with st.container(horizontal=True, horizontal_alignment="right"):
+#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
+
+
+# # ============================================
+# # FILTRO PRINCIPAL DE EDITAL
+# # ============================================
+
+# # Base: todos os projetos
+# df_filtrado = df_projetos.copy()
+
+# # Filtrar pelo edital selecionado
+# df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
+
+# # Se o toggle estiver ativo, filtra apenas os projetos do padrinho/madrinha logado
+# if ver_meus_projetos:
+#     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
+
+# # Caso não existam projetos após o filtro
+# if df_filtrado.empty:
+#     st.warning(f"Nenhum projeto encontrado para o edital **{edital_selecionado}**.")
+#     st.stop()
+
+
+# # ============================================
+# # INTERFACE
+# # ============================================
+
+
+# st.divider()
+
+
+# larguras_colunas = [1, 2, 5, 2, 2, 2, 2]  # Código, Sigla, Organização, Padrinho, Próxima parcela, Status, Botão
+# col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
+
+# # Cabeçalhos
+# cols = st.columns(larguras_colunas)
+# for i, label in enumerate(col_labels):
+#     cols[i].markdown(f"**{label}**")
+# st.write('')
+
+# # Linhas de projetos
+# for index, projeto in df_filtrado.iterrows():
+#     cols = st.columns(larguras_colunas)
+#     cols[0].write(projeto['codigo'])
+#     cols[1].write(projeto['sigla'])
+#     cols[2].write(projeto['organizacao'])
+#     cols[3].write(projeto['padrinho'])
+
+#     # Próxima parcela
+#     prox_parcela = ""
+#     parcelas = projeto.get('parcelas', [])
+#     if isinstance(parcelas, list) and len(parcelas) > 0:
+#         parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get('parcela', 0))
+#         for p in parcelas_ordenadas:
+#             if 'data_parcela_realizada' not in p:
+#                 prox_parcela = p.get('parcela')
+#                 break
+#     cols[4].write(str(prox_parcela))
+
+#     # Status
+#     cols[5].write(projeto.get('status', ""))
+
+
+#     # Botão para ver projeto
+#     if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
+
+#         st.session_state.pagina_atual = "ver_projeto"
+#         st.session_state.projeto_atual = f"{projeto['codigo']}"
+
+#         st.rerun()
 
 

@@ -22,10 +22,6 @@ df_pessoas = pd.DataFrame(list(col_pessoas.find()))
 col_projetos = db["projetos"]
 df_projetos = pd.DataFrame(list(col_projetos.find()))
 
-# Editais
-col_editais = db["editais"]
-df_editais = pd.DataFrame(list(col_editais.find()))
-
 # Chamadas
 col_chamadas = db["chamadas"]
 df_chamadas = pd.DataFrame(list(col_chamadas.find()))
@@ -213,37 +209,99 @@ chamada_selecionada = st.selectbox("Selecione a chamada", lista_chamadas, width=
 # ???????????
 # st.write(df_projetos)
 
+
+# ============================================
+# FILTRO PRINCIPAL DE PROJETOS
+# ============================================
+
 # Base: todos os projetos
 df_filtrado = df_projetos.copy()
 
-# Filtrar pela chamada somente se NÃO for "Todas"
-if chamada_selecionada != "Todas":
+# ============================================
+# TÍTULO + TOGGLE NO MESMO CONTAINER
+# ============================================
+
+with st.container(horizontal=True):
     
-    # Nome do edital
-    nome_chamada = df_chamadas.loc[
-        df_chamadas["codigo_chamada"] == chamada_selecionada, "nome_chamada"
-    ].values[0]
+    col_titulo, col_toggle = st.columns([4, 1])
 
-    st.subheader(f'{chamada_selecionada} - {nome_chamada}')
+    # --- TÍTULO ---
+    with col_titulo:
+        if chamada_selecionada == "Todas":
+            st.subheader("Todas as chamadas")
+        else:
+            nome_chamada = df_chamadas.loc[
+                df_chamadas["codigo_chamada"] == chamada_selecionada,
+                "nome_chamada"
+            ].values[0]
 
+            st.subheader(f"{chamada_selecionada} — {nome_chamada}")
+
+    # --- TOGGLE ---
+    with col_toggle:
+        st.write('')
+        ver_meus_projetos = st.toggle(
+            "Ver somente os meus projetos",
+            False,
+        )
+
+# ============================================
+# APLICAÇÃO DOS FILTROS
+# ============================================
+
+# Filtrar pela chamada apenas se NÃO for "Todas"
+if chamada_selecionada != "Todas":
     df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
 
-else:
-    st.subheader("Todas as chamadas")
-
-# Toggle para ver somente os projetos do usuário logado
-with st.container(horizontal=True, horizontal_alignment="right"):
-    ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
-
-# Filtra apenas projetos do padrinho/madrinha logado
+# Filtrar apenas os projetos do padrinho/madrinha logado
 if ver_meus_projetos:
     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
 
-# Caso não existam projetos após o filtro
+# Caso não existam projetos após os filtros
 if df_filtrado.empty:
     st.divider()
     st.warning("Nenhum projeto encontrado.")
     st.stop()
+
+
+
+
+
+
+
+
+
+# # Base: todos os projetos
+# df_filtrado = df_projetos.copy()
+
+# # Filtrar pela chamada somente se NÃO for "Todas"
+# if chamada_selecionada != "Todas":
+    
+#     # Nome do edital
+#     nome_chamada = df_chamadas.loc[
+#         df_chamadas["codigo_chamada"] == chamada_selecionada, "nome_chamada"
+#     ].values[0]
+
+#     st.subheader(f'{chamada_selecionada} - {nome_chamada}')
+
+#     df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
+
+# else:
+#     st.subheader("Todas as chamadas")
+
+# # Toggle para ver somente os projetos do usuário logado
+# with st.container(horizontal=True, horizontal_alignment="right"):
+#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
+
+# # Filtra apenas projetos do padrinho/madrinha logado
+# if ver_meus_projetos:
+#     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
+
+# # Caso não existam projetos após o filtro
+# if df_filtrado.empty:
+#     st.divider()
+#     st.warning("Nenhum projeto encontrado.")
+#     st.stop()
 
 
 
