@@ -26,6 +26,10 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
 
+# Chamadas
+col_chamadas = db["chamadas"]
+df_chamadas = pd.DataFrame(list(col_chamadas.find()))
+
 
 
 ###########################################################################################################
@@ -193,96 +197,201 @@ st.header("Projetos")
 st.write('')
 
 
+# ============================================
+# SELEÇÃO DA CHAMADA
+# ============================================
+
+
+lista_chamadas = ["Todas"] + df_chamadas['codigo_chamada'].tolist()
+chamada_selecionada = st.selectbox("Selecione a chamada", lista_chamadas, width=300)
+
 
 # ============================================
-# SELEÇÃO DO EDITAL
+# FILTRO PRINCIPAL DE PROJETOS
 # ============================================
 
-# Lista de editais disponíveis
-lista_editais = df_editais['codigo_edital'].tolist()
+# ???????????
+# st.write(df_projetos)
 
-# Seletor de edital
-edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
-# st.write('')
+# Base: todos os projetos
+df_filtrado = df_projetos.copy()
 
+# Filtrar pela chamada somente se NÃO for "Todas"
+if chamada_selecionada != "Todas":
+    
+    # Nome do edital
+    nome_chamada = df_chamadas.loc[
+        df_chamadas["codigo_chamada"] == chamada_selecionada, "nome_chamada"
+    ].values[0]
 
-# Nome do edital selecionado
-nome_edital = df_editais.loc[
-    df_editais["codigo_edital"] == edital_selecionado, "nome_edital"
-].values[0]
-st.subheader(f'{edital_selecionado} - {nome_edital}')
+    st.subheader(f'{chamada_selecionada} - {nome_chamada}')
+
+    df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
+
+else:
+    st.subheader("Todas as chamadas")
 
 # Toggle para ver somente os projetos do usuário logado
 with st.container(horizontal=True, horizontal_alignment="right"):
     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
 
-
-# ============================================
-# FILTRO PRINCIPAL DE EDITAL
-# ============================================
-
-# Base: todos os projetos
-df_filtrado = df_projetos.copy()
-
-# Filtrar pelo edital selecionado
-df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
-
-# Se o toggle estiver ativo, filtra apenas os projetos do padrinho/madrinha logado
+# Filtra apenas projetos do padrinho/madrinha logado
 if ver_meus_projetos:
     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
 
 # Caso não existam projetos após o filtro
 if df_filtrado.empty:
-    st.warning(f"Nenhum projeto encontrado para o edital **{edital_selecionado}**.")
+    st.divider()
+    st.warning("Nenhum projeto encontrado.")
     st.stop()
 
 
-# ============================================
-# INTERFACE
-# ============================================
+
+else:
+
+    # ============================================
+    # INTERFACE
+    # ============================================
 
 
-st.divider()
+    st.divider()
 
 
-larguras_colunas = [1, 2, 5, 2, 2, 2, 2]  # Código, Sigla, Organização, Padrinho, Próxima parcela, Status, Botão
-col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
 
-# Cabeçalhos
-cols = st.columns(larguras_colunas)
-for i, label in enumerate(col_labels):
-    cols[i].markdown(f"**{label}**")
-st.write('')
-
-# Linhas de projetos
-for index, projeto in df_filtrado.iterrows():
-    cols = st.columns(larguras_colunas)
-    cols[0].write(projeto['codigo'])
-    cols[1].write(projeto['sigla'])
-    cols[2].write(projeto['organizacao'])
-    cols[3].write(projeto['padrinho'])
-
-    # Próxima parcela
-    prox_parcela = ""
-    parcelas = projeto.get('parcelas', [])
-    if isinstance(parcelas, list) and len(parcelas) > 0:
-        parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get('parcela', 0))
-        for p in parcelas_ordenadas:
-            if 'data_parcela_realizada' not in p:
-                prox_parcela = p.get('parcela')
-                break
-    cols[4].write(str(prox_parcela))
-
-    # Status
-    cols[5].write(projeto.get('status', ""))
+    col1, col2, col3 = st.columns([1, 6, 3], gap="large")
 
 
-    # Botão para ver projeto
-    if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
+    # Contagem de projetos no edital selecionado
 
-        st.session_state.pagina_atual = "ver_projeto"
-        st.session_state.projeto_atual = f"{projeto['codigo']}"
+    with col1:
+        if chamada_selecionada == "Todas":
+            total_projetos = len(df_filtrado)
+        else:
+            total_projetos = len(df_filtrado[df_filtrado['chamada'] == chamada_selecionada])
 
-        st.rerun()
+        st.metric("Projetos", total_projetos)
+
+        # st.metric("Projetos", len(df_filtrado[df_filtrado['edital'] == chamada_selecionada]))
+        st.write('')
+
+
+    # Lista de projetos atrasados
+    with col2:
+        st.write('**Projetos atrasados**')
+        st.write('')
+
+        # ???????????????
+        # st.write(df_filtrado)
+
+        if chamada_selecionada == "Todas":
+            projetos_atrasados = df_filtrado[df_filtrado['status'] == 'Atrasado']
+        else:
+            projetos_atrasados = df_filtrado[
+                (df_filtrado['chamada'] == chamada_selecionada) &
+                (df_filtrado['status'] == 'Atrasado')
+            ]
+
+
+        if not projetos_atrasados.empty:
+            projetos_atrasados = projetos_atrasados.copy()
+            projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso'] * -1
+            projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'chamada', 'dias_atraso']]
+            projetos_atrasados = projetos_atrasados.rename(columns={
+                'codigo': 'Código',
+                'sigla': 'Sigla',
+                'padrinho': 'Padrinho/Madrinha',
+                'dias_atraso': 'Dias de atraso',
+                'chamada': 'Chamada'
+            })
+
+
+
+            projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
+            st.dataframe(projetos_atrasados)
+        else:
+            st.write("Não há projetos atrasados.")
+
+    # Gráfico de pizza do status
+    with col3:
+        st.write('**Status dos projetos**')
+        
+        mapa_cores_status = {
+            'Concluído': '#74a7e4',   # Azul
+            'Em dia': '#aedddd',      # Verde
+            'Atrasado': '#ffbfb0',    # Vermelho
+            'Cancelado': '#bbb'       # Cinza
+        }
+
+        contagens = df_filtrado['status'].value_counts(dropna=True)
+        status = contagens.index.tolist()
+        contagem_status = contagens.values.tolist()
+
+
+        # status = df_filtrado['status'].unique().tolist()
+        # contagem_status = df_filtrado['status'].value_counts().tolist()
+
+        fig = px.pie(
+            names=status,
+            values=contagem_status,
+            color=status,
+            color_discrete_map=mapa_cores_status,
+            height=300
+        )
+        st.plotly_chart(fig)
+
+    # Cronograma de contratos
+    st.write("**Cronograma de contratos**")
+
+    df_filtrado_sorted = df_filtrado.sort_values(by='data_fim_contrato', ascending=False)
+
+    altura_base = 400
+    altura_extra = sum([10 / (1 + i * 0.01) for i in range(len(df_filtrado_sorted))])
+    altura = int(altura_base + altura_extra)
+
+    fig = px.timeline(
+        df_filtrado_sorted,
+        x_start='data_inicio_contrato_dtime',
+        x_end='data_fim_contrato_dtime',
+        y='codigo',
+        color='status',
+        color_discrete_map=mapa_cores_status,
+        height=altura,
+        labels={
+            'codigo': 'Projeto',
+            'data_inicio_contrato_dtime': 'Início',
+            'data_fim_contrato_dtime': 'Fim'
+        },
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            '<b>Projeto:</b> %{y}<br>' +
+            '<b>Início:</b> %{customdata[0]}<br>' +
+            '<b>Fim:</b> %{customdata[1]}<br>' +
+            '<extra></extra>'
+        ),
+        customdata=df_filtrado_sorted[['data_inicio_contrato', 'data_fim_contrato']].values
+    )
+
+    fig.add_vline(
+        x=datetime.datetime.today(),
+        line_width=2,
+        line_dash="dash",
+        line_color="red",
+    )
+
+    fig.update_layout(
+        showlegend=False,
+        yaxis=dict(title=None, side="right"),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            tickmode='linear',
+            dtick="M1",
+            tickformat="%m/%Y"
+        )
+    )
+
+    st.plotly_chart(fig)
 
 
