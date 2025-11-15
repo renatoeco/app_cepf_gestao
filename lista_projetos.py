@@ -286,7 +286,7 @@ if df_filtrado.empty:
 
 st.divider()
 
-larguras_colunas = [1, 2, 5, 2, 2, 2, 2]
+larguras_colunas = [2, 2, 5, 2, 2, 2, 2]
 col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
 
 # Cabeçalhos
