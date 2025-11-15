@@ -345,6 +345,7 @@ else:
                 st.Page("pessoas_cadastrar.py", title="Cadastrar pessoa", icon=":material/person_add:"),
             ],
             "Administração": [
+                st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
                 st.Page("relatorio_acessos.py", title="Relatório de acessos", icon=":material/bar_chart:"),
                 st.Page("relatorio_armazenamento.py", title="Armazenamento", icon=":material/home_storage:"),
             ],
