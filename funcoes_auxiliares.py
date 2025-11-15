@@ -1,20 +1,12 @@
 import streamlit as st
 from pymongo import MongoClient
-import time
-
-
-
-
-
-
-
 
 
 
 @st.cache_resource
 def conectar_mongo_cepf_gestao():
     # CONEXÃO LOCAL
-    cliente = MongoClient("mongodb://localhost:27017/")
+    cliente = MongoClient(st.secrets["senhas"]["senha_mongo_cepf_gestao"])
     db_cepf_gestao = cliente["cepf_gestao"] 
     return db_cepf_gestao
 
