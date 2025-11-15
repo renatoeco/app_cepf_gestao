@@ -336,7 +336,7 @@ else:
             ],
             "Organizações": [
                 st.Page("organizacoes_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("nova_organizacao.py", title="Cadastrar", icon=":material/add_business:"),
+                st.Page("nova_organizacao.py", title="Nova organização", icon=":material/add_business:"),
             ],
             "Pessoas": [
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
@@ -366,7 +366,7 @@ else:
             ],
             "Organizações": [
                 st.Page("organizacoes_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("nova_organizacao.py", title="Cadastrar", icon=":material/add_business:"),
+                st.Page("nova_organizacao.py", title="Nova organização", icon=":material/add_business:"),
             ],
             "Pessoas": [
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
