@@ -287,6 +287,10 @@ elif opcao_cadastro == "Convite em massa":
     if 'uploader_key' not in st.session_state:
         st.session_state['uploader_key'] = str(uuid.uuid4())
 
+    st.write('**Convite em massa disponível apenas para usuários(as) do tipo "beneficiário".**')
+
+    st.write('')
+
     st.write("Baixe aqui o modelo de tabela para convite em massa:")
 
     with open("modelos/modelo_convite_pessoas_em_massa.xlsx", "rb") as f:
