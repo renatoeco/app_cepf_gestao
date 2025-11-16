@@ -211,7 +211,8 @@ elif opcao_cadastro == "Cadastro em massa":
     arquivo = st.file_uploader(
         "Envie um arquivo XLSX preenchido para cadastrar múltiplas organizações:",
         type=["xlsx"],
-        key=st.session_state['uploader_key']
+        key=st.session_state['uploader_key'],
+        width=400
     )
 
 

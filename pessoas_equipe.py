@@ -153,7 +153,8 @@ st.logo("images/cepf_logo.png", size='large')
 
 st.header('Equipe')
 
-st.write('')
+# st.write('')
+st.divider()
 
 
 # Separando só a equipe e administradores

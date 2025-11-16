@@ -5,6 +5,11 @@ import locale
 import re
 import time
 import uuid
+import datetime
+import smtplib
+import random
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
@@ -26,25 +31,98 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 ###########################################################################################################
 
 
-# # CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS (Ajuste conforme seu SO)
-# try:
-#     # Tenta a configuração comum em sistemas Linux/macOS
-#     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-# except locale.Error:
-#     try:
-#         # Tenta a configuração comum em alguns sistemas Windows
-#         locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
-#     except locale.Error:
-#         # Se falhar, usa a configuração padrão (geralmente inglês)
-#         print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
-
-
-
 
 
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+def gerar_codigo_aleatorio():
+    """Gera um código numérico aleatório de 6 dígitos como string."""
+    return f"{random.randint(0, 999999):06d}"
+
+
+def enviar_email_convite(nome_completo, email_destino, codigo):
+    """
+    Envia um e-mail de convite com código de 6 dígitos usando credenciais do st.secrets.
+    Retorna True se enviado, False se falhou.
+    """
+    try:
+        smtp_server = st.secrets["senhas"]["smtp_server"]
+        port = st.secrets["senhas"]["port"]
+        endereco_email = st.secrets["senhas"]["endereco_email"]
+        senha_email = st.secrets["senhas"]["senha_email"]
+
+        msg = MIMEMultipart()
+        msg['From'] = endereco_email
+        msg['To'] = email_destino
+        msg['Subject'] = "Convite para a Plataforma CEPF"
+
+        corpo_html = f"""
+        <p>Olá {nome_completo},</p>
+        <p>Você foi convidado para utilizar a <strong>Plataforma de Gestão de Projetos do CEPF</strong>.</p>
+        <p>Para realizar seu cadastro, acesse o link abaixo e clique no botão <strong>"Primeiro acesso"</strong>:</p>
+        <p><a href="https://cepf-ieb.streamlit.app/">Acesse aqui a Plataforma</a></p>
+        <p>Insira o seu <strong>e-mail</strong> e o <strong>código</strong> que te enviamos abaixo:</p>
+        <h2>{codigo}</h2>
+        <p>Se tiver alguma dúvida, entre em contato com a equipe do CEPF.</p>
+        """
+        msg.attach(MIMEText(corpo_html, 'html'))
+
+        server = smtplib.SMTP(smtp_server, port)
+        server.starttls()
+        server.login(endereco_email, senha_email)
+        server.send_message(msg)
+        server.quit()
+
+        st.success(f":material/mail: E-mail de convite enviado para {email_destino}.")
+        return True
+    except Exception as e:
+        st.error(f"Erro ao enviar e-mail para {email_destino}: {e}")
+        return False
+
+
+
+
+# def enviar_email_convite(nome_completo, email_destino, codigo):
+#     """
+#     Envia um e-mail de convite com código de 6 dígitos usando credenciais do st.secrets.
+#     Retorna True se enviado, False se falhou.
+#     """
+#     try:
+#         smtp_server = st.secrets["senhas"]["smtp_server"]
+#         port = st.secrets["senhas"]["port"]
+#         endereco_email = st.secrets["senhas"]["endereco_email"]
+#         senha_email = st.secrets["senhas"]["senha_email"]
+
+#         msg = MIMEMultipart()
+#         msg['From'] = endereco_email
+#         msg['To'] = email_destino
+#         msg['Subject'] = "Convite para a Plataforma CEPF"
+
+#         corpo_html = f"""
+#         <p>Olá {nome_completo},</p>
+#         <p>Você foi convidado para utilizar a <strong>Plataforma de Gestão de Projetos do CEPF</strong>.</p>
+#         <p>Para realizar seu cadastro, acesse o link abaixo e clique no botão <strong>"Primeiro acesso"</strong>:</p>
+#         <p><a href="https://cepf-ieb.streamlit.app/">Acesse aqui a Plataforma</a></p>
+#         <p>Insira o seu e-mail e o código que te enviamos abaixo:</p>
+#         <h2>{codigo}</h2>
+#         <p>Se tiver alguma dúvida, entre em contato com a equipe do CEPF.</p>
+#         """
+#         msg.attach(MIMEText(corpo_html, 'html'))
+
+#         server = smtplib.SMTP(smtp_server, port)
+#         server.starttls()
+#         server.login(endereco_email, senha_email)
+#         server.send_message(msg)
+#         server.quit()
+
+#         return True
+#     except Exception as e:
+#         print(f"Erro ao enviar e-mail para {email_destino}: {e}")  # log no console
+#         return False
+
+
 
 
 
@@ -57,13 +135,6 @@ def df_index1(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-
-# def df_index1(df):
-#     df = df.copy().reset_index(drop=True)
-#     df.index = df.index + 1
-#     return df
-
-
 # Regex para validar e-mail
 EMAIL_REGEX = r"^[\w\.-]+@[\w\.-]+\.\w+$"
 def validar_email(email):
@@ -71,14 +142,6 @@ def validar_email(email):
         return False
     return bool(re.match(EMAIL_REGEX, str(email).strip()))
 
-
-# def validar_telefone(t):
-#     t = str(t).replace(" ", "").replace("-", "")
-#     return re.match(TELEFONE_REGEX, t) is not None
-
-# def normalizar_telefone(t):
-#     t = re.sub(r"\D", "", str(t))
-#     return t
 
 
 
@@ -103,10 +166,10 @@ projetos = df_projetos["sigla"].unique().tolist()
 st.logo("images/cepf_logo.png", size='large')
 
 # Título da página
-st.header("Cadastrar pessoa")
+st.header("Convidar pessoa")
 
 
-opcao_cadastro = st.radio("", ["Cadastro individual", "Cadastro em massa"], key="opcao_cadastro", horizontal=True)
+opcao_cadastro = st.radio("", ["Convite individual", "Convite em massa"], key="opcao_cadastro", horizontal=True)
 
 st.write('')
 
@@ -117,11 +180,11 @@ st.write('')
 # --------------------------
 # FORMULÁRIO DE CADASTRO
 # --------------------------
-if opcao_cadastro == "Cadastro individual":
+if opcao_cadastro == "Convite individual":
 
     # --- campos do formulário que vamos controlar ---
     CAMPOS_FORM_PESSOA = {
-        "nome_completo": "",
+        "nome_completo_novo": "",
         "tipo_novo_usuario": "",
         "tipo_beneficiario": "",   # string; só usado quando beneficiário
         "e_mail": "",
@@ -141,7 +204,7 @@ if opcao_cadastro == "Cadastro individual":
 
 
     # --- Inputs com keys que coincidem com as chaves do session_state ---
-    nome_completo = st.text_input("Nome completo", key="nome_completo")
+    nome_completo_novo = st.text_input("Nome completo", key="nome_completo_novo")
 
     # depende do tipo de usuário logado (ex.: tipo_usuario vem do login)
     if tipo_usuario == "equipe":
@@ -171,81 +234,250 @@ if opcao_cadastro == "Cadastro individual":
     e_mail = st.text_input("E-mail", key="e_mail")
     telefone = st.text_input("Telefone", key="telefone")
 
-    # 'projetos' é a sua lista de opções — mantenha a variável 'projetos' com as siglas
+    # garante que a key exista com lista vazia caso ainda não exista
+    if "projetos_escolhidos" not in st.session_state:
+        st.session_state["projetos_escolhidos"] = []
+
+    # Garante que a key exista com lista vazia caso ainda não exista
+    if "projetos_escolhidos" not in st.session_state:
+        st.session_state["projetos_escolhidos"] = []
+
+    # Agora cria o multiselect sem passar default
     projetos_escolhidos = st.multiselect(
-        "Projetos", projetos, default=[], key="projetos_escolhidos"
+        "Projetos",
+        projetos,
+        key="projetos_escolhidos"
     )
+
+
+
+    # projetos_escolhidos = st.multiselect(
+    #     "Projetos",
+    #     projetos,
+    #     default=st.session_state["projetos_escolhidos"],  # pega o valor atual do session_state
+    #     key="projetos_escolhidos"
+    # )
+
 
     st.write("")
     submit_button = st.button("Salvar", icon=":material/save:", type="primary", width=150)
 
+
+
     if submit_button:
-        # validações
-        if not st.session_state["nome_completo"] or not st.session_state["tipo_novo_usuario"] \
-           or not st.session_state["e_mail"] or not st.session_state["telefone"]:
+        # 1) Validações
+        if not st.session_state["nome_completo_novo"] or not st.session_state["tipo_novo_usuario"] \
+        or not st.session_state["e_mail"] or not st.session_state["telefone"]:
             st.error(":material/error: Todos os campos obrigatórios devem ser preenchidos.")
             st.stop()
 
-        # se beneficiário, tipo_beneficiario obrigatório
         if st.session_state["tipo_novo_usuario"] == "beneficiario" and not st.session_state.get("tipo_beneficiario"):
             st.error(":material/error: O campo 'Tipo de beneficiário' é obrigatório para beneficiários.")
             st.stop()
 
-        # valida email (usa sua função validar_email)
         if not validar_email(st.session_state["e_mail"]):
             st.error(":material/error: E-mail inválido.")
             st.stop()
 
-        # duplicidade
         if col_pessoas.find_one({"e_mail": st.session_state["e_mail"]}):
             st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
             st.stop()
 
-        # monta documento a inserir
+        # 2) Gera código de 6 dígitos
+        codigo_6_digitos = gerar_codigo_aleatorio()
+
+        # 3) Monta documento a inserir no MongoDB
         novo_doc = {
-            "nome_completo": st.session_state["nome_completo"],
+            "nome_completo": st.session_state["nome_completo_novo"],
             "tipo_usuario": st.session_state["tipo_novo_usuario"],
             "e_mail": st.session_state["e_mail"],
             "telefone": st.session_state["telefone"],
-            "status": "ativo",
+            "status": "convidado",
             "projetos": st.session_state.get("projetos_escolhidos", []),
-            "senha": None
+            "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
+            "senha": None,
+            "codigo_convite": codigo_6_digitos
         }
 
         if st.session_state["tipo_novo_usuario"] == "beneficiario":
             novo_doc["tipo_beneficiario"] = st.session_state.get("tipo_beneficiario")
 
-        # inserir no banco
+        # 4) Inserir no banco
         col_pessoas.insert_one(novo_doc)
-        st.success(":material/check: Pessoa cadastrada com sucesso!")
 
-        # marca para limpar apenas os campos do formulário e re-executa
-        st.session_state["limpar_form_pessoa"] = True
-        time.sleep(2)
-        st.rerun()
+        with st.spinner("Cadastrando pessoa... aguarde..."):
+
+            time.sleep(2)
+
+            st.success(":material/check: Pessoa cadastrada com sucesso no banco de dados!")
+
+            # 5) Envio do e-mail de convite
+            enviado = enviar_email_convite(
+                nome_completo=st.session_state["nome_completo_novo"],
+                email_destino=st.session_state["e_mail"],
+                codigo=codigo_6_digitos
+            )
+
+
+
+            # 6) Limpar campos do formulário e rerun
+            st.session_state["limpar_form_pessoa"] = True
+            time.sleep(6)
+            st.rerun()
+
+
+
+
+
+
+
+
+
+    # if submit_button:
+    #     # validações
+    #     if not st.session_state["nome_completo_novo"] or not st.session_state["tipo_novo_usuario"] \
+    #     or not st.session_state["e_mail"] or not st.session_state["telefone"]:
+    #         st.error(":material/error: Todos os campos obrigatórios devem ser preenchidos.")
+    #         st.stop()
+
+    #     if st.session_state["tipo_novo_usuario"] == "beneficiario" and not st.session_state.get("tipo_beneficiario"):
+    #         st.error(":material/error: O campo 'Tipo de beneficiário' é obrigatório para beneficiários.")
+    #         st.stop()
+
+    #     if not validar_email(st.session_state["e_mail"]):
+    #         st.error(":material/error: E-mail inválido.")
+    #         st.stop()
+
+    #     if col_pessoas.find_one({"e_mail": st.session_state["e_mail"]}):
+    #         st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
+    #         st.stop()
+
+    #     # Gera o código de 6 dígitos
+    #     codigo_6_digitos = gerar_codigo_aleatorio()
+
+    #     # monta documento a inserir
+    #     novo_doc = {
+    #         "nome_completo": st.session_state["nome_completo_novo"],
+    #         "tipo_usuario": st.session_state["tipo_novo_usuario"],
+    #         "e_mail": st.session_state["e_mail"],
+    #         "telefone": st.session_state["telefone"],
+    #         "status": "convidado",
+    #         "projetos": st.session_state.get("projetos_escolhidos", []),
+    #         "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
+    #         "senha": None,
+    #         "codigo_convite": codigo_6_digitos
+    #     }
+
+    #     if st.session_state["tipo_novo_usuario"] == "beneficiario":
+    #         novo_doc["tipo_beneficiario"] = st.session_state.get("tipo_beneficiario")
+
+    #     # inserir no banco
+    #     col_pessoas.insert_one(novo_doc)
+    #     st.success(":material/check: Pessoa cadastrada com sucesso!")
+
+    #     # Tenta enviar o e-mail de convite
+    #     try:
+    #         enviado = enviar_email_convite(
+    #             nome_completo=st.session_state["nome_completo_novo"],
+    #             email_destino=st.session_state["e_mail"],
+    #             codigo=codigo_6_digitos
+    #         )
+    #         if enviado:
+    #             st.success(":material/check: E-mail de convite enviado com sucesso!")
+    #         else:
+    #             st.warning(":material/warning: O e-mail de convite não pôde ser enviado.")
+    #     except Exception as e:
+    #         st.error(":material/error: Erro ao tentar enviar o e-mail de convite.")
+    #         st.exception(e)
+
+    #     # limpa campos do formulário
+    #     time.sleep(2)
+    #     st.session_state["limpar_form_pessoa"] = True
+    #     st.rerun()
+
+
+
+
+
+
+    # if submit_button:
+    #     # validações
+    #     if not st.session_state["nome_completo"] or not st.session_state["tipo_novo_usuario"] \
+    #        or not st.session_state["e_mail"] or not st.session_state["telefone"]:
+    #         st.error(":material/error: Todos os campos obrigatórios devem ser preenchidos.")
+    #         st.stop()
+
+    #     # se beneficiário, tipo_beneficiario obrigatório
+    #     if st.session_state["tipo_novo_usuario"] == "beneficiario" and not st.session_state.get("tipo_beneficiario"):
+    #         st.error(":material/error: O campo 'Tipo de beneficiário' é obrigatório para beneficiários.")
+    #         st.stop()
+
+    #     # valida email (usa sua função validar_email)
+    #     if not validar_email(st.session_state["e_mail"]):
+    #         st.error(":material/error: E-mail inválido.")
+    #         st.stop()
+
+    #     # duplicidade
+    #     if col_pessoas.find_one({"e_mail": st.session_state["e_mail"]}):
+    #         st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
+    #         st.stop()
+
+    #     # monta documento a inserir
+    #     novo_doc = {
+    #         "nome_completo": st.session_state["nome_completo"],
+    #         "tipo_usuario": st.session_state["tipo_novo_usuario"],
+    #         "e_mail": st.session_state["e_mail"],
+    #         "telefone": st.session_state["telefone"],
+    #         "status": "convidado",
+    #         "projetos": st.session_state.get("projetos_escolhidos", []),
+    #         "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
+    #         "senha": None
+    #     }
+
+    #     if st.session_state["tipo_novo_usuario"] == "beneficiario":
+    #         novo_doc["tipo_beneficiario"] = st.session_state.get("tipo_beneficiario")
+
+    #     # inserir no banco
+    #     col_pessoas.insert_one(novo_doc)
+    #     st.success(":material/check: Pessoa cadastrada com sucesso!")
+
+    #     # Enviar email de convite com código de 6 números
+    #     codigo_6_digitos = gerar_codigo_aleatorio()
+
+    #     enviar_email_convite(
+    #         nome_completo=st.session_state["nome_completo"],
+    #         email_destino=st.session_state["e_mail"],
+    #         codigo=codigo_6_digitos
+    #     )
+
+
+    #     # marca para limpar apenas os campos do formulário e re-executa
+    #     st.session_state["limpar_form_pessoa"] = True
+    #     time.sleep(2)
+    #     st.rerun()
 
 
 
 
 # ----------------------------
-#   CADASTRO EM MASSA
+#   CONVITE EM MASSA
 # ----------------------------
 
 
 
-elif opcao_cadastro == "Cadastro em massa":
+elif opcao_cadastro == "Convite em massa":
 
     # Inicializa o 'key' do file_uploader se ele não existir
     if 'uploader_key' not in st.session_state:
         st.session_state['uploader_key'] = str(uuid.uuid4())
 
-    st.write("Baixe aqui o modelo de tabela para cadastro em massa:")
+    st.write("Baixe aqui o modelo de tabela para convite em massa:")
 
-    with open("modelos/modelo_cadastro_pessoas_em_massa.xlsx", "rb") as f:
+    with open("modelos/modelo_convite_pessoas_em_massa.xlsx", "rb") as f:
         st.download_button(
             label=":material/download: Baixar modelo XLSX",
             data=f,
-            file_name="modelo_cadastro_pessoas_em_massa.xlsx",
+            file_name="modelo_convite_pessoas_em_massa.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
@@ -255,9 +487,10 @@ elif opcao_cadastro == "Cadastro em massa":
     # Upload
     # ------------------------------
     arquivo = st.file_uploader(
-        "Envie um arquivo XLSX preenchido para cadastrar múltiplas pessoas:",
+        "Envie um arquivo XLSX preenchido para convidar múltiplas pessoas:",
         type=["xlsx"],
-        key=st.session_state['uploader_key']
+        key=st.session_state['uploader_key'],
+        width=400
     )
 
     st.write("")
@@ -422,7 +655,7 @@ elif opcao_cadastro == "Cadastro em massa":
                         "tipo_beneficiario": row["tipo_beneficiario"],
                         "e_mail": row["e_mail"],
                         "status": "ativo",
-                        "senha": None
+                        # "senha": None
                     }
 
                     # Adiciona telefone somente se houver valor

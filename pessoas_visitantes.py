@@ -151,7 +151,7 @@ st.logo("images/cepf_logo.png", size='large')
 
 st.header('Visitantes')
 
-st.write('')
+st.divider()
 
 # Separando só os visitantes
 df_visitantes = df_pessoas[

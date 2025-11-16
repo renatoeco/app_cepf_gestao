@@ -17,36 +17,68 @@ db = conectar_mongo_cepf_gestao()
 col_pessoas = db["pessoas"]
 
 
+# Projetos
+col_projetos = db["projetos"]
+
 
 ###########################################################################################################
 # TRATAMENTO DOS DADOS
 ###########################################################################################################
 
-# Busca todos os documentos, mas exclui o campo "senha"
+# PROJETOS
+
+df_projetos = pd.DataFrame(list(col_projetos.find()))
+# Converte objectId para string
+df_projetos['_id'] = df_projetos['_id'].astype(str)
+
+
+# PESSOAS
+
+# 1) Busca todos os documentos, mas já exclui a coluna 'senha'
 df_pessoas = pd.DataFrame(list(col_pessoas.find({}, {"senha": 0})))
 
-# Converte ObjectId para string
-df_pessoas["_id"] = df_pessoas["_id"].astype(str)
+# 2) Filtra apenas os registros com status 'convidado'
+df_pendentes = df_pessoas[df_pessoas["status"] == "convidado"]
+
+
+# # 1) Busca todos os documentos, incluindo a senha
+# df_pendentes = pd.DataFrame(list(col_pessoas.find({})))
+
+# # 2) Filtra apenas os registros pendentes (senha vazia ou None)
+# df_pendentes = df_pendentes[df_pendentes["senha"].isna() | (df_pendentes["senha"] == "")]
+
+# # 3) Remove a coluna 'senha' do dataframe final
+# df_pendentes = df_pendentes.drop(columns=["senha"])
+
+# ??????????????????/
+# # Cria uma cópia para exibição
+# df_pendentes_display = df_pendentes.copy()
+# # Transforma a coluna 'projetos' em string (listas viram texto)
+# if "projetos" in df_pendentes_display.columns:
+#     df_pendentes_display["projetos"] = df_pendentes_display["projetos"].apply(
+#         lambda x: ", ".join(x) if isinstance(x, list) else ""
+#     )
+# # Agora pode exibir sem erro
+# st.dataframe(df_pendentes_display)
+# # Converte ObjectId para string
+# df_pendentes["_id"] = df_pendentes["_id"].astype(str)
+
+
 
 # Renomeia as colunas
-df_pessoas = df_pessoas.rename(columns={
+df_pendentes = df_pendentes.rename(columns={
     "nome_completo": "Nome",
     "tipo_usuario": "Tipo de usuário",
     "tipo_beneficiario": "Tipo de beneficiário",
     "e_mail": "E-mail",
     "telefone": "Telefone",
     "status": "Status",
-    "projetos": "Projetos"
+    "projetos": "Projetos",
+    "data_convite": "Data do convite"
 })
 
 # Ordena por Nome
-df_pessoas = df_pessoas.sort_values(by="Nome")
-
-# Projetos
-col_projetos = db["projetos"]
-df_projetos = pd.DataFrame(list(col_projetos.find()))
-# Converte objectId para string
-df_projetos['_id'] = df_projetos['_id'].astype(str)
+df_pendentes = df_pendentes.sort_values(by="Nome")
 
 
 
@@ -95,12 +127,12 @@ def editar_pessoa(_id: str):
             else 0
         )
 
-    # Status
-    status = st.selectbox(
-        "Status",
-        options=["ativo", "inativo"],
-        index=0 if pessoa.get("status", "ativo") == "ativo" else 1
-    )
+    # # Status
+    # status = st.selectbox(
+    #     "Status",
+    #     options=["ativo", "inativo"],
+    #     index=0 if pessoa.get("status", "ativo") == "ativo" else 1
+    # )
 
     # Projetos
     projetos = st.multiselect(
@@ -119,7 +151,7 @@ def editar_pessoa(_id: str):
             "e_mail": email,
             "telefone": telefone,
             "tipo_usuario": tipo_usuario,
-            "status": status,
+            # "status": status,
             "projetos": projetos
         }
 
@@ -149,17 +181,10 @@ def editar_pessoa(_id: str):
 # Logo do sidebar
 st.logo("images/cepf_logo.png", size='large')
 
-st.header('Beneficiários(as)')
+st.header('Convites pendentes')
 
 st.divider()
 
-
-# Separando só os beneficiários
-df_benef = df_pessoas[
-    df_pessoas["Tipo de usuário"] == "beneficiario"
-]
-
-st.write('')
 
 dist_colunas = [3, 4, 3, 2, 3, 2, 1]
 
@@ -172,13 +197,13 @@ col2.write('**Projetos**')
 col3.write('**E-mail**')
 col4.write('**Telefone**')
 col5.write('**Tipo de usuário**')
-col6.write('**Status**')
+col6.write('**Data do convite**')
 col7.write('')
 
 st.write('')
 
 # Pra cada linha, criar colunas para os dados
-for _, row in df_benef.iterrows():
+for _, row in df_pendentes.iterrows():
     col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
 
     # NOME -----------------
@@ -211,8 +236,12 @@ for _, row in df_benef.iterrows():
 
 
     # TIPO DE USUÁRIO -----------------
-    tipo_usuario = row.get("Tipo de usuário", "").strip()
-    tipo_beneficiario = row.get("Tipo de beneficiário", "").strip() if "Tipo de beneficiário" in row else ""
+    tipo_usuario = str(row.get("Tipo de usuário", "") or "").strip()
+
+    # Só tenta pegar tipo_beneficiario se for beneficiario
+    tipo_beneficiario = ""
+    if tipo_usuario.lower() == "beneficiario":
+        tipo_beneficiario = str(row.get("Tipo de beneficiário", "") or "").strip()
 
     # Se for beneficiário, concatena o tipo_beneficiario
     if tipo_usuario.lower() == "beneficiario" and tipo_beneficiario:
@@ -222,17 +251,8 @@ for _, row in df_benef.iterrows():
 
     col5.write(tipo_exibido)
 
-
-
-    # # TIPO DE USUÁRIO -----------------
-    # tipo_usuario = str(row.get("Tipo de usuário", "")).strip()
-
-    # # Exibição
-    # col5.write(tipo_usuario)
-
-
     # STATUS -----------------       
-    col6.write(row["Status"])
+    col6.write(row["Data do convite"])
 
     # BOTÃO DE EDITAR -----------------
     col7.button(":material/edit:", key=row["_id"], on_click=editar_pessoa, args=(row["_id"],))

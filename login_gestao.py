@@ -32,6 +32,15 @@ col_pessoas = db["pessoas"]
 # FUNÇÕES AUXILIARES
 ##############################################################################################################
 
+def validar_senha(senha: str) -> bool:
+    """Valida se a senha tem pelo menos 8 caracteres, contém letras e números."""
+    if len(senha) < 8:
+        return False
+    has_letter = any(c.isalpha() for c in senha)
+    has_digit = any(c.isdigit() for c in senha)
+    return has_letter and has_digit
+
+
 
 def encontrar_usuario_por_email(pessoas, email_busca):
     usuario = pessoas.find_one({"e_mail": email_busca})
@@ -76,10 +85,110 @@ def enviar_email(destinatario, codigo):
 
 
 ##############################################################################################################
-# CAIXA DE DIÁLOGO PARA RECUPERAÇÃO DE SENHA
+# CAIXA DE DIÁLOGO PARA PRIMEIRO ACESSO
 ##############################################################################################################
 
+@st.dialog("Primeiro Acesso")
+def primeiro_acesso_dialog():
+    # Containers para esconder elementos
+    container_email_codigo = st.empty()
+    container_nova_senha = st.empty()
 
+    # Variáveis de sessão
+    st.session_state.setdefault("usuario_validado", False)
+    st.session_state.setdefault("usuario_id", None)
+
+    # --- FORMULÁRIO 1: Email + Código ---
+    if not st.session_state.usuario_validado:
+        with container_email_codigo.form("form_email_codigo", clear_on_submit=False):
+            email_input = st.text_input("Digite seu e-mail")
+            codigo_input = st.text_input("Digite o código que você recebeu por e-mail")
+            enviar_codigo = st.form_submit_button("Confirmar")
+
+            if enviar_codigo:
+                usuario = col_pessoas.find_one({"e_mail": email_input})
+                if not usuario:
+                    st.error("Usuário não encontrado. Entre em contato com o administrador.")
+                elif usuario.get("codigo_convite") != codigo_input:
+                    st.error("Código inválido. Verifique o e-mail enviado.")
+                else:
+                    st.success(f"Código validado!")
+                    time.sleep(3)
+                    # Guarda info na sessão
+                    st.session_state.usuario_validado = True
+                    st.session_state.usuario_id = usuario["_id"]
+                    # Esconde formulário 1
+                    container_email_codigo.empty()
+
+
+    # --- FORMULÁRIO 2: Nova Senha ---
+    if st.session_state.usuario_validado:
+        with container_nova_senha.form("form_nova_senha", clear_on_submit=False):
+            nova_senha = st.text_input("Nova senha", type="password")
+            confirmar_senha = st.text_input("Confirme a senha", type="password")
+            salvar_senha = st.form_submit_button("Salvar")
+
+            if salvar_senha:
+                if nova_senha != confirmar_senha:
+                    st.error("As senhas não coincidem.")
+                elif not validar_senha(nova_senha):
+                    st.error("Senha deve ter pelo menos 8 caracteres e conter letras e números.")
+                else:
+                    # Hash da senha
+                    hash_senha = bcrypt.hashpw(nova_senha.encode("utf-8"), bcrypt.gensalt())
+
+                    # Atualiza banco
+                    col_pessoas.update_one(
+                        {"_id": st.session_state.usuario_id},
+                        {"$set": {"senha": hash_senha, "status": "ativo"},
+                        "$unset": {"codigo_convite": ""}}
+                    )
+
+                    # Limpa sessão
+                    for key in ["usuario_validado", "usuario_id"]:
+                        st.session_state.pop(key, None)
+
+                    # Mensagem final
+                    sucesso = st.success(
+                        "Senha cadastrada com sucesso.\n\nFaça o login normalmente."
+                    )
+
+                    time.sleep(3)
+                    sucesso.empty()
+                    st.rerun()
+
+
+    # # --- FORMULÁRIO 2: Nova Senha ---
+    # if st.session_state.usuario_validado:
+    #     with container_nova_senha.form("form_nova_senha", clear_on_submit=False):
+    #         nova_senha = st.text_input("Nova senha", type="password")
+    #         confirmar_senha = st.text_input("Confirme a senha", type="password")
+    #         salvar_senha = st.form_submit_button("Salvar")
+
+    #         if salvar_senha:
+    #             if nova_senha != confirmar_senha:
+    #                 st.error("As senhas não coincidem.")
+    #             elif not validar_senha(nova_senha):
+    #                 st.error("Senha deve ter pelo menos 8 caracteres e conter letras e números.")
+    #             else:
+    #                 # Hash da senha
+    #                 hash_senha = bcrypt.hashpw(nova_senha.encode("utf-8"), bcrypt.gensalt())
+    #                 # Atualiza banco
+    #                 col_pessoas.update_one(
+    #                     {"_id": st.session_state.usuario_id},
+    #                     {"$set": {"senha": hash_senha, "status": "ativo"},
+    #                      "$unset": {"codigo_convite": ""}}
+    #                 )
+    #                 st.success("Senha cadastrada com sucesso! Agora você pode acessar o sistema.")
+    #                 # Limpa sessão
+    #                 for key in ["usuario_validado", "usuario_id"]:
+    #                     st.session_state.pop(key, None)
+    #                 container_nova_senha.empty()
+
+
+##############################################################################################################
+# CAIXA DE DIÁLOGO PARA RECUPERAÇÃO DE SENHA
+##############################################################################################################
 @st.dialog("Recuperação de Senha")
 def recuperar_senha_dialog():
     st.session_state.setdefault("codigo_enviado", False)
@@ -291,15 +400,27 @@ def login():
 
             st.write('')
             st.write('')
-            st.write('')
 
-            # Botão para recuperar senha
-            st.button(
-                "Esqueci a senha", 
-                key="forgot_password", 
-                type="tertiary", 
-                on_click=recuperar_senha_dialog
-            )
+            with st.container(horizontal=True, horizontal_alignment="left", gap="large"):
+
+                # Botão para recuperar senha
+                st.button(
+                    "Esqueci a senha", 
+                    key="forgot_password", 
+                    type="tertiary", 
+                    on_click=recuperar_senha_dialog
+                )
+
+                
+
+                # Botão de primeiro acesso
+                st.button(
+                    "Primeiro acesso", 
+                    key="primeiro_acesso", 
+                    type="tertiary", 
+                    on_click=primeiro_acesso_dialog
+                )
+
 
 
 
@@ -342,7 +463,8 @@ else:
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
                 st.Page("pessoas_beneficiarios.py", title="Beneficiários", icon=":material/group:"),
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
-                st.Page("pessoas_cadastrar.py", title="Cadastrar pessoa", icon=":material/person_add:"),
+                st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
+                st.Page("pessoas_cadastrar.py", title="Convidar pessoa", icon=":material/person_add:"),
             ],
             "Administração": [
                 st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
@@ -373,7 +495,8 @@ else:
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
                 st.Page("pessoas_beneficiarios.py", title="Beneficiários", icon=":material/group:"),
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
-                st.Page("pessoas_cadastrar.py", title="Cadastrar pessoa", icon=":material/person_add:"),
+                st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
+                st.Page("pessoas_cadastrar.py", title="Convidar pessoa", icon=":material/person_add:"),
             ],
         },
 
