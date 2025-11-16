@@ -112,7 +112,7 @@ def primeiro_acesso_dialog():
                 elif usuario.get("codigo_convite") != codigo_input:
                     st.error("Código inválido. Verifique o e-mail enviado.")
                 else:
-                    st.success(f"Código validado!")
+                    st.success(f"Código validado! Aguarde...")
                     time.sleep(3)
                     # Guarda info na sessão
                     st.session_state.usuario_validado = True
@@ -124,6 +124,10 @@ def primeiro_acesso_dialog():
     # --- FORMULÁRIO 2: Nova Senha ---
     if st.session_state.usuario_validado:
         with container_nova_senha.form("form_nova_senha", clear_on_submit=False):
+            
+            st.write('**Crie uma nova senha** com pelo menos 8 caracteres, contendo letras e números.')
+            # st.write('Mínimo de 8 caracteres com letras e números.')
+            
             nova_senha = st.text_input("Nova senha", type="password")
             confirmar_senha = st.text_input("Confirme a senha", type="password")
             salvar_senha = st.form_submit_button("Salvar")
@@ -464,7 +468,7 @@ else:
                 st.Page("pessoas_beneficiarios.py", title="Beneficiários", icon=":material/group:"),
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
                 st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
-                st.Page("pessoas_cadastrar.py", title="Convidar pessoa", icon=":material/person_add:"),
+                st.Page("pessoas_cadastrar.py", title="Convidar pessoas", icon=":material/person_add:"),
             ],
             "Administração": [
                 st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
@@ -496,7 +500,7 @@ else:
                 st.Page("pessoas_beneficiarios.py", title="Beneficiários", icon=":material/group:"),
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
                 st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
-                st.Page("pessoas_cadastrar.py", title="Convidar pessoa", icon=":material/person_add:"),
+                st.Page("pessoas_cadastrar.py", title="Convidar pessoas", icon=":material/person_add:"),
             ],
         },
 
@@ -623,81 +627,139 @@ else:
 
 
 
-
     # ROTEAMENTO DO BENEFICIÁRIO ---------------------------------
     elif tipo_usuario == "beneficiario":
 
-        projetos = st.session_state.get("projetos", [])
+        projetos_raw = st.session_state.get("projetos")
+        projetos = projetos_raw if isinstance(projetos_raw, list) else []
 
-        # Primeira execução: 
-        # se pagina_atual == None, a pagina atual dependerá se o beneficiário tem mais de um projeto
+        # Primeira execução:
         if st.session_state.pagina_atual is None:
 
-            # ????????????????????
-            # st.write(st.session_state)
-            
             # Verifica quantos projetos o beneficiário tem
-            
             if len(projetos) == 1:
                 st.session_state.pagina_atual = "ver_projeto"
-
             else:
                 st.session_state.pagina_atual = "ben_selec_projeto"
 
-
         # Demais execuções
-        # Beneficiário tem apenas um projeto
-
         if st.session_state.pagina_atual == "ver_projeto":
-            # Só define o projeto atual se ainda não tiver sido escolhido
-            if not st.session_state.get("projeto_atual"):
+
+            if not st.session_state.get("projeto_atual") and len(projetos) >= 1:
                 st.session_state.projeto_atual = projetos[0]
 
             pages = pags_por_tipo["ver_projeto"]
 
-
-        # Beneficiário tem mais de um projeto
         elif st.session_state.pagina_atual == "ben_selec_projeto":
             pages = pags_por_tipo["ben_selec_projeto"]
-
-
-
 
 
 
     # ROTEAMENTO DO VISITANTE ---------------------------------
     elif tipo_usuario == "visitante":
 
-        projetos = st.session_state.get("projetos", [])
+        projetos_raw = st.session_state.get("projetos")
+        projetos = projetos_raw if isinstance(projetos_raw, list) else []
 
-        # Primeira execução: 
-        # se pagina_atual == None, a pagina atual dependerá se o visitante tem mais de um projeto
+        # Primeira execução:
         if st.session_state.pagina_atual is None:
 
-            
             # Verifica quantos projetos o visitante tem
-            
             if len(projetos) == 1:
                 st.session_state.pagina_atual = "ver_projeto"
-
             else:
                 st.session_state.pagina_atual = "ben_selec_projeto"
 
-
         # Demais execuções
-        # visitante tem apenas um projeto
-
         if st.session_state.pagina_atual == "ver_projeto":
-            # Só define o projeto atual se ainda não tiver sido escolhido
-            if not st.session_state.get("projeto_atual"):
+
+            if not st.session_state.get("projeto_atual") and len(projetos) >= 1:
                 st.session_state.projeto_atual = projetos[0]
 
             pages = pags_por_tipo["ver_projeto"]
 
-
-        # visitante tem mais de um projeto
         elif st.session_state.pagina_atual == "ben_selec_projeto":
             pages = pags_por_tipo["ben_selec_projeto"]
+
+
+
+
+
+
+
+
+    # # ROTEAMENTO DO BENEFICIÁRIO ---------------------------------
+    # elif tipo_usuario == "beneficiario":
+
+    #     projetos = st.session_state.get("projetos", [])
+
+    #     # Primeira execução: 
+    #     # se pagina_atual == None, a pagina atual dependerá se o beneficiário tem mais de um projeto
+    #     if st.session_state.pagina_atual is None:
+
+            
+    #         # Verifica quantos projetos o beneficiário tem
+            
+    #         if len(projetos) == 1:
+    #             st.session_state.pagina_atual = "ver_projeto"
+
+    #         else:
+    #             st.session_state.pagina_atual = "ben_selec_projeto"
+
+
+    #     # Demais execuções
+    #     # Beneficiário tem apenas um projeto
+
+    #     if st.session_state.pagina_atual == "ver_projeto":
+    #         # Só define o projeto atual se ainda não tiver sido escolhido
+    #         if not st.session_state.get("projeto_atual"):
+    #             st.session_state.projeto_atual = projetos[0]
+
+    #         pages = pags_por_tipo["ver_projeto"]
+
+
+    #     # Beneficiário tem mais de um projeto
+    #     elif st.session_state.pagina_atual == "ben_selec_projeto":
+    #         pages = pags_por_tipo["ben_selec_projeto"]
+
+
+
+
+
+
+    # # ROTEAMENTO DO VISITANTE ---------------------------------
+    # elif tipo_usuario == "visitante":
+
+    #     projetos = st.session_state.get("projetos", [])
+
+    #     # Primeira execução: 
+    #     # se pagina_atual == None, a pagina atual dependerá se o visitante tem mais de um projeto
+    #     if st.session_state.pagina_atual is None:
+
+            
+    #         # Verifica quantos projetos o visitante tem
+            
+    #         if len(projetos) == 1:
+    #             st.session_state.pagina_atual = "ver_projeto"
+
+    #         else:
+    #             st.session_state.pagina_atual = "ben_selec_projeto"
+
+
+    #     # Demais execuções
+    #     # visitante tem apenas um projeto
+
+    #     if st.session_state.pagina_atual == "ver_projeto":
+    #         # Só define o projeto atual se ainda não tiver sido escolhido
+    #         if not st.session_state.get("projeto_atual"):
+    #             st.session_state.projeto_atual = projetos[0]
+
+    #         pages = pags_por_tipo["ver_projeto"]
+
+
+    #     # visitante tem mais de um projeto
+    #     elif st.session_state.pagina_atual == "ben_selec_projeto":
+    #         pages = pags_por_tipo["ben_selec_projeto"]
 
 
 

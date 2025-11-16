@@ -522,7 +522,7 @@ with tab4:
     st.write("")
 
     opcao_financiadores = st.radio(
-        "Escolha a ação:",
+        "Selecione uma ação:",
         ["Cadastrar Financiador", "Editar Financiador"],
         horizontal=True
     )
