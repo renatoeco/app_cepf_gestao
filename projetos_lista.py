@@ -190,6 +190,29 @@ df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
 
 
 
+# CRIAR RELAÇÃO PROJETO ↔ PADRINHOS (SEM DUPLICAR LINHAS)
+
+df_padrinhos = (
+    df_pessoas[["nome_completo", "projetos"]]
+    .explode("projetos")
+    .dropna(subset=["projetos"])
+    .groupby("projetos", as_index=False)
+    .agg({
+        "nome_completo": lambda nomes: ", ".join(sorted(set(nomes)))
+    })
+    .rename(columns={
+        "projetos": "sigla",
+        "nome_completo": "padrinho"
+    })
+)
+
+# Juntar os padrinhos aos projetos
+df_projetos = df_projetos.merge(
+    df_padrinhos,
+    on="sigla",
+    how="left"
+)
+
 
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
@@ -268,9 +291,41 @@ df_filtrado = df_projetos.copy()
 if edital_selecionado != "Todos":
     df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
 
-# Filtrar somente os projetos do padrinho logado
+
+# Filtrar somente os projetos da pessoa logada
 if ver_meus_projetos:
-    df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
+
+    nome_usuario = st.session_state.nome
+
+    # Busca a pessoa logada no df_pessoas
+    pessoa = df_pessoas.loc[
+        df_pessoas["nome_completo"] == nome_usuario
+    ]
+
+    if pessoa.empty:
+        st.warning("Usuário não encontrado no cadastro de pessoas.")
+        st.stop()
+
+    # Lista de siglas de projetos associadas à pessoa
+    projetos_usuario = pessoa.iloc[0].get("projetos", [])
+
+    if not projetos_usuario:
+        st.warning("Você não possui projetos associados.")
+        st.stop()
+
+    # Filtra os projetos pela sigla
+    df_filtrado = df_filtrado[
+        df_filtrado["sigla"].isin(projetos_usuario)
+    ]
+
+
+
+
+
+
+# # Filtrar somente os projetos do padrinho logado
+# if ver_meus_projetos:
+#     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
 
 
 # Se nenhum projeto encontrado
@@ -308,7 +363,8 @@ for index, projeto in df_filtrado.iterrows():
     cols[0].write(projeto['codigo'])
     cols[1].write(projeto['sigla'])
     cols[2].write(projeto['organizacao'])
-    cols[3].write(projeto['padrinho'])
+    cols[3].write(projeto.get('padrinho', '—'))
+
 
     # Próxima parcela
     prox_parcela = ""
