@@ -25,8 +25,8 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_organizacoes = db["organizacoes"]
 df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 
-col_chamadas = db["chamadas"]
-df_chamadas = pd.DataFrame(list(col_chamadas.find()))
+col_editais = db["editais"]
+# df_editais = pd.DataFrame(list(col_editais.find()))
 
 col_direcoes = db["direcoes_estrategicas"]
 df_direcoes = pd.DataFrame(list(col_direcoes.find()))
@@ -276,12 +276,12 @@ st.write('')
 
 with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
 
-    # CHAMADA        
-    # Obtém a lista de chamadas e ordena pela coluna data_lancamento
-    chamadas = col_chamadas.find().sort("data_lancamento", -1)
-    chamadas = [chamada['codigo_chamada'] for chamada in chamadas]
-    # Lista chamadas
-    chamada = st.selectbox("Chamada", chamadas)
+    # EDITAL        
+    # Obtém a lista de editais e ordena pela coluna data_lancamento
+    editais = col_editais.find().sort("data_lancamento", -1)
+    editais = [edital['codigo_edital'] for edital in editais]
+    # Lista editais
+    edital = st.selectbox("Edital", editais)
 
     # ORGANIZAÇÃO
     # Obtém a lista de organizações
@@ -436,7 +436,7 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
 
         # Lista de campos obrigatórios com nome e valor
         campos_obrigatorios = {
-            "Chamada": chamada,
+            "Edital": edital,
             "Código do Projeto": codigo_projeto,
             "Sigla do Projeto": sigla_projeto,
             "Organização": organizacao,
@@ -514,7 +514,7 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
                 # --- Montar documento ---
                 doc = {
                     "_id": projeto_id,
-                    "chamada": chamada,
+                    "edital": edital,
                     "codigo": codigo_projeto,
                     "sigla": sigla_projeto,
                     "organizacao": organizacao,

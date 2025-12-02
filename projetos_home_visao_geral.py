@@ -22,9 +22,9 @@ df_pessoas = pd.DataFrame(list(col_pessoas.find()))
 col_projetos = db["projetos"]
 df_projetos = pd.DataFrame(list(col_projetos.find()))
 
-# Chamadas
-col_chamadas = db["chamadas"]
-df_chamadas = pd.DataFrame(list(col_chamadas.find()))
+# Editais
+col_editais = db["editais"]
+df_editais = pd.DataFrame(list(col_editais.find()))
 
 
 
@@ -221,12 +221,12 @@ st.write('')
 
 
 # ============================================
-# SELEÇÃO DA CHAMADA
+# SELEÇÃO DO EDITAL
 # ============================================
 
 
-lista_chamadas = ["Todas"] + df_chamadas['codigo_chamada'].tolist()
-chamada_selecionada = st.selectbox("Selecione a chamada", lista_chamadas, width=300)
+lista_editais = ["Todos"] + df_editais['codigo_edital'].tolist()
+edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
 
 
 # ============================================
@@ -254,15 +254,15 @@ with st.container(horizontal=True):
 
     # --- TÍTULO ---
     with col_titulo:
-        if chamada_selecionada == "Todas":
-            st.subheader("Todas as chamadas")
+        if edital_selecionado == "Todos":
+            st.subheader("Todos os editais")
         else:
-            nome_chamada = df_chamadas.loc[
-                df_chamadas["codigo_chamada"] == chamada_selecionada,
-                "nome_chamada"
+            nome_edital = df_editais.loc[
+                df_editais["codigo_edital"] == edital_selecionado,
+                "nome_edital"
             ].values[0]
 
-            st.subheader(f"{chamada_selecionada} — {nome_chamada}")
+            st.subheader(f"{edital_selecionado} — {nome_edital}")
 
     # --- TOGGLE ---
     with col_toggle:
@@ -276,9 +276,9 @@ with st.container(horizontal=True):
 # APLICAÇÃO DOS FILTROS
 # ============================================
 
-# Filtrar pela chamada apenas se NÃO for "Todas"
-if chamada_selecionada != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
+# Filtrar pelo edital apenas se NÃO for "Todos"
+if edital_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
 
 # Filtrar apenas os projetos do padrinho/madrinha logado
 if ver_meus_projetos:
@@ -293,42 +293,6 @@ if df_filtrado.empty:
 
 
 
-
-
-
-
-
-# # Base: todos os projetos
-# df_filtrado = df_projetos.copy()
-
-# # Filtrar pela chamada somente se NÃO for "Todas"
-# if chamada_selecionada != "Todas":
-    
-#     # Nome do edital
-#     nome_chamada = df_chamadas.loc[
-#         df_chamadas["codigo_chamada"] == chamada_selecionada, "nome_chamada"
-#     ].values[0]
-
-#     st.subheader(f'{chamada_selecionada} - {nome_chamada}')
-
-#     df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
-
-# else:
-#     st.subheader("Todas as chamadas")
-
-# # Toggle para ver somente os projetos do usuário logado
-# with st.container(horizontal=True, horizontal_alignment="right"):
-#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
-
-# # Filtra apenas projetos do padrinho/madrinha logado
-# if ver_meus_projetos:
-#     df_filtrado = df_filtrado[df_filtrado["padrinho"] == st.session_state.nome]
-
-# # Caso não existam projetos após o filtro
-# if df_filtrado.empty:
-#     st.divider()
-#     st.warning("Nenhum projeto encontrado.")
-#     st.stop()
 
 
 
@@ -349,14 +313,14 @@ else:
     # Contagem de projetos no edital selecionado
 
     with col1:
-        if chamada_selecionada == "Todas":
+        if edital_selecionado == "Todos":
             total_projetos = len(df_filtrado)
         else:
-            total_projetos = len(df_filtrado[df_filtrado['chamada'] == chamada_selecionada])
+            total_projetos = len(df_filtrado[df_filtrado['edital'] == edital_selecionado])
 
         st.metric("Projetos", total_projetos)
 
-        # st.metric("Projetos", len(df_filtrado[df_filtrado['edital'] == chamada_selecionada]))
+        # st.metric("Projetos", len(df_filtrado[df_filtrado['edital'] == edital_selecionado]))
         st.write('')
 
 
@@ -368,11 +332,11 @@ else:
         # ???????????????
         # st.write(df_filtrado)
 
-        if chamada_selecionada == "Todas":
+        if edital_selecionado == "Todos":
             projetos_atrasados = df_filtrado[df_filtrado['status'] == 'Atrasado']
         else:
             projetos_atrasados = df_filtrado[
-                (df_filtrado['chamada'] == chamada_selecionada) &
+                (df_filtrado['edital'] == edital_selecionado) &
                 (df_filtrado['status'] == 'Atrasado')
             ]
 
@@ -380,13 +344,13 @@ else:
         if not projetos_atrasados.empty:
             projetos_atrasados = projetos_atrasados.copy()
             projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso'] * -1
-            projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'chamada', 'dias_atraso']]
+            projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'edital', 'dias_atraso']]
             projetos_atrasados = projetos_atrasados.rename(columns={
                 'codigo': 'Código',
                 'sigla': 'Sigla',
                 'padrinho': 'Padrinho/Madrinha',
                 'dias_atraso': 'Dias de atraso',
-                'chamada': 'Chamada'
+                'edital': 'edital'
             })
 
 

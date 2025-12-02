@@ -15,8 +15,8 @@ db = conectar_mongo_cepf_gestao()
 col_ciclos = db["ciclos_investimento"]
 df_ciclos = pd.DataFrame(list(col_ciclos.find()))
 
-col_chamadas = db["chamadas"]
-df_chamadas = pd.DataFrame(list(col_chamadas.find()))
+col_editais = db["editais"]
+df_editais = pd.DataFrame(list(col_editais.find()))
 
 col_parceiros = db["parceiros"]
 df_parceiros = pd.DataFrame(list(col_parceiros.find()))
@@ -41,10 +41,10 @@ df_ciclos = df_ciclos.rename(columns={
     "financiadores": "Financiadores"
 })
 
-# Renomear as colunas de df_chamadas
-df_chamadas = df_chamadas.rename(columns={
-    "codigo_chamada": "Código",
-    "nome_chamada": "Nome",
+# Renomear as colunas de df_editais
+df_editais = df_editais.rename(columns={
+    "codigo_edital": "Código",
+    "nome_edital": "Nome",
     "data_lancamento": "Data de Lançamento",
     "ciclo_investimento": "Ciclo de investimento",
 })
@@ -65,8 +65,8 @@ df_financiadores = df_financiadores.rename(columns={
 if "_id" in df_ciclos.columns:
     df_ciclos["_id"] = df_ciclos["_id"].astype(str)
 
-if "_id" in df_chamadas.columns:
-    df_chamadas["_id"] = df_chamadas["_id"].astype(str)
+if "_id" in df_editais.columns:
+    df_editais["_id"] = df_editais["_id"].astype(str)
 
 if "_id" in df_parceiros.columns:
     df_parceiros["_id"] = df_parceiros["_id"].astype(str)
@@ -116,9 +116,9 @@ with st.expander("**Filtros**"):
         )
 
     with col_filtros[1]:
-        filtro_chamada = st.selectbox(
-            "Chamada:",
-            options=["Todas"] + sorted(df_chamadas["Código"].unique().tolist()),
+        filtro_edital = st.selectbox(
+            "Edital:",
+            options=["Todos"] + sorted(df_editais["Código"].unique().tolist()),
             index=0
         )
 
@@ -139,7 +139,7 @@ with st.expander("**Filtros**"):
 
 # --- Inicializa dataframes filtrados ---
 df_ciclos_filtrado = df_ciclos.copy()
-df_chamadas_filtrado = df_chamadas.copy()
+df_editais_filtrado = df_editais.copy()
 df_parceiros_filtrado = df_parceiros.copy()
 df_financiadores_filtrado = df_financiadores.copy()
 
@@ -149,8 +149,8 @@ if filtro_ciclo != "Todos":
     # Ciclo de investimento selecionado
     df_ciclos_filtrado = df_ciclos[df_ciclos["Código"] == filtro_ciclo]
 
-    # Chamadas relacionadas
-    df_chamadas_filtrado = df_chamadas[df_chamadas["Ciclo de investimento"] == filtro_ciclo]
+    # Editais relacionados
+    df_editais_filtrado = df_editais[df_editais["Ciclo de investimento"] == filtro_ciclo]
 
     # Parceiros e financiadores relacionados
     parceiros_rel = df_ciclos_filtrado["Parceiros"].explode().dropna().unique().tolist()
@@ -160,11 +160,11 @@ if filtro_ciclo != "Todos":
     df_financiadores_filtrado = df_financiadores[df_financiadores["Sigla"].isin(financiadores_rel)]
 
 
-# --- FILTRO POR CHAMADA ---
-elif filtro_chamada != "Todas":
-    df_chamadas_filtrado = df_chamadas[df_chamadas["Código"] == filtro_chamada]
+# --- FILTRO POR EDITAL ---
+elif filtro_edital != "Todos":
+    df_editais_filtrado = df_editais[df_editais["Código"] == filtro_edital]
 
-    ciclo_rel = df_chamadas_filtrado["Ciclo de investimento"].iloc[0]
+    ciclo_rel = df_editais_filtrado["Ciclo de investimento"].iloc[0]
     df_ciclos_filtrado = df_ciclos[df_ciclos["Código"] == ciclo_rel]
 
     parceiros_rel = df_ciclos_filtrado["Parceiros"].explode().dropna().unique().tolist()
@@ -181,7 +181,7 @@ elif filtro_parceiro != "Todos":
     ]
 
     codigos_ciclos_rel = df_ciclos_filtrado["Código"].unique().tolist()
-    df_chamadas_filtrado = df_chamadas[df_chamadas["Ciclo de investimento"].isin(codigos_ciclos_rel)]
+    df_editais_filtrado = df_editais[df_editais["Ciclo de investimento"].isin(codigos_ciclos_rel)]
 
     df_parceiros_filtrado = df_parceiros[df_parceiros["Sigla"] == filtro_parceiro]
 
@@ -196,7 +196,7 @@ elif filtro_financiador != "Todos":
     ]
 
     codigos_ciclos_rel = df_ciclos_filtrado["Código"].unique().tolist()
-    df_chamadas_filtrado = df_chamadas[df_chamadas["Ciclo de investimento"].isin(codigos_ciclos_rel)]
+    df_editais_filtrado = df_editais[df_editais["Ciclo de investimento"].isin(codigos_ciclos_rel)]
 
     parceiros_rel = df_ciclos_filtrado["Parceiros"].explode().dropna().unique().tolist()
     df_parceiros_filtrado = df_parceiros[df_parceiros["Sigla"].isin(parceiros_rel)]
@@ -217,10 +217,10 @@ st.dataframe(
 )
 st.write('')
 
-# CHAMADAS ------------------------------------------------------
-st.subheader(pluralizar(len(df_chamadas_filtrado), "chamada", "chamadas"))
+# EDITAIS ------------------------------------------------------
+st.subheader(pluralizar(len(df_editais_filtrado), "edital", "editais"))
 st.dataframe(
-    df_chamadas_filtrado,
+    df_editais_filtrado,
     hide_index=True,
     column_order=['Código', 'Nome', 'Data de Lançamento', 'Ciclo de investimento']
 )

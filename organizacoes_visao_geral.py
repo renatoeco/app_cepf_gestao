@@ -18,15 +18,6 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_organizacoes = db["organizacoes"]
 df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 
-# col_chamadas = db["chamadas"]
-# df_chamadas = pd.DataFrame(list(col_chamadas.find()))
-
-# col_direcoes = db["direcoes_estrategicas"]
-# df_direcoes = pd.DataFrame(list(col_direcoes.find()))
-
-# col_publicos = db["publicos"]
-# df_publicos = pd.DataFrame(list(col_publicos.find()))
-
 
 
 

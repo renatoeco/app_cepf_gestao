@@ -15,8 +15,8 @@ db = conectar_mongo_cepf_gestao()
 col_ciclos = db["ciclos_investimento"]
 df_ciclos = pd.DataFrame(list(col_ciclos.find()))
 
-col_chamadas = db["chamadas"]
-df_chamadas = pd.DataFrame(list(col_chamadas.find()))
+col_editais = db["editais"]
+df_editais = pd.DataFrame(list(col_editais.find()))
 
 col_parceiros = db["parceiros"]
 df_parceiros = pd.DataFrame(list(col_parceiros.find()))
@@ -45,8 +45,8 @@ df_ciclos = df_ciclos.rename(columns={
 if "_id" in df_ciclos.columns:
     df_ciclos["_id"] = df_ciclos["_id"].astype(str)
 
-if "_id" in df_chamadas.columns:
-    df_chamadas["_id"] = df_chamadas["_id"].astype(str)
+if "_id" in df_editais.columns:
+    df_editais["_id"] = df_editais["_id"].astype(str)
 
 if "_id" in df_parceiros.columns:
     df_parceiros["_id"] = df_parceiros["_id"].astype(str)
@@ -75,7 +75,7 @@ st.logo("images/cepf_logo.png", size='large')
 # Título da página
 st.header("Gerenciar Ciclos de Investimento")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Ciclos de Investimento", "Chamadas", "Parceiros", "Financiadores"])
+tab1, tab2, tab3, tab4 = st.tabs(["Ciclos de Investimento", "Editais", "Parceiros", "Financiadores"])
 
 
 
@@ -235,23 +235,23 @@ with tab1:
 
 
 
-# Aba Chamadas ---------------------------------------------------------------------------------------
+# Aba Editais ---------------------------------------------------------------------------------------
 with tab2:
  
     st.write("")
-    opcao_chamadas = st.radio("Selecione uma ação:", ["Cadastrar Chamada", "Editar Chamada"], key="opcao_chamadas", horizontal=True)
+    opcao_editais = st.radio("Selecione uma ação:", ["Cadastrar Edital", "Editar Edital"], key="opcao_editais", horizontal=True)
 
 
-    # CADASTRAR CHAMADA
-    if opcao_chamadas == "Cadastrar Chamada":
+    # CADASTRAR EDITAL
+    if opcao_editais == "Cadastrar Edital":
         
 
-        with st.form(key="cadastrar_chamada_form" ,border=False):
+        with st.form(key="cadastrar_edital_form" ,border=False):
 
             st.write('')
 
-            codigo_chamada = st.text_input("Codigo da chamada:")
-            nome_chamada = st.text_input("Nome da chamada:")
+            codigo_edital = st.text_input("Codigo do edital:")
+            nome_edital = st.text_input("Nome do edital:")
             data_lancamento = st.date_input("Data de lançamento:", format="DD/MM/YYYY")
             
             codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
@@ -264,12 +264,12 @@ with tab2:
 
             st.write('')
 
-            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary", key="btn_cadastrar_chamada")
+            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary", key="btn_cadastrar_edital")
 
             if submit:
 
                 # Validação de campos vazios
-                if not codigo_chamada or not nome_chamada or not data_lancamento or not ciclo:
+                if not codigo_edital or not nome_edital or not data_lancamento or not ciclo:
                     st.error("Todos os campos devem ser preenchidos.")
 
                 else:
@@ -278,63 +278,63 @@ with tab2:
                     data_lancamento_dt = datetime.datetime.combine(data_lancamento, datetime.datetime.min.time())
 
                     # Verifica se codigo já existe
-                    codigo_existente = col_chamadas.find_one({"codigo_chamada": codigo_chamada})
+                    codigo_existente = col_editais.find_one({"codigo_edital": codigo_edital})
 
                     if codigo_existente:
-                        st.error(f"O codigo '{codigo_chamada}' já está cadastrada.")
+                        st.error(f"O codigo '{codigo_edital}' já está cadastrada.")
 
                     else:
                         # Inserir no MongoDB
-                        nova_chamada = {
-                            "codigo_chamada": codigo_chamada,
-                            "nome_chamada": nome_chamada,
+                        novo_edital = {
+                            "codigo_edital": codigo_edital,
+                            "nome_edital": nome_edital,
                             "data_lancamento": data_lancamento_dt,
                             "ciclo_investimento": ciclo  
                         }
-                        col_chamadas.insert_one(nova_chamada)
-                        st.success("Chamada cadastrada com sucesso!")
+                        col_editais.insert_one(novo_edital)
+                        st.success("Edital cadastrado com sucesso!")
 
                         time.sleep(2)
                         st.rerun()
 
 
-    # EDITAR CHAMADA
-    elif opcao_chamadas == "Editar Chamada":
+    # EDITAR EDITAL
+    elif opcao_editais == "Editar Edital":
         
         st.write('')
 
-        lista_chamadas = sorted(col_chamadas.distinct("codigo_chamada"))
+        lista_editais = sorted(col_editais.distinct("codigo_edital"))
 
-        chamada_selecionada = st.selectbox(
-            "Selecione a Chamada:", 
-            options=[""] + lista_chamadas,
+        edital_selecionado = st.selectbox(
+            "Selecione o Edital:", 
+            options=[""] + lista_editais,
             index=0
         )
 
-        if chamada_selecionada:
-            # Buscar a chamada selecionada no MongoDB
-            chamada = col_chamadas.find_one({"codigo_chamada": chamada_selecionada})
+        if edital_selecionado:
+            # Buscar o edital selecionado no MongoDB
+            edital = col_editais.find_one({"codigo_edital": edital_selecionado})
 
-            if chamada:
+            if edital:
                 # Formulário de edição (sem aninhar forms!)
-                with st.form(key="editar_chamada_form", border=False):
+                with st.form(key="editar_edital_form", border=False):
 
                     st.divider()
 
                     # Campos preenchidos com dados existentes
-                    codigo_chamada = st.text_input(
-                        "Código da chamada:",
-                        value=chamada.get("codigo_chamada", ""),
+                    codigo_edital = st.text_input(
+                        "Código do edital:",
+                        value=edital.get("codigo_edital", ""),
                         disabled=True
                     )
 
-                    nome_chamada = st.text_input(
-                        "Nome da chamada:",
-                        value=chamada.get("nome_chamada", "")
+                    nome_edital = st.text_input(
+                        "Nome do edital:",
+                        value=edital.get("nome_edital", "")
                     )
 
                     # Data de lançamento
-                    data_lancamento = chamada.get("data_lancamento")
+                    data_lancamento = edital.get("data_lancamento")
                     if isinstance(data_lancamento, str):
                         try:
                             from datetime import datetime
@@ -354,7 +354,7 @@ with tab2:
                     codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
                     codigos_ciclos.insert(0, "")
 
-                    ciclo_atual = chamada.get("ciclo_investimento", "")
+                    ciclo_atual = edital.get("ciclo_investimento", "")
                     ciclo = st.selectbox(
                         "Ciclo de Investimento:",
                         options=codigos_ciclos,
@@ -366,19 +366,19 @@ with tab2:
                         "Salvar alterações", 
                         icon=":material/save:", 
                         type="primary", 
-                        key="btn_editar_chamada"
+                        key="btn_editar_edital"
                     )
 
                     if submit_editar:
                         # Validação de campos obrigatórios
-                        if not nome_chamada or not ciclo:
+                        if not nome_edital or not ciclo:
                             st.error("Todos os campos obrigatórios devem ser preenchidos.")
                         else:
                             # Atualizar no MongoDB
-                            col_chamadas.update_one(
-                                {"_id": chamada["_id"]},
+                            col_editais.update_one(
+                                {"_id": edital["_id"]},
                                 {"$set": {
-                                    "nome_chamada": nome_chamada,
+                                    "nome_edital": nome_edital,
                                     "data_lancamento": data_lancamento.strftime("%d/%m/%Y") if data_lancamento else None,
                                     "ciclo_investimento": ciclo,
                                     "parceiros": parceiro,
@@ -386,11 +386,11 @@ with tab2:
                                 }}
                             )
 
-                            st.success("Chamada atualizada com sucesso!")
+                            st.success("Edital atualizado com sucesso!")
                             time.sleep(2)
                             st.rerun()
             else:
-                st.warning("Não foi possível localizar a chamada selecionada.")
+                st.warning("Não foi possível localizar o edital selecionado.")
 
 
 

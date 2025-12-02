@@ -448,7 +448,7 @@ else:
         "home_admin": {
             "Projetos": [
                 st.Page("projetos_home_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("lista_projetos.py", title="Projetos", icon=":material/list:"),
+                st.Page("projetos_lista.py", title="Projetos", icon=":material/list:"),
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
                 st.Page("projeto_novo.py", title="Novo projeto", icon=":material/add_circle:"),
             ],
@@ -480,7 +480,7 @@ else:
         "home_equipe": {
             "Projetos": [
                 st.Page("projetos_home_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("lista_projetos.py", title="Projetos", icon=":material/list:"),
+                st.Page("projetos_lista.py", title="Projetos", icon=":material/list:"),
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
                 st.Page("projeto_novo.py", title="Novo projeto", icon=":material/add_circle:"),
             ],

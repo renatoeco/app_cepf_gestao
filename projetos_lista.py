@@ -22,9 +22,9 @@ df_pessoas = pd.DataFrame(list(col_pessoas.find()))
 col_projetos = db["projetos"]
 df_projetos = pd.DataFrame(list(col_projetos.find()))
 
-# Chamadas
-col_chamadas = db["chamadas"]
-df_chamadas = pd.DataFrame(list(col_chamadas.find()))
+# Editais
+col_editais = db["editais"]
+df_editais = pd.DataFrame(list(col_editais.find()))
 
 
 ###########################################################################################################
@@ -216,17 +216,17 @@ st.write('')
 st.write('')
 
 # ============================================
-# SELEÇÃO DA CHAMADA
+# SELEÇÃO DO EDITAL
 # ============================================
 
-# Lista de chamadas disponíveis
-lista_chamadas = sorted(df_chamadas['codigo_chamada'].unique().tolist())
+# Lista de editais disponíveis
+lista_editais = sorted(df_editais['codigo_edital'].unique().tolist())
 
-# Adiciona "Todas" no início
-lista_chamadas = ["Todas"] + lista_chamadas
+# Adiciona "Todos" no início
+lista_editais = ["Todos"] + lista_editais
 
-# Selectbox de chamada
-chamada_selecionada = st.selectbox("Selecione a chamada", lista_chamadas, width=300)
+# Selectbox de edital
+edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
 
 
 # TÍTULO + TOGGLE no mesmo container
@@ -238,15 +238,15 @@ with st.container(horizontal=True):
 
     # --- TÍTULO ---
     with col_titulo:
-        if chamada_selecionada == "Todas":
-            st.subheader("Todas as chamadas")
+        if edital_selecionado == "Todos":
+            st.subheader("Todos os editais")
         else:
-            nome_chamada = df_chamadas.loc[
-                df_chamadas["codigo_chamada"] == chamada_selecionada,
-                "nome_chamada"
+            nome_edital = df_editais.loc[
+                df_editais["codigo_edital"] == edital_selecionado,
+                "nome_edital"
             ].values[0]
 
-            st.subheader(f"{chamada_selecionada} — {nome_chamada}")
+            st.subheader(f"{edital_selecionado} — {nome_edital}")
 
     # --- TOGGLE ---
     with col_toggle:
@@ -258,36 +258,15 @@ with st.container(horizontal=True):
 
 
 
-
-
-# # Título
-# if chamada_selecionada == "Todas":
-#     st.subheader("Todas as chamadas")
-# else:
-#     nome_chamada = df_chamadas.loc[
-#         df_chamadas["codigo_chamada"] == chamada_selecionada, "nome_chamada"
-#     ].values[0]
-
-#     st.subheader(f"{chamada_selecionada} — {nome_chamada}")
-
-
-# # ============================================
-# # TOGGLE "Ver somente meus projetos"
-# # ============================================
-
-# with st.container(horizontal=True, horizontal_alignment="right"):
-#     ver_meus_projetos = st.toggle("Ver somente os meus projetos", False)
-
-
 # ============================================
 # FILTRO PRINCIPAL
 # ============================================
 
 df_filtrado = df_projetos.copy()
 
-# Filtrar pela chamada selecionada
-if chamada_selecionada != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["chamada"] == chamada_selecionada]
+# Filtrar pelo edital selecionado
+if edital_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
 
 # Filtrar somente os projetos do padrinho logado
 if ver_meus_projetos:
