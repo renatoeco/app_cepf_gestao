@@ -63,81 +63,230 @@ df_projetos['_id'] = df_projetos['_id'].astype(str)
 @st.dialog("Editar Pessoa", width="medium")
 def editar_pessoa(_id: str):
     """Abre o diálogo para editar uma pessoa"""
-    
+
     pessoa = col_pessoas.find_one({"_id": ObjectId(_id)})
     if not pessoa:
         st.error("Pessoa não encontrada.")
         return
 
-    # Inputs básicos
+    # ===============================
+    # Campos básicos
+    # ===============================
     nome = st.text_input("Nome", value=pessoa.get("nome_completo", ""))
     email = st.text_input("E-mail", value=pessoa.get("e_mail", ""))
     telefone = st.text_input("Telefone", value=pessoa.get("telefone", ""))
 
+    # ===============================
     # Tipo de usuário
+    # ===============================
+    tipos_usuario_validos = ["admin", "equipe", "beneficiario", "visitante"]
+
     tipo_usuario_raw = pessoa.get("tipo_usuario", "")
-    tipo_usuario_default = tipo_usuario_raw.strip() if isinstance(tipo_usuario_raw, str) else ""
+    tipo_usuario_default = (
+        tipo_usuario_raw.strip()
+        if isinstance(tipo_usuario_raw, str) and tipo_usuario_raw in tipos_usuario_validos
+        else tipos_usuario_validos[0]
+    )
 
     tipo_usuario = st.selectbox(
         "Tipo de usuário",
-        options=["admin", "equipe", "beneficiario", "visitante"],
-        index=["admin", "equipe", "beneficiario", "visitante"].index(tipo_usuario_default)
-        if tipo_usuario_default in ["admin", "equipe", "beneficiario", "visitante"]
-        else 0
+        options=tipos_usuario_validos,
+        index=tipos_usuario_validos.index(tipo_usuario_default),
     )
 
-    # Tipo de beneficiário — só aparece se tipo_usuario == beneficiario
+    # ===============================
+    # Tipo de beneficiário (condicional)
+    # ===============================
     tipo_beneficiario = None
+    tipos_beneficiario_validos = ["técnico", "financeiro"]
+
     if tipo_usuario == "beneficiario":
-        tipo_beneficiario = st.selectbox(
-            "Tipo de beneficiário",
-            options=["técnico", "financeiro"],
-            index=["técnico", "financeiro"].index(pessoa.get("tipo_beneficiario", "técnico"))
-            if pessoa.get("tipo_beneficiario") in ["técnico", "financeiro"]
-            else 0
+        tipo_beneficiario_raw = pessoa.get("tipo_beneficiario", tipos_beneficiario_validos[0])
+        tipo_beneficiario_default = (
+            tipo_beneficiario_raw
+            if tipo_beneficiario_raw in tipos_beneficiario_validos
+            else tipos_beneficiario_validos[0]
         )
 
+        tipo_beneficiario = st.selectbox(
+            "Tipo de beneficiário",
+            options=tipos_beneficiario_validos,
+            index=tipos_beneficiario_validos.index(tipo_beneficiario_default),
+        )
+
+    # ===============================
     # Status
+    # ===============================
+    status_validos = ["ativo", "inativo"]
+    status_raw = pessoa.get("status", "ativo")
+    status_default = status_raw if status_raw in status_validos else "ativo"
+
     status = st.selectbox(
         "Status",
-        options=["ativo", "inativo"],
-        index=0 if pessoa.get("status", "ativo") == "ativo" else 1
+        options=status_validos,
+        index=status_validos.index(status_default),
     )
 
+    # ===============================
     # Projetos
+    # ===============================
+    # Opções existentes no banco
+    opcoes_projetos = (
+        df_projetos["sigla"]
+        .dropna()
+        .astype(str)
+        .sort_values()
+        .tolist()
+    )
+
+    # Projetos cadastrados na pessoa (podem conter inválidos)
+    projetos_pessoa = pessoa.get("projetos", [])
+    if not isinstance(projetos_pessoa, list):
+        projetos_pessoa = []
+
+    # Filtra somente projetos que ainda existem
+    projetos_default_validos = [
+        p for p in projetos_pessoa if p in opcoes_projetos
+    ]
+
+    # Detecta projetos removidos
+    projetos_invalidos = sorted(set(projetos_pessoa) - set(opcoes_projetos))
+
+    # Aviso ao usuário
+    if projetos_invalidos:
+        st.warning(
+            "Os seguintes projetos não existem no banco de dados e serão removidos desse usuário: "
+            + ", ".join(projetos_invalidos)
+        )
+
+    # Multiselect protegido
     projetos = st.multiselect(
         "Projetos",
-        options=df_projetos["sigla"].tolist(),
-        default=pessoa.get("projetos", []),
+        options=opcoes_projetos,
+        default=projetos_default_validos,
     )
 
-    st.write("")
+    st.divider()
 
-    # Botão de salvar
+    # ===============================
+    # Salvar alterações
+    # ===============================
     if st.button("Salvar alterações", icon=":material/save:"):
-        # Documento base
         update_data = {
             "nome_completo": nome,
             "e_mail": email,
             "telefone": telefone,
             "tipo_usuario": tipo_usuario,
             "status": status,
-            "projetos": projetos
+            "projetos": projetos,  # já higienizados
         }
 
-        # Adiciona tipo_beneficiario apenas se aplicável
-        if tipo_beneficiario:
+        # Tipo beneficiário (somente se for beneficiário)
+        if tipo_usuario == "beneficiario" and tipo_beneficiario:
             update_data["tipo_beneficiario"] = tipo_beneficiario
         else:
-            # Remove o campo se existir no documento anterior
-            col_pessoas.update_one({"_id": ObjectId(_id)}, {"$unset": {"tipo_beneficiario": ""}})
+            # Remove se existir no banco
+            col_pessoas.update_one(
+                {"_id": ObjectId(_id)},
+                {"$unset": {"tipo_beneficiario": ""}},
+            )
 
-        # Atualiza o registro
-        col_pessoas.update_one({"_id": ObjectId(_id)}, {"$set": update_data})
+        # Atualiza documento
+        col_pessoas.update_one(
+            {"_id": ObjectId(_id)},
+            {"$set": update_data},
+        )
 
         st.success("Pessoa atualizada com sucesso!")
         time.sleep(2)
         st.rerun()
+
+
+
+
+
+
+
+
+
+
+# def editar_pessoa(_id: str):
+#     """Abre o diálogo para editar uma pessoa"""
+    
+#     pessoa = col_pessoas.find_one({"_id": ObjectId(_id)})
+#     if not pessoa:
+#         st.error("Pessoa não encontrada.")
+#         return
+
+#     # Inputs básicos
+#     nome = st.text_input("Nome", value=pessoa.get("nome_completo", ""))
+#     email = st.text_input("E-mail", value=pessoa.get("e_mail", ""))
+#     telefone = st.text_input("Telefone", value=pessoa.get("telefone", ""))
+
+#     # Tipo de usuário
+#     tipo_usuario_raw = pessoa.get("tipo_usuario", "")
+#     tipo_usuario_default = tipo_usuario_raw.strip() if isinstance(tipo_usuario_raw, str) else ""
+
+#     tipo_usuario = st.selectbox(
+#         "Tipo de usuário",
+#         options=["admin", "equipe", "beneficiario", "visitante"],
+#         index=["admin", "equipe", "beneficiario", "visitante"].index(tipo_usuario_default)
+#         if tipo_usuario_default in ["admin", "equipe", "beneficiario", "visitante"]
+#         else 0
+#     )
+
+#     # Tipo de beneficiário — só aparece se tipo_usuario == beneficiario
+#     tipo_beneficiario = None
+#     if tipo_usuario == "beneficiario":
+#         tipo_beneficiario = st.selectbox(
+#             "Tipo de beneficiário",
+#             options=["técnico", "financeiro"],
+#             index=["técnico", "financeiro"].index(pessoa.get("tipo_beneficiario", "técnico"))
+#             if pessoa.get("tipo_beneficiario") in ["técnico", "financeiro"]
+#             else 0
+#         )
+
+#     # Status
+#     status = st.selectbox(
+#         "Status",
+#         options=["ativo", "inativo"],
+#         index=0 if pessoa.get("status", "ativo") == "ativo" else 1
+#     )
+
+#     # Projetos
+#     projetos = st.multiselect(
+#         "Projetos",
+#         options=df_projetos["sigla"].tolist(),
+#         default=pessoa.get("projetos", []),
+#     )
+
+#     st.write("")
+
+#     # Botão de salvar
+#     if st.button("Salvar alterações", icon=":material/save:"):
+#         # Documento base
+#         update_data = {
+#             "nome_completo": nome,
+#             "e_mail": email,
+#             "telefone": telefone,
+#             "tipo_usuario": tipo_usuario,
+#             "status": status,
+#             "projetos": projetos
+#         }
+
+#         # Adiciona tipo_beneficiario apenas se aplicável
+#         if tipo_beneficiario:
+#             update_data["tipo_beneficiario"] = tipo_beneficiario
+#         else:
+#             # Remove o campo se existir no documento anterior
+#             col_pessoas.update_one({"_id": ObjectId(_id)}, {"$unset": {"tipo_beneficiario": ""}})
+
+#         # Atualiza o registro
+#         col_pessoas.update_one({"_id": ObjectId(_id)}, {"$set": update_data})
+
+#         st.success("Pessoa atualizada com sucesso!")
+#         time.sleep(2)
+#         st.rerun()
 
 
 

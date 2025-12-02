@@ -211,7 +211,7 @@ st.write('')
 # Área de notificações
 
 if st.session_state.notificacoes:
-    with st.expander("Notificações importantes", expanded=False, icon=":material/warning:"):
+    with st.expander("Notificações", expanded=False, icon=":material/warning:"):
         for msg in st.session_state.notificacoes:
             st.warning(msg)
 
