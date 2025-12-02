@@ -21,8 +21,8 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 col_parceiros = db["parceiros"]
 df_parceiros = pd.DataFrame(list(col_parceiros.find()))
 
-col_financiadores = db["financiadores"]
-df_financiadores = pd.DataFrame(list(col_financiadores.find()))
+col_doadores = db["doadores"]
+df_doadores = pd.DataFrame(list(col_doadores.find()))
 
 # Define as coleções específicas que serão utilizadas a partir do banco
 # col_pessoas = db["pessoas"]
@@ -38,7 +38,7 @@ df_ciclos = df_ciclos.rename(columns={
     "nome_ciclo": "Nome",
     "data_lancamento": "Data de Lançamento",
     "parceiros": "Parceiros",
-    "financiadores": "Financiadores"
+    "doadores": "Doadores"
 })
 
 # Converte o ObjectId para string (evita erro do PyArrow)
@@ -51,8 +51,8 @@ if "_id" in df_editais.columns:
 if "_id" in df_parceiros.columns:
     df_parceiros["_id"] = df_parceiros["_id"].astype(str)
 
-if "_id" in df_financiadores.columns:
-    df_financiadores["_id"] = df_financiadores["_id"].astype(str)
+if "_id" in df_doadores.columns:
+    df_doadores["_id"] = df_doadores["_id"].astype(str)
 
 
 
@@ -75,7 +75,7 @@ st.logo("images/cepf_logo.png", size='large')
 # Título da página
 st.header("Gerenciar Ciclos de Investimento")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Ciclos de Investimento", "Editais", "Parceiros", "Financiadores"])
+tab1, tab2, tab3, tab4 = st.tabs(["Ciclos de Investimento", "Editais", "Parceiros", "Doadores"])
 
 
 
@@ -107,13 +107,13 @@ with tab1:
             )
 
 
-            # Buscar siglas únicas dos financiadores no MongoDB
-            siglas_financiadores = sorted(col_financiadores.distinct("sigla_financiador"))
-            siglas_financiadores.insert(0, "")  # adiciona uma opção vazia
+            # Buscar siglas únicas dos doadores no MongoDB
+            siglas_doadores = sorted(col_doadores.distinct("sigla_doador"))
+            siglas_doadores.insert(0, "")  # adiciona uma opção vazia
 
-            financiador = st.multiselect(
-                "Financiadores(s):",
-                options=siglas_financiadores,
+            doador = st.multiselect(
+                "Doador(es):",
+                options=siglas_doadores,
             )
 
 
@@ -126,7 +126,7 @@ with tab1:
             if submit:
 
                 # Validação de campos vazios
-                if not codigo_ciclo or not nome_ciclo or not parceiro or not financiador:
+                if not codigo_ciclo or not nome_ciclo or not parceiro or not doador:
                     st.error("Todos os campos devem ser preenchidos.")
 
                 else:
@@ -143,7 +143,7 @@ with tab1:
                             "codigo_ciclo": codigo_ciclo,
                             "nome_ciclo": nome_ciclo,
                             "parceiros": parceiro,
-                            "financiadores": financiador,
+                            "doadores": doador,
                             }
                         col_ciclos.insert_one(novo_ciclo)
                         st.success("Ciclo de Investimento cadastrado com sucesso!")
@@ -188,15 +188,15 @@ with tab1:
                         default=parceiros_selecionados
                     )
 
-                    # Financiadores
-                    siglas_financiadores = sorted(col_financiadores.distinct("sigla_financiador"))
-                    siglas_financiadores.insert(0, "")
-                    financiadores_selecionados = ciclo.get("financiadores", [])
+                    # Doadores
+                    siglas_doadores = sorted(col_doadores.distinct("sigla_doador"))
+                    siglas_doadores.insert(0, "")
+                    doadores_selecionados = ciclo.get("doadores", [])
 
-                    financiador = st.multiselect(
-                        "Financiador(es):",
-                        options=siglas_financiadores,
-                        default=financiadores_selecionados
+                    doador = st.multiselect(
+                        "Doador(es):",
+                        options=siglas_doadores,
+                        default=doadores_selecionados
                     )
 
                     st.write('')
@@ -211,7 +211,7 @@ with tab1:
 
                     if submit_editar:
                         # Validação de campos vazios
-                        if not nome_ciclo or not parceiro or not financiador:
+                        if not nome_ciclo or not parceiro or not doador:
                             st.error("Todos os campos devem ser preenchidos.")
                         else:
                             # Atualizar no MongoDB (sem verificar duplicidade de código)
@@ -220,7 +220,7 @@ with tab1:
                                 {"$set": {
                                     "nome_ciclo": nome_ciclo,
                                     "parceiros": parceiro,
-                                    "financiadores": financiador
+                                    "doadores": doador
                                 }}
                             )
 
@@ -382,7 +382,7 @@ with tab2:
                                     "data_lancamento": data_lancamento.strftime("%d/%m/%Y") if data_lancamento else None,
                                     "ciclo_investimento": ciclo,
                                     "parceiros": parceiro,
-                                    "financiadores": financiador
+                                    "doadores": doador
                                 }}
                             )
 
@@ -514,85 +514,85 @@ with tab3:
 
 
 # ----------------------------------------
-# ABA FINANCIADORES
+# ABA DOADORES
 # ----------------------------------------
 
 with tab4:
 
     st.write("")
 
-    opcao_financiadores = st.radio(
+    opcao_doadores = st.radio(
         "Selecione uma ação:",
-        ["Cadastrar Financiador", "Editar Financiador"],
+        ["Cadastrar Doador", "Editar Doador"],
         horizontal=True
     )
 
     # ----------------------------------------
-    # CADASTRAR FINANCIADOR
+    # CADASTRAR DOADOR
     # ----------------------------------------
-    if opcao_financiadores == "Cadastrar Financiador":
+    if opcao_doadores == "Cadastrar Doador":
 
-        with st.form(key="financiador_cadastro_form", border=False):
+        with st.form(key="doador_cadastro_form", border=False):
             st.write("")
 
-            sigla_financiador = st.text_input("Sigla:")
-            nome_financiador = st.text_input("Nome do financiador:")
+            sigla_doador = st.text_input("Sigla:")
+            nome_doador = st.text_input("Nome do doador:")
 
             st.write("")
             submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary")
 
             if submit:
                 # Validação
-                if not sigla_financiador or not nome_financiador:
+                if not sigla_doador or not nome_doador:
                     st.error("Todos os campos devem ser preenchidos.")
                 else:
                     # Verifica se a sigla já existe
-                    sigla_existente = col_financiadores.find_one({"sigla_financiador": sigla_financiador})
+                    sigla_existente = col_doadores.find_one({"sigla_doador": sigla_doador})
 
                     if sigla_existente:
-                        st.error(f"A sigla '{sigla_financiador}' já está sendo utilizada.")
+                        st.error(f"A sigla '{sigla_doador}' já está sendo utilizada.")
                     else:
                         # Inserir no MongoDB
-                        novo_financiador = {
-                            "sigla_financiador": sigla_financiador,
-                            "nome_financiador": nome_financiador,
+                        novo_doador = {
+                            "sigla_doador": sigla_doador,
+                            "nome_doador": nome_doador,
                         }
-                        col_financiadores.insert_one(novo_financiador)
-                        st.success("Financiador cadastrado com sucesso!")
+                        col_doadores.insert_one(novo_doador)
+                        st.success("Doador cadastrado com sucesso!")
                         time.sleep(2)
                         st.rerun()
 
     # ----------------------------------------
-    # EDITAR FINANCIADOR
+    # EDITAR DOADOR
     # ----------------------------------------
-    elif opcao_financiadores == "Editar Financiador":
+    elif opcao_doadores == "Editar Doador":
         st.write("")
 
         # Selectbox fora do form — evita erro "Missing Submit Button"
-        lista_financiadores = sorted(col_financiadores.distinct("sigla_financiador"))
-        financiador_selecionado = st.selectbox(
-            "Selecione o financiador:",
-            options=[""] + lista_financiadores,
+        lista_doadores = sorted(col_doadores.distinct("sigla_doador"))
+        doador_selecionado = st.selectbox(
+            "Selecione o doador:",
+            options=[""] + lista_doadores,
             index=0
         )
 
-        if financiador_selecionado:
-            # Buscar o financiador no MongoDB
-            financiador = col_financiadores.find_one({"sigla_financiador": financiador_selecionado})
+        if doador_selecionado:
+            # Buscar o doador no MongoDB
+            doador = col_doadores.find_one({"sigla_doador": doador_selecionado})
 
-            if financiador:
-                # Form somente quando há um financiador válido
-                with st.form(key="financiador_editar_form", border=False):
+            if doador:
+                # Form somente quando há um doador válido
+                with st.form(key="doador_editar_form", border=False):
                     st.divider()
 
-                    sigla_financiador = st.text_input(
-                        "Sigla do financiador:",
-                        value=financiador.get("sigla_financiador", ""),
+                    sigla_doador = st.text_input(
+                        "Sigla do doador:",
+                        value=doador.get("sigla_doador", ""),
                         disabled=True
                     )
-                    nome_financiador = st.text_input(
-                        "Nome do financiador:",
-                        value=financiador.get("nome_financiador", "")
+                    nome_doador = st.text_input(
+                        "Nome do doador:",
+                        value=doador.get("nome_doador", "")
                     )
 
                     st.write("")
@@ -604,17 +604,17 @@ with tab4:
 
                     if submit_editar:
                         # Validação
-                        if not nome_financiador:
-                            st.error("O campo nome do financiador deve ser preenchido.")
+                        if not nome_doador:
+                            st.error("O campo nome do doador deve ser preenchido.")
                         else:
                             # Atualizar no MongoDB
-                            col_financiadores.update_one(
-                                {"_id": financiador["_id"]},
-                                {"$set": {"nome_financiador": nome_financiador}}
+                            col_doadores.update_one(
+                                {"_id": doador["_id"]},
+                                {"$set": {"nome_doador": nome_doador}}
                             )
 
-                            st.success("Financiador atualizado com sucesso!")
+                            st.success("Doador atualizado com sucesso!")
                             time.sleep(2)
                             st.rerun()
             else:
-                st.warning("Não foi possível localizar o financiador selecionado.")
+                st.warning("Não foi possível localizar o doador selecionado.")

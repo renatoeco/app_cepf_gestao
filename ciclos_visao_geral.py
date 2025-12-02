@@ -21,8 +21,8 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 col_parceiros = db["parceiros"]
 df_parceiros = pd.DataFrame(list(col_parceiros.find()))
 
-col_financiadores = db["financiadores"]
-df_financiadores = pd.DataFrame(list(col_financiadores.find()))
+col_doadores = db["doadores"]
+df_doadores = pd.DataFrame(list(col_doadores.find()))
 
 # Define as coleções específicas que serão utilizadas a partir do banco
 # col_pessoas = db["pessoas"]
@@ -38,7 +38,7 @@ df_ciclos = df_ciclos.rename(columns={
     "nome_ciclo": "Nome",
     "data_lancamento": "Data de Lançamento",
     "parceiros": "Parceiros",
-    "financiadores": "Financiadores"
+    "doadores": "Doadores"
 })
 
 # Renomear as colunas de df_editais
@@ -55,10 +55,10 @@ df_parceiros = df_parceiros.rename(columns={
     "nome_parceiro": "Nome",
 })
 
-# Renomear as colunas de df_financiadores
-df_financiadores = df_financiadores.rename(columns={
-    "sigla_financiador": "Sigla",
-    "nome_financiador": "Nome",
+# Renomear as colunas de df_doadores
+df_doadores = df_doadores.rename(columns={
+    "sigla_doador": "Sigla",
+    "nome_doador": "Nome",
 })
 
 # Converte o ObjectId para string (evita erro do PyArrow)
@@ -71,8 +71,8 @@ if "_id" in df_editais.columns:
 if "_id" in df_parceiros.columns:
     df_parceiros["_id"] = df_parceiros["_id"].astype(str)
 
-if "_id" in df_financiadores.columns:
-    df_financiadores["_id"] = df_financiadores["_id"].astype(str)
+if "_id" in df_doadores.columns:
+    df_doadores["_id"] = df_doadores["_id"].astype(str)
 
 
 
@@ -130,9 +130,9 @@ with st.expander("**Filtros**"):
         )
 
     with col_filtros[3]:
-        filtro_financiador = st.selectbox(
-            "Financiador:",
-            options=["Todos"] + sorted(df_financiadores["Sigla"].unique().tolist()),
+        filtro_doador = st.selectbox(
+            "Doador:",
+            options=["Todos"] + sorted(df_doadores["Sigla"].unique().tolist()),
             index=0
         )
 
@@ -141,7 +141,7 @@ with st.expander("**Filtros**"):
 df_ciclos_filtrado = df_ciclos.copy()
 df_editais_filtrado = df_editais.copy()
 df_parceiros_filtrado = df_parceiros.copy()
-df_financiadores_filtrado = df_financiadores.copy()
+df_doadores_filtrado = df_doadores.copy()
 
 
 # --- FILTRO POR CICLO DE INVESTIMENTO ---
@@ -152,12 +152,12 @@ if filtro_ciclo != "Todos":
     # Editais relacionados
     df_editais_filtrado = df_editais[df_editais["Ciclo de investimento"] == filtro_ciclo]
 
-    # Parceiros e financiadores relacionados
+    # Parceiros e doadores relacionados
     parceiros_rel = df_ciclos_filtrado["Parceiros"].explode().dropna().unique().tolist()
-    financiadores_rel = df_ciclos_filtrado["Financiadores"].explode().dropna().unique().tolist()
+    doadores_rel = df_ciclos_filtrado["Doadores"].explode().dropna().unique().tolist()
 
     df_parceiros_filtrado = df_parceiros[df_parceiros["Sigla"].isin(parceiros_rel)]
-    df_financiadores_filtrado = df_financiadores[df_financiadores["Sigla"].isin(financiadores_rel)]
+    df_doadores_filtrado = df_doadores[df_doadores["Sigla"].isin(doadores_rel)]
 
 
 # --- FILTRO POR EDITAL ---
@@ -168,10 +168,10 @@ elif filtro_edital != "Todos":
     df_ciclos_filtrado = df_ciclos[df_ciclos["Código"] == ciclo_rel]
 
     parceiros_rel = df_ciclos_filtrado["Parceiros"].explode().dropna().unique().tolist()
-    financiadores_rel = df_ciclos_filtrado["Financiadores"].explode().dropna().unique().tolist()
+    doadores_rel = df_ciclos_filtrado["Doadores"].explode().dropna().unique().tolist()
 
     df_parceiros_filtrado = df_parceiros[df_parceiros["Sigla"].isin(parceiros_rel)]
-    df_financiadores_filtrado = df_financiadores[df_financiadores["Sigla"].isin(financiadores_rel)]
+    df_doadores_filtrado = df_doadores[df_doadores["Sigla"].isin(doadores_rel)]
 
 
 # --- FILTRO POR PARCEIRO ---
@@ -185,14 +185,14 @@ elif filtro_parceiro != "Todos":
 
     df_parceiros_filtrado = df_parceiros[df_parceiros["Sigla"] == filtro_parceiro]
 
-    financiadores_rel = df_ciclos_filtrado["Financiadores"].explode().dropna().unique().tolist()
-    df_financiadores_filtrado = df_financiadores[df_financiadores["Sigla"].isin(financiadores_rel)]
+    doadores_rel = df_ciclos_filtrado["Doadores"].explode().dropna().unique().tolist()
+    df_doadores_filtrado = df_doadores[df_doadores["Sigla"].isin(doadores_rel)]
 
 
-# --- FILTRO POR FINANCIADOR ---
-elif filtro_financiador != "Todos":
+# --- FILTRO POR DOADOR ---
+elif filtro_doador != "Todos":
     df_ciclos_filtrado = df_ciclos[
-        df_ciclos["Financiadores"].apply(lambda x: filtro_financiador in x if isinstance(x, list) else False)
+        df_ciclos["Doadores"].apply(lambda x: filtro_doador in x if isinstance(x, list) else False)
     ]
 
     codigos_ciclos_rel = df_ciclos_filtrado["Código"].unique().tolist()
@@ -201,7 +201,7 @@ elif filtro_financiador != "Todos":
     parceiros_rel = df_ciclos_filtrado["Parceiros"].explode().dropna().unique().tolist()
     df_parceiros_filtrado = df_parceiros[df_parceiros["Sigla"].isin(parceiros_rel)]
 
-    df_financiadores_filtrado = df_financiadores[df_financiadores["Sigla"] == filtro_financiador]
+    df_doadores_filtrado = df_doadores[df_doadores["Sigla"] == filtro_doador]
 
 
 # --- EXIBIÇÃO DOS DATAFRAMES ---
@@ -213,7 +213,7 @@ st.subheader(pluralizar(len(df_ciclos_filtrado), "ciclo de investimento", "ciclo
 st.dataframe(
     df_ciclos_filtrado,
     hide_index=True,
-    column_order=['Código', 'Nome', 'Data de Lançamento', 'Parceiros', 'Financiadores']
+    column_order=['Código', 'Nome', 'Data de Lançamento', 'Parceiros', 'Doadores']
 )
 st.write('')
 
@@ -235,10 +235,10 @@ st.dataframe(
 )
 st.write('')
 
-# FINANCIADORES ------------------------------------------------------
-st.subheader(pluralizar(len(df_financiadores_filtrado), "financiador", "financiadores"))
+# DOADORES ------------------------------------------------------
+st.subheader(pluralizar(len(df_doadores_filtrado), "doador", "doadores"))
 st.dataframe(
-    df_financiadores_filtrado,
+    df_doadores_filtrado,
     hide_index=True,
     column_order=['Sigla', 'Nome']
 )
