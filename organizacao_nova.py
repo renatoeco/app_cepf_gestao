@@ -23,8 +23,8 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_organizacoes = db["organizacoes"]
 df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 
-col_editais = db["editais"]
-df_editais = pd.DataFrame(list(col_editais.find()))
+# col_ciclos = db["ciclos_investimento"]
+# df_ciclos = pd.DataFrame(list(col_ciclos.find()))
 
 col_temas = db["temas_projetos"]
 df_temas = pd.DataFrame(list(col_temas.find()))

@@ -165,17 +165,17 @@ if opcao_cadastro == "Convite individual":
     # depende do tipo de usuário logado (ex.: tipo_usuario vem do login)
     if tipo_usuario == "equipe":
         tipo_novo_usuario = st.selectbox(
-            "Tipo de usuário", ["beneficiario", "visitante"], key="tipo_novo_usuario"
+            "Tipo de usuário", ["", "beneficiario", "visitante"], key="tipo_novo_usuario"
         )
     elif tipo_usuario == "admin":
         tipo_novo_usuario = st.selectbox(
             "Tipo de usuário", ["", "admin", "equipe", "beneficiario", "visitante"], key="tipo_novo_usuario"
         )
-    else:
-        # se quiser um fallback:
-        tipo_novo_usuario = st.selectbox(
-            "Tipo de usuário", ["", "beneficiario", "visitante"], key="tipo_novo_usuario"
-        )
+    # else:
+    #     # se quiser um fallback:
+    #     tipo_novo_usuario = st.selectbox(
+    #         "Tipo de usuário", ["", "beneficiario", "visitante"], key="tipo_novo_usuario"
+    #     )
 
     # mostra apenas se selecionado beneficiário
     if st.session_state.get("tipo_novo_usuario") == "beneficiario":

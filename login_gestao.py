@@ -450,18 +450,18 @@ else:
                 st.Page("projetos_home_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
                 st.Page("lista_projetos.py", title="Projetos", icon=":material/list:"),
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-                st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+                st.Page("projeto_novo.py", title="Novo projeto", icon=":material/add_circle:"),
             ],
-            "Editais": [
-                st.Page("editais_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("gerenciar_editais.py", title="Gerenciar", icon=":material/settings:"),
+            "Ciclos de investimento": [
+                st.Page("ciclos_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
+                st.Page("ciclos_gerenciar.py", title="Gerenciar", icon=":material/settings:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
 
             ],
             "Organizações": [
                 st.Page("organizacoes_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("nova_organizacao.py", title="Nova organização", icon=":material/add_business:"),
+                st.Page("organizacao_nova.py", title="Nova organização", icon=":material/add_business:"),
             ],
             "Pessoas": [
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
@@ -482,18 +482,18 @@ else:
                 st.Page("projetos_home_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
                 st.Page("lista_projetos.py", title="Projetos", icon=":material/list:"),
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-                st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
+                st.Page("projeto_novo.py", title="Novo projeto", icon=":material/add_circle:"),
             ],
-            "Editais": [
-                st.Page("editais_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("gerenciar_editais.py", title="Edital / Chamada", icon=":material/settings:"),
+            "Ciclos de investimento": [
+                st.Page("ciclos_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
+                st.Page("ciclos_gerenciar.py", title="Gerenciar", icon=":material/settings:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
                 # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
 
             ],
             "Organizações": [
                 st.Page("organizacoes_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
-                st.Page("nova_organizacao.py", title="Nova organização", icon=":material/add_business:"),
+                st.Page("organizacao_nova.py", title="Nova organização", icon=":material/add_business:"),
             ],
             "Pessoas": [
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
@@ -526,44 +526,6 @@ else:
         },
     }
 
-
-
-    # # Define as páginas disponíveis para cada tipo de usuário
-    # pags_por_tipo = {
-    #     "home_admin": [
-    #         st.Page("projetos_visao_geral.py", title="Projetos", icon=":material/assignment:"),
-    #         st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-    #         st.Page("novo_edital.py", title="Cadastrar edital", icon=":material/campaign:"),
-    #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-    #         st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-    #         st.Page("administracao.py", title="Administração", icon=":material/admin_panel_settings:")
-    #     ],
-    #     "home_equipe": [
-    #         st.Page("projetos_visao_geral.py", title="Projetos", icon=":material/assignment:"),
-    #         st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-    #         st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-    #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-    #         st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-    #     ],
-    #     "ver_projeto": [
-    #         st.Page("projeto_visao_geral.py", title="Visão geral", icon=":material/assignment:"),
-    #         st.Page("projeto_atividades.py", title="Atividades", icon=":material/add_circle:"),
-    #         st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/campaign:"),
-    #         st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
-    #         st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/group:"),
-    #     ],
-    #     "ben_selec_projeto": [
-    #         st.Page("ben_selec_projeto.py", title="Selecione o projeto", icon=":material/assignment:"),
-    #         # st.Page("novo_projeto.py", title="Novo projeto", icon=":material/add_circle:"),
-    #         # st.Page("novo_edital.py", title="Novo edital", icon=":material/campaign:"),
-    #         # st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-    #         # st.Page("pessoas.py", title="Pessoas", icon=":material/group:"),
-    #     ],
-    #     "visitante": [
-    #         st.Page("projetos_visao_geral.py", title="Projetos", icon=":material/assignment:"),
-    #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-    #     ]
-    # }
 
 
     # Inicializa variáveis de controle no session_state ----------------------
