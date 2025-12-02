@@ -80,7 +80,8 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 
         # Se não há parcelas cadastradas
         if len(parcelas) == 0:
-            st.warning(
+            # area_notificacoes.warning(
+            notificar(
                 f"O projeto {codigo} - {sigla} não tem parcelas cadastradas. "
                 "Não é possível determinar o status."
             )
@@ -143,6 +144,17 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 
 
 
+# ============================================
+# ÁREA DE NOTIFICAÇÕES
+# ============================================
+
+
+if "notificacoes" not in st.session_state:
+    st.session_state.notificacoes = []
+
+
+def notificar(mensagem: str):
+    st.session_state.notificacoes.append(mensagem)
 
 
 
@@ -150,6 +162,8 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 # TRATAMENTO DE DADOS   
 ###########################################################################################################
 
+# Limpar as notificações, para preencher novamente.
+st.session_state.notificacoes = []
 
 # Inclulir o status no dataframe de projetos
 df_projetos = calcular_status_projetos(df_projetos)
@@ -191,7 +205,15 @@ st.header("Projetos")
 
 st.write('')
 
+# Área de notificações
 
+if st.session_state.notificacoes:
+    with st.expander("Notificações importantes", expanded=False, icon=":material/warning:"):
+        for msg in st.session_state.notificacoes:
+            st.warning(msg)
+
+st.write('')
+st.write('')
 
 # ============================================
 # SELEÇÃO DA CHAMADA
