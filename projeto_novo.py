@@ -299,11 +299,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
     # NOME DO PROJETO
     nome_projeto = st.text_input("Nome do Projeto:")
 
-    # LATITUDE
-    # latitude = st.text_input("Latitude: (ex: -19.015224)")
-
-    # LONGITUDE
-    # longitude = st.text_input("Longitude: (ex: -47.856324)")
 
     # DURAÇÃO DO PROJETO EM MESES
     duracao_projeto = st.number_input(
@@ -318,18 +313,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
 
     # DATA DE FIM DO CONTRATO
     data_fim_contrato = st.date_input("Data de Fim do Contrato:", format="DD/MM/YYYY")
-
-    # # VALOR DO CONTRATO
-    # valor_contrato = st.number_input("Valor do Contrato:", format="%f")
-
-    # Padrinho/Madrinha
-    # Filtrar nomes que contenham a palavra "monitor" na coluna tipo_usuario
-    # padrinhos = df_pessoas[df_pessoas['tipo_usuario'].str.contains("monitor", case=False, na=False)]['nome_completo'].tolist()
-    # padrinhos = df_pessoas[df_pessoas["tipo_usuario"] == "monitor"]["nome_completo"].tolist()
-    # padrinhos = df_pessoas[df_pessoas["tipo_usuario"].isin(["equipe", "admin"])]["nome_completo"].tolist()
-
-    # Selectbox com a lista filtrada
-    # padrinho = st.selectbox("Padrinho/Madrinha:", padrinhos)
 
     # Responsável
     responsiveis = df_pessoas[df_pessoas['tipo_usuario'].str.contains("beneficiario", case=False, na=False)]['nome_completo'].tolist()
@@ -367,63 +350,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
         placeholder=""
     )
 
-    # # biomas_selecionados = col3.multiselect(
-    # #     "Biomas",
-    # #     options=list(biomas_codigo_para_label.values()),
-    # #     placeholder=""
-    # # )
-
-    # #  TERRAS INDÍGENAS -----------------------
-    # col1, col2 = st.columns(2)
-
-    # tis_selecionadas = col1.multiselect(
-    #     "Terras Indígenas",
-    #     options=list(ti_codigo_para_label.values()),
-    #     placeholder=""
-    # )
-
-    # #  UNIDADES DE CONSERVAÇÃO -----------------------
-    # ucs_selecionadas = col2.multiselect(
-    #     "Unidades de Conservação",
-    #     options=list(uc_codigo_para_label.values()),
-    #     placeholder=""
-    # )
-
-    # #  ASSENTAMENTOS -----------------------
-    # col1, col2 = st.columns(2)
-    # assentamentos_selecionados = col1.multiselect(
-    #     "Assentamentos",
-    #     options=list(assent_codigo_para_label.values()),
-    #     placeholder=""
-    # )
-
-    # #  QUILOMBOS -----------------------
-    # quilombos_selecionados = col2.multiselect(
-    #     "Quilombos",
-    #     options=list(quilombo_codigo_para_label.values()),
-    #     placeholder=""
-    # )
-
-    # #  BACIAS HIDROGRÁFICAS -----------------------
-    # col1, col2, col3 = st.columns(3)
-
-    # bacias_macro_sel = col1.multiselect(
-    #     "Bacias Hidrográficas - Macro",
-    #     options=list(bacia_macro_codigo_para_label.values()),
-    #     placeholder=""
-    # )
-
-    # bacias_meso_sel = col2.multiselect(
-    #     "Bacias Hidrográficas - Meso",
-    #     options=list(bacia_meso_codigo_para_label.values()),
-    #     placeholder=""
-    # )
-
-    # bacias_micro_sel = col3.multiselect(
-    #     "Bacias Hidrográficas - Micro",
-    #     options=list(bacia_micro_codigo_para_label.values()),
-    #     placeholder=""
-    # )
 
     st.write('')
 
@@ -445,13 +371,8 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
             "Duração do Projeto": duracao_projeto,
             "Data de Início": data_inicio_contrato,
             "Data de Fim": data_fim_contrato,
-            # "Valor do Contrato": valor_contrato,
-            # "Padrinho/Madrinha": padrinho,
-            # "Responsável": responsavel,
             "Direções estratégicas": direcoes,
             "Públicos": publicos,
-            # "Latitude": latitude,
-            # "Longitude": longitude,
             "Estados (UF)": ufs_selecionadas,
             "Municípios": municipios_selecionadas
         }
@@ -475,9 +396,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
             else:
 
 
-
-
-
                 # --- Criar ObjectIds ---
                 projeto_id = bson.ObjectId()
 
@@ -495,14 +413,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
                 for tipo, selecionados, dicionario in [
                     ("uf", ufs_selecionadas, uf_codigo_para_label),
                     ("municipio", municipios_selecionadas, municipios_codigo_para_label),
-                    # ("bioma", biomas_selecionados, biomas_codigo_para_label),
-                    # ("terra_indigena", tis_selecionadas, ti_codigo_para_label),
-                    # ("uc", ucs_selecionadas, uc_codigo_para_label),
-                    # ("assentamento", assentamentos_selecionados, assent_codigo_para_label),
-                    # ("quilombo", quilombos_selecionados, quilombo_codigo_para_label),
-                    # ("bacia_micro", bacias_micro_sel, bacia_micro_codigo_para_label),
-                    # ("bacia_meso", bacias_meso_sel, bacia_meso_codigo_para_label),
-                    # ("bacia_macro", bacias_macro_sel, bacia_macro_codigo_para_label),
                 ]:
                     for item in selecionados:
                         codigo_atuacao = get_codigo_por_label(dicionario, item)
@@ -523,14 +433,10 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
                     "duracao": duracao_projeto,
                     "data_inicio_contrato": data_inicio_contrato.strftime("%d/%m/%Y"),
                     "data_fim_contrato": data_fim_contrato.strftime("%d/%m/%Y"),
-                    # "valor": valor_contrato,
-                    # "valor_da_contrapartida_em_r$": float_to_br(contrapartida),
-                    # "padrinho": padrinho,
                     "responsavel": responsavel,
                     "direcoes_estrategicas": direcoes,
                     "publicos": publicos,
-                    # "latitude": latitude,
-                    # "longitude": longitude,
+
                     "regioes_atuacao": regioes_atuacao,
 
                 }
@@ -538,11 +444,7 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
                 # --- Inserir no MongoDB ---
                 col_projetos.insert_one(doc)
 
-                # st.session_state.cadastrando_projeto_codigo = codigo_projeto
-                # st.session_state.cadastrando_projeto_sigla = sigla_projeto
-                # st.session_state.expand_parcelas = True
 
-                # expand_passo_1 = False
 
                 st.success("Projeto cadastrado com sucesso!")
                 time.sleep(3)
