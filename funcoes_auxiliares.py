@@ -68,6 +68,48 @@ def ajustar_altura_dataframe(
 
 
 
+
+
+
+
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+def sidebar_projeto():
+    # Botão de voltar para a home_interna só para admin, equipe e visitante
+    if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
+
+        if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+            
+            if st.session_state.tipo_usuario == 'admin':
+                st.session_state.pagina_atual = 'home_admin'
+                st.rerun()
+
+            elif st.session_state.tipo_usuario == 'equipe':
+                st.session_state.pagina_atual = 'home_equipe'
+                st.rerun()
+
+
+    # Botão de voltar para beneficiário — apenas se tiver mais de um projeto
+    if (
+        st.session_state.get("tipo_usuario") == "beneficiario"
+        and len(st.session_state.get("projetos", [])) > 1
+    ):
+        if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+            st.session_state.pagina_atual = "ben_selec_projeto"
+            st.session_state.projeto_atual = None
+            st.rerun()
+
+
+
+
+
+
+
+
+
+
 # # --- Conversor string brasileira -> float ---
 # def br_to_float(valor_str: str) -> float:
 #     """

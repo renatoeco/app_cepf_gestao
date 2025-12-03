@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto  # Função personalizada para conectar ao MongoDB
 import pandas as pd
 import streamlit_shadcn_ui as ui
 import datetime
@@ -68,8 +68,8 @@ if "_id" in df_projeto.columns:
 ###########################################################################################################
 
 # ???????????????????????
-with st.expander("Colunas do projeto"):
-    st.write(df_projeto.columns)
+# with st.expander("Colunas do projeto"):
+#     st.write(df_projeto.columns)
 
 
 # Logo do sidebar
@@ -103,9 +103,13 @@ st.write('*Bloco do cronograma de parcelas, relatórios e status*')
 
 st.divider()
 
+st.subheader('**Anotações**')
 
-# Anotações
-st.write('**Anotações**')
+
+# ============================================================
+# ANOTAÇÕES - DIÁLGO DE GERENCIAMENTO
+# ============================================================
+
 
 # Função do diálogo de gerenciar anotações  -------------------------------------
 @st.dialog("Gerenciar anotações", width="medium")
@@ -223,10 +227,6 @@ def gerenciar_anotacoes():
 
 
 
-
-
-
-
 with st.container(horizontal=True, horizontal_alignment="right"):
     if st.button(
         "Gerenciar anotações",
@@ -241,7 +241,6 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 # ANOTAÇÕES - LISTAGEM
 # ============================================================
 
-st.write("**Anotações**")
 
 anotacoes = (
     df_projeto["anotacoes"].values[0]
@@ -257,11 +256,16 @@ else:
     ui.table(data=df_anotacoes)
 
 
+st.write('')
+st.write('')
 
 
-# Visitas
-st.write('**Visitas**')
+# Visitas 
+st.subheader('**Visitas**')
 
+# ============================================================
+# VISITAS - DIÁLGO DE GERENCIAMENTO
+# ============================================================
 
 @st.dialog("Gerenciar visitas", width="medium")
 def gerenciar_visitas():
@@ -397,7 +401,6 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 
 
 
-# Listagem de visitas
 # ============================================================
 # VISITAS — LISTAGEM
 # ============================================================
@@ -424,37 +427,9 @@ else:
 
 
 
-
-
-
-
-
 # ###################################################################################################
-# SIDEBAR
+# SIDEBAR DA PÁGINA DO PROJETO
 # ###################################################################################################
 
-
-# Botão de voltar para a home_interna só para admin, equipe e visitante
-if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
-
-    if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
-        
-        if st.session_state.tipo_usuario == 'admin':
-            st.session_state.pagina_atual = 'home_admin'
-            st.rerun()
-
-        elif st.session_state.tipo_usuario == 'equipe':
-            st.session_state.pagina_atual = 'home_equipe'
-            st.rerun()
-
-
-# Botão de voltar para beneficiário — apenas se tiver mais de um projeto
-if (
-    st.session_state.get("tipo_usuario") == "beneficiario"
-    and len(st.session_state.get("projetos", [])) > 1
-):
-    if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
-        st.session_state.pagina_atual = "ben_selec_projeto"
-        st.session_state.projeto_atual = None
-        st.rerun()
+sidebar_projeto()
 

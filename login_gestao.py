@@ -505,11 +505,11 @@ else:
         },
 
         "ver_projeto": [
-            st.Page("projeto_visao_geral.py", title="Visão geral", icon=":material/assignment:"),
-            st.Page("projeto_atividades.py", title="Atividades", icon=":material/add_circle:"),
-            st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/campaign:"),
+            st.Page("projeto_visao_geral.py", title="Visão geral", icon=":material/home:"),
+            st.Page("projeto_atividades.py", title="Atividades", icon=":material/assignment:"),
+            st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/payments:"),
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
-            st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/group:"),
+            st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
         ],
 
 
