@@ -111,7 +111,7 @@ tipo_usuario = st.session_state.get("tipo_usuario", "")
 
 
 
-projetos = df_projetos["sigla"].unique().tolist()
+projetos = df_projetos["codigo"].unique().tolist()
 
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA

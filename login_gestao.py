@@ -467,8 +467,8 @@ else:
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
                 st.Page("pessoas_beneficiarios.py", title="Beneficiários", icon=":material/group:"),
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
-                st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
                 st.Page("pessoas_cadastrar.py", title="Convidar pessoas", icon=":material/person_add:"),
+                st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
             ],
             "Administração": [
                 st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
@@ -499,8 +499,8 @@ else:
                 st.Page("pessoas_equipe.py", title="Equipe", icon=":material/badge:"),
                 st.Page("pessoas_beneficiarios.py", title="Beneficiários", icon=":material/group:"),
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
-                st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
                 st.Page("pessoas_cadastrar.py", title="Convidar pessoas", icon=":material/person_add:"),
+                st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
             ],
         },
 

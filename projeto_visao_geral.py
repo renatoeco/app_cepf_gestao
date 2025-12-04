@@ -38,6 +38,8 @@ col_projetos = db["projetos"]
 
 codigo_projeto_atual = st.session_state.get("projeto_atual")
 
+st.write(codigo_projeto_atual)
+
 if not codigo_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()

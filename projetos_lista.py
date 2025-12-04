@@ -188,12 +188,14 @@ df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
     errors="coerce"
 )
 
-
-
-# CRIAR RELAÇÃO PROJETO ↔ PADRINHOS (SEM DUPLICAR LINHAS)
+# CRIAR RELAÇÃO PROJETO ↔ PADRINHOS (SOMENTE admin e equipe, SEM DUPLICAR LINHAS)
+# Quando houver mais de um padrinho cadastrado, mostra os dois separados por vírgula
 
 df_padrinhos = (
-    df_pessoas[["nome_completo", "projetos"]]
+    # Filtra só admin e equipe
+    df_pessoas[
+        df_pessoas["tipo_usuario"].isin(["admin", "equipe"])
+    ][["nome_completo", "projetos"]]
     .explode("projetos")
     .dropna(subset=["projetos"])
     .groupby("projetos", as_index=False)
@@ -212,6 +214,31 @@ df_projetos = df_projetos.merge(
     on="sigla",
     how="left"
 )
+
+
+
+# # CRIAR RELAÇÃO PROJETO ↔ PADRINHOS (SEM DUPLICAR LINHAS)
+
+# df_padrinhos = (
+#     df_pessoas[["nome_completo", "projetos"]]
+#     .explode("projetos")
+#     .dropna(subset=["projetos"])
+#     .groupby("projetos", as_index=False)
+#     .agg({
+#         "nome_completo": lambda nomes: ", ".join(sorted(set(nomes)))
+#     })
+#     .rename(columns={
+#         "projetos": "sigla",
+#         "nome_completo": "padrinho"
+#     })
+# )
+
+# # Juntar os padrinhos aos projetos
+# df_projetos = df_projetos.merge(
+#     df_padrinhos,
+#     on="sigla",
+#     how="left"
+# )
 
 
 ###########################################################################################################

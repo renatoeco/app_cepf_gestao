@@ -132,7 +132,7 @@ def editar_pessoa(_id: str):
     # ===============================
     # Opções existentes no banco
     opcoes_projetos = (
-        df_projetos["sigla"]
+        df_projetos["codigo"]
         .dropna()
         .astype(str)
         .sort_values()

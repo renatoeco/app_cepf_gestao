@@ -105,7 +105,7 @@ def editar_pessoa(_id: str):
     # Projetos
     projetos = st.multiselect(
         "Projetos",
-        options=df_projetos["sigla"].tolist(),
+        options=df_projetos["codigo"].tolist(),
         default=pessoa.get("projetos", []),
     )
 
