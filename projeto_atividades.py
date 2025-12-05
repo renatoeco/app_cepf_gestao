@@ -86,10 +86,532 @@ st.logo("images/cepf_logo.png", size='large')
 
 
 # Título da página
-# st.header("Atividades")
+st.header("Marco Lógico")
 
 
-impactos, indicadores, plano_trabalho, monitoramento = st.tabs(["Impactos", "Indicadores", "Plano de trabalho", "Monitoramento"])
+plano_trabalho, impactos, indicadores, monitoramento = st.tabs(["Plano de trabalho", "Impactos", "Indicadores", "Monitoramento"])
+
+
+
+
+# ###################################################################################################
+# PLANO DE TRABALHO
+# ###################################################################################################
+
+
+with plano_trabalho:
+
+    # --------------------------------------------------
+    # PERMISSÃO
+    # --------------------------------------------------
+    usuario_pode_editar = st.session_state.tipo_usuario in ["admin", "equipe"]
+
+    # Valor padrão do modo edição
+    modo_edicao = False
+
+    # --------------------------------------------------
+    # TOGGLE DE EDIÇÃO (somente para admin/equipe)
+    # --------------------------------------------------
+    if usuario_pode_editar:
+        with st.container(horizontal=True, horizontal_alignment="right"):
+            modo_edicao = st.toggle(
+                "Modo de edição",
+                key="editar_plano_trabalho"
+            )
+
+    # --------------------------------------------------
+    # TÍTULO DA SUBPÁGINA
+    # --------------------------------------------------
+    st.subheader("Plano de Trabalho")
+    st.write("")
+
+    # --------------------------------------------------
+    # RENDERIZAÇÃO CONDICIONAL
+    # --------------------------------------------------
+    if not modo_edicao:
+
+        # --------------------------------------------------
+        # MODO VISUALIZAÇÃO
+        # --------------------------------------------------
+
+        st.write("")
+
+        # Aqui você exibe o plano de trabalho que vem do df_projeto
+        # Exemplo:
+        plano = df_projeto.get("plano_trabalho", [])[0] if "plano_trabalho" in df_projeto.columns else []
+
+        if not plano:
+            st.info("Nenhum item do Plano de Trabalho cadastrado.")
+        else:
+            # Renderização futura:
+            # ui.table, st.dataframe, layout customizado etc.
+            st.write(plano)
+
+    else:
+
+
+
+
+
+
+
+
+        # -------------------------
+        # MODO EDIÇÃO - PLANO DE TRABALHO
+        # -------------------------
+
+
+        # Radio para escolher entre editar Componentes ou Atividades
+        opcao_comp_ativ = st.radio(
+            "O que deseja editar?",
+            ["Atividades",
+             "Entregas", 
+             "Componentes"],
+            horizontal=True
+        )
+
+
+        if opcao_comp_ativ == "Atividades":
+
+
+            # --------------------------------------------------
+            # MODO DE EDIÇÃO — ATIVIDADES
+            # --------------------------------------------------
+
+            st.write("")
+            st.write("")
+
+            # ============================================================
+            # Carregar plano de trabalho
+            # ============================================================
+
+            plano_trabalho = (
+                df_projeto["plano_trabalho"].values[0]
+                if "plano_trabalho" in df_projeto.columns else {}
+            )
+
+            componentes = plano_trabalho.get("componentes", [])
+
+            if not componentes:
+                st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar atividades.")
+                st.stop()
+
+
+            # ============================================================
+            # Montar lista de entregas
+            # ============================================================
+
+            lista_entregas = []
+
+            for comp in componentes:
+                for ent in comp.get("entregas", []):
+                    lista_entregas.append({
+                        "label": ent["entrega"],  # só o nome da entrega
+                        "componente": comp,
+                        "entrega": ent
+                    })
+
+            if not lista_entregas:
+                st.warning("Nenhuma entrega cadastrada. Cadastre entregas antes de adicionar atividades.")
+                st.stop()
+
+            lista_entregas = sorted(lista_entregas, key=lambda x: x["label"].lower())
+
+
+            # ============================================================
+            # Selectbox de entrega
+            # ============================================================
+
+            nome_entrega_sel = st.selectbox(
+                "Selecione a entrega",
+                [item["label"] for item in lista_entregas],
+                key="select_entrega_ativ"
+            )
+
+            item_sel = next(item for item in lista_entregas if item["label"] == nome_entrega_sel)
+
+            componente_sel = item_sel["componente"]
+            entrega_sel = item_sel["entrega"]
+
+            st.write('')
+
+            # ============================================================
+            # Carregar atividades existentes
+            # ============================================================
+
+            atividades_exist = entrega_sel.get("atividades", [])
+
+            lista_atividades = []
+            for a in atividades_exist:
+                try:
+                    dt_inicio = datetime.datetime.strptime(a.get("data_inicio", ""), "%d/%m/%Y").date()
+                except:
+                    dt_inicio = None
+
+                try:
+                    dt_fim = datetime.datetime.strptime(a.get("data_fim", ""), "%d/%m/%Y").date()
+                except:
+                    dt_fim = None
+
+                lista_atividades.append({
+                    "atividade": a.get("atividade", ""),
+                    "data_inicio": dt_inicio,
+                    "data_fim": dt_fim,
+                })
+
+            df_atividades = pd.DataFrame(lista_atividades)
+
+            # Se estiver vazio, cria colunas vazias
+            if df_atividades.empty:
+                df_atividades = pd.DataFrame({
+                    "atividade": pd.Series(dtype="str"),
+                    "data_inicio": pd.Series(dtype="datetime64[ns]"),
+                    "data_fim": pd.Series(dtype="datetime64[ns]"),
+                })
+
+
+            # ============================================================
+            # Data Editor com DateColumn DD/MM/YYYY
+            # ============================================================
+
+            df_editado = st.data_editor(
+                df_atividades,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_atividades",
+                column_config={
+
+                    "atividade": st.column_config.Column(
+                        label="Atividade",
+                        width=1000
+                    ),
+                    "data_inicio": st.column_config.DateColumn(
+                        label="Data início",
+                        format="DD/MM/YYYY",
+                        width=100
+                    ),
+                    "data_fim": st.column_config.DateColumn(
+                        label="Data término",
+                        format="DD/MM/YYYY",
+                        width=100
+                    ),
+                }
+            )
+
+
+            # ============================================================
+            # Botão salvar
+            # ============================================================
+
+            salvar_ativ = st.button(
+                "Salvar atividades",
+                icon=":material/save:",
+                type="secondary",
+                key="btn_salvar_atividades"
+            )
+
+
+            # ============================================================
+            # Validação + Salvamento
+            # ============================================================
+
+            if salvar_ativ:
+
+                erros = []
+
+                atividades_final = []
+
+                # Validação linha a linha
+                for idx, row in df_editado.iterrows():
+
+                    atividade = str(row["atividade"]).strip()
+                    dt_inicio = row["data_inicio"]
+                    dt_fim = row["data_fim"]
+
+                    if atividade == "":
+                        erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
+                    if dt_inicio is None:
+                        erros.append(f"Linha {idx + 1}: a Data de início é obrigatória.")
+                    if dt_fim is None:
+                        erros.append(f"Linha {idx + 1}: a Data de término é obrigatória.")
+
+                    # Se não houver erro, já preparo os dados finais
+                    if not erros:
+                        atividades_final.append({
+                            "atividade": atividade,
+                            "data_inicio": dt_inicio.strftime("%d/%m/%Y"),
+                            "data_fim": dt_fim.strftime("%d/%m/%Y"),
+                        })
+
+                # Se houver erros → exibir e não salvar
+                if erros:
+                    for e in erros:
+                        st.error(e)
+                    st.stop()
+
+                # Agora garantimos IDs estáveis
+                ids_original = [a["id"] for a in atividades_exist]
+
+                nova_lista = []
+                for idx, a in enumerate(atividades_final):
+
+                    if idx < len(ids_original):
+                        id_usado = ids_original[idx]
+                    else:
+                        id_usado = str(bson.ObjectId())
+
+                    nova_lista.append({
+                        "id": id_usado,
+                        **a
+                    })
+
+                # Atualizar entrega
+                entregas_atualizadas = []
+                for e in componente_sel["entregas"]:
+                    if e["id"] == entrega_sel["id"]:
+                        entregas_atualizadas.append({**e, "atividades": nova_lista})
+                    else:
+                        entregas_atualizadas.append(e)
+
+                # Atualizar apenas o componente correspondente
+                componentes_atualizados = []
+                for c in componentes:
+                    if c["id"] == componente_sel["id"]:
+                        componentes_atualizados.append({**c, "entregas": entregas_atualizadas})
+                    else:
+                        componentes_atualizados.append(c)
+
+                # Salvar no Mongo
+                resultado = col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+                )
+
+                if resultado.matched_count == 1:
+                    st.success("Atividades atualizadas com sucesso!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Erro ao atualizar atividades.")
+
+
+
+
+
+        # --------------------------------------------------
+        # MODO DE EDIÇÃO — ENTREGAS
+        # --------------------------------------------------
+        if opcao_comp_ativ == "Entregas":
+
+
+            st.write("")
+            st.write("")
+
+            # 1) Carrega o plano de trabalho e componentes
+            plano_trabalho = (
+                df_projeto["plano_trabalho"].values[0]
+                if "plano_trabalho" in df_projeto.columns else {}
+            )
+
+            componentes = plano_trabalho.get("componentes", [])
+
+            if not componentes:
+                st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar entregas.")
+                st.stop()
+
+            # 2) Usuário escolhe o componente ao qual deseja adicionar/editar entregas
+            mapa_comp_por_nome = {c["componente"]: c for c in componentes}
+            nomes_componentes = list(mapa_comp_por_nome.keys())
+
+            nome_componente_selecionado = st.selectbox(
+                "Selecione o componente",
+                nomes_componentes
+            )
+
+            componente = mapa_comp_por_nome[nome_componente_selecionado]
+
+            # 3) Carrega entregas existentes do componente selecionado
+            entregas_existentes = componente.get("entregas", [])
+
+            # Cria um DataFrame SOMENTE com a coluna "entrega"
+            if entregas_existentes:
+                df_entregas = pd.DataFrame({
+                    "entrega": [e.get("entrega", "") for e in entregas_existentes]
+                })
+            else:
+                df_entregas = pd.DataFrame({"entrega": pd.Series(dtype="str")})
+
+            # Mostra o editor
+            df_editado = st.data_editor(
+                df_entregas,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_entregas"
+            )
+
+            # Botão salvar
+            salvar_entregas = st.button(
+                "Salvar entregas",
+                icon=":material/save:",
+                type="secondary",
+                key="btn_salvar_entregas"
+            )
+
+            if salvar_entregas:
+
+                # Remove vazios
+                df_editado["entrega"] = df_editado["entrega"].astype(str).str.strip()
+                df_editado = df_editado[df_editado["entrega"] != ""]
+
+                # IDs originais na ordem correta
+                ids_original = [e["id"] for e in entregas_existentes]
+
+                nova_lista = []
+                import bson
+
+                for idx, row in df_editado.iterrows():
+                    nome = row["entrega"]
+
+                    # Se existia antes, mantém ID
+                    if idx < len(ids_original):
+                        id_usado = ids_original[idx]
+                    else:
+                        id_usado = str(bson.ObjectId())  # ID novo
+
+                    nova_lista.append({
+                        "id": id_usado,
+                        "entrega": nome
+                    })
+
+                # Atualizar SOMENTE o componente selecionado
+                componentes_atualizados = []
+
+                for comp in componentes:
+                    if comp["componente"] == nome_componente_selecionado:
+                        componentes_atualizados.append({
+                            **comp,
+                            "entregas": nova_lista
+                        })
+                    else:
+                        componentes_atualizados.append(comp)
+
+                # Salvar no banco de dados
+                resultado = col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+                )
+
+                if resultado.matched_count == 1:
+                    st.success("Entregas atualizadas com sucesso!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Erro ao atualizar entregas.")
+
+
+
+
+
+
+        # --------------------------------------------------
+        # EDIÇÃO DE COMPONENTES
+        # --------------------------------------------------
+        if opcao_comp_ativ == "Componentes":
+
+            st.write("")
+            # st.write("**Componentes** - Modo de Edição")
+            st.write("")
+
+            # 1) Carrega componentes diretamente do projeto
+            plano_trabalho = (
+                df_projeto["plano_trabalho"].values[0]
+                if "plano_trabalho" in df_projeto.columns else {}
+            )
+
+            componentes_existentes = plano_trabalho.get("componentes", [])
+
+            # 2) Criar DataFrame SOMENTE com 'componente'
+            #    O ID não aparece no editor
+            if componentes_existentes:
+                df_componentes = pd.DataFrame({
+                    "componente": [c.get("componente", "") for c in componentes_existentes]
+                })
+            else:
+                df_componentes = pd.DataFrame({"componente": pd.Series(dtype="str")})
+
+            # 3) Editor (somente coluna componente)
+            df_editado = st.data_editor(
+                df_componentes,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_componentes",
+            )
+
+            # -------------------------
+            # BOTÃO SALVAR
+            # -------------------------
+            salvar = st.button(
+                "Salvar componentes",
+                icon=":material/save:",
+                type="secondary",
+                key="btn_salvar_componentes"
+            )
+
+            # -------------------------
+            # SALVAMENTO
+            # -------------------------
+            if salvar:
+
+                # Limpa linhas vazias
+                df_editado["componente"] = df_editado["componente"].astype(str).str.strip()
+                df_editado = df_editado[df_editado["componente"] != ""]
+
+                novos_componentes = []
+                existentes_por_nome = {c["componente"]: c for c in componentes_existentes}
+
+                for _, row in df_editado.iterrows():
+                    nome = row["componente"]
+
+                    if nome in existentes_por_nome:
+                        # componente já existia → mantém o ID
+                        novos_componentes.append({
+                            "id": existentes_por_nome[nome]["id"],
+                            "componente": nome
+                        })
+                    else:
+                        # novo componente → cria ID novo
+                        novos_componentes.append({
+                            "id": str(bson.ObjectId()),
+                            "componente": nome
+                        })
+
+                # Salva no banco de dados
+                resultado = col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {"$set": {"plano_trabalho": {"componentes": novos_componentes}}}
+                )
+
+                if resultado.matched_count == 1:
+                    st.success("Componentes atualizados com sucesso!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Erro ao atualizar o Plano de Trabalho.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -98,7 +620,6 @@ impactos, indicadores, plano_trabalho, monitoramento = st.tabs(["Impactos", "Ind
 # ###################################################################################################
 
 with impactos:
-
 
     @st.dialog("Editar impactos", width="medium")
     def editar_impactos():
@@ -229,7 +750,7 @@ with impactos:
                 else:
                     st.error("Erro ao atualizar impacto.")
 
-    st.write('')
+    # st.write('')
 
     # Toggle do modo de edição
 
@@ -312,11 +833,8 @@ with impactos:
 # INDICADORES
 # ###################################################################################################
 
-
-
 with indicadores:
 
-    st.write("")
 
     # --------------------------------------------------
     # PERMISSÃO
@@ -335,6 +853,14 @@ with indicadores:
                 "Modo de edição",
                 key="editar_indicadores"
             )
+
+
+    # --------------------------------------------------
+    # TÍTULO DA SUBPÁGINA
+    # --------------------------------------------------
+    st.subheader("Indicadores")
+
+
 
     # --------------------------------------------------
     # RENDERIZAÇÃO CONDICIONAL
@@ -391,12 +917,6 @@ with indicadores:
             ui.table(df_visualizacao)
 
 
-
-
-
-
-
-
     else:
 
 
@@ -404,7 +924,7 @@ with indicadores:
         # MODO EDIÇÃO — INDICADORES
         # -------------------------
 
-        st.write("Selecione os indicadores que serão acompanhados no projeto.")
+        st.write("*Selecione os indicadores que serão acompanhados no projeto.*")
         st.write("")
 
         # --------------------------------------------------
@@ -447,7 +967,7 @@ with indicadores:
             # --------------------------------------------------
             # CABEÇALHO
             # --------------------------------------------------
-            col_h1, col_h2, col_h3 = st.columns([5, 2, 3])
+            col_h1, col_h2, col_h3 = st.columns([6, 2, 4])
 
             with col_h1:
                 st.markdown("**Indicadores do CEPF**")
@@ -458,7 +978,8 @@ with indicadores:
             with col_h3:
                 st.markdown("**Descrição da contribuição esperada**")
 
-            st.divider()
+            # st.divider()
+            st.write('')
 
             # --------------------------------------------------
             # LISTAGEM DOS INDICADORES
@@ -476,7 +997,7 @@ with indicadores:
                 valor_atual = dados_atual.get("valor", 0)
                 descricao_atual = dados_atual.get("descricao", "")
 
-                col_check, col_valor, col_desc = st.columns([5, 2, 3])
+                col_check, col_valor, col_desc = st.columns([6, 2, 4])
 
                 # -------------------------
                 # CHECKBOX

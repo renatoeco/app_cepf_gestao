@@ -232,9 +232,9 @@ def gerenciar_anotacoes():
 with st.container(horizontal=True, horizontal_alignment="right"):
     if st.button(
         "Gerenciar anotações",
-        icon=":material/notes:",
+        icon=":material/edit:",
         type="secondary",
-        width=250
+        width=200
     ):
         gerenciar_anotacoes()
 
@@ -261,6 +261,10 @@ else:
 
 st.write('')
 st.write('')
+st.write('')
+
+
+
 
 
 # Visitas 
@@ -397,9 +401,9 @@ def gerenciar_visitas():
 with st.container(horizontal=True, horizontal_alignment="right"):
     if st.button(
         "Gerenciar visitas",
-        icon=":material/location_on:",
+        icon=":material/edit:",
         type="secondary",
-        width=250
+        width=200
     ):
         gerenciar_visitas()
 
