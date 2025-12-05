@@ -233,7 +233,8 @@ with st.container(horizontal=True, horizontal_alignment="right"):
     if st.button(
         "Gerenciar anotações",
         icon=":material/notes:",
-        type="secondary"
+        type="secondary",
+        width=250
     ):
         gerenciar_anotacoes()
 
@@ -397,7 +398,8 @@ with st.container(horizontal=True, horizontal_alignment="right"):
     if st.button(
         "Gerenciar visitas",
         icon=":material/location_on:",
-        type="secondary"
+        type="secondary",
+        width=250
     ):
         gerenciar_visitas()
 

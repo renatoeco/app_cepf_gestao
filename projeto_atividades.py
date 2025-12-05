@@ -246,7 +246,7 @@ with impactos:
 
     with col_lp:
         st.subheader("Impactos de longo prazo")
-        st.write('Entre 3 a 5 anos após o final do projeto')
+        st.write('*Entre 3 a 5 anos após o final do projeto*')
 
         # Botões de edição só para admin e equipe. Por isso o try.
         try:
@@ -278,7 +278,7 @@ with impactos:
 
     with col_cp:
         st.subheader("Impactos de curto prazo")
-        st.write("Durante o projeto ou até o final da subvenção")
+        st.write("*Durante o projeto ou até o final da subvenção*")
 
         # Botões de edição só para admin e equipe. Por isso o try.
         try:
