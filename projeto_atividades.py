@@ -122,7 +122,7 @@ with plano_trabalho:
     # --------------------------------------------------
     # TÍTULO DA SUBPÁGINA
     # --------------------------------------------------
-    st.subheader("Plano de Trabalho")
+    # st.subheader("Plano de Trabalho")
     st.write("")
 
     # --------------------------------------------------
@@ -134,26 +134,85 @@ with plano_trabalho:
         # MODO VISUALIZAÇÃO
         # --------------------------------------------------
 
-        st.write("")
+        # st.write("")
 
-        # Aqui você exibe o plano de trabalho que vem do df_projeto
-        # Exemplo:
-        plano = df_projeto.get("plano_trabalho", [])[0] if "plano_trabalho" in df_projeto.columns else []
+        
 
-        if not plano:
-            st.info("Nenhum item do Plano de Trabalho cadastrado.")
+        # Pegando o projeto carregado
+        projeto = df_projeto.iloc[0]
+
+        # Acessando o plano de trabalho
+        plano = projeto.get("plano_trabalho", {})
+        componentes = plano.get("componentes", [])
+
+        if not componentes:
+            st.info("Este projeto não possui plano de trabalho cadastrado.")
         else:
-            # Renderização futura:
-            # ui.table, st.dataframe, layout customizado etc.
-            st.write(plano)
+            # ==========================================
+            # Loop pelos componentes
+            # ==========================================
+            for componente in componentes:
+                
+                st.markdown(f"#### {componente.get('componente', 'Componente sem nome')}")
+
+                entregas = componente.get("entregas", [])
+
+                for entrega in entregas:
+
+                    st.write('')
+                    st.write(f"**{entrega.get('entrega', 'Entrega sem nome')}**")
+
+                    atividades = entrega.get("atividades", [])
+
+                    if atividades and isinstance(atividades, list):
+
+                        # Cria DataFrame
+                        df = pd.DataFrame(atividades)
+
+                        # Renomeia colunas (apenas texto)
+                        df = df.rename(columns={
+                            "atividade": "Atividades",
+                            "data_inicio": "Data de início",
+                            "data_fim": "Data de fim",
+                        })
+
+                        # Mantém exatamente como string
+                        # Garante que exista, mesmo se algum campo faltar
+                        if "Data de início" not in df.columns:
+                            df["Data de início"] = ""
+                        if "Data de fim" not in df.columns:
+                            df["Data de fim"] = ""
+
+                        # Exibe tabela com as colunas desejadas
+                        colunas = [c for c in ["Atividades", "Data de início", "Data de fim"] if c in df.columns]
+
+                        st.dataframe(df[colunas],
+                                     hide_index=True,
+                                     column_config={
+                                         "Atividades": st.column_config.TextColumn(
+                                             width=1000
+                                         ),
+                                         "Data de início": st.column_config.TextColumn(
+                                             width=80
+                                         ),
+                                         "Data de fim": st.column_config.TextColumn(
+                                             width=80
+                                         )
+                                     })
+
+                    else:
+                        st.caption("Nenhuma atividade cadastrada nesta entrega.")
+
+                    st.write('')
+
+
+
+
+
+
+
 
     else:
-
-
-
-
-
-
 
 
         # -------------------------
@@ -162,21 +221,16 @@ with plano_trabalho:
 
 
         # Radio para escolher entre editar Componentes ou Atividades
-        opcao_comp_ativ = st.radio(
+        opcao_editar_pt = st.radio(
             "O que deseja editar?",
             ["Atividades",
-             "Entregas", 
-             "Componentes"],
+            "Entregas", 
+            "Componentes"],
             horizontal=True
         )
 
 
-        if opcao_comp_ativ == "Atividades":
-
-
-            # --------------------------------------------------
-            # MODO DE EDIÇÃO — ATIVIDADES
-            # --------------------------------------------------
+        if opcao_editar_pt == "Atividades":
 
             st.write("")
             st.write("")
@@ -206,7 +260,7 @@ with plano_trabalho:
             for comp in componentes:
                 for ent in comp.get("entregas", []):
                     lista_entregas.append({
-                        "label": ent["entrega"],  # só o nome da entrega
+                        "label": ent["entrega"],
                         "componente": comp,
                         "entrega": ent
                     })
@@ -243,20 +297,11 @@ with plano_trabalho:
 
             lista_atividades = []
             for a in atividades_exist:
-                try:
-                    dt_inicio = datetime.datetime.strptime(a.get("data_inicio", ""), "%d/%m/%Y").date()
-                except:
-                    dt_inicio = None
-
-                try:
-                    dt_fim = datetime.datetime.strptime(a.get("data_fim", ""), "%d/%m/%Y").date()
-                except:
-                    dt_fim = None
-
+                # Agora as datas não serão convertidas aqui.
                 lista_atividades.append({
                     "atividade": a.get("atividade", ""),
-                    "data_inicio": dt_inicio,
-                    "data_fim": dt_fim,
+                    "data_inicio": a.get("data_inicio", ""),  # mantém string
+                    "data_fim": a.get("data_fim", ""),        # mantém string
                 })
 
             df_atividades = pd.DataFrame(lista_atividades)
@@ -265,13 +310,13 @@ with plano_trabalho:
             if df_atividades.empty:
                 df_atividades = pd.DataFrame({
                     "atividade": pd.Series(dtype="str"),
-                    "data_inicio": pd.Series(dtype="datetime64[ns]"),
-                    "data_fim": pd.Series(dtype="datetime64[ns]"),
+                    "data_inicio": pd.Series(dtype="str"),
+                    "data_fim": pd.Series(dtype="str"),
                 })
 
 
             # ============================================================
-            # Data Editor com DateColumn DD/MM/YYYY
+            # Data Editor usando STRING, NÃO DateColumn
             # ============================================================
 
             df_editado = st.data_editor(
@@ -281,19 +326,21 @@ with plano_trabalho:
                 key="editor_atividades",
                 column_config={
 
-                    "atividade": st.column_config.Column(
+                    "atividade": st.column_config.TextColumn(
                         label="Atividade",
                         width=1000
                     ),
-                    "data_inicio": st.column_config.DateColumn(
-                        label="Data início",
-                        format="DD/MM/YYYY",
-                        width=100
+
+                    "data_inicio": st.column_config.TextColumn(
+                        label="Data de início",
+                        width=120,
+                        help="Formato obrigatório: DD/MM/YYYY"
                     ),
-                    "data_fim": st.column_config.DateColumn(
-                        label="Data término",
-                        format="DD/MM/YYYY",
-                        width=100
+
+                    "data_fim": st.column_config.TextColumn(
+                        label="Data de fim",
+                        width=120,
+                        help="Formato obrigatório: DD/MM/YYYY"
                     ),
                 }
             )
@@ -318,38 +365,49 @@ with plano_trabalho:
             if salvar_ativ:
 
                 erros = []
-
                 atividades_final = []
+
+                def valida_data(valor, linha, campo):
+                    if not valor or str(valor).strip() == "":
+                        erros.append(f"Linha {linha}: {campo} é obrigatória.")
+                        return None
+
+                    try:
+                        datetime.datetime.strptime(valor.strip(), "%d/%m/%Y")
+                        return valor.strip()
+                    except:
+                        erros.append(f"Linha {linha}: data inválida em '{campo}': '{valor}'. Formato correto: DD/MM/YYYY")
+                        return None
 
                 # Validação linha a linha
                 for idx, row in df_editado.iterrows():
 
                     atividade = str(row["atividade"]).strip()
-                    dt_inicio = row["data_inicio"]
-                    dt_fim = row["data_fim"]
+                    data_inicio_raw = str(row["data_inicio"]).strip()
+                    data_fim_raw = str(row["data_fim"]).strip()
 
                     if atividade == "":
                         erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
-                    if dt_inicio is None:
-                        erros.append(f"Linha {idx + 1}: a Data de início é obrigatória.")
-                    if dt_fim is None:
-                        erros.append(f"Linha {idx + 1}: a Data de término é obrigatória.")
 
-                    # Se não houver erro, já preparo os dados finais
-                    if not erros:
+                    # valida datas via função
+                    data_inicio = valida_data(data_inicio_raw, idx + 1, "Data de início")
+                    data_fim = valida_data(data_fim_raw, idx + 1, "Data de término")
+
+                    # Se nenhuma validação falhou para esta linha
+                    if data_inicio and data_fim and atividade != "":
                         atividades_final.append({
                             "atividade": atividade,
-                            "data_inicio": dt_inicio.strftime("%d/%m/%Y"),
-                            "data_fim": dt_fim.strftime("%d/%m/%Y"),
+                            "data_inicio": data_inicio,
+                            "data_fim": data_fim,
                         })
 
-                # Se houver erros → exibir e não salvar
+                # Se houver erros → exibir e parar
                 if erros:
                     for e in erros:
                         st.error(e)
                     st.stop()
 
-                # Agora garantimos IDs estáveis
+                # IDs antigos preservados
                 ids_original = [a["id"] for a in atividades_exist]
 
                 nova_lista = []
@@ -397,11 +455,252 @@ with plano_trabalho:
 
 
 
+        # # -------------------------
+        # # MODO EDIÇÃO - PLANO DE TRABALHO
+        # # -------------------------
+
+
+        # # Radio para escolher entre editar Componentes ou Atividades
+        # opcao_editar_pt = st.radio(
+        #     "O que deseja editar?",
+        #     ["Atividades",
+        #      "Entregas", 
+        #      "Componentes"],
+        #     horizontal=True
+        # )
+
+
+        # if opcao_editar_pt == "Atividades":
+
+
+        #     # --------------------------------------------------
+        #     # MODO DE EDIÇÃO — ATIVIDADES
+        #     # --------------------------------------------------
+
+        #     st.write("")
+        #     st.write("")
+
+        #     # ============================================================
+        #     # Carregar plano de trabalho
+        #     # ============================================================
+
+        #     plano_trabalho = (
+        #         df_projeto["plano_trabalho"].values[0]
+        #         if "plano_trabalho" in df_projeto.columns else {}
+        #     )
+
+        #     componentes = plano_trabalho.get("componentes", [])
+
+        #     if not componentes:
+        #         st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar atividades.")
+        #         st.stop()
+
+
+        #     # ============================================================
+        #     # Montar lista de entregas
+        #     # ============================================================
+
+        #     lista_entregas = []
+
+        #     for comp in componentes:
+        #         for ent in comp.get("entregas", []):
+        #             lista_entregas.append({
+        #                 "label": ent["entrega"],  # só o nome da entrega
+        #                 "componente": comp,
+        #                 "entrega": ent
+        #             })
+
+        #     if not lista_entregas:
+        #         st.warning("Nenhuma entrega cadastrada. Cadastre entregas antes de adicionar atividades.")
+        #         st.stop()
+
+        #     lista_entregas = sorted(lista_entregas, key=lambda x: x["label"].lower())
+
+
+        #     # ============================================================
+        #     # Selectbox de entrega
+        #     # ============================================================
+
+        #     nome_entrega_sel = st.selectbox(
+        #         "Selecione a entrega",
+        #         [item["label"] for item in lista_entregas],
+        #         key="select_entrega_ativ"
+        #     )
+
+        #     item_sel = next(item for item in lista_entregas if item["label"] == nome_entrega_sel)
+
+        #     componente_sel = item_sel["componente"]
+        #     entrega_sel = item_sel["entrega"]
+
+        #     st.write('')
+
+        #     # ============================================================
+        #     # Carregar atividades existentes
+        #     # ============================================================
+
+        #     atividades_exist = entrega_sel.get("atividades", [])
+
+        #     lista_atividades = []
+        #     for a in atividades_exist:
+        #         try:
+        #             dt_inicio = datetime.datetime.strptime(a.get("data_inicio", ""), "%d/%m/%Y").date()
+        #         except:
+        #             dt_inicio = None
+
+        #         try:
+        #             dt_fim = datetime.datetime.strptime(a.get("data_fim", ""), "%d/%m/%Y").date()
+        #         except:
+        #             dt_fim = None
+
+        #         lista_atividades.append({
+        #             "atividade": a.get("atividade", ""),
+        #             "data_inicio": dt_inicio,
+        #             "data_fim": dt_fim,
+        #         })
+
+        #     df_atividades = pd.DataFrame(lista_atividades)
+
+        #     # Se estiver vazio, cria colunas vazias
+        #     if df_atividades.empty:
+        #         df_atividades = pd.DataFrame({
+        #             "atividade": pd.Series(dtype="str"),
+        #             "data_inicio": pd.Series(dtype="datetime64[ns]"),
+        #             "data_fim": pd.Series(dtype="datetime64[ns]"),
+        #         })
+
+
+        #     # ============================================================
+        #     # Data Editor com DateColumn DD/MM/YYYY
+        #     # ============================================================
+
+        #     df_editado = st.data_editor(
+        #         df_atividades,
+        #         num_rows="dynamic",
+        #         hide_index=True,
+        #         key="editor_atividades",
+        #         column_config={
+
+        #             "atividade": st.column_config.Column(
+        #                 label="Atividade",
+        #                 width=1000
+        #             ),
+        #             "data_inicio": st.column_config.DateColumn(
+        #                 label="Data início",
+        #                 format="DD/MM/YYYY",
+        #                 width=100
+        #             ),
+        #             "data_fim": st.column_config.DateColumn(
+        #                 label="Data término",
+        #                 format="DD/MM/YYYY",
+        #                 width=100
+        #             ),
+        #         }
+        #     )
+
+
+        #     # ============================================================
+        #     # Botão salvar
+        #     # ============================================================
+
+        #     salvar_ativ = st.button(
+        #         "Salvar atividades",
+        #         icon=":material/save:",
+        #         type="secondary",
+        #         key="btn_salvar_atividades"
+        #     )
+
+
+        #     # ============================================================
+        #     # Validação + Salvamento
+        #     # ============================================================
+
+        #     if salvar_ativ:
+
+        #         erros = []
+
+        #         atividades_final = []
+
+        #         # Validação linha a linha
+        #         for idx, row in df_editado.iterrows():
+
+        #             atividade = str(row["atividade"]).strip()
+        #             dt_inicio = row["data_inicio"]
+        #             dt_fim = row["data_fim"]
+
+        #             if atividade == "":
+        #                 erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
+        #             if dt_inicio is None:
+        #                 erros.append(f"Linha {idx + 1}: a Data de início é obrigatória.")
+        #             if dt_fim is None:
+        #                 erros.append(f"Linha {idx + 1}: a Data de término é obrigatória.")
+
+        #             # Se não houver erro, já preparo os dados finais
+        #             if not erros:
+        #                 atividades_final.append({
+        #                     "atividade": atividade,
+        #                     "data_inicio": dt_inicio.strftime("%d/%m/%Y"),
+        #                     "data_fim": dt_fim.strftime("%d/%m/%Y"),
+        #                 })
+
+        #         # Se houver erros → exibir e não salvar
+        #         if erros:
+        #             for e in erros:
+        #                 st.error(e)
+        #             st.stop()
+
+        #         # Agora garantimos IDs estáveis
+        #         ids_original = [a["id"] for a in atividades_exist]
+
+        #         nova_lista = []
+        #         for idx, a in enumerate(atividades_final):
+
+        #             if idx < len(ids_original):
+        #                 id_usado = ids_original[idx]
+        #             else:
+        #                 id_usado = str(bson.ObjectId())
+
+        #             nova_lista.append({
+        #                 "id": id_usado,
+        #                 **a
+        #             })
+
+        #         # Atualizar entrega
+        #         entregas_atualizadas = []
+        #         for e in componente_sel["entregas"]:
+        #             if e["id"] == entrega_sel["id"]:
+        #                 entregas_atualizadas.append({**e, "atividades": nova_lista})
+        #             else:
+        #                 entregas_atualizadas.append(e)
+
+        #         # Atualizar apenas o componente correspondente
+        #         componentes_atualizados = []
+        #         for c in componentes:
+        #             if c["id"] == componente_sel["id"]:
+        #                 componentes_atualizados.append({**c, "entregas": entregas_atualizadas})
+        #             else:
+        #                 componentes_atualizados.append(c)
+
+        #         # Salvar no Mongo
+        #         resultado = col_projetos.update_one(
+        #             {"codigo": codigo_projeto_atual},
+        #             {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+        #         )
+
+        #         if resultado.matched_count == 1:
+        #             st.success("Atividades atualizadas com sucesso!")
+        #             time.sleep(1)
+        #             st.rerun()
+        #         else:
+        #             st.error("Erro ao atualizar atividades.")
+
+
+
+
 
         # --------------------------------------------------
         # MODO DE EDIÇÃO — ENTREGAS
         # --------------------------------------------------
-        if opcao_comp_ativ == "Entregas":
+        if opcao_editar_pt == "Entregas":
 
 
             st.write("")
@@ -516,7 +815,7 @@ with plano_trabalho:
         # --------------------------------------------------
         # EDIÇÃO DE COMPONENTES
         # --------------------------------------------------
-        if opcao_comp_ativ == "Componentes":
+        if opcao_editar_pt == "Componentes":
 
             st.write("")
             # st.write("**Componentes** - Modo de Edição")
@@ -597,14 +896,6 @@ with plano_trabalho:
                     st.rerun()
                 else:
                     st.error("Erro ao atualizar o Plano de Trabalho.")
-
-
-
-
-
-
-
-
 
 
 
