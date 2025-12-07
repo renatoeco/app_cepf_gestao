@@ -101,7 +101,7 @@ st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
 
 st.divider()
 
-st.write('*Bloco do cronograma de parcelas, relatórios e status*')
+st.write('*Bloco do cronograma de parcelas, relatórios e status // Em construção*')
 
 st.divider()
 
