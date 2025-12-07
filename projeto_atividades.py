@@ -906,36 +906,6 @@ with plano_trabalho:
 
 
 
-        # if st.session_state.get("abrir_dialogo_atividade"):
-        #     dialog_relatos()
-
-        #     # RESET AUTOMÁTICO (nunca reabre sozinho)
-        #     st.session_state["abrir_dialogo_atividade"] = False
-        #     st.session_state["atividade_dialogo"] = None  
-        #     # st.session_state["atividade_selecionada"] = None
-        #     st.session_state["atividade_selecionada_tabela_key"] = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     # -------------------------
     # MODO EDIÇÃO - PLANO DE TRABALHO
     # -------------------------
