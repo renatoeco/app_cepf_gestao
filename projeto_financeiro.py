@@ -156,7 +156,139 @@ with cron_desemb:
         st.markdown('#### Cronograma de Parcelas e Relatórios')
 
         st.write("")
+
+
+        # OPÇÃO 1 DE LAYOUT DA TABELA
+
+
         st.write("")
+
+        # -----------------------------
+        # Construir cronograma
+        # -----------------------------
+        linhas_cronograma = []
+
+        # ===== Parcelas =====
+        parcelas = financeiro.get("parcelas", [])
+
+        for p in parcelas:
+            numero = p.get("numero")
+            percentual = p.get("percentual")
+            valor = p.get("valor")
+            data_prevista = p.get("data_prevista")
+            data_realizada = p.get("data_realizada")
+
+            linhas_cronograma.append(
+                {
+                    "evento": f"Parcela {numero}",
+                    "Entregas": "",
+                    "Valor R$": (
+                        f"{valor:,.2f}".replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                        if valor is not None else ""
+                    ),
+                    "Percentual": (
+                        f"{int(percentual)} %"
+                        if percentual is not None else ""
+                    ),
+                    "Data prevista": pd.to_datetime(
+                        data_prevista, errors="coerce"
+                    ),
+                    "Data realizada": (
+                        pd.to_datetime(data_realizada).strftime("%d/%m/%Y")
+                        if data_realizada else ""
+                    ),
+                }
+            )
+
+        # ===== Relatórios =====
+        relatorios = projeto.get("relatorios", [])
+
+        for r in relatorios:
+            numero = r.get("numero")
+            entregas = r.get("entregas", [])
+            data_prevista = r.get("data_prevista")
+            data_realizada = r.get("data_realizada")
+
+            linhas_cronograma.append(
+                {
+                    "evento": f"Relatório {numero}",
+                    "Entregas": "\n".join(entregas) if entregas else "",
+                    # "Entregas": "<br>".join(entregas) if entregas else "",
+                    "Valor R$": "",
+                    "Percentual": "",
+                    "Data prevista": pd.to_datetime(
+                        data_prevista, errors="coerce"
+                    ),
+                    "Data realizada": (
+                        pd.to_datetime(data_realizada).strftime("%d/%m/%Y")
+                        if data_realizada else ""
+                    ),
+                }
+            )
+
+        # -----------------------------
+        # DataFrame final
+        # -----------------------------
+        df_cronograma = pd.DataFrame(linhas_cronograma)
+
+        if df_cronograma.empty:
+            st.info("Não há dados financeiros para exibição.")
+            st.stop()
+
+        # Ordenar por data prevista
+        df_cronograma = df_cronograma.sort_values(
+            by="Data prevista",
+            ascending=True
+        )
+
+        # Formatar data prevista para exibição
+        df_cronograma["Data prevista"] = df_cronograma["Data prevista"].dt.strftime(
+            "%d/%m/%Y"
+        )
+
+        # Renomear a coluna evento
+        df_cronograma = df_cronograma.rename(
+            columns={"evento": "Evento"}
+        )
+
+
+        # -----------------------------
+        # Tabela
+        # -----------------------------
+        
+        ui.table(df_cronograma)
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        st.write('')
+        st.write('')
+        st.write('')
+
+
+
+        st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
 
 
         # -----------------------------
@@ -269,131 +401,6 @@ with cron_desemb:
             cols[5].write(row["data_realizada"])
 
             st.divider()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        st.write('')
-        st.write('')
-        st.write('')
-
-        st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
-
-        st.write("")
-
-        # -----------------------------
-        # Construir cronograma
-        # -----------------------------
-        linhas_cronograma = []
-
-        # ===== Parcelas =====
-        parcelas = financeiro.get("parcelas", [])
-
-        for p in parcelas:
-            numero = p.get("numero")
-            percentual = p.get("percentual")
-            valor = p.get("valor")
-            data_prevista = p.get("data_prevista")
-            data_realizada = p.get("data_realizada")
-
-            linhas_cronograma.append(
-                {
-                    "evento": f"Parcela {numero}",
-                    "Entregas": "",
-                    "Valor R$": (
-                        f"{valor:,.2f}".replace(",", "X")
-                        .replace(".", ",")
-                        .replace("X", ".")
-                        if valor is not None else ""
-                    ),
-                    "Percentual": (
-                        f"{int(percentual)} %"
-                        if percentual is not None else ""
-                    ),
-                    "Data prevista": pd.to_datetime(
-                        data_prevista, errors="coerce"
-                    ),
-                    "Data realizada": (
-                        pd.to_datetime(data_realizada).strftime("%d/%m/%Y")
-                        if data_realizada else ""
-                    ),
-                }
-            )
-
-        # ===== Relatórios =====
-        relatorios = projeto.get("relatorios", [])
-
-        for r in relatorios:
-            numero = r.get("numero")
-            entregas = r.get("entregas", [])
-            data_prevista = r.get("data_prevista")
-            data_realizada = r.get("data_realizada")
-
-            linhas_cronograma.append(
-                {
-                    "evento": f"Relatório {numero}",
-                    "Entregas": "\n".join(entregas) if entregas else "",
-                    # "Entregas": "<br>".join(entregas) if entregas else "",
-                    "Valor R$": "",
-                    "Percentual": "",
-                    "Data prevista": pd.to_datetime(
-                        data_prevista, errors="coerce"
-                    ),
-                    "Data realizada": (
-                        pd.to_datetime(data_realizada).strftime("%d/%m/%Y")
-                        if data_realizada else ""
-                    ),
-                }
-            )
-
-        # -----------------------------
-        # DataFrame final
-        # -----------------------------
-        df_cronograma = pd.DataFrame(linhas_cronograma)
-
-        if df_cronograma.empty:
-            st.info("Não há dados financeiros para exibição.")
-            st.stop()
-
-        # Ordenar por data prevista
-        df_cronograma = df_cronograma.sort_values(
-            by="Data prevista",
-            ascending=True
-        )
-
-        # Formatar data prevista para exibição
-        df_cronograma["Data prevista"] = df_cronograma["Data prevista"].dt.strftime(
-            "%d/%m/%Y"
-        )
-
-        # -----------------------------
-        # Tabela
-        # -----------------------------
-        
-        ui.table(df_cronograma)
-        
-
-
-
-
-
 
 
 
