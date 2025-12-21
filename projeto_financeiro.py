@@ -854,7 +854,8 @@ with orcamento:
 
 
                 st.warning(
-                    f"O total do orçamento ({soma_fmt}) é diferente do valor total do projeto ({total_fmt})."
+                    f"O total do orçamento ({soma_fmt}) é diferente do valor total do projeto ({total_fmt}).",
+                    icon=":material/warning:"
                 )
 
 
