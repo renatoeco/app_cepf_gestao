@@ -24,6 +24,10 @@ col_direcoes = db["direcoes_estrategicas"]
 # Indicadores
 col_indicadores = db["indicadores"]
 
+# Categorias de despesa
+col_categorias_despesa = db["categorias_despesa"]
+
+
 ###########################################################################################################
 # TRATAMENTO DOS DADOS
 ###########################################################################################################
@@ -56,8 +60,14 @@ st.write('')
 
 
 
-abas = st.tabs(['Públicos', 'Direções Estratégicas', 'Indicadores'])
+# abas = st.tabs(['Públicos', 'Direções Estratégicas', 'Indicadores'])
 
+abas = st.tabs([
+    'Públicos',
+    'Direções Estratégicas',
+    'Indicadores',
+    'Categorias de despesa'
+])
 
 
 
@@ -440,124 +450,139 @@ with abas[2]:
 
 
 
+# ==========================================================
+# ABA — CATEGORIAS DE DESPESA
+# ==========================================================
 
+with abas[3]:
 
+    st.subheader("Categorias de despesa")
+    st.write("")
 
+    # 1) Carrega documentos da coleção (ordenados)
+    dados_categorias = list(
+        col_categorias_despesa.find({}, {"categoria": 1}).sort("categoria", 1)
+    )
 
-# # ==========================================================
-# # ABA — INDICADORES
-# # ==========================================================
-# with abas[2]:
+    df_categorias = pd.DataFrame(dados_categorias)
 
-#     st.subheader("Indicadores")
-#     st.write("")
+    # Converte ObjectId para string
+    if "_id" in df_categorias.columns:
+        df_categorias["_id"] = df_categorias["_id"].astype(str)
+    else:
+        df_categorias["_id"] = ""
 
-#     # Coleção MongoDB
-#     col_indicadores = db["indicadores"]
+    editar_categorias = st.toggle("Editar", key="editar_categorias_despesa")
+    st.write("")
 
-#     # Carrega documentos da coleção (ordenados)
-#     dados_indicadores = list(
-#         col_indicadores.find({}, {"indicador": 1}).sort("indicador", 1)
-#     )
+    # -------------------------
+    # MODO VISUALIZAÇÃO
+    # -------------------------
+    if not editar_categorias:
 
-#     df_indicadores = pd.DataFrame(dados_indicadores)
+        if df_categorias.empty:
+            st.info("Nenhuma categoria de despesa cadastrada.")
+        else:
+            df_tabela = (
+                df_categorias[["categoria"]]
+                .sort_values("categoria")
+                .reset_index(drop=True)
+                .rename(columns={"categoria": "Categoria de despesa"})
+            )
 
-#     # Converte ObjectId para string
-#     if "_id" in df_indicadores.columns:
-#         df_indicadores["_id"] = df_indicadores["_id"].astype(str)
-#     else:
-#         df_indicadores["_id"] = ""
+            ui.table(df_tabela)
 
-#     editar_indicadores = st.toggle("Editar", key="editar_indicadores")
-#     st.write("")
+    # -------------------------
+    # MODO EDIÇÃO
+    # -------------------------
+    else:
 
-#     # -------------------------
-#     # MODO VISUALIZAÇÃO
-#     # -------------------------
-#     if not editar_indicadores:
-#         if df_indicadores.empty:
-#             st.info("Nenhum indicador cadastrado.")
-#         else:
-#             st.dataframe(
-#                 df_indicadores[["indicador"]].sort_values("indicador"),
-#                 hide_index=True,
-#                 width=500
-#             )
+        st.write("Edite, adicione e exclua linhas.")
 
-#     # -------------------------
-#     # MODO EDIÇÃO
-#     # -------------------------
-#     else:
-#         st.write("Edite, adicione e exclua linhas.")
+        if df_categorias.empty:
+           
+            df_editor = pd.DataFrame(
+                {"categoria": pd.Series(dtype="str")}
+            )
+        else:
+            df_editor = df_categorias[["categoria"]].copy()
+            df_editor["categoria"] = df_editor["categoria"].astype(str)
 
-#         df_editor = df_indicadores[["indicador"]].copy()
+        df_editado = st.data_editor(
+            df_editor,
+            num_rows="dynamic",
+            hide_index=True,
+            key="editor_categorias_despesa",
+            width=500
+        )
 
-#         df_editado = st.data_editor(
-#             df_editor,
-#             num_rows="dynamic",
-#             hide_index=True,
-#             key="editor_indicadores",
-#             width=500
-#         )
+        if st.button(
+            "Salvar alterações",
+            icon=":material/save:",
+            type="primary"
+        ):
 
-#         if st.button(
-#             "Salvar alterações",
-#             icon=":material/save:",
-#             type="primary"
-#         ):
+            if "categoria" not in df_editado.columns:
+                st.error("Nenhum dado válido para salvar.")
+                st.stop()
 
-#             # Normaliza e remove vazios
-#             df_editado["indicador"] = (
-#                 df_editado["indicador"]
-#                 .astype(str)
-#                 .str.strip()
-#             )
-#             df_editado = df_editado[df_editado["indicador"] != ""]
+            # Normaliza e remove vazios
+            df_editado["categoria"] = (
+                df_editado["categoria"]
+                .astype(str)
+                .str.strip()
+            )
+            df_editado = df_editado[df_editado["categoria"] != ""]
 
-#             # Ordena antes de salvar
-#             df_editado = df_editado.sort_values("indicador")
+            if df_editado.empty:
+                st.warning("Nenhuma categoria informada.")
+                st.stop()
 
-#             # ===========================
-#             # VERIFICAÇÃO DE DUPLICADOS
-#             # ===========================
-#             lista_editada = df_editado["indicador"].tolist()
-#             duplicados_local = {
-#                 x for x in lista_editada if lista_editada.count(x) > 1
-#             }
+            df_editado = df_editado.sort_values("categoria")
 
-#             if duplicados_local:
-#                 st.error(
-#                     f"Existem valores duplicados na lista: "
-#                     f"{', '.join(duplicados_local)}"
-#                 )
-#                 st.stop()
+            # ===========================
+            # VERIFICAÇÃO DE DUPLICADOS
+            # ===========================
+            lista_editada = df_editado["categoria"].tolist()
+            duplicados_local = {
+                x for x in lista_editada if lista_editada.count(x) > 1
+            }
 
-#             # Banco atual
-#             valores_orig = set(df_indicadores["indicador"])
-#             valores_editados = set(lista_editada)
+            if duplicados_local:
+                st.error(
+                    "Existem categorias duplicadas: "
+                    f"{', '.join(duplicados_local)}"
+                )
+                st.stop()
 
-#             # 1) Removidos
-#             removidos = valores_orig - valores_editados
-#             for indicador in removidos:
-#                 col_indicadores.delete_one(
-#                     {"indicador": indicador}
-#                 )
+            valores_orig = (
+                set(df_categorias["categoria"])
+                if "categoria" in df_categorias.columns
+                else set()
+            )
+            valores_editados = set(lista_editada)
 
-#             # 2) Novos
-#             novos = valores_editados - valores_orig
-#             for indicador in novos:
+            # 1) Removidos
+            for categoria in valores_orig - valores_editados:
+                col_categorias_despesa.delete_one(
+                    {"categoria": categoria}
+                )
 
-#                 # Verificação extra de duplicidade
-#                 if col_indicadores.find_one({"indicador": indicador}):
-#                     st.error(
-#                         f"O valor '{indicador}' já existe "
-#                         "e não será inserido."
-#                     )
-#                     st.stop()
+            # 2) Novos
+            for categoria in valores_editados - valores_orig:
+                if col_categorias_despesa.find_one(
+                    {"categoria": categoria}
+                ):
+                    st.error(
+                        f"A categoria '{categoria}' já existe "
+                        "e não será inserida."
+                    )
+                    st.stop()
 
-#                 col_indicadores.insert_one(
-#                     {"indicador": indicador}
-#                 )
+                col_categorias_despesa.insert_one(
+                    {"categoria": categoria}
+                )
 
-#             st.success("Indicadores atualizados com sucesso!")
-#             st.rerun()
+            st.success("Categorias de despesa atualizadas com sucesso!")
+            time.sleep(3)
+            st.rerun()

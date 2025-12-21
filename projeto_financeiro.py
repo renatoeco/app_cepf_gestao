@@ -188,10 +188,10 @@ with cron_desemb:
                         .replace("X", ".")
                         if valor is not None else ""
                     ),
-                    "Percentual": (
-                        f"{int(percentual)} %"
-                        if percentual is not None else ""
-                    ),
+                    # "Percentual": (
+                    #     f"{int(percentual)} %"
+                    #     if percentual is not None else ""
+                    # ),
                     "Data prevista": pd.to_datetime(
                         data_prevista, errors="coerce"
                     ),
@@ -217,7 +217,7 @@ with cron_desemb:
                     "Entregas": "\n".join(entregas) if entregas else "",
                     # "Entregas": "<br>".join(entregas) if entregas else "",
                     "Valor R$": "",
-                    "Percentual": "",
+                    # "Percentual": "",
                     "Data prevista": pd.to_datetime(
                         data_prevista, errors="coerce"
                     ),
@@ -274,133 +274,125 @@ with cron_desemb:
 
 
 
+        # st.write('')
+        # st.write('')
+        # st.write('')
 
 
 
+        # st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
 
 
+        # # -----------------------------
+        # # Construir cronograma
+        # # -----------------------------
+        # linhas_cronograma = []
+
+        # # ===== Parcelas =====
+        # parcelas = financeiro.get("parcelas", [])
+
+        # for p in parcelas:
+        #     linhas_cronograma.append(
+        #         {
+        #             "evento": f"Parcela {p.get('numero')}",
+        #             "entregas": [],
+        #             "valor": (
+        #                 f"R$ {p['valor']:,.2f}".replace(",", "X")
+        #                 .replace(".", ",")
+        #                 .replace("X", ".")
+        #                 if p.get("valor") is not None else ""
+        #             ),
+        #             "percentual": (
+        #                 f"{int(p['percentual'])} %"
+        #                 if p.get("percentual") is not None else ""
+        #             ),
+        #             "data_prevista": (
+        #                 pd.to_datetime(p.get("data_prevista")).strftime("%d/%m/%Y")
+        #                 if p.get("data_prevista") else ""
+        #             ),
+        #             "data_realizada": (
+        #                 pd.to_datetime(p.get("data_realizada")).strftime("%d/%m/%Y")
+        #                 if p.get("data_realizada") else ""
+        #             ),
+        #         }
+        #     )
+
+        # # ===== Relatórios =====
+        # relatorios = projeto.get("relatorios", [])
+
+        # for r in relatorios:
+        #     linhas_cronograma.append(
+        #         {
+        #             "evento": f"Relatório {r.get('numero')}",
+        #             "entregas": r.get("entregas", []),
+        #             "valor": "",
+        #             "percentual": "",
+        #             "data_prevista": (
+        #                 pd.to_datetime(r.get("data_prevista")).strftime("%d/%m/%Y")
+        #                 if r.get("data_prevista") else ""
+        #             ),
+        #             "data_realizada": (
+        #                 pd.to_datetime(r.get("data_realizada")).strftime("%d/%m/%Y")
+        #                 if r.get("data_realizada") else ""
+        #             ),
+        #         }
+        #     )
+
+        # # Ordenar por data prevista
+        # linhas_cronograma = sorted(
+        #     linhas_cronograma,
+        #     key=lambda x: pd.to_datetime(
+        #         x["data_prevista"], dayfirst=True, errors="coerce"
+        #     )
+        # )
+
+        # # -----------------------------
+        # # Layout das colunas
+        # # -----------------------------
+        # layout_colunas = [2, 7, 2, 2, 2, 2]
 
 
+        # # -----------------------------
+        # # Cabeçalho
+        # # -----------------------------
+        # col_header = st.columns(layout_colunas)
+        # col_header[0].write("**Evento**")
+        # col_header[1].write("**Entregas**")
+        # col_header[2].write("**Valor**")
+        # col_header[3].write("**Percentual**")
+        # col_header[4].write("**Data prevista**")
+        # col_header[5].write("**Data realizada**")
 
-        st.write('')
-        st.write('')
-        st.write('')
+        # st.divider()
 
+        # # -----------------------------
+        # # Linhas
+        # # -----------------------------
+        # for row in linhas_cronograma:
 
+        #     cols = st.columns(layout_colunas)
 
-        st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
+        #     # Evento
+        #     cols[0].write(row["evento"])
 
+        #     # Entregas (multilinha real)
+        #     if row["entregas"]:
+        #         for entrega in row["entregas"]:
+        #             cols[1].write(f"{entrega}")
+        #     else:
+        #         cols[1].write("")
 
-        # -----------------------------
-        # Construir cronograma
-        # -----------------------------
-        linhas_cronograma = []
+        #     # Valor
+        #     cols[2].write(row["valor"])
 
-        # ===== Parcelas =====
-        parcelas = financeiro.get("parcelas", [])
+        #     # Percentual
+        #     cols[3].write(row["percentual"])
 
-        for p in parcelas:
-            linhas_cronograma.append(
-                {
-                    "evento": f"Parcela {p.get('numero')}",
-                    "entregas": [],
-                    "valor": (
-                        f"R$ {p['valor']:,.2f}".replace(",", "X")
-                        .replace(".", ",")
-                        .replace("X", ".")
-                        if p.get("valor") is not None else ""
-                    ),
-                    "percentual": (
-                        f"{int(p['percentual'])} %"
-                        if p.get("percentual") is not None else ""
-                    ),
-                    "data_prevista": (
-                        pd.to_datetime(p.get("data_prevista")).strftime("%d/%m/%Y")
-                        if p.get("data_prevista") else ""
-                    ),
-                    "data_realizada": (
-                        pd.to_datetime(p.get("data_realizada")).strftime("%d/%m/%Y")
-                        if p.get("data_realizada") else ""
-                    ),
-                }
-            )
+        #     # Datas
+        #     cols[4].write(row["data_prevista"])
+        #     cols[5].write(row["data_realizada"])
 
-        # ===== Relatórios =====
-        relatorios = projeto.get("relatorios", [])
-
-        for r in relatorios:
-            linhas_cronograma.append(
-                {
-                    "evento": f"Relatório {r.get('numero')}",
-                    "entregas": r.get("entregas", []),
-                    "valor": "",
-                    "percentual": "",
-                    "data_prevista": (
-                        pd.to_datetime(r.get("data_prevista")).strftime("%d/%m/%Y")
-                        if r.get("data_prevista") else ""
-                    ),
-                    "data_realizada": (
-                        pd.to_datetime(r.get("data_realizada")).strftime("%d/%m/%Y")
-                        if r.get("data_realizada") else ""
-                    ),
-                }
-            )
-
-        # Ordenar por data prevista
-        linhas_cronograma = sorted(
-            linhas_cronograma,
-            key=lambda x: pd.to_datetime(
-                x["data_prevista"], dayfirst=True, errors="coerce"
-            )
-        )
-
-        # -----------------------------
-        # Layout das colunas
-        # -----------------------------
-        layout_colunas = [2, 7, 2, 2, 2, 2]
-
-
-        # -----------------------------
-        # Cabeçalho
-        # -----------------------------
-        col_header = st.columns(layout_colunas)
-        col_header[0].write("**Evento**")
-        col_header[1].write("**Entregas**")
-        col_header[2].write("**Valor**")
-        col_header[3].write("**Percentual**")
-        col_header[4].write("**Data prevista**")
-        col_header[5].write("**Data realizada**")
-
-        st.divider()
-
-        # -----------------------------
-        # Linhas
-        # -----------------------------
-        for row in linhas_cronograma:
-
-            cols = st.columns(layout_colunas)
-
-            # Evento
-            cols[0].write(row["evento"])
-
-            # Entregas (multilinha real)
-            if row["entregas"]:
-                for entrega in row["entregas"]:
-                    cols[1].write(f"{entrega}")
-            else:
-                cols[1].write("")
-
-            # Valor
-            cols[2].write(row["valor"])
-
-            # Percentual
-            cols[3].write(row["percentual"])
-
-            # Datas
-            cols[4].write(row["data_prevista"])
-            cols[5].write(row["data_realizada"])
-
-            st.divider()
+        #     st.divider()
 
 
 
@@ -430,9 +422,12 @@ with cron_desemb:
         st.write('')
         st.write('')
 
+
+
+
+
         # -------------------------------------------------------
         # Editar o valor total do projeto
-
 
         if opcao_editar_cron == "Valor total":
 
@@ -475,12 +470,6 @@ with cron_desemb:
 
         # -------------------------------------------------------
         # Editar Parcelas
-
-
-
-
-
-
 
         if opcao_editar_cron == "Parcelas":
 
@@ -526,14 +515,14 @@ with cron_desemb:
                 ).reset_index(drop=True)
 
             # -----------------------------------
-            # Calcular valor (fonte da verdade)
+            # Calcular valor
             # -----------------------------------
             df_parcelas["valor"] = (
                 df_parcelas["percentual"].fillna(0) / 100 * valor_total
             )
 
             # -----------------------------------
-            # Coluna de exibição (UI)
+            # Coluna de exibição
             # -----------------------------------
             df_parcelas["valor_fmt"] = df_parcelas["valor"].apply(
                 lambda x: f"R$ {x:,.2f}"
@@ -543,7 +532,7 @@ with cron_desemb:
             )
 
             # -----------------------------------
-            # Editor (UI)
+            # Editor
             # -----------------------------------
             df_editado = st.data_editor(
                 df_parcelas[
@@ -657,10 +646,8 @@ with cron_desemb:
 
 
 
-
-
-
-
+        # -------------------------------------------------------
+        # Editar Parcelas
 
         if opcao_editar_cron == "Relatórios":
 
@@ -819,6 +806,233 @@ with cron_desemb:
 
 
 
-
 with orcamento:
-    st.write('*Bloco do cronograma de parcelas, relatórios e status // Em construção*')
+
+    st.markdown("### Orçamento")
+    st.write("")
+
+    # ==================================================
+    # PERMISSÃO E MODO DE EDIÇÃO
+    # ==================================================
+    usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
+
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if usuario_interno:
+            modo_edicao = st.toggle("Modo de edição", key="editar_orcamento")
+        else:
+            modo_edicao = False
+
+    # ==================================================
+    # MODO VISUALIZAÇÃO
+    # ==================================================
+    if not modo_edicao:
+
+        valor_total = financeiro.get("valor_total")
+
+        if valor_total is not None:
+            st.metric(
+                label="Valor total do projeto",
+                value=(
+                    f"R$ {valor_total:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                )
+            )
+        else:
+            st.caption("Valor total do projeto ainda não cadastrado.")
+
+        st.info("Ative o modo de edição para cadastrar o orçamento.")
+        st.stop()
+
+    # ==================================================
+    # MODO EDIÇÃO — CRUD DO ORÇAMENTO
+    # ==================================================
+
+    # Garantir estrutura no documento
+    financeiro_db = financeiro or {}
+    orcamento_db = financeiro_db.get("orcamento", {})
+    categorias_db = orcamento_db.get("categorias_despesa", [])
+
+    # --------------------------------------------------
+    # Seleção / criação de categoria
+    # --------------------------------------------------
+    categorias_existentes = [c["categoria"] for c in categorias_db]
+
+    categoria_selecionada = st.selectbox(
+        "Categoria de despesa",
+        options=["Nova categoria"] + categorias_existentes,
+    )
+
+    if categoria_selecionada == "Nova categoria":
+        nova_categoria = st.text_input("Nome da nova categoria")
+        nome_categoria = nova_categoria.strip()
+    else:
+        nome_categoria = categoria_selecionada
+
+    if not nome_categoria:
+        st.warning("Informe uma categoria para continuar.")
+        st.stop()
+
+    # --------------------------------------------------
+    # Recuperar despesas da categoria
+    # --------------------------------------------------
+    categoria_atual = next(
+        (c for c in categorias_db if c["categoria"] == nome_categoria),
+        {"categoria": nome_categoria, "despesas": []},
+    )
+
+    despesas = categoria_atual.get("despesas", [])
+
+    # --------------------------------------------------
+    # DataFrame base
+    # --------------------------------------------------
+    if despesas:
+        df_despesas = pd.DataFrame(despesas)
+    else:
+        df_despesas = pd.DataFrame(
+            columns=[
+                "nome_despesa",
+                "descricao_despesa",
+                "unidade",
+                "quantidade",
+                "valor_unitario",
+                "valor_total",
+            ]
+        )
+
+    # Garantir colunas
+    for col in [
+        "nome_despesa",
+        "descricao_despesa",
+        "unidade",
+        "quantidade",
+        "valor_unitario",
+        "valor_total",
+    ]:
+        if col not in df_despesas.columns:
+            df_despesas[col] = None
+
+    # --------------------------------------------------
+    # Calcular valor total automaticamente
+    # --------------------------------------------------
+    df_despesas["quantidade"] = pd.to_numeric(
+        df_despesas["quantidade"], errors="coerce"
+    )
+    df_despesas["valor_unitario"] = pd.to_numeric(
+        df_despesas["valor_unitario"], errors="coerce"
+    )
+
+    df_despesas["valor_total"] = (
+        df_despesas["quantidade"].fillna(0)
+        * df_despesas["valor_unitario"].fillna(0)
+    )
+
+    df_despesas["valor_total_fmt"] = df_despesas["valor_total"].apply(
+        lambda x: (
+            f"R$ {x:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+        if pd.notna(x) else ""
+    )
+
+    # --------------------------------------------------
+    # Editor
+    # --------------------------------------------------
+    df_editado = st.data_editor(
+        df_despesas[
+            [
+                "nome_despesa",
+                "descricao_despesa",
+                "unidade",
+                "quantidade",
+                "valor_unitario",
+                "valor_total_fmt",
+            ]
+        ],
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "nome_despesa": st.column_config.TextColumn("Despesa"),
+            "descricao_despesa": st.column_config.TextColumn("Descrição"),
+            "unidade": st.column_config.TextColumn("Unidade"),
+            "quantidade": st.column_config.NumberColumn(
+                "Quantidade", min_value=0, step=1
+            ),
+            "valor_unitario": st.column_config.NumberColumn(
+                "Valor unitário (R$)", min_value=0.0, step=100.0, format="%.2f"
+            ),
+            "valor_total_fmt": st.column_config.TextColumn(
+                "Valor total (auto)", disabled=True
+            ),
+        },
+        key="editor_orcamento",
+    )
+
+    st.write("")
+
+    total_categoria = (
+        df_despesas["valor_total"].sum()
+        if not df_despesas.empty else 0
+    )
+
+    st.write(
+        f"**Total da categoria:** "
+        f"R$ {total_categoria:,.2f}".replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+
+    # --------------------------------------------------
+    # SALVAR
+    # --------------------------------------------------
+    if st.button("Salvar orçamento", icon=":material/save:"):
+
+        df_salvar = df_editado.dropna(
+            subset=["nome_despesa", "quantidade", "valor_unitario"],
+            how="any",
+        ).copy()
+
+        despesas_salvar = []
+
+        for _, row in df_salvar.iterrows():
+            qtd = float(row["quantidade"])
+            vu = float(row["valor_unitario"])
+
+            despesas_salvar.append(
+                {
+                    "nome_despesa": row["nome_despesa"],
+                    "descricao_despesa": row["descricao_despesa"],
+                    "unidade": row["unidade"],
+                    "quantidade": qtd,
+                    "valor_unitario": vu,
+                    "valor_total": qtd * vu,
+                }
+            )
+
+        # Atualizar categorias
+        categorias_filtradas = [
+            c for c in categorias_db if c["categoria"] != nome_categoria
+        ]
+
+        categorias_filtradas.append(
+            {
+                "categoria": nome_categoria,
+                "despesas": despesas_salvar,
+            }
+        )
+
+        col_projetos.update_one(
+            {"codigo": codigo_projeto_atual},
+            {
+                "$set": {
+                    "financeiro.orcamento.categorias_despesa": categorias_filtradas
+                }
+            },
+        )
+
+        st.success("Orçamento salvo com sucesso!")
+        time.sleep(3)
+        st.rerun()
