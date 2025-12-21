@@ -68,6 +68,32 @@ def ajustar_altura_dataframe(
 
 
 
+def ajustar_altura_data_editor(df, linhas_adicionais=1):
+    """
+    Calcula a altura ideal para st.data_editor,
+    garantindo que todas as linhas fiquem visíveis
+    sem barra de rolagem.
+
+    Parâmetros:
+    - df: DataFrame exibido no data_editor
+    - linhas_adicionais: linhas extras de folga (default=1)
+
+    Retorna:
+    - altura em pixels (int)
+    """
+
+    ALTURA_LINHA = 35      # altura média de cada linha
+    ALTURA_HEADER = 38    # cabeçalho do data_editor
+
+    try:
+        total_linhas = len(df) + linhas_adicionais
+    except Exception:
+        total_linhas = linhas_adicionais
+
+    altura = (total_linhas * ALTURA_LINHA) + ALTURA_HEADER
+
+    return altura
+
 
 
 
