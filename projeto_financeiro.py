@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import streamlit_shadcn_ui as ui
 
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, ajustar_altura_data_editor  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, ajustar_altura_data_editor, sidebar_projeto  # Função personalizada para conectar ao MongoDB
 
 
 ###########################################################################################################
@@ -586,22 +586,26 @@ with cron_desemb:
                     "numero": st.column_config.NumberColumn(
                         "Número",
                         min_value=1,
-                        step=1
+                        step=1,
+                        width=60
                     ),
                     "percentual": st.column_config.NumberColumn(
                         "Percentual (%)",
                         min_value=0.0,
                         max_value=100.0,
                         step=1.0,
-                        format="%.0f%%"
+                        format="%.0f%%",
+                        width=100
                     ),
                     "valor_fmt": st.column_config.TextColumn(
                         "Valor (auto)",
-                        disabled=True
+                        disabled=True,
+                        width=150
                     ),
                     "data_prevista": st.column_config.DateColumn(
                         "Data prevista",
-                        format="DD/MM/YYYY"
+                        format="DD/MM/YYYY",
+                        width=150
                     ),
                 },
                 key="editor_parcelas",
@@ -1514,3 +1518,8 @@ with orcamento:
 
 
 
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+sidebar_projeto()

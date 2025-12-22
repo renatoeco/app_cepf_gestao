@@ -31,6 +31,6 @@ db = conectar_mongo_cepf_gestao()
 st.logo("images/cepf_logo.png", size='large')
 
 # Título da página
-st.header("XXXXXXXX")
+st.header("Locais")
 
 
