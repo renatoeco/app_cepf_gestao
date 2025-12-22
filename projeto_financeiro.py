@@ -101,6 +101,51 @@ def atualizar_datas_relatorios(col_projetos, codigo_projeto):
         {"$set": {"relatorios": novos_relatorios}}
     )
 
+# ????????????????????
+st.write(st.session_state)
+
+
+# ==========================================================================================
+# DIÁLOGO: VER RELATOS FINANCEIROS
+# ==========================================================================================
+@st.dialog("Lançamentos de despesa", width="large")
+def dialog_relatos_fin():
+
+    despesa = st.session_state.get("despesa_selecionada")
+
+    # Se por algum motivo vier vazio/None
+    if not isinstance(despesa, dict):
+        st.warning("Nenhuma despesa selecionada. Feche o diálogo e selecione uma despesa na tabela.")
+        return
+
+    # Tenta pegar primeiro "despesa", depois "Despesa", depois usa texto padrão
+    nome_despesa = (
+        despesa.get("despesa")
+        or despesa.get("Despesa")
+        or "Despesa sem nome"
+    )
+
+    st.markdown(f"### {nome_despesa}")
+    st.write("")
+
+
+
+    # ==========================================================
+    # Usamos fragment para evitar rerun completo
+    # ==========================================================
+    @st.fragment
+    def corpo_dialogo_relatos_fin():
+        st.write('corpo')
+        
+
+    # Renderiza o fragment do corpo
+    corpo_dialogo_relatos_fin()
+
+
+
+
+
+
 
 
 ###########################################################################################################
@@ -741,7 +786,6 @@ with cron_desemb:
             df_editado = st.data_editor(
                 df_relatorios_base[["numero", "entregas", "data_prevista"]],
                 num_rows="fixed",
-                use_container_width=True,
                 column_config={
                     "numero": st.column_config.NumberColumn(
                         "Número (auto)",
@@ -816,7 +860,7 @@ with orcamento:
 
 
     # ==================================================
-    # NOTIFICAÇÃO PARA USUÁRIO INTERNO
+    # NOTIFICAÇÕES PARA USUÁRIO INTERNO
     # ==================================================
 
     # ==================================================
@@ -879,6 +923,11 @@ with orcamento:
     # ==================================================
     if not modo_edicao:
 
+
+
+
+        # Métrica do valor total
+
         valor_total = financeiro.get("valor_total")
 
         if valor_total is not None:
@@ -894,716 +943,384 @@ with orcamento:
         else:
             st.caption("Valor total do projeto ainda não cadastrado.")
 
-        st.info("Ative o modo de edição para cadastrar o orçamento.")
-        st.stop()
 
-    # ==================================================
-    # MODO EDIÇÃO — CRUD DO ORÇAMENTO
-    # ==================================================
 
-    # -----------------------------------
-    # Buscar categorias de despesa
-    # -----------------------------------
-    col_categorias_despesa = db["categorias_despesa"]
+        # --------------------------------------------------
+        # ESTADOS DO DIÁLOGO (inicialização segura)
+        # --------------------------------------------------
+        if "despesa_selecionada" not in st.session_state:
+            st.session_state["despesa_selecionada"] = None
 
-    categorias = list(
-        col_categorias_despesa
-        .find({}, {"categoria": 1})
-        .sort("categoria", 1)
-    )
+        if "despesa_selecionada_tabela_key" not in st.session_state:
+            st.session_state["despesa_selecionada_tabela_key"] = None
 
-    opcoes_categorias = [c["categoria"] for c in categorias]
+        if "abrir_dialogo_despesa" not in st.session_state:
+            st.session_state["abrir_dialogo_despesa"] = False
 
-    if not opcoes_categorias:
-        st.warning(
-            "Não há categorias de despesa cadastradas. "
-            "Cadastre primeiro nas configurações auxiliares."
-        )
-        st.stop()
 
-    # -----------------------------------
-    # Dados atuais do orçamento
-    # -----------------------------------
-    orcamento_atual = financeiro.get("orcamento", [])
+        # --------------------------------------------------
+        # CONTEÚDO DO MODO VISUALIZAÇÃO
+        # --------------------------------------------------
+        orcamento = financeiro.get("orcamento", [])
 
-    if orcamento_atual:
-        df_orcamento = pd.DataFrame(orcamento_atual)
-    else:
-        df_orcamento = pd.DataFrame(
-            columns=[
+        if not orcamento:
+            st.info("Nenhuma despesa cadastrada no orçamento.")
+        else:
+
+            df_orcamento = pd.DataFrame(orcamento)
+
+            # Garantir colunas esperadas
+            for col in [
                 "categoria",
                 "nome_despesa",
                 "descricao_despesa",
                 "unidade",
                 "quantidade",
                 "valor_unitario",
-            ]
-        )
+                "valor_total",
+            ]:
+                if col not in df_orcamento.columns:
+                    df_orcamento[col] = None
 
-    # Garantir colunas
-    for col in [
-        "categoria",
-        "nome_despesa",
-        "descricao_despesa",
-        "unidade",
-        "quantidade",
-        "valor_unitario",
-    ]:
-        if col not in df_orcamento.columns:
-            df_orcamento[col] = None
+            # -----------------------------------
+            # Formatação para exibição
+            # -----------------------------------
+            df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(
+                lambda x: (
+                    f"R$ {x:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                    if x not in [None, ""]
+                    else ""
+                )
+            )
 
-    # -----------------------------------
-    # Calcular valores
-    # -----------------------------------
-    df_orcamento["quantidade"] = df_orcamento["quantidade"].fillna(0)
-    df_orcamento["valor_unitario"] = df_orcamento["valor_unitario"].fillna(0)
+            df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(
+                lambda x: (
+                    f"R$ {x:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                    if x not in [None, ""]
+                    else ""
+                )
+            )
 
-    df_orcamento["valor_total"] = (
-        df_orcamento["quantidade"] * df_orcamento["valor_unitario"]
-    )
+            df_vis = df_orcamento.rename(columns={
+                "categoria": "Categoria",
+                "nome_despesa": "Despesa",
+                "descricao_despesa": "Descrição",
+                "unidade": "Unidade",
+                "quantidade": "Quantidade",
+            })
 
-    # -----------------------------------
-    # Formatação para exibição
-    # -----------------------------------
-    def format_brl(valor):
-        return (
-            f"R$ {valor:,.2f}"
-            .replace(",", "X")
-            .replace(".", ",")
-            .replace("X", ".")
-        ) if valor else ""
-
-    df_orcamento["valor_unitario_fmt"] = df_orcamento["valor_unitario"].apply(format_brl)
-    df_orcamento["valor_total_fmt"] = df_orcamento["valor_total"].apply(format_brl)
-
-    # -----------------------------------
-    # Editor
-    # -----------------------------------
-    
-
-
-
-
-    altura_editor = ajustar_altura_data_editor(
-        df_orcamento,
-        linhas_adicionais=1
-    )
-
-    df_editado = st.data_editor(
-        df_orcamento[
-            [
-                "categoria",
-                "nome_despesa",
-                "descricao_despesa",
-                "unidade",
-                "quantidade",
-                "valor_unitario_fmt",
-                "valor_total_fmt",
-            ]
-        ],
-        num_rows="dynamic",
-        use_container_width=True,
-        height=altura_editor,
-        column_config={
-            "categoria": st.column_config.SelectboxColumn(
-                "Categoria de despesa",
-                options=opcoes_categorias,
-                required=True
-            ),
-            "nome_despesa": st.column_config.TextColumn(
+            colunas_vis = [
+                "Categoria",
                 "Despesa",
-                required=True
-            ),
-            "descricao_despesa": st.column_config.TextColumn(
-                "Descrição"
-            ),
-            "unidade": st.column_config.TextColumn(
-                "Unidade"
-            ),
-            "quantidade": st.column_config.NumberColumn(
+                "Descrição",
+                "Unidade",
                 "Quantidade",
-                min_value=0,
-                step=1
-            ),
-            "valor_unitario_fmt": st.column_config.TextColumn(
-                "Valor unitário (R$)"
-            ),
-            "valor_total_fmt": st.column_config.TextColumn(
-                "Valor total (auto)",
-                disabled=True
-            ),
-        },
-        key="editor_orcamento",
-    )
+                "Valor unitário",
+                "Valor total",
+            ]
+
+            key_df = "df_vis_orcamento"
+
+
+            # ==========================================================================================
+            # CALLBACK DE SELEÇÃO — MESMO PADRÃO DA PÁGINA DE ATIVIDADES
+            # ==========================================================================================
 
 
 
+            def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
+
+                def handle_selecao():
+
+                    estado_tabela = st.session_state.get(chave_tabela, {})
+                    selecao = estado_tabela.get("selection", {})
+                    linhas = selecao.get("rows", [])
+
+                    if not linhas:
+                        return
+
+                    idx = linhas[0]
+                    linha = dataframe_orc.iloc[idx]
+
+                    despesa_escolhida = {
+                        # 🔹 nomes exatamente como no banco
+                        "categoria": linha.get("categoria", ""),
+                        "nome_despesa": linha.get("nome_despesa", ""),
+                        "descricao_despesa": linha.get("descricao_despesa", ""),
+                        "unidade": linha.get("unidade", ""),
+                        "quantidade": linha.get("quantidade", 0),
+                        "valor_unitario": linha.get("valor_unitario", 0),
+                        "valor_total": linha.get("valor_total", 0),
+
+                        # 🔹 campos auxiliares
+                        "indice": idx,
+                    }
+
+                    # 🔹 compatibilidade com o diálogo já existente
+                    despesa_escolhida["despesa"] = despesa_escolhida["nome_despesa"]
+                    despesa_escolhida["Despesa"] = despesa_escolhida["nome_despesa"]
+
+                    st.session_state["despesa_selecionada"] = despesa_escolhida
+                    st.session_state["despesa_selecionada_tabela_key"] = chave_tabela
+                    st.session_state["abrir_dialogo_despesa"] = True
+
+                return handle_selecao
 
 
-
-    
-    # df_editado = st.data_editor(
-    #     df_orcamento[
-    #         [
-    #             "categoria",
-    #             "nome_despesa",
-    #             "descricao_despesa",
-    #             "unidade",
-    #             "quantidade",
-    #             "valor_unitario_fmt",
-    #             "valor_total_fmt",
-    #         ]
-    #     ],
-    #     num_rows="dynamic",
-    #     use_container_width=True,
-    #     column_config={
-    #         "categoria": st.column_config.SelectboxColumn(
-    #             "Categoria de despesa",
-    #             options=opcoes_categorias,
-    #             required=True
-    #         ),
-    #         "nome_despesa": st.column_config.TextColumn(
-    #             "Despesa",
-    #             required=True
-    #         ),
-    #         "descricao_despesa": st.column_config.TextColumn(
-    #             "Descrição"
-    #         ),
-    #         "unidade": st.column_config.TextColumn(
-    #             "Unidade"
-    #         ),
-    #         "quantidade": st.column_config.NumberColumn(
-    #             "Quantidade",
-    #             min_value=0,
-    #             step=1
-    #         ),
-    #         "valor_unitario_fmt": st.column_config.TextColumn(
-    #             "Valor unitário (R$)"
-    #         ),
-    #         "valor_total_fmt": st.column_config.TextColumn(
-    #             "Valor total (auto)",
-    #             disabled=True
-    #         ),
-    #     },
-    #     key="editor_orcamento",
-    # )
-
-
-
-
-
-
-    st.write("")
-
-
-
-    # -----------------------------------
-    # Salvar
-    # -----------------------------------
-    if st.button("Salvar orçamento", icon=":material/save:"):
-
-        df_salvar = df_editado.dropna(
-            subset=["categoria", "nome_despesa"],
-            how="any"
-        ).copy()
-
-        # Converter string → float
-        def parse_brl(valor):
-            if not valor:
-                return 0.0
-            return float(
-                valor.replace("R$", "")
-                .replace(".", "")
-                .replace(",", ".")
-                .strip()
+            callback_selecao = criar_callback_selecao_orcamento(
+                df_orcamento,
+                key_df
             )
 
-        df_salvar["quantidade"] = df_salvar["quantidade"].fillna(0)
-        df_salvar["valor_unitario"] = df_salvar["valor_unitario_fmt"].apply(parse_brl)
-        df_salvar["valor_total"] = (
-            df_salvar["quantidade"] * df_salvar["valor_unitario"]
+
+            # -------------------------------------------
+            # TABELA INTERATIVA
+            # -------------------------------------------
+            st.dataframe(
+                df_vis[colunas_vis],
+                hide_index=True,
+                selection_mode="single-row",
+                key=key_df,
+                on_select=callback_selecao,
+                column_config={
+                    "Categoria": st.column_config.TextColumn(width=180),
+                    "Despesa": st.column_config.TextColumn(width=200),
+                    "Descrição": st.column_config.TextColumn(width=420),
+                    "Unidade": st.column_config.TextColumn(width=100),
+                    "Quantidade": st.column_config.NumberColumn(width=80),
+                    "Valor unitário": st.column_config.TextColumn(width=120),
+                    "Valor total": st.column_config.TextColumn(width=120),
+                }
+            )
+
+
+        # --------------------------------------------------
+        # ABRIR O DIÁLOGO SE FOI SOLICITADO
+        # --------------------------------------------------
+        if st.session_state.get("abrir_dialogo_despesa"):
+            dialog_relatos_fin()
+            st.session_state["abrir_dialogo_despesa"] = False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # ==================================================
+    # MODO EDIÇÃO — CRUD DO ORÇAMENTO
+    # ==================================================
+    if modo_edicao:
+
+        # -----------------------------------
+        # Buscar categorias de despesa
+        # -----------------------------------
+        col_categorias_despesa = db["categorias_despesa"]
+
+        categorias = list(
+            col_categorias_despesa
+            .find({}, {"categoria": 1})
+            .sort("categoria", 1)
         )
 
-        orcamento_salvar = []
+        opcoes_categorias = [c["categoria"] for c in categorias]
 
-        for _, row in df_salvar.iterrows():
-            orcamento_salvar.append(
+        if not opcoes_categorias:
+            st.warning(
+                "Não há categorias de despesa cadastradas. "
+                "Cadastre primeiro nas configurações auxiliares."
+            )
+            st.stop()
+
+        # -----------------------------------
+        # Dados atuais do orçamento
+        # -----------------------------------
+        orcamento_atual = financeiro.get("orcamento", [])
+
+        if orcamento_atual:
+            df_orcamento = pd.DataFrame(orcamento_atual)
+        else:
+            df_orcamento = pd.DataFrame(
+                columns=[
+                    "categoria",
+                    "nome_despesa",
+                    "descricao_despesa",
+                    "unidade",
+                    "quantidade",
+                    "valor_unitario",
+                ]
+            )
+
+        # Garantir colunas
+        for col in [
+            "categoria",
+            "nome_despesa",
+            "descricao_despesa",
+            "unidade",
+            "quantidade",
+            "valor_unitario",
+        ]:
+            if col not in df_orcamento.columns:
+                df_orcamento[col] = None
+
+        # -----------------------------------
+        # Calcular valores
+        # -----------------------------------
+        df_orcamento["quantidade"] = df_orcamento["quantidade"].fillna(0)
+        df_orcamento["valor_unitario"] = df_orcamento["valor_unitario"].fillna(0)
+
+        df_orcamento["valor_total"] = (
+            df_orcamento["quantidade"] * df_orcamento["valor_unitario"]
+        )
+
+        # -----------------------------------
+        # Formatação para exibição
+        # -----------------------------------
+        def format_brl(valor):
+            return (
+                f"R$ {valor:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            ) if valor else ""
+
+        df_orcamento["valor_unitario_fmt"] = df_orcamento["valor_unitario"].apply(format_brl)
+        df_orcamento["valor_total_fmt"] = df_orcamento["valor_total"].apply(format_brl)
+
+        # -----------------------------------
+        # Editor
+        # -----------------------------------
+        
+
+
+
+
+        altura_editor = ajustar_altura_data_editor(
+            df_orcamento,
+            linhas_adicionais=1
+        )
+
+        df_editado = st.data_editor(
+            df_orcamento[
+                [
+                    "categoria",
+                    "nome_despesa",
+                    "descricao_despesa",
+                    "unidade",
+                    "quantidade",
+                    "valor_unitario_fmt",
+                    "valor_total_fmt",
+                ]
+            ],
+            num_rows="dynamic",
+            height=altura_editor,
+            column_config={
+                "categoria": st.column_config.SelectboxColumn(
+                    "Categoria de despesa",
+                    options=opcoes_categorias,
+                    required=True
+                ),
+                "nome_despesa": st.column_config.TextColumn(
+                    "Despesa",
+                    required=True
+                ),
+                "descricao_despesa": st.column_config.TextColumn(
+                    "Descrição"
+                ),
+                "unidade": st.column_config.TextColumn(
+                    "Unidade"
+                ),
+                "quantidade": st.column_config.NumberColumn(
+                    "Quantidade",
+                    min_value=0,
+                    step=1
+                ),
+                "valor_unitario_fmt": st.column_config.TextColumn(
+                    "Valor unitário (R$)"
+                ),
+                "valor_total_fmt": st.column_config.TextColumn(
+                    "Valor total (auto)",
+                    disabled=True
+                ),
+            },
+            key="editor_orcamento",
+        )
+
+
+
+        st.write("")
+
+        # -----------------------------------
+        # Salvar
+        # -----------------------------------
+        if st.button("Salvar orçamento", icon=":material/save:"):
+
+            df_salvar = df_editado.dropna(
+                subset=["categoria", "nome_despesa"],
+                how="any"
+            ).copy()
+
+            # Converter string → float
+            def parse_brl(valor):
+                if not valor:
+                    return 0.0
+                return float(
+                    valor.replace("R$", "")
+                    .replace(".", "")
+                    .replace(",", ".")
+                    .strip()
+                )
+
+            df_salvar["quantidade"] = df_salvar["quantidade"].fillna(0)
+            df_salvar["valor_unitario"] = df_salvar["valor_unitario_fmt"].apply(parse_brl)
+            df_salvar["valor_total"] = (
+                df_salvar["quantidade"] * df_salvar["valor_unitario"]
+            )
+
+            orcamento_salvar = []
+
+            for _, row in df_salvar.iterrows():
+                orcamento_salvar.append(
+                    {
+                        "categoria": row["categoria"],
+                        "nome_despesa": row["nome_despesa"],
+                        "descricao_despesa": row.get("descricao_despesa"),
+                        "unidade": row.get("unidade"),
+                        "quantidade": float(row["quantidade"]),
+                        "valor_unitario": float(row["valor_unitario"]),
+                        "valor_total": float(row["valor_total"]),
+                    }
+                )
+
+            col_projetos.update_one(
+                {"codigo": codigo_projeto_atual},
                 {
-                    "categoria": row["categoria"],
-                    "nome_despesa": row["nome_despesa"],
-                    "descricao_despesa": row.get("descricao_despesa"),
-                    "unidade": row.get("unidade"),
-                    "quantidade": float(row["quantidade"]),
-                    "valor_unitario": float(row["valor_unitario"]),
-                    "valor_total": float(row["valor_total"]),
+                    "$set": {
+                        "financeiro.orcamento": orcamento_salvar
+                    }
                 }
             )
 
-        col_projetos.update_one(
-            {"codigo": codigo_projeto_atual},
-            {
-                "$set": {
-                    "financeiro.orcamento": orcamento_salvar
-                }
-            }
-        )
+            st.success("Orçamento salvo com sucesso!")
+            time.sleep(3)
+            st.rerun()
 
-        st.success("Orçamento salvo com sucesso!")
-        time.sleep(3)
-        st.rerun()
 
 
 
 
-
-
-
-
-# with orcamento:
-
-#     st.markdown("### Orçamento")
-#     st.write("")
-
-#     # ==================================================
-#     # PERMISSÃO E MODO DE EDIÇÃO
-#     # ==================================================
-#     usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
-
-#     with st.container(horizontal=True, horizontal_alignment="right"):
-#         if usuario_interno:
-#             modo_edicao = st.toggle("Modo de edição", key="editar_orcamento")
-#         else:
-#             modo_edicao = False
-
-#     # ==================================================
-#     # MODO VISUALIZAÇÃO
-#     # ==================================================
-#     if not modo_edicao:
-
-#         valor_total = financeiro.get("valor_total")
-
-#         if valor_total is not None:
-#             st.metric(
-#                 label="Valor total do projeto",
-#                 value=(
-#                     f"R$ {valor_total:,.2f}"
-#                     .replace(",", "X")
-#                     .replace(".", ",")
-#                     .replace("X", ".")
-#                 )
-#             )
-#         else:
-#             st.caption("Valor total do projeto ainda não cadastrado.")
-
-#         st.info("Ative o modo de edição para cadastrar o orçamento.")
-#         st.stop()
-
-#     # ==================================================
-#     # MODO EDIÇÃO — CRUD DO ORÇAMENTO
-#     # ==================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#     # -----------------------------------
-#     # Buscar categorias de despesa
-#     # -----------------------------------
-#     col_categorias_despesa = db["categorias_despesa"]
-
-#     categorias = list(
-#         col_categorias_despesa
-#         .find({}, {"categoria": 1})
-#         .sort("categoria", 1)
-#     )
-
-#     opcoes_categorias = [c["categoria"] for c in categorias]
-
-#     if not opcoes_categorias:
-#         st.warning(
-#             "Não há categorias de despesa cadastradas. "
-#             "Cadastre primeiro nas configurações auxiliares."
-#         )
-#         st.stop()
-
-#     # -----------------------------------
-#     # Dados atuais do orçamento
-#     # -----------------------------------
-#     orcamento = financeiro.get("orcamento", [])
-
-#     if orcamento:
-#         df_orcamento = pd.DataFrame(orcamento)
-#     else:
-#         df_orcamento = pd.DataFrame(
-#             columns=[
-#                 "categoria",
-#                 "nome_despesa",
-#                 "descricao_despesa",
-#                 "unidade",
-#                 "quantidade",
-#                 "valor_unitario",
-#             ]
-#         )
-
-#     # Garantir todas as colunas
-#     for col in [
-#         "categoria",
-#         "nome_despesa",
-#         "descricao_despesa",
-#         "unidade",
-#         "quantidade",
-#         "valor_unitario",
-#     ]:
-#         if col not in df_orcamento.columns:
-#             df_orcamento[col] = None
-
-#     # -----------------------------------
-#     # Calcular valor total
-#     # -----------------------------------
-#     df_orcamento["valor_total"] = (
-#         df_orcamento["quantidade"].fillna(0)
-#         * df_orcamento["valor_unitario"].fillna(0)
-#     )
-
-#     df_orcamento["valor_total_fmt"] = df_orcamento["valor_total"].apply(
-#         lambda x: (
-#             f"R$ {x:,.2f}"
-#             .replace(",", "X")
-#             .replace(".", ",")
-#             .replace("X", ".")
-#         )
-#         if x else ""
-#     )
-
-#     # -----------------------------------
-#     # Editor
-#     # -----------------------------------
-#     df_editado = st.data_editor(
-#         df_orcamento[
-#             [
-#                 "categoria",
-#                 "nome_despesa",
-#                 "descricao_despesa",
-#                 "unidade",
-#                 "quantidade",
-#                 "valor_unitario",
-#                 "valor_total_fmt",
-#             ]
-#         ],
-#         num_rows="dynamic",
-#         use_container_width=True,
-#         column_config={
-#             "categoria": st.column_config.SelectboxColumn(
-#                 "Categoria de despesa",
-#                 options=opcoes_categorias,
-#                 required=True
-#             ),
-#             "nome_despesa": st.column_config.TextColumn(
-#                 "Despesa",
-#                 required=True
-#             ),
-#             "descricao_despesa": st.column_config.TextColumn(
-#                 "Descrição"
-#             ),
-#             "unidade": st.column_config.TextColumn(
-#                 "Unidade"
-#             ),
-#             "quantidade": st.column_config.NumberColumn(
-#                 "Quantidade",
-#                 min_value=0,
-#                 step=1
-#             ),
-#             "valor_unitario": st.column_config.NumberColumn(
-#                 "Valor unitário (R$)",
-#                 min_value=0.0,
-#                 step=100.0,
-#                 format="%.2f"
-#             ),
-#             "valor_total_fmt": st.column_config.TextColumn(
-#                 "Valor total (auto)",
-#                 disabled=True
-#             ),
-#         },
-#         key="editor_orcamento",
-#     )
-
-#     st.write("")
-
-#     # -----------------------------------
-#     # Salvar
-#     # -----------------------------------
-#     if st.button("Salvar orçamento", icon=":material/save:"):
-
-#         df_salvar = df_editado.dropna(
-#             subset=["categoria", "nome_despesa"],
-#             how="any"
-#         ).copy()
-
-#         # Recalcular valores antes de salvar
-#         df_salvar["quantidade"] = df_salvar["quantidade"].fillna(0)
-#         df_salvar["valor_unitario"] = df_salvar["valor_unitario"].fillna(0)
-
-#         df_salvar["valor_total"] = (
-#             df_salvar["quantidade"] * df_salvar["valor_unitario"]
-#         )
-
-#         orcamento_salvar = []
-
-#         for _, row in df_salvar.iterrows():
-#             orcamento_salvar.append(
-#                 {
-#                     "categoria": row["categoria"],
-#                     "nome_despesa": row["nome_despesa"],
-#                     "descricao_despesa": row.get("descricao_despesa"),
-#                     "unidade": row.get("unidade"),
-#                     "quantidade": float(row["quantidade"]),
-#                     "valor_unitario": float(row["valor_unitario"]),
-#                     "valor_total": float(row["valor_total"]),
-#                 }
-#             )
-
-#         col_projetos.update_one(
-#             {"codigo": codigo_projeto_atual},
-#             {
-#                 "$set": {
-#                     "financeiro.orcamento": orcamento_salvar
-#                 }
-#             }
-#         )
-
-#         st.success("Orçamento salvo com sucesso!")
-#         time.sleep(3)
-#         st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # # Garantir estrutura no documento
-    # financeiro_db = financeiro or {}
-    # orcamento_db = financeiro_db.get("orcamento", {})
-    # categorias_db = orcamento_db.get("categorias_despesa", [])
-
-    # # --------------------------------------------------
-    # # Seleção / criação de categoria
-    # # --------------------------------------------------
-    # categorias_existentes = [c["categoria"] for c in categorias_db]
-
-    # categoria_selecionada = st.selectbox(
-    #     "Categoria de despesa",
-    #     options=["Nova categoria"] + categorias_existentes,
-    # )
-
-    # if categoria_selecionada == "Nova categoria":
-    #     nova_categoria = st.text_input("Nome da nova categoria")
-    #     nome_categoria = nova_categoria.strip()
-    # else:
-    #     nome_categoria = categoria_selecionada
-
-    # if not nome_categoria:
-    #     st.warning("Informe uma categoria para continuar.")
-    #     st.stop()
-
-    # # --------------------------------------------------
-    # # Recuperar despesas da categoria
-    # # --------------------------------------------------
-    # categoria_atual = next(
-    #     (c for c in categorias_db if c["categoria"] == nome_categoria),
-    #     {"categoria": nome_categoria, "despesas": []},
-    # )
-
-    # despesas = categoria_atual.get("despesas", [])
-
-    # # --------------------------------------------------
-    # # DataFrame base
-    # # --------------------------------------------------
-    # if despesas:
-    #     df_despesas = pd.DataFrame(despesas)
-    # else:
-    #     df_despesas = pd.DataFrame(
-    #         columns=[
-    #             "nome_despesa",
-    #             "descricao_despesa",
-    #             "unidade",
-    #             "quantidade",
-    #             "valor_unitario",
-    #             "valor_total",
-    #         ]
-    #     )
-
-    # # Garantir colunas
-    # for col in [
-    #     "nome_despesa",
-    #     "descricao_despesa",
-    #     "unidade",
-    #     "quantidade",
-    #     "valor_unitario",
-    #     "valor_total",
-    # ]:
-    #     if col not in df_despesas.columns:
-    #         df_despesas[col] = None
-
-    # # --------------------------------------------------
-    # # Calcular valor total automaticamente
-    # # --------------------------------------------------
-    # df_despesas["quantidade"] = pd.to_numeric(
-    #     df_despesas["quantidade"], errors="coerce"
-    # )
-    # df_despesas["valor_unitario"] = pd.to_numeric(
-    #     df_despesas["valor_unitario"], errors="coerce"
-    # )
-
-    # df_despesas["valor_total"] = (
-    #     df_despesas["quantidade"].fillna(0)
-    #     * df_despesas["valor_unitario"].fillna(0)
-    # )
-
-    # df_despesas["valor_total_fmt"] = df_despesas["valor_total"].apply(
-    #     lambda x: (
-    #         f"R$ {x:,.2f}"
-    #         .replace(",", "X")
-    #         .replace(".", ",")
-    #         .replace("X", ".")
-    #     )
-    #     if pd.notna(x) else ""
-    # )
-
-    # # --------------------------------------------------
-    # # Editor
-    # # --------------------------------------------------
-    # df_editado = st.data_editor(
-    #     df_despesas[
-    #         [
-    #             "nome_despesa",
-    #             "descricao_despesa",
-    #             "unidade",
-    #             "quantidade",
-    #             "valor_unitario",
-    #             "valor_total_fmt",
-    #         ]
-    #     ],
-    #     num_rows="dynamic",
-    #     use_container_width=True,
-    #     column_config={
-    #         "nome_despesa": st.column_config.TextColumn("Despesa"),
-    #         "descricao_despesa": st.column_config.TextColumn("Descrição"),
-    #         "unidade": st.column_config.TextColumn("Unidade"),
-    #         "quantidade": st.column_config.NumberColumn(
-    #             "Quantidade", min_value=0, step=1
-    #         ),
-    #         "valor_unitario": st.column_config.NumberColumn(
-    #             "Valor unitário (R$)", min_value=0.0, step=100.0, format="%.2f"
-    #         ),
-    #         "valor_total_fmt": st.column_config.TextColumn(
-    #             "Valor total (auto)", disabled=True
-    #         ),
-    #     },
-    #     key="editor_orcamento",
-    # )
-
-    # st.write("")
-
-    # total_categoria = (
-    #     df_despesas["valor_total"].sum()
-    #     if not df_despesas.empty else 0
-    # )
-
-    # st.write(
-    #     f"**Total da categoria:** "
-    #     f"R$ {total_categoria:,.2f}".replace(",", "X")
-    #     .replace(".", ",")
-    #     .replace("X", ".")
-    # )
-
-    # # --------------------------------------------------
-    # # SALVAR
-    # # --------------------------------------------------
-    # if st.button("Salvar orçamento", icon=":material/save:"):
-
-    #     df_salvar = df_editado.dropna(
-    #         subset=["nome_despesa", "quantidade", "valor_unitario"],
-    #         how="any",
-    #     ).copy()
-
-    #     despesas_salvar = []
-
-    #     for _, row in df_salvar.iterrows():
-    #         qtd = float(row["quantidade"])
-    #         vu = float(row["valor_unitario"])
-
-    #         despesas_salvar.append(
-    #             {
-    #                 "nome_despesa": row["nome_despesa"],
-    #                 "descricao_despesa": row["descricao_despesa"],
-    #                 "unidade": row["unidade"],
-    #                 "quantidade": qtd,
-    #                 "valor_unitario": vu,
-    #                 "valor_total": qtd * vu,
-    #             }
-    #         )
-
-    #     # Atualizar categorias
-    #     categorias_filtradas = [
-    #         c for c in categorias_db if c["categoria"] != nome_categoria
-    #     ]
-
-    #     categorias_filtradas.append(
-    #         {
-    #             "categoria": nome_categoria,
-    #             "despesas": despesas_salvar,
-    #         }
-    #     )
-
-    #     col_projetos.update_one(
-    #         {"codigo": codigo_projeto_atual},
-    #         {
-    #             "$set": {
-    #                 "financeiro.orcamento.categorias_despesa": categorias_filtradas
-    #             }
-    #         },
-    #     )
-
-    #     st.success("Orçamento salvo com sucesso!")
-    #     time.sleep(3)
-    #     st.rerun()
