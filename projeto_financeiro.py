@@ -101,8 +101,6 @@ def atualizar_datas_relatorios(col_projetos, codigo_projeto):
         {"$set": {"relatorios": novos_relatorios}}
     )
 
-# ????????????????????
-st.write(st.session_state)
 
 
 # ==========================================================================================
@@ -194,7 +192,7 @@ with cron_desemb:
 
 
     # --------------------------------------------------
-    # MODO VISUALIZAÇÃO
+    # MODO VISUALIZAÇÃO CRONOGRAMA
     # --------------------------------------------------
     if not modo_edicao:
 
@@ -442,14 +440,8 @@ with cron_desemb:
 
 
 
-
-
-
-
-
-
     # --------------------------------------------------
-    # MODO EDIÇÃO
+    # MODO EDIÇÃO CRONOGRAMA
     # --------------------------------------------------
     else:
 
@@ -852,10 +844,28 @@ with cron_desemb:
 
 
 
+# --------------------------------------------------
+# ABA ORÇAMENTO
+# --------------------------------------------------
+
 
 with orcamento:
 
-    st.markdown("### Orçamento")
+
+    # ==================================================
+    # PERMISSÃO E MODO DE EDIÇÃO
+    # ==================================================
+    usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
+
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if usuario_interno:
+            modo_edicao = st.toggle("Modo de edição", key="editar_orcamento")
+        else:
+            modo_edicao = False
+
+
+
+    st.markdown("#### Orçamento")
     st.write("")
 
 
@@ -906,28 +916,14 @@ with orcamento:
 
 
 
-
     # ==================================================
-    # PERMISSÃO E MODO DE EDIÇÃO
-    # ==================================================
-    usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
-
-    with st.container(horizontal=True, horizontal_alignment="right"):
-        if usuario_interno:
-            modo_edicao = st.toggle("Modo de edição", key="editar_orcamento")
-        else:
-            modo_edicao = False
-
-    # ==================================================
-    # MODO VISUALIZAÇÃO
+    # MODO VISUALIZAÇÃO — ORÇAMENTO AGRUPADO POR CATEGORIA
     # ==================================================
     if not modo_edicao:
 
-
-
-
+        # -----------------------------
         # Métrica do valor total
-
+        # -----------------------------
         valor_total = financeiro.get("valor_total")
 
         if valor_total is not None:
@@ -943,7 +939,7 @@ with orcamento:
         else:
             st.caption("Valor total do projeto ainda não cadastrado.")
 
-
+        st.write("")
 
         # --------------------------------------------------
         # ESTADOS DO DIÁLOGO (inicialização segura)
@@ -957,58 +953,109 @@ with orcamento:
         if "abrir_dialogo_despesa" not in st.session_state:
             st.session_state["abrir_dialogo_despesa"] = False
 
-
         # --------------------------------------------------
-        # CONTEÚDO DO MODO VISUALIZAÇÃO
+        # Dados do orçamento
         # --------------------------------------------------
         orcamento = financeiro.get("orcamento", [])
 
         if not orcamento:
             st.info("Nenhuma despesa cadastrada no orçamento.")
-        else:
+            st.stop()
 
-            df_orcamento = pd.DataFrame(orcamento)
+        df_orcamento = pd.DataFrame(orcamento)
 
-            # Garantir colunas esperadas
-            for col in [
-                "categoria",
-                "nome_despesa",
-                "descricao_despesa",
-                "unidade",
-                "quantidade",
-                "valor_unitario",
-                "valor_total",
-            ]:
-                if col not in df_orcamento.columns:
-                    df_orcamento[col] = None
+        # Garantir colunas
+        for col in [
+            "categoria",
+            "nome_despesa",
+            "descricao_despesa",
+            "unidade",
+            "quantidade",
+            "valor_unitario",
+            "valor_total",
+        ]:
+            if col not in df_orcamento.columns:
+                df_orcamento[col] = None
 
-            # -----------------------------------
-            # Formatação para exibição
-            # -----------------------------------
-            df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(
-                lambda x: (
-                    f"R$ {x:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                    if x not in [None, ""]
-                    else ""
-                )
+        # -----------------------------------
+        # Formatação para exibição
+        # -----------------------------------
+        df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(
+            lambda x: (
+                f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                if x not in [None, ""]
+                else ""
             )
+        )
 
-            df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(
-                lambda x: (
-                    f"R$ {x:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                    if x not in [None, ""]
-                    else ""
-                )
+        df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(
+            lambda x: (
+                f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                if x not in [None, ""]
+                else ""
             )
+        )
 
-            df_vis = df_orcamento.rename(columns={
-                "categoria": "Categoria",
+        # --------------------------------------------------
+        # Agrupar por categoria
+        # --------------------------------------------------
+        categorias = (
+            df_orcamento["categoria"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+        # --------------------------------------------------
+        # CALLBACK PARA ABERTURA DO DIÁLOGO DE RELATOS
+        # --------------------------------------------------
+        def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
+
+            def handle_selecao():
+
+                estado_tabela = st.session_state.get(chave_tabela, {})
+                selecao = estado_tabela.get("selection", {})
+                linhas = selecao.get("rows", [])
+
+                if not linhas:
+                    return
+
+                idx = linhas[0]
+                linha = dataframe_orc.iloc[idx]
+
+                despesa_escolhida = {
+                    "categoria": linha.get("categoria", ""),
+                    "nome_despesa": linha.get("nome_despesa", ""),
+                    "descricao_despesa": linha.get("descricao_despesa", ""),
+                    "unidade": linha.get("unidade", ""),
+                    "quantidade": linha.get("quantidade", 0),
+                    "valor_unitario": linha.get("valor_unitario", 0),
+                    "valor_total": linha.get("valor_total", 0),
+                    "indice": idx,
+                }
+
+                # Compatibilidade com o diálogo
+                despesa_escolhida["despesa"] = despesa_escolhida["nome_despesa"]
+                despesa_escolhida["Despesa"] = despesa_escolhida["nome_despesa"]
+
+                st.session_state["despesa_selecionada"] = despesa_escolhida
+                st.session_state["despesa_selecionada_tabela_key"] = chave_tabela
+                st.session_state["abrir_dialogo_despesa"] = True
+
+            return handle_selecao
+
+        # --------------------------------------------------
+        # RENDERIZAÇÃO POR CATEGORIA
+        # --------------------------------------------------
+        for categoria in categorias:
+
+            st.write("")
+            st.write(f"**{categoria}**")
+            # st.divider()
+
+            df_cat = df_orcamento[df_orcamento["categoria"] == categoria].copy()
+
+            df_vis = df_cat.rename(columns={
                 "nome_despesa": "Despesa",
                 "descricao_despesa": "Descrição",
                 "unidade": "Unidade",
@@ -1016,7 +1063,6 @@ with orcamento:
             })
 
             colunas_vis = [
-                "Categoria",
                 "Despesa",
                 "Descrição",
                 "Unidade",
@@ -1025,63 +1071,13 @@ with orcamento:
                 "Valor total",
             ]
 
-            key_df = "df_vis_orcamento"
-
-
-            # ==========================================================================================
-            # CALLBACK DE SELEÇÃO — MESMO PADRÃO DA PÁGINA DE ATIVIDADES
-            # ==========================================================================================
-
-
-
-            def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
-
-                def handle_selecao():
-
-                    estado_tabela = st.session_state.get(chave_tabela, {})
-                    selecao = estado_tabela.get("selection", {})
-                    linhas = selecao.get("rows", [])
-
-                    if not linhas:
-                        return
-
-                    idx = linhas[0]
-                    linha = dataframe_orc.iloc[idx]
-
-                    despesa_escolhida = {
-                        # 🔹 nomes exatamente como no banco
-                        "categoria": linha.get("categoria", ""),
-                        "nome_despesa": linha.get("nome_despesa", ""),
-                        "descricao_despesa": linha.get("descricao_despesa", ""),
-                        "unidade": linha.get("unidade", ""),
-                        "quantidade": linha.get("quantidade", 0),
-                        "valor_unitario": linha.get("valor_unitario", 0),
-                        "valor_total": linha.get("valor_total", 0),
-
-                        # 🔹 campos auxiliares
-                        "indice": idx,
-                    }
-
-                    # 🔹 compatibilidade com o diálogo já existente
-                    despesa_escolhida["despesa"] = despesa_escolhida["nome_despesa"]
-                    despesa_escolhida["Despesa"] = despesa_escolhida["nome_despesa"]
-
-                    st.session_state["despesa_selecionada"] = despesa_escolhida
-                    st.session_state["despesa_selecionada_tabela_key"] = chave_tabela
-                    st.session_state["abrir_dialogo_despesa"] = True
-
-                return handle_selecao
-
+            key_df = f"df_vis_orcamento_{categoria}"
 
             callback_selecao = criar_callback_selecao_orcamento(
-                df_orcamento,
+                df_cat,
                 key_df
             )
 
-
-            # -------------------------------------------
-            # TABELA INTERATIVA
-            # -------------------------------------------
             st.dataframe(
                 df_vis[colunas_vis],
                 hide_index=True,
@@ -1089,23 +1085,217 @@ with orcamento:
                 key=key_df,
                 on_select=callback_selecao,
                 column_config={
-                    "Categoria": st.column_config.TextColumn(width=180),
-                    "Despesa": st.column_config.TextColumn(width=200),
+                    "Despesa": st.column_config.TextColumn(width=220),
                     "Descrição": st.column_config.TextColumn(width=420),
-                    "Unidade": st.column_config.TextColumn(width=100),
+                    "Unidade": st.column_config.TextColumn(width=120),
                     "Quantidade": st.column_config.NumberColumn(width=80),
                     "Valor unitário": st.column_config.TextColumn(width=120),
                     "Valor total": st.column_config.TextColumn(width=120),
                 }
             )
 
-
         # --------------------------------------------------
-        # ABRIR O DIÁLOGO SE FOI SOLICITADO
+        # ABRIR DIÁLOGO
         # --------------------------------------------------
         if st.session_state.get("abrir_dialogo_despesa"):
             dialog_relatos_fin()
             st.session_state["abrir_dialogo_despesa"] = False
+
+
+
+
+
+
+
+
+    # # ==================================================
+    # # MODO VISUALIZAÇÃO (OPÇÃO COM TABELA DE ORÇAMENTO ÚNICA, SEM SEPARAR POR CATEGORIA)
+    # # ==================================================
+    # if not modo_edicao:
+
+
+
+
+    #     # Métrica do valor total
+
+    #     valor_total = financeiro.get("valor_total")
+
+    #     if valor_total is not None:
+    #         st.metric(
+    #             label="Valor total do projeto",
+    #             value=(
+    #                 f"R$ {valor_total:,.2f}"
+    #                 .replace(",", "X")
+    #                 .replace(".", ",")
+    #                 .replace("X", ".")
+    #             )
+    #         )
+    #     else:
+    #         st.caption("Valor total do projeto ainda não cadastrado.")
+
+
+
+    #     # --------------------------------------------------
+    #     # ESTADOS DO DIÁLOGO (inicialização segura)
+    #     # --------------------------------------------------
+    #     if "despesa_selecionada" not in st.session_state:
+    #         st.session_state["despesa_selecionada"] = None
+
+    #     if "despesa_selecionada_tabela_key" not in st.session_state:
+    #         st.session_state["despesa_selecionada_tabela_key"] = None
+
+    #     if "abrir_dialogo_despesa" not in st.session_state:
+    #         st.session_state["abrir_dialogo_despesa"] = False
+
+
+    #     # --------------------------------------------------
+    #     # CONTEÚDO DO MODO VISUALIZAÇÃO
+    #     # --------------------------------------------------
+    #     orcamento = financeiro.get("orcamento", [])
+
+    #     if not orcamento:
+    #         st.info("Nenhuma despesa cadastrada no orçamento.")
+    #     else:
+
+    #         df_orcamento = pd.DataFrame(orcamento)
+
+    #         # Garantir colunas esperadas
+    #         for col in [
+    #             "categoria",
+    #             "nome_despesa",
+    #             "descricao_despesa",
+    #             "unidade",
+    #             "quantidade",
+    #             "valor_unitario",
+    #             "valor_total",
+    #         ]:
+    #             if col not in df_orcamento.columns:
+    #                 df_orcamento[col] = None
+
+    #         # -----------------------------------
+    #         # Formatação para exibição
+    #         # -----------------------------------
+    #         df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(
+    #             lambda x: (
+    #                 f"R$ {x:,.2f}"
+    #                 .replace(",", "X")
+    #                 .replace(".", ",")
+    #                 .replace("X", ".")
+    #                 if x not in [None, ""]
+    #                 else ""
+    #             )
+    #         )
+
+    #         df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(
+    #             lambda x: (
+    #                 f"R$ {x:,.2f}"
+    #                 .replace(",", "X")
+    #                 .replace(".", ",")
+    #                 .replace("X", ".")
+    #                 if x not in [None, ""]
+    #                 else ""
+    #             )
+    #         )
+
+    #         df_vis = df_orcamento.rename(columns={
+    #             "categoria": "Categoria",
+    #             "nome_despesa": "Despesa",
+    #             "descricao_despesa": "Descrição",
+    #             "unidade": "Unidade",
+    #             "quantidade": "Quantidade",
+    #         })
+
+    #         colunas_vis = [
+    #             "Categoria",
+    #             "Despesa",
+    #             "Descrição",
+    #             "Unidade",
+    #             "Quantidade",
+    #             "Valor unitário",
+    #             "Valor total",
+    #         ]
+
+    #         key_df = "df_vis_orcamento"
+
+
+    #         # ==========================================================================================
+    #         # CALLBACK DE SELEÇÃO — MESMO PADRÃO DA PÁGINA DE ATIVIDADES
+    #         # ==========================================================================================
+
+
+
+    #         def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
+
+    #             def handle_selecao():
+
+    #                 estado_tabela = st.session_state.get(chave_tabela, {})
+    #                 selecao = estado_tabela.get("selection", {})
+    #                 linhas = selecao.get("rows", [])
+
+    #                 if not linhas:
+    #                     return
+
+    #                 idx = linhas[0]
+    #                 linha = dataframe_orc.iloc[idx]
+
+    #                 despesa_escolhida = {
+    #                     # nomes exatamente como no banco
+    #                     "categoria": linha.get("categoria", ""),
+    #                     "nome_despesa": linha.get("nome_despesa", ""),
+    #                     "descricao_despesa": linha.get("descricao_despesa", ""),
+    #                     "unidade": linha.get("unidade", ""),
+    #                     "quantidade": linha.get("quantidade", 0),
+    #                     "valor_unitario": linha.get("valor_unitario", 0),
+    #                     "valor_total": linha.get("valor_total", 0),
+
+    #                     # campos auxiliares
+    #                     "indice": idx,
+    #                 }
+
+    #                 # compatibilidade com o diálogo já existente
+    #                 despesa_escolhida["despesa"] = despesa_escolhida["nome_despesa"]
+    #                 despesa_escolhida["Despesa"] = despesa_escolhida["nome_despesa"]
+
+    #                 st.session_state["despesa_selecionada"] = despesa_escolhida
+    #                 st.session_state["despesa_selecionada_tabela_key"] = chave_tabela
+    #                 st.session_state["abrir_dialogo_despesa"] = True
+
+    #             return handle_selecao
+
+
+    #         callback_selecao = criar_callback_selecao_orcamento(
+    #             df_orcamento,
+    #             key_df
+    #         )
+
+
+    #         # -------------------------------------------
+    #         # TABELA INTERATIVA
+    #         # -------------------------------------------
+    #         st.dataframe(
+    #             df_vis[colunas_vis],
+    #             hide_index=True,
+    #             selection_mode="single-row",
+    #             key=key_df,
+    #             on_select=callback_selecao,
+    #             column_config={
+    #                 "Categoria": st.column_config.TextColumn(width=180),
+    #                 "Despesa": st.column_config.TextColumn(width=200),
+    #                 "Descrição": st.column_config.TextColumn(width=420),
+    #                 "Unidade": st.column_config.TextColumn(width=100),
+    #                 "Quantidade": st.column_config.NumberColumn(width=80),
+    #                 "Valor unitário": st.column_config.TextColumn(width=120),
+    #                 "Valor total": st.column_config.TextColumn(width=120),
+    #             }
+    #         )
+
+
+    #     # --------------------------------------------------
+    #     # ABRIR O DIÁLOGO SE FOI SOLICITADO
+    #     # --------------------------------------------------
+    #     if st.session_state.get("abrir_dialogo_despesa"):
+    #         dialog_relatos_fin()
+    #         st.session_state["abrir_dialogo_despesa"] = False
 
 
 
