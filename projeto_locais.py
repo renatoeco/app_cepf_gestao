@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 import pandas as pd
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto  
 import io
 
 
@@ -1309,3 +1309,13 @@ with st.container(border=True):
         else:
             for arq in arquivos:
                 st.markdown(f"[{arq['nome']}]({arq['url']})")
+
+
+
+
+
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+sidebar_projeto()
