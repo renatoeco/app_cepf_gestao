@@ -337,7 +337,7 @@ if ver_meus_projetos:
     projetos_usuario = pessoa.iloc[0].get("projetos", [])
 
     if not projetos_usuario:
-        st.warning("Você não possui projetos associados.")
+        st.caption("Nenhum projeto associado a você.")
         st.stop()
 
     # Filtra os projetos pela sigla
