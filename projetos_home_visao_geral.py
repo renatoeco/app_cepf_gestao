@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos  # Função personalizada para conectar ao MongoDB
 import plotly.express as px
 import pandas as pd
 import datetime
@@ -55,156 +55,6 @@ except locale.Error:
 # FUNÇÕES
 ###########################################################################################################
 
-# Função para calcular o status de cada projeto
-def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
-    """
-    Atualiza o DataFrame de projetos com as colunas:
-    - status
-    - dias_atraso
-
-    As regras de cálculo consideram:
-    - parcelas localizadas em financeiro.parcelas
-    - datas previstas de relatório
-    - datas de conclusão ou fim de contrato
-    """
-
-    # ------------------------------------------------------------------
-    # GARANTE QUE AS COLUNAS EXISTAM
-    # ------------------------------------------------------------------
-    if "status" not in df_projetos.columns:
-        df_projetos["status"] = None
-
-    if "dias_atraso" not in df_projetos.columns:
-        df_projetos["dias_atraso"] = None
-
-    hoje = datetime.datetime.now().date()
-
-    # ------------------------------------------------------------------
-    # FUNÇÃO INTERNA PARA AVALIAR UM PROJETO (UMA LINHA)
-    # ------------------------------------------------------------------
-    def avaliar_projeto(projeto: pd.Series):
-        """
-        Avalia um único projeto (linha do DataFrame)
-        e retorna uma tupla (status, dias_atraso)
-        """
-
-        # --------------------------------------------------------------
-        # SE JÁ ESTÁ CANCELADO, NÃO RECALCULA
-        # --------------------------------------------------------------
-        if projeto.get("status") == "Cancelado":
-            return "Cancelado", None
-
-        codigo = projeto.get("codigo", "Sem código")
-        sigla = projeto.get("sigla", "Sem sigla")
-
-        # --------------------------------------------------------------
-        # ACESSO SEGURO AO FINANCEIRO
-        # --------------------------------------------------------------
-        financeiro = projeto.get("financeiro", {})
-
-        if not isinstance(financeiro, dict):
-            financeiro = {}
-
-        parcelas = financeiro.get("parcelas", [])
-
-        if not isinstance(parcelas, list):
-            parcelas = []
-
-        # --------------------------------------------------------------
-        # SEM PARCELAS → NÃO É POSSÍVEL DEFINIR STATUS
-        # --------------------------------------------------------------
-        if len(parcelas) == 0:
-            notificar(
-                f"O projeto {codigo} - {sigla} não possui parcelas cadastradas. "
-                "Não é possível determinar o status."
-            )
-            return None, None
-
-        status = None
-        dias_atraso = None
-
-        # --------------------------------------------------------------
-        # PROCURA A PRIMEIRA PARCELA SEM RELATÓRIO REALIZADO
-        # --------------------------------------------------------------
-        parcela_sem_relatorio = next(
-            (
-                p for p in parcelas
-                if isinstance(p, dict)
-                and "data_relatorio_prevista" in p
-                and not p.get("data_relatorio_realizada")
-            ),
-            None
-        )
-
-        # --------------------------------------------------------------
-        # CASO EXISTA PARCELA PENDENTE
-        # --------------------------------------------------------------
-        if parcela_sem_relatorio:
-            try:
-                data_prevista = datetime.datetime.strptime(
-                    parcela_sem_relatorio["data_relatorio_prevista"],
-                    "%d/%m/%Y"
-                ).date()
-
-                diff = (data_prevista - hoje).days
-                dias_atraso = diff
-                status = "Em dia" if diff >= 0 else "Atrasado"
-
-            except Exception:
-                status = "Erro na data prevista"
-                dias_atraso = None
-
-        # --------------------------------------------------------------
-        # CASO TODAS AS PARCELAS TENHAM RELATÓRIO
-        # --------------------------------------------------------------
-        else:
-            ultima_parcela = parcelas[-1] if parcelas else None
-
-            # Projeto concluído
-            if (
-                isinstance(ultima_parcela, dict)
-                and ultima_parcela.get("data_monitoramento")
-            ):
-                status = "Concluído"
-                dias_atraso = 0
-
-            # Caso contrário, avalia pela data fim do contrato
-            else:
-                try:
-                    data_fim_str = projeto.get("data_fim_contrato")
-
-                    if not data_fim_str:
-                        st.warning(
-                            f"O projeto {codigo} - {sigla} não possui data_fim_contrato registrada."
-                        )
-                        return None, None
-
-                    data_fim = datetime.datetime.strptime(
-                        data_fim_str,
-                        "%d/%m/%Y"
-                    ).date()
-
-                    diff = (data_fim - hoje).days
-                    dias_atraso = diff
-                    status = "Em dia" if diff >= 0 else "Atrasado"
-
-                except Exception:
-                    status = "Erro na data fim"
-                    dias_atraso = None
-
-        return status, dias_atraso
-
-    # ------------------------------------------------------------------
-    # APLICA A FUNÇÃO A CADA LINHA DO DATAFRAME
-    # ------------------------------------------------------------------
-    resultados = df_projetos.apply(
-        lambda row: avaliar_projeto(row),
-        axis=1
-    )
-
-    df_projetos["status"], df_projetos["dias_atraso"] = zip(*resultados)
-
-    return df_projetos
 
 
 
@@ -232,6 +82,9 @@ st.session_state.notificacoes = []
 
 # Inclulir o status no dataframe de projetos
 df_projetos = calcular_status_projetos(df_projetos)
+
+# Filtar somente tipos de usuário admin e equipe em df_pessoas
+df_pessoas = df_pessoas[(df_pessoas["tipo_usuario"] == "admin") | (df_pessoas["tipo_usuario"] == "equipe")]
 
 # Incluir padrinho no dataframe de projetos
 # Fazendo um dataframe auxiliar de relacionamento
