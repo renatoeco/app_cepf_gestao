@@ -2,6 +2,64 @@ import streamlit as st
 import time
 import pandas as pd
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+import io
+
+
+# Google Drive API
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+
+
+
+###########################################################################################################
+# CONFIGURAÇÕES DO STREAMLIT
+###########################################################################################################
+
+
+# Traduzindo o texto do st.file_uploader
+# Texto interno
+st.markdown("""
+<style>
+/* Esconde o texto padrão */
+[data-testid="stFileUploaderDropzone"] div div::before {
+    content: "Arraste e solte os arquivos aqui";
+    color: rgba(49, 51, 63, 0.7);
+    font-size: 0.9rem;
+    font-weight: 400;
+    position: absolute;
+    top: 50px;              /* fixa no topo */
+    left: 50%;
+    transform: translate(-50%, 10%);
+    pointer-events: none;
+}
+/* Esconde o texto original */
+[data-testid="stFileUploaderDropzone"] div div span {
+    visibility: hidden !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Traduzindo Botão do file_uploader
+st.markdown("""
+<style>
+/* Alvo: apenas o botão dentro do componente de upload */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
+    font-size: 0px !important;   /* esconde o texto original */
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    min-width: 160px !important;
+}
+/* Insere o texto traduzido */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
+    content: "Selecionar arquivo";
+    font-size: 14px !important;
+    color: inherit;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 
 
 ###########################################################################################################
@@ -26,20 +84,46 @@ col_kbas = db["kbas"]
 
 
 ###########################################################################################################
+# CONEXÃO COM GOOGLE DRIVE
+###########################################################################################################
+
+
+# Escopo mínimo necessário para Drive
+ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
+
+@st.cache_resource
+def obter_servico_drive():
+    """
+    Retorna o cliente autenticado do Google Drive,
+    usando as credenciais armazenadas em st.secrets.
+    """
+    credenciais = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=ESCOPO_DRIVE
+    )
+    return build("drive", "v3", credentials=credenciais)
+
+
+
+
+
+###########################################################################################################
 # CARREGAMENTO DE DADOS
 ###########################################################################################################
 
 
 # Capturando o código do projeto e os dados do projeto
 codigo_projeto_atual = st.session_state.get("projeto_atual")
+
 if not codigo_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
 
 projeto = col_projetos.find_one(
     {"codigo": codigo_projeto_atual},
-    {"locais": 1}
+    {"codigo": 1, "sigla": 1, "locais": 1}
 ) or {}
+
 
 
 # --------------------------------------------------
@@ -81,7 +165,6 @@ lista_corredores = list(
 )
 
 
-
 # Lista completa de KBAs disponíveis
 lista_kbas = list(
     col_kbas.find(
@@ -96,6 +179,139 @@ lista_kbas = list(
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+def obter_ou_criar_pasta(servico, nome_pasta, id_pasta_pai):
+    """
+    Busca uma pasta com o nome especificado dentro da pasta pai no Google Drive.
+    Se a pasta não existir, ela é criada.
+    
+    Retorna o ID da pasta encontrada ou criada.
+    """
+
+    # Monta a query de busca:
+    # - nome exato da pasta
+    # - dentro da pasta pai
+    # - apenas pastas
+    # - não deletadas
+    consulta = (
+        f"name='{nome_pasta}' and "
+        f"'{id_pasta_pai}' in parents and "
+        f"mimeType='application/vnd.google-apps.folder' and trashed=false"
+    )
+
+    # Executa a busca
+    resultado = servico.files().list(
+        q=consulta,
+        fields="files(id)",
+        includeItemsFromAllDrives=True,
+        supportsAllDrives=True
+    ).execute()
+
+    arquivos = resultado.get("files", [])
+
+    # Se encontrou, reutiliza a pasta existente
+    if arquivos:
+        return arquivos[0]["id"]
+
+    # Caso não exista, cria a pasta
+    pasta = servico.files().create(
+        body={
+            "name": nome_pasta,
+            "parents": [id_pasta_pai],
+            "mimeType": "application/vnd.google-apps.folder"
+        },
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+
+    return pasta["id"]
+
+
+def obter_pasta_projeto(servico, codigo, sigla):
+    """
+    Retorna o ID da pasta do projeto no Google Drive.
+
+    - Usa o nome: 'codigo - sigla'
+    - Cria a pasta somente se não existir
+    - Guarda o ID no session_state para evitar duplicações
+    """
+
+    chave = f"pasta_projeto_{codigo}"
+
+    # Se já foi criada nesta sessão, reutiliza
+    if chave in st.session_state:
+        return st.session_state[chave]
+
+    # Cria ou localiza a pasta do projeto
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        f"{codigo} - {sigla}",
+        st.secrets["drive"]["pasta_drive_projetos"]
+    )
+
+    # Guarda no session_state
+    st.session_state[chave] = pasta_id
+
+    return pasta_id
+
+
+def obter_pasta_locais(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Locais' dentro da pasta do projeto.
+
+    Também usa cache no session_state para evitar múltiplas criações.
+    """
+
+    if "pasta_locais_id" in st.session_state:
+        return st.session_state["pasta_locais_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Locais",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_locais_id"] = pasta_id
+    return pasta_id
+
+
+def enviar_arquivo_drive(servico, id_pasta, arquivo):
+    """
+    Faz upload de um arquivo para o Google Drive dentro da pasta informada.
+
+    Retorna o ID do arquivo criado.
+    """
+
+    # Converte o arquivo do Streamlit para bytes
+    media = MediaIoBaseUpload(
+        io.BytesIO(arquivo.read()),
+        mimetype=arquivo.type,
+        resumable=False
+    )
+
+    # Cria o arquivo no Drive
+    arq = servico.files().create(
+        body={
+            "name": arquivo.name,
+            "parents": [id_pasta]
+        },
+        media_body=media,
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+
+    return arq["id"]
+
+
+def gerar_link_drive(id_arquivo):
+    """
+    Gera o link público padrão de visualização do arquivo no Google Drive.
+    """
+    return f"https://drive.google.com/file/d/{id_arquivo}/view"
+
+
+
 
 def extrair_lat_long_google_maps(link):
     try:
@@ -441,9 +657,6 @@ def dialog_editar_localidades():
 
 
 
-
-
-
 @st.dialog("Áreas Protegidas", width="medium")
 def dialog_editar_areas_protegidas():
 
@@ -650,7 +863,6 @@ def dialog_editar_corredores():
 
 
 
-
 @st.dialog("Editar KBAs", width="medium")
 def dialog_editar_kbas():
 
@@ -709,6 +921,106 @@ def dialog_editar_kbas():
         st.success("KBAs atualizadas com sucesso!")
         time.sleep(3)
         st.rerun()
+
+
+
+@st.dialog("Mapas do Projeto", width="large")
+def dialog_mapas():
+
+    servico = obter_servico_drive()
+
+    pasta_projeto = obter_pasta_projeto(
+        servico,
+        projeto["codigo"],
+        projeto["sigla"]
+    )
+
+    pasta_locais = obter_pasta_locais(
+        servico,
+        pasta_projeto
+    )
+
+    abas = st.tabs([":material/add: Adicionar mapas", ":material/delete: Remover mapas"])
+
+    # ---------------- UPLOAD ----------------
+    with abas[0]:
+        st.write('')
+        st.write('**Selecione os arquivos de mapa**')
+        arquivos = st.file_uploader(
+            "Tamanho máximo: 25MB. Formatos de arquivo aceitos: jpg, png, pdf, jpeg, webp, docx",
+            accept_multiple_files=True,
+            type=["jpg", "png", "pdf", "jpeg", "webp", "docx"]
+        )
+
+        if arquivos and st.button(":material/save: Enviar arquivos"):
+            novos = []
+
+            for arq in arquivos:
+                id_drive = enviar_arquivo_drive(servico, pasta_locais, arq)
+                novos.append({
+                    "nome": arq.name,
+                    "url": gerar_link_drive(id_drive)
+                })
+
+            col_projetos.update_one(
+                {"codigo": codigo_projeto_atual},
+                {"$push": {"locais.arquivos": {"$each": novos}}}
+            )
+
+            st.success("Arquivos cadastrados com sucesso!")
+            time.sleep(3)
+            st.rerun()
+
+
+
+    # ---------------- REMOVER ----------------
+    with abas[1]:
+
+        arquivos_bd = locais.get("arquivos", [])
+
+        if not arquivos_bd:
+            st.info("Nenhum mapa cadastrado.")
+            return
+
+        # Lista apenas os nomes
+        nomes_mapas = sorted(
+            [a["nome"] for a in arquivos_bd],
+            key=lambda x: x.lower()
+        )
+
+        mapa_selecionado = st.selectbox(
+            "Selecione o mapa para remover",
+            options=nomes_mapas,
+            index=None,
+            placeholder="Escolha um mapa"
+        )
+
+        st.write("")
+
+        if st.button(
+            "Remover mapa",
+            icon=":material/delete:",
+        ):
+
+            if not mapa_selecionado:
+                st.error("Selecione um mapa para remover.")
+                return
+
+            col_projetos.update_one(
+                {"codigo": codigo_projeto_atual},
+                {
+                    "$pull": {
+                        "locais.arquivos": {
+                            "nome": mapa_selecionado
+                        }
+                    }
+                }
+            )
+
+            st.success("Arquivo removido com sucesso!")
+            time.sleep(3)
+            st.rerun()
+
 
 
 
@@ -850,9 +1162,6 @@ with col_localidade.container(border=True):
 
 with col_area_protegida.container(border=True):
 
-    # -------------------------------------------------------------------------------
-    # SEÇÃO — ÁREAS PROTEGIDAS
-    # -------------------------------------------------------------------------------
     col_botao, col_titulo = st.columns([1, 30])
 
     with col_botao:
@@ -889,7 +1198,9 @@ with col_area_protegida.container(border=True):
 col_corredores, col_kbas = st.columns(2)
 
 
-
+# -------------------------------------------------------------------------------
+# SEÇÃO — CORREDORES
+# -------------------------------------------------------------------------------
 with col_corredores.container(border=True):
 
     col_botao, col_titulo = st.columns([1, 30])
@@ -918,8 +1229,9 @@ with col_corredores.container(border=True):
                 st.write(corredor.get("nome_corredor", ""))
 
 
-
-
+# -------------------------------------------------------------------------------
+# SEÇÃO — KBAs
+# -------------------------------------------------------------------------------
 with col_kbas.container(border=True):
 
     col_botao, col_titulo = st.columns([1, 30])
@@ -948,5 +1260,24 @@ with col_kbas.container(border=True):
                 st.write(kba.get("nome_kba", ""))
 
 
+# -------------------------------------------------------------------------------
+# SEÇÃO — MAPAS
+# -------------------------------------------------------------------------------
+with st.container(border=True):
 
+    col_btn, col_title = st.columns([1, 30])
 
+    with col_btn:
+        if st.button("", icon=":material/edit:", type="tertiary"):
+            dialog_mapas()
+
+    with col_title:
+        st.markdown("#### Mapas")
+
+        arquivos = locais.get("arquivos", [])
+
+        if not arquivos:
+            st.caption("Nenhum mapa cadastrado para este projeto.")
+        else:
+            for arq in arquivos:
+                st.markdown(f"[{arq['nome']}]({arq['url']})")
