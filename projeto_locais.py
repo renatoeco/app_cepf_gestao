@@ -924,28 +924,22 @@ def dialog_editar_kbas():
 
 
 
+
+
 @st.dialog("Mapas do Projeto", width="large")
 def dialog_mapas():
 
-    servico = obter_servico_drive()
-
-    pasta_projeto = obter_pasta_projeto(
-        servico,
-        projeto["codigo"],
-        projeto["sigla"]
+    abas = st.tabs(
+        [":material/add: Adicionar mapas", ":material/delete: Remover mapas"]
     )
 
-    pasta_locais = obter_pasta_locais(
-        servico,
-        pasta_projeto
-    )
-
-    abas = st.tabs([":material/add: Adicionar mapas", ":material/delete: Remover mapas"])
-
-    # ---------------- UPLOAD ----------------
+    # =========================================================
+    # ABA — ADICIONAR MAPAS
+    # =========================================================
     with abas[0]:
         st.write('')
         st.write('**Selecione os arquivos de mapa**')
+
         arquivos = st.file_uploader(
             "Tamanho máximo: 25MB. Formatos de arquivo aceitos: jpg, png, pdf, jpeg, webp, docx",
             accept_multiple_files=True,
@@ -953,27 +947,55 @@ def dialog_mapas():
         )
 
         if arquivos and st.button(":material/save: Enviar arquivos"):
-            novos = []
 
-            for arq in arquivos:
-                id_drive = enviar_arquivo_drive(servico, pasta_locais, arq)
-                novos.append({
-                    "nome": arq.name,
-                    "url": gerar_link_drive(id_drive)
-                })
+            # Spinner exibido enquanto os arquivos são enviados
+            with st.spinner("Enviando arquivos..."):
+                
+                # Conecta ao Google Drive SOMENTE quando necessário
+                servico = obter_servico_drive()
 
-            col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
-                {"$push": {"locais.arquivos": {"$each": novos}}}
-            )
+                # Obtém ou reutiliza a pasta do projeto
+                pasta_projeto = obter_pasta_projeto(
+                    servico,
+                    projeto["codigo"],
+                    projeto["sigla"]
+                )
 
+                # Obtém ou cria a pasta "Locais"
+                pasta_locais = obter_pasta_locais(
+                    servico,
+                    pasta_projeto
+                )
+
+                novos = []
+
+                # Loop de upload dos arquivos
+                for arq in arquivos:
+                    id_drive = enviar_arquivo_drive(
+                        servico,
+                        pasta_locais,
+                        arq
+                    )
+
+                    novos.append({
+                        "nome": arq.name,
+                        "url": gerar_link_drive(id_drive)
+                    })
+
+                # Salva os links no MongoDB
+                col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {"$push": {"locais.arquivos": {"$each": novos}}}
+                )
+
+            # Mensagem exibida após o spinner finalizar
             st.success("Arquivos cadastrados com sucesso!")
             time.sleep(3)
             st.rerun()
 
-
-
-    # ---------------- REMOVER ----------------
+    # =========================================================
+    # ABA — REMOVER MAPAS
+    # =========================================================
     with abas[1]:
 
         arquivos_bd = locais.get("arquivos", [])
@@ -982,7 +1004,7 @@ def dialog_mapas():
             st.info("Nenhum mapa cadastrado.")
             return
 
-        # Lista apenas os nomes
+        # Lista apenas os nomes dos mapas
         nomes_mapas = sorted(
             [a["nome"] for a in arquivos_bd],
             key=lambda x: x.lower()
@@ -998,7 +1020,7 @@ def dialog_mapas():
         st.write("")
 
         if st.button(
-            "Remover mapa",
+            "Remover arquivo",
             icon=":material/delete:",
         ):
 
@@ -1006,20 +1028,26 @@ def dialog_mapas():
                 st.error("Selecione um mapa para remover.")
                 return
 
-            col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
-                {
-                    "$pull": {
-                        "locais.arquivos": {
-                            "nome": mapa_selecionado
+            # Spinner para a remoção (mesmo sendo rápida)
+            with st.spinner("Removendo mapa..."):
+                col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {
+                        "$pull": {
+                            "locais.arquivos": {
+                                "nome": mapa_selecionado
+                            }
                         }
                     }
-                }
-            )
+                )
 
             st.success("Arquivo removido com sucesso!")
             time.sleep(3)
             st.rerun()
+
+
+
+
 
 
 
