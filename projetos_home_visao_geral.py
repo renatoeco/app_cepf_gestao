@@ -276,16 +276,16 @@ edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300
 
 
 
-# ============================================
-# FILTRO PRINCIPAL DE PROJETOS
-# ============================================
+# # ============================================
+# # FILTRO PRINCIPAL DE PROJETOS
+# # ============================================
 
-# Base: todos os projetos
-df_filtrado = df_projetos.copy()
+# # Base: todos os projetos
+# df_filtrado = df_projetos.copy()
 
-# Garante que a coluna 'padrinho' exista
-if "padrinho" not in df_filtrado.columns:
-    df_filtrado["padrinho"] = None
+# # Garante que a coluna 'padrinho' exista
+# if "padrinho" not in df_filtrado.columns:
+#     df_filtrado["padrinho"] = None
 
 
 # ============================================
@@ -326,7 +326,9 @@ with st.container(horizontal=True):
 # -------------------------------------------------
 # FILTRO POR EDITAL
 # -------------------------------------------------
-df_filtrado = df_filtrado.copy()
+
+df_filtrado = df_projetos.copy()
+
 
 if edital_selecionado != "Todos":
     df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]

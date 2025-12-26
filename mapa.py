@@ -20,6 +20,11 @@ db = conectar_mongo_cepf_gestao()
 col_projetos = db["projetos"]
 df_projetos = pd.DataFrame(list(col_projetos.find()))
 
+# Coleção de editais
+col_editais = db["editais"]
+df_editais = pd.DataFrame(list(col_editais.find()))
+
+
 
 ###########################################################################################################
 # FUNÇÕES
@@ -39,6 +44,48 @@ st.logo("images/cepf_logo.png", size='large')
 
 # Título da página
 st.header("Mapa de projetos")
+
+st.write('')
+
+
+
+# ============================================
+# FILTRO DE EDITAL
+# ============================================
+
+
+lista_editais = ["Todos"] + df_editais['codigo_edital'].tolist()
+edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
+
+st.write('')
+
+if edital_selecionado == "Todos":
+    st.markdown("##### Todos os editais")
+else:
+    nome_edital = df_editais.loc[
+        df_editais["codigo_edital"] == edital_selecionado,
+        "nome_edital"
+    ].values[0]
+
+    st.markdown(f"##### {edital_selecionado} - {nome_edital}")
+
+
+df_filtrado = df_projetos.copy()
+
+
+if edital_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
+
+# Se não há projetos no edital
+if df_filtrado.empty:
+    st.divider()
+    st.warning("Nenhum projeto encontrado.")
+    st.stop()
+
+
+
+
+
 
 st.write('')
 
