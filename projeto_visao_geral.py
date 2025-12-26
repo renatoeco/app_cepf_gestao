@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, gerar_cronograma_financeiro
 import pandas as pd
 import streamlit_shadcn_ui as ui
 import datetime
@@ -13,8 +13,10 @@ import bson
 # Conecta-se ao banco de dados MongoDB (usa cache automático para melhorar performance)
 db = conectar_mongo_cepf_gestao()
 
-# Define as coleções específicas que serão utilizadas a partir do banco
-# col_pessoas = db["pessoas"]
+# Pessoas
+col_pessoas = db["pessoas"]
+df_pessoas = pd.DataFrame(list(col_pessoas.find()))
+
 
 # Projetos
 col_projetos = db["projetos"]
@@ -31,14 +33,10 @@ col_projetos = db["projetos"]
 # TRATAMENTO DE DADOS
 ###########################################################################################################
 
-# Carregamento do projeto -------------------------------------
 
-# Projetos (somente o projeto atual)
-col_projetos = db["projetos"]
 
 codigo_projeto_atual = st.session_state.get("projeto_atual")
 
-st.write(codigo_projeto_atual)
 
 if not codigo_projeto_atual:
     st.error("Nenhum projeto selecionado.")
@@ -62,6 +60,60 @@ df_projeto = df_projeto.copy()
 
 if "_id" in df_projeto.columns:
     df_projeto["_id"] = df_projeto["_id"].astype(str)
+
+
+# Inclulir o status no dataframe de projetos
+df_projeto = calcular_status_projetos(df_projeto)
+
+
+# Incluir padrinho no dataframe de projetos
+# Fazendo um dataframe auxiliar de relacionamento
+# Seleciona apenas colunas necessárias
+df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
+
+# Garante que "projetos" seja sempre lista
+df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
+    lambda x: x if isinstance(x, list) else []
+)
+
+# Explode: uma linha por projeto
+df_pessoas_proj = df_pessoas_proj.explode("projetos")
+
+# Remove linhas sem código de projeto
+df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
+
+# Renomeia para facilitar o merge
+df_pessoas_proj = df_pessoas_proj.rename(columns={
+    "projetos": "codigo",
+    "nome_completo": "padrinho"
+})
+
+# Agrupar (caso haja mais de um padrinho por projeto)
+df_padrinhos = (
+    df_pessoas_proj
+    .groupby("codigo")["padrinho"]
+    .apply(lambda nomes: ", ".join(sorted(set(nomes))))
+    .reset_index()
+)
+
+# Fazer o merge
+df_projeto = df_projeto.merge(
+    df_padrinhos,
+    on="codigo",
+    how="left"
+)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -94,18 +146,142 @@ st.write(f"Nome: {df_projeto['nome_do_projeto'].values[0]}")
 # Objetivo geral
 st.write(f"Objetivo geral: {df_projeto['objetivo_geral'].values[0]}")
 
+# Duração do projeto
+st.write(f"Duração: {df_projeto['duracao'].values[0]} meses")
+
+cols = st.columns(3)
+
+# Data de início do contrato
+cols[0].write(f"Data de início do contrato: {df_projeto['data_inicio_contrato'].values[0]}")
+
+# Data de fim do contrato
+cols[1].write(f"Data de fim do contrato: {df_projeto['data_fim_contrato'].values[0]}")
+
+# Link para o contrato
+cols[2].write(f"Link para o contrato: *em breve*")
+
 # Responsável (coordenador)
 st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
 
+# Padrinho
+st.write(f"Padrinho/Madrinha: {df_projeto['padrinho'].values[0]}")
 
+# Direções estratégicas (lista)
+st.write("Direções estratégicas:")
+direcoes = df_projeto['direcoes_estrategicas'].values[0]
+if direcoes:
+    for direcao in direcoes:
+        st.write(f"- {direcao}")
+
+# Público (lista)
+publicos = df_projeto['publicos'].values[0]
+if publicos:
+    publicos_formatado = " / ".join(publicos)
+    st.write(f"Público: {publicos_formatado}")
 
 st.divider()
 
-st.write('*Bloco do cronograma de parcelas, relatórios e status // Em construção*')
 
-st.divider()
 
-st.subheader('**Anotações**')
+# #############################################################################################
+# BLOCO DE STATUS
+# #############################################################################################
+
+
+# STATUS
+status_projeto = df_projeto["status"].values[0]
+
+if status_projeto == "Em dia":
+    st.markdown(f"#### O projeto está :green[{status_projeto.lower()}]")
+elif status_projeto == "Atrasado":
+    st.markdown(f"#### O projeto está :orange[{status_projeto.lower()}]")
+elif status_projeto == "Concluído":
+    st.markdown(f"#### O projeto está :green[{status_projeto.lower()}]")
+elif status_projeto == "Cancelado":
+    st.markdown(f"#### O projeto está :red[{status_projeto.lower()}]")
+
+
+# MENSAGEM DO STATUS
+
+projeto = df_projeto.iloc[0].to_dict()
+parcelas = projeto.get("financeiro", {}).get("parcelas", [])
+relatorios = projeto.get("relatorios", [])
+
+df_cronograma = gerar_cronograma_financeiro(parcelas, relatorios)
+
+# reset index
+df_cronograma = df_cronograma.reset_index(drop=True)
+
+
+
+
+# Garante que o DataFrame não está vazio
+if df_projeto.empty:
+    st.caption("Não há dados no cronograma.")
+
+else:
+    hoje = datetime.date.today()
+
+    proximo_evento = df_projeto.iloc[0]["proximo_evento"]
+    data_proximo_evento = df_projeto.iloc[0]["data_proximo_evento"]
+    dias_atraso = df_projeto.iloc[0]["dias_atraso"]
+
+    # Projeto concluído
+    if proximo_evento is None:
+        st.success("🎉 Parabéns! O projeto realizou todas as etapas e está concluído.")
+
+    else:
+        # Texto da data
+        if pd.notna(data_proximo_evento):
+            if data_proximo_evento == hoje:
+                texto_data = "previsto para hoje"
+            else:
+                texto_data = f"previsto para **{data_proximo_evento.strftime('%d/%m/%Y')}**"
+        else:
+            texto_data = "com data não informada"
+
+        # Mensagem principal
+        if str(proximo_evento).startswith("Parcela"):
+            st.write(
+                f"O próximo passo é o pagamento da **{proximo_evento.lower()}**, {texto_data}."
+            )
+
+        elif str(proximo_evento).startswith("Relatório"):
+            st.write(
+                f"O próximo passo é o envio do **{proximo_evento.lower()}**, {texto_data}."
+            )
+
+        else:
+            st.info(
+                f"Próximo evento: **{proximo_evento}**, {texto_data}."
+            )
+
+        # Exibe atraso / antecedência
+        if dias_atraso is not None:
+            if dias_atraso > 0:
+                st.write(f"O projeto acumula **{dias_atraso} dias** de atraso.")
+            elif dias_atraso < 0:
+                st.write(f"Faltam **{abs(dias_atraso)} dias**.")
+
+
+
+
+
+
+
+st.write('')
+st.write('')
+st.write('')
+
+
+
+
+
+
+
+# st.divider()
+
+st.markdown('#### Anotações')
 
 
 # ============================================================
@@ -265,10 +441,10 @@ st.write('')
 
 
 
-
+# st.divider()
 
 # Visitas 
-st.subheader('**Visitas**')
+st.markdown('#### Visitas')
 
 # ============================================================
 # VISITAS - DIÁLGO DE GERENCIAMENTO
