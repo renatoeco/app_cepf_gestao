@@ -3,6 +3,8 @@ import time
 import pandas as pd
 from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto  
 import io
+import folium
+from streamlit_folium import st_folium
 
 
 # Google Drive API
@@ -118,6 +120,17 @@ codigo_projeto_atual = st.session_state.get("projeto_atual")
 if not codigo_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
+
+
+df_projeto = pd.DataFrame(
+    list(
+        col_projetos.find(
+            {"codigo": codigo_projeto_atual}
+        )
+    )
+)
+
+
 
 projeto = col_projetos.find_one(
     {"codigo": codigo_projeto_atual},
@@ -1066,249 +1079,338 @@ st.logo("images/cepf_logo.png", size='large')
 st.header("Locais")
 
 st.write('')
-st.write('')
 
 
-# Colunas para Estados e Municípios
-col_estados, col_municipios = st.columns(2)
-
-# -------------------------------------------------------------------------------
-# SEÇÃO — ESTADOS
-# -------------------------------------------------------------------------------
-with col_estados.container(border=True):
+aba_cadastro, aba_mapas = st.tabs(
+    ["Cadastro", "Mapa"]
+)
 
 
-    col_botao, col_titulo = st.columns([1, 30])
+with aba_cadastro:
 
-    with col_botao:
+    st.write('')
 
-        if st.button(
-            "",
-            icon=":material/edit:",
-            key="editar_estados",
-            type="tertiary"
-        ):
-            dialog_editar_estados()
+    # Colunas para Estados e Municípios
+    col_estados, col_municipios = st.columns(2)
 
-    with col_titulo:
+    # -------------------------------------------------------------------------------
+    # SEÇÃO — ESTADOS
+    # -------------------------------------------------------------------------------
+    with col_estados.container(border=True):
 
 
-        st.markdown("#### Estados")
+        col_botao, col_titulo = st.columns([1, 30])
 
-        # --------------------------------------------------
-        # TABELA DE ESTADOS CADASTRADOS
-        # --------------------------------------------------
-        estados_cadastrados = locais.get("estados", [])
+        with col_botao:
 
-        if not estados_cadastrados:
-            st.caption("Nenhum estado cadastrado para este projeto.")
-        else:
-            df_estados = pd.DataFrame(estados_cadastrados)
-
-            for estado in df_estados["nome_estado"].sort_values():
-                st.write(f"{estado}")
-
-
-
-# -------------------------------------------------------------------------------
-# SEÇÃO — MUNICÍPIOS
-# -------------------------------------------------------------------------------
-
-with col_municipios.container(border=True):
-
-    col_botao, col_titulo = st.columns([1, 30])
-
-    with col_botao:
-        if st.button(
-            "",
-            icon=":material/edit:",
-            key="editar_municipios",
-            type="tertiary"
-        ):
-            dialog_editar_municipios()
-
-    with col_titulo:
-        st.markdown("#### Municípios")
-
-        municipios_cadastrados = locais.get("municipios", [])
-
-        if not municipios_cadastrados:
-            st.caption("Nenhum município cadastrado para este projeto.")
-        else:
-            for municipio in sorted(
-                [m["nome_municipio"] for m in municipios_cadastrados],
-                key=lambda x: x.lower()
+            if st.button(
+                "",
+                icon=":material/edit:",
+                key="editar_estados",
+                type="tertiary"
             ):
-                st.write(municipio)
+                dialog_editar_estados()
+
+        with col_titulo:
+
+
+            st.markdown("#### Estados")
+
+            # --------------------------------------------------
+            # TABELA DE ESTADOS CADASTRADOS
+            # --------------------------------------------------
+            estados_cadastrados = locais.get("estados", [])
+
+            if not estados_cadastrados:
+                st.caption("Nenhum estado cadastrado para este projeto.")
+            else:
+                df_estados = pd.DataFrame(estados_cadastrados)
+
+                for estado in df_estados["nome_estado"].sort_values():
+                    st.write(f"{estado}")
 
 
 
+    # -------------------------------------------------------------------------------
+    # SEÇÃO — MUNICÍPIOS
+    # -------------------------------------------------------------------------------
 
+    with col_municipios.container(border=True):
 
-# Colunas para Localidades e Áreas Protegidas
-col_localidade, col_area_protegida = st.columns(2)
+        col_botao, col_titulo = st.columns([1, 30])
 
-# -------------------------------------------------------------------------------
-# SEÇÃO — LOCALIDADES
-# -------------------------------------------------------------------------------
-
-with col_localidade.container(border=True):
-
-    col_botao, col_titulo = st.columns([1, 30])
-
-    with col_botao:
-        if st.button(
-            "",
-            icon=":material/edit:",
-            key="editar_localidades",
-            type="tertiary"
-        ):
-            dialog_editar_localidades()
-
-    with col_titulo:
-        st.markdown("#### Localidades e Comunidades")
-
-        localidades_cadastradas = locais.get("localidades", [])
-
-        if not localidades_cadastradas:
-            st.caption("Nenhuma localidade cadastrada para este projeto.")
-        else:
-            for loc in sorted(
-                localidades_cadastradas,
-                key=lambda x: x.get("nome_localidade", "").lower()
+        with col_botao:
+            if st.button(
+                "",
+                icon=":material/edit:",
+                key="editar_municipios",
+                type="tertiary"
             ):
-                st.write(
-                    f"**{loc.get('nome_localidade')}** - {loc.get('municipio')}"
-                )
+                dialog_editar_municipios()
+
+        with col_titulo:
+            st.markdown("#### Municípios")
+
+            municipios_cadastrados = locais.get("municipios", [])
+
+            if not municipios_cadastrados:
+                st.caption("Nenhum município cadastrado para este projeto.")
+            else:
+                for municipio in sorted(
+                    [m["nome_municipio"] for m in municipios_cadastrados],
+                    key=lambda x: x.lower()
+                ):
+                    st.write(municipio)
 
 
 
 
-# -------------------------------------------------------------------------------
-# SEÇÃO - ÁREAS PROTEGIDAS
-# -------------------------------------------------------------------------------
 
-with col_area_protegida.container(border=True):
+    # Colunas para Localidades e Áreas Protegidas
+    col_localidade, col_area_protegida = st.columns(2)
 
-    col_botao, col_titulo = st.columns([1, 30])
+    # -------------------------------------------------------------------------------
+    # SEÇÃO — LOCALIDADES
+    # -------------------------------------------------------------------------------
 
-    with col_botao:
-        if st.button(
-            "",
-            icon=":material/edit:",
-            key="editar_areas_protegidas",
-            type="tertiary"
-        ):
-            dialog_editar_areas_protegidas()
+    with col_localidade.container(border=True):
 
-    with col_titulo:
-        st.markdown("#### Áreas protegidas")
+        col_botao, col_titulo = st.columns([1, 30])
 
-        areas_cadastradas = locais.get("areas_protegidas", [])
-
-        if not areas_cadastradas:
-            st.caption("Nenhuma área protegida cadastrada para este projeto.")
-        else:
-            for area in sorted(
-                areas_cadastradas,
-                key=lambda x: x.get("nome_area_protegida", "").lower()
+        with col_botao:
+            if st.button(
+                "",
+                icon=":material/edit:",
+                key="editar_localidades",
+                type="tertiary"
             ):
-                st.write(f"**{area.get('nome_area_protegida')}** - {', '.join(area.get('municipios', []))}")
-                st.caption(
-                    f"Responsável: {area.get('gerente_area_protegida')}"
-                )
+                dialog_editar_localidades()
+
+        with col_titulo:
+            st.markdown("#### Localidades e Comunidades")
+
+            localidades_cadastradas = locais.get("localidades", [])
+
+            if not localidades_cadastradas:
+                st.caption("Nenhuma localidade cadastrada para este projeto.")
+            else:
+                for loc in sorted(
+                    localidades_cadastradas,
+                    key=lambda x: x.get("nome_localidade", "").lower()
+                ):
+                    st.write(
+                        f"**{loc.get('nome_localidade')}** - {loc.get('municipio')}"
+                    )
 
 
 
 
+    # -------------------------------------------------------------------------------
+    # SEÇÃO - ÁREAS PROTEGIDAS
+    # -------------------------------------------------------------------------------
 
-# Colunas para Corredores e KBAs
-col_corredores, col_kbas = st.columns(2)
+    with col_area_protegida.container(border=True):
 
+        col_botao, col_titulo = st.columns([1, 30])
 
-# -------------------------------------------------------------------------------
-# SEÇÃO — CORREDORES
-# -------------------------------------------------------------------------------
-with col_corredores.container(border=True):
-
-    col_botao, col_titulo = st.columns([1, 30])
-
-    with col_botao:
-        if st.button(
-            "",
-            icon=":material/edit:",
-            key="editar_corredores",
-            type="tertiary"
-        ):
-            dialog_editar_corredores()
-
-    with col_titulo:
-        st.markdown("#### Corredores Prioritários de Conservação")
-
-        corredores_cadastrados = locais.get("corredores", [])
-
-        if not corredores_cadastrados:
-            st.caption("Nenhum corredor cadastrado para este projeto.")
-        else:
-            for corredor in sorted(
-                corredores_cadastrados,
-                key=lambda x: x.get("nome_corredor", "").lower()
+        with col_botao:
+            if st.button(
+                "",
+                icon=":material/edit:",
+                key="editar_areas_protegidas",
+                type="tertiary"
             ):
-                st.write(corredor.get("nome_corredor", ""))
+                dialog_editar_areas_protegidas()
+
+        with col_titulo:
+            st.markdown("#### Áreas protegidas")
+
+            areas_cadastradas = locais.get("areas_protegidas", [])
+
+            if not areas_cadastradas:
+                st.caption("Nenhuma área protegida cadastrada para este projeto.")
+            else:
+                for area in sorted(
+                    areas_cadastradas,
+                    key=lambda x: x.get("nome_area_protegida", "").lower()
+                ):
+                    st.write(f"**{area.get('nome_area_protegida')}** - {', '.join(area.get('municipios', []))}")
+                    st.caption(
+                        f"Responsável: {area.get('gerente_area_protegida')}"
+                    )
 
 
-# -------------------------------------------------------------------------------
-# SEÇÃO — KBAs
-# -------------------------------------------------------------------------------
-with col_kbas.container(border=True):
 
-    col_botao, col_titulo = st.columns([1, 30])
 
-    with col_botao:
-        if st.button(
-            "",
-            icon=":material/edit:",
-            key="editar_kbas",
-            type="tertiary"
-        ):
-            dialog_editar_kbas()
 
-    with col_titulo:
-        st.markdown("#### KBAs (Áreas Chave de Biodiversidade)")
+    # Colunas para Corredores e KBAs
+    col_corredores, col_kbas = st.columns(2)
 
-        kbas_cadastradas = locais.get("kbas", [])
 
-        if not kbas_cadastradas:
-            st.caption("Nenhuma KBA cadastrada para este projeto.")
-        else:
-            for kba in sorted(
-                kbas_cadastradas,
-                key=lambda x: x.get("nome_kba", "").lower()
+    # -------------------------------------------------------------------------------
+    # SEÇÃO — CORREDORES
+    # -------------------------------------------------------------------------------
+    with col_corredores.container(border=True):
+
+        col_botao, col_titulo = st.columns([1, 30])
+
+        with col_botao:
+            if st.button(
+                "",
+                icon=":material/edit:",
+                key="editar_corredores",
+                type="tertiary"
             ):
-                st.write(kba.get("nome_kba", ""))
+                dialog_editar_corredores()
+
+        with col_titulo:
+            st.markdown("#### Corredores Prioritários de Conservação")
+
+            corredores_cadastrados = locais.get("corredores", [])
+
+            if not corredores_cadastrados:
+                st.caption("Nenhum corredor cadastrado para este projeto.")
+            else:
+                for corredor in sorted(
+                    corredores_cadastrados,
+                    key=lambda x: x.get("nome_corredor", "").lower()
+                ):
+                    st.write(corredor.get("nome_corredor", ""))
 
 
-# -------------------------------------------------------------------------------
-# SEÇÃO — MAPAS
-# -------------------------------------------------------------------------------
-with st.container(border=True):
+    # -------------------------------------------------------------------------------
+    # SEÇÃO — KBAs
+    # -------------------------------------------------------------------------------
+    with col_kbas.container(border=True):
 
-    col_btn, col_title = st.columns([1, 30])
+        col_botao, col_titulo = st.columns([1, 30])
 
-    with col_btn:
-        if st.button("", icon=":material/edit:", type="tertiary"):
-            dialog_mapas()
+        with col_botao:
+            if st.button(
+                "",
+                icon=":material/edit:",
+                key="editar_kbas",
+                type="tertiary"
+            ):
+                dialog_editar_kbas()
 
-    with col_title:
-        st.markdown("#### Mapas")
+        with col_titulo:
+            st.markdown("#### KBAs (Áreas Chave de Biodiversidade)")
 
-        arquivos = locais.get("arquivos", [])
+            kbas_cadastradas = locais.get("kbas", [])
 
-        if not arquivos:
-            st.caption("Nenhum mapa cadastrado para este projeto.")
+            if not kbas_cadastradas:
+                st.caption("Nenhuma KBA cadastrada para este projeto.")
+            else:
+                for kba in sorted(
+                    kbas_cadastradas,
+                    key=lambda x: x.get("nome_kba", "").lower()
+                ):
+                    st.write(kba.get("nome_kba", ""))
+
+
+    # -------------------------------------------------------------------------------
+    # SEÇÃO — MAPAS
+    # -------------------------------------------------------------------------------
+    with st.container(border=True):
+
+        col_btn, col_title = st.columns([1, 30])
+
+        with col_btn:
+            if st.button("", icon=":material/edit:", type="tertiary"):
+                dialog_mapas()
+
+        with col_title:
+            st.markdown("#### Mapas")
+
+            arquivos = locais.get("arquivos", [])
+
+            if not arquivos:
+                st.caption("Nenhum mapa cadastrado para este projeto.")
+            else:
+                for arq in arquivos:
+                    st.markdown(f"[{arq['nome']}]({arq['url']})")
+
+
+
+
+
+# ABAS - MAPAS
+with aba_mapas:
+    st.write('')
+
+    st.write("**Mapa de Localidades e Comunidades**")
+
+    # Garantir que há dados
+    if df_projeto.empty:
+        st.info("Nenhum dado de projeto disponível.")
+
+    else:
+        projeto = df_projeto.iloc[0]
+
+        locais = projeto.get("locais", {})
+        localidades = locais.get("localidades", [])
+
+        pontos_mapa = []
+
+        for local in localidades:
+            lat = local.get("latitude")
+            lon = local.get("longitude")
+
+            if lat is None or lon is None:
+                continue
+
+            pontos_mapa.append({
+                "codigo": projeto.get("codigo"),
+                "sigla": projeto.get("sigla"),
+                "nome_projeto": projeto.get("nome_do_projeto"),
+                "organizacao": projeto.get("organizacao"),
+                "municipio": local.get("municipio"),
+                "localidade": local.get("nome_localidade"),
+                "latitude": lat,
+                "longitude": lon
+            })
+
+        if not pontos_mapa:
+            st.info("Este projeto não possui localidades com coordenadas cadastradas.")
         else:
-            for arq in arquivos:
-                st.markdown(f"[{arq['nome']}]({arq['url']})")
+            df_mapa = pd.DataFrame(pontos_mapa)
+
+            # Centraliza o mapa
+            centro_lat = df_mapa["latitude"].mean()
+            centro_lon = df_mapa["longitude"].mean()
+
+            mapa = folium.Map(
+                location=[centro_lat, centro_lon],
+                zoom_start=6,
+                tiles="OpenStreetMap"
+            )
+
+            # Adiciona os marcadores
+            for _, row in df_mapa.iterrows():
+
+                popup_html = f"""
+                <div style="width:300px">
+                    <b>Organização:</b> {row['organizacao']}<br>
+                    <b>Sigla:</b> {row['sigla']}<br>
+                    <b>Código:</b> {row['codigo']}<br>
+                    <b>Projeto:</b> {row['nome_projeto']}<br>
+                    <b>Município:</b> {row['municipio']}<br>
+                    <b>Localidade:</b> {row['localidade']}
+                </div>
+                """
+
+                folium.Marker(
+                    location=[row["latitude"], row["longitude"]],
+                    popup=folium.Popup(popup_html, max_width=500),
+                    icon=folium.Icon(
+                        color="red",
+                        prefix="fa"
+                    ),
+                ).add_to(mapa)
+
+            # Renderiza o mapa ocupando toda a largura
+            st_folium(mapa, width="100%", height=600)
 
 
 
