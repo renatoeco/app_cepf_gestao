@@ -391,7 +391,15 @@ else:
 
     st.divider()
 
+    sobre_col1, sobre_col2 = st.columns([7,3])
 
+    sobre_col1.write(
+        "**Projetos atrasados**"
+    )
+
+    sobre_col2.write(
+        "**Status dos projetos**"
+    )
 
     col1, col2, col3 = st.columns([1, 6, 3], gap="large")
 
@@ -404,19 +412,14 @@ else:
         else:
             total_projetos = len(df_filtrado[df_filtrado['edital'] == edital_selecionado])
 
-        st.metric("Projetos", total_projetos)
+        st.metric("", total_projetos)
 
-        # st.metric("Projetos", len(df_filtrado[df_filtrado['edital'] == edital_selecionado]))
         st.write('')
 
 
     # Lista de projetos atrasados
     with col2:
-        st.write('**Projetos atrasados**')
         st.write('')
-
-        # ???????????????
-        # st.write(df_filtrado)
 
         if edital_selecionado == "Todos":
             projetos_atrasados = df_filtrado[df_filtrado['status'] == 'Atrasado']
@@ -429,7 +432,7 @@ else:
 
         if not projetos_atrasados.empty:
             projetos_atrasados = projetos_atrasados.copy()
-            projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso'] * -1
+            projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso']
             projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'edital', 'dias_atraso']]
             projetos_atrasados = projetos_atrasados.rename(columns={
                 'codigo': 'Código',
@@ -442,13 +445,12 @@ else:
 
 
             projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
-            st.dataframe(projetos_atrasados)
+            st.dataframe(projetos_atrasados, hide_index=True)
         else:
             st.write("Não há projetos atrasados.")
 
     # Gráfico de pizza do status
     with col3:
-        st.write('**Status dos projetos**')
         
         mapa_cores_status = {
             'Concluído': '#74a7e4',   # Azul
@@ -460,10 +462,6 @@ else:
         contagens = df_filtrado['status'].value_counts(dropna=True)
         status = contagens.index.tolist()
         contagem_status = contagens.values.tolist()
-
-
-        # status = df_filtrado['status'].unique().tolist()
-        # contagem_status = df_filtrado['status'].value_counts().tolist()
 
         fig = px.pie(
             names=status,
