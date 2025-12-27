@@ -33,6 +33,8 @@ col_projetos = db["projetos"]
 # TRATAMENTO DE DADOS
 ###########################################################################################################
 
+# Verifica se o usuário logado é interno (bool)
+usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
 
 codigo_projeto_atual = st.session_state.get("projeto_atual")
@@ -113,71 +115,208 @@ df_projeto = df_projeto.merge(
 
 
 
-
-
-
-
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
-# ???????????????????????
-# with st.expander("Colunas do projeto"):
-#     st.write(df_projeto.columns)
-
-
 # Logo do sidebar
 st.logo("images/cepf_logo.png", size='large')
 
+# ??????
+st.sidebar.write(df_projeto.columns)
 
 
-# Código e sigla do projeto 
-st.header(f"{df_projeto['sigla'].values[0]} - {df_projeto['codigo'].values[0]}")
 
-# Edital
-st.write(f"Edital: {df_projeto['edital'].values[0]}")
+# Toggle do modo de edição
 
-# Organização
-st.write(f"Organização: {df_projeto['organizacao'].values[0]}")
 
-# Nome do projeto
-st.write(f"Nome: {df_projeto['nome_do_projeto'].values[0]}")
 
-# Objetivo geral
-st.write(f"Objetivo geral: {df_projeto['objetivo_geral'].values[0]}")
+modo_edicao = st.toggle("Editar", value=False)
 
-# Duração do projeto
-st.write(f"Duração: {df_projeto['duracao'].values[0]} meses")
 
-cols = st.columns(3)
 
-# Data de início do contrato
-cols[0].write(f"Data de início do contrato: {df_projeto['data_inicio_contrato'].values[0]}")
+# MODO DE VISUALIZAÇÃO
 
-# Data de fim do contrato
-cols[1].write(f"Data de fim do contrato: {df_projeto['data_fim_contrato'].values[0]}")
+if not modo_edicao:
 
-# Link para o contrato
-cols[2].write(f"Link para o contrato: *em breve*")
+    st.header(f"{df_projeto['sigla'].values[0]} - {df_projeto['codigo'].values[0]}")
 
-# Responsável (coordenador)
-st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
+    st.write(f"Edital: {df_projeto['edital'].values[0]}")
+    st.write(f"Organização: {df_projeto['organizacao'].values[0]}")
+    st.write(f"Nome do projeto: {df_projeto['nome_do_projeto'].values[0]}")
+    st.write(f"Objetivo geral: {df_projeto['objetivo_geral'].values[0]}")
+    st.write(f"Duração: {df_projeto['duracao'].values[0]} meses")
 
-# Padrinho
-st.write(f"Padrinho/Madrinha: {df_projeto['padrinho'].values[0]}")
+    cols = st.columns(3)
+    cols[0].write(f"Início: {df_projeto['data_inicio_contrato'].values[0]}")
+    cols[1].write(f"Fim: {df_projeto['data_fim_contrato'].values[0]}")
+    cols[2].write("Contrato: em breve")
 
-# Direções estratégicas (lista)
-st.write("Direções estratégicas:")
-direcoes = df_projeto['direcoes_estrategicas'].values[0]
-if direcoes:
-    for direcao in direcoes:
-        st.write(f"- {direcao}")
+    st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
+    st.write(f"Padrinho/Madrinha: {df_projeto['padrinho'].values[0]}")
 
-# Público (lista)
-publicos = df_projeto['publicos'].values[0]
-if publicos:
-    publicos_formatado = " / ".join(publicos)
-    st.write(f"Público: {publicos_formatado}")
+    direcoes = df_projeto['direcoes_estrategicas'].values[0]
+    if direcoes:
+        st.write("Direções estratégicas:")
+        for d in direcoes:
+            st.write(f"- {d}")
+
+    publicos = df_projeto['publicos'].values[0]
+    if publicos:
+        st.write("Público:", " / ".join(publicos))
+
+
+
+# MODO DE EDIÇÃO
+
+else:
+    st.write("**Editar informações cadastrais do projeto**")
+
+    projeto = df_projeto.iloc[0]
+
+    with st.form("form_editar_projeto"):
+
+        # ---------- CAMPOS ----------
+        edital = st.text_input("Edital", projeto["edital"])
+        codigo = st.text_input("Código do Projeto", projeto["codigo"])
+        sigla = st.text_input("Sigla do Projeto", projeto["sigla"])
+        nome = st.text_input("Nome do Projeto", projeto["nome_do_projeto"])
+
+        duracao = st.number_input(
+            "Duração (meses)",
+            min_value=1,
+            value=int(projeto["duracao"])
+        )
+
+        data_inicio = st.date_input(
+            "Data de início",
+            pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True)
+        )
+
+        data_fim = st.date_input(
+            "Data de fim",
+            pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True)
+        )
+
+        responsavel = st.text_input(
+            "Responsável",
+            projeto.get("responsavel", "")
+        )
+
+        objetivo = st.text_area(
+            "Objetivo geral",
+            projeto.get("objetivo_geral", "")
+        )
+
+        direcoes = st.multiselect(
+            "Direções estratégicas",
+            options=df_direcoes["tema"].tolist(),
+            default=projeto.get("direcoes_estrategicas", [])
+        )
+
+        publicos = st.multiselect(
+            "Públicos",
+            options=df_publicos["publico"].tolist(),
+            default=projeto.get("publicos", [])
+        )
+
+        salvar = st.form_submit_button("💾 Salvar alterações")
+
+        # ---------- SALVAR ----------
+        if salvar:
+            col_projetos.update_one(
+                {"_id": projeto["_id"]},
+                {
+                    "$set": {
+                        "edital": edital,
+                        "codigo": codigo,
+                        "sigla": sigla,
+                        "nome_do_projeto": nome,
+                        "objetivo_geral": objetivo,
+                        "duracao": duracao,
+                        "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
+                        "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
+                        "responsavel": responsavel,
+                        "direcoes_estrategicas": direcoes,
+                        "publicos": publicos,
+                    }
+                }
+            )
+
+            st.success("✅ Projeto atualizado com sucesso!")
+            st.rerun()
+
+
+
+
+
+
+
+# # Código e sigla do projeto 
+# st.header(f"{df_projeto['sigla'].values[0]} - {df_projeto['codigo'].values[0]}")
+
+# # Edital
+# st.write(f"Edital: {df_projeto['edital'].values[0]}")
+
+# # Organização
+# st.write(f"Organização: {df_projeto['organizacao'].values[0]}")
+
+# # Nome do projeto
+# st.write(f"Nome: {df_projeto['nome_do_projeto'].values[0]}")
+
+# # Objetivo geral
+# st.write(f"Objetivo geral: {df_projeto['objetivo_geral'].values[0]}")
+
+# # Duração do projeto
+# st.write(f"Duração: {df_projeto['duracao'].values[0]} meses")
+
+# cols = st.columns(3)
+
+# # Data de início do contrato
+# cols[0].write(f"Data de início do contrato: {df_projeto['data_inicio_contrato'].values[0]}")
+
+# # Data de fim do contrato
+# cols[1].write(f"Data de fim do contrato: {df_projeto['data_fim_contrato'].values[0]}")
+
+# # Link para o contrato
+# cols[2].write(f"Link para o contrato: *em breve*")
+
+# # Responsável (coordenador)
+# st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
+
+# # Padrinho
+# st.write(f"Padrinho/Madrinha: {df_projeto['padrinho'].values[0]}")
+
+# # Direções estratégicas (lista)
+# st.write("Direções estratégicas:")
+# direcoes = df_projeto['direcoes_estrategicas'].values[0]
+# if direcoes:
+#     for direcao in direcoes:
+#         st.write(f"- {direcao}")
+
+# # Público (lista)
+# publicos = df_projeto['publicos'].values[0]
+# if publicos:
+#     publicos_formatado = " / ".join(publicos)
+#     st.write(f"Público: {publicos_formatado}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 st.divider()
 
@@ -211,9 +350,6 @@ df_cronograma = gerar_cronograma_financeiro(parcelas, relatorios)
 
 # reset index
 df_cronograma = df_cronograma.reset_index(drop=True)
-
-
-
 
 # Garante que o DataFrame não está vazio
 if df_projeto.empty:
@@ -572,16 +708,20 @@ def gerenciar_visitas():
                 st.error("Erro ao atualizar visita.")
 
 
-# Botão para abrir o dialogo de gerenciar visitas
 
-with st.container(horizontal=True, horizontal_alignment="right"):
-    if st.button(
-        "Gerenciar visitas",
-        icon=":material/edit:",
-        type="secondary",
-        width=200
-    ):
-        gerenciar_visitas()
+# Botão para abrir o dialogo de gerenciar visitas (só pra usuários internos)
+
+if usuario_interno:
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if st.button(
+            "Gerenciar visitas",
+            icon=":material/edit:",
+            type="secondary",
+            width=200
+        ):
+            gerenciar_visitas()
+
+
 
 
 
