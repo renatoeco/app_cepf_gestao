@@ -6,91 +6,132 @@ import datetime
 import time
 import bson
 
+
+
+
+
+
+
 ###########################################################################################################
-# CONEXÃO COM O BANCO DE DADOS MONGODB
+# CONEXÃO COM O BANCO DE DADOS
 ###########################################################################################################
 
-# Conecta-se ao banco de dados MongoDB (usa cache automático para melhorar performance)
+# Conexão com MongoDB
 db = conectar_mongo_cepf_gestao()
 
-# Pessoas
+# Coleções
 col_pessoas = db["pessoas"]
-df_pessoas = pd.DataFrame(list(col_pessoas.find()))
-
-
-# Projetos
 col_projetos = db["projetos"]
-
-
-###########################################################################################################
-# FUNÇÕES
-###########################################################################################################
+col_editais = db["editais"]
+col_direcoes_estrategicas = db["direcoes_estrategicas"]
+col_publicos = db["publicos"]
 
 
 
 
 ###########################################################################################################
-# TRATAMENTO DE DADOS
+# CONTEXTO DO USUÁRIO
 ###########################################################################################################
 
-# Verifica se o usuário logado é interno (bool)
+# Verifica se o usuário logado é interno
 usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
 
-codigo_projeto_atual = st.session_state.get("projeto_atual")
 
+###########################################################################################################
+# CARREGAMENTO DOS DADOS
+###########################################################################################################
+
+# Projeto
+
+# Código do projeto atual
+codigo_projeto_atual = st.session_state.get("projeto_atual")
 
 if not codigo_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
 
 df_projeto = pd.DataFrame(
-    list(
-        col_projetos.find(
-            {"codigo": codigo_projeto_atual}
-        )
-    )
+    list(col_projetos.find({"codigo": codigo_projeto_atual}))
 )
 
 if df_projeto.empty:
     st.error("Projeto não encontrado no banco de dados.")
     st.stop()
 
-
-# Transformar o id em string
-df_projeto = df_projeto.copy()
-
-if "_id" in df_projeto.columns:
-    df_projeto["_id"] = df_projeto["_id"].astype(str)
+# Facilita acesso aos dados
+projeto = df_projeto.iloc[0].to_dict()
 
 
-# Inclulir o status no dataframe de projetos
+# Pessoas
+df_pessoas = pd.DataFrame(list(col_pessoas.find()))
+
+# Editais
+df_editais = pd.DataFrame(list(col_editais.find()))
+
+# Direções estratégicas
+df_direcoes_estrategicas = pd.DataFrame(list(col_direcoes_estrategicas.find()))
+
+# Públicos
+df_publicos = pd.DataFrame(list(col_publicos.find()))
+
+# Organizações
+df_organizacoes = pd.DataFrame(list(db["organizacoes"].find()))
+
+
+###########################################################################################################
+# NORMALIZAÇÃO DE IDs
+###########################################################################################################
+
+def normalizar_id(df):
+    if "_id" in df.columns:
+        df["_id"] = df["_id"].astype(str)
+    return df
+
+
+df_projeto = normalizar_id(df_projeto)
+df_editais = normalizar_id(df_editais)
+df_direcoes_estrategicas = normalizar_id(df_direcoes_estrategicas)
+df_publicos = normalizar_id(df_publicos)
+df_organizacoes = normalizar_id(df_organizacoes)
+
+###########################################################################################################
+# CÁLCULO DE STATUS DO PROJETO
+###########################################################################################################
+
 df_projeto = calcular_status_projetos(df_projeto)
 
 
-# Incluir padrinho no dataframe de projetos
-# Fazendo um dataframe auxiliar de relacionamento
-# Seleciona apenas colunas necessárias
-df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
+###########################################################################################################
+# RELACIONAMENTO: PADRINHOS DO PROJETO
+###########################################################################################################
 
-# Garante que "projetos" seja sempre lista
+# Filtra apenas usuários internos (admin e equipe)
+df_pessoas_filtrado = df_pessoas[
+    df_pessoas["tipo_usuario"].isin(["admin", "equipe"])
+].copy()
+
+# Seleciona apenas colunas necessárias
+df_pessoas_proj = df_pessoas_filtrado[["nome_completo", "projetos"]].copy()
+
+# Garante que "projetos" seja lista
 df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
     lambda x: x if isinstance(x, list) else []
 )
 
-# Explode: uma linha por projeto
+# Explode para uma linha por projeto
 df_pessoas_proj = df_pessoas_proj.explode("projetos")
 
-# Remove linhas sem código de projeto
+# Remove registros inválidos
 df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
 
-# Renomeia para facilitar o merge
+# Renomeia colunas
 df_pessoas_proj = df_pessoas_proj.rename(columns={
     "projetos": "codigo",
     "nome_completo": "padrinho"
 })
 
-# Agrupar (caso haja mais de um padrinho por projeto)
+# Agrupa padrinhos por projeto
 df_padrinhos = (
     df_pessoas_proj
     .groupby("codigo")["padrinho"]
@@ -98,7 +139,7 @@ df_padrinhos = (
     .reset_index()
 )
 
-# Fazer o merge
+# Junta com o dataframe principal
 df_projeto = df_projeto.merge(
     df_padrinhos,
     on="codigo",
@@ -107,7 +148,9 @@ df_projeto = df_projeto.merge(
 
 
 
-
+# ###########################################################################################################
+# # FUNÇÕES
+# ###########################################################################################################
 
 
 
@@ -122,48 +165,46 @@ df_projeto = df_projeto.merge(
 # Logo do sidebar
 st.logo("images/cepf_logo.png", size='large')
 
-# ??????
-st.sidebar.write(df_projeto.columns)
 
+# Código e Sigla do projeto
+st.header(f"{df_projeto['sigla'].values[0]} - {df_projeto['codigo'].values[0]}")
 
 
 # Toggle do modo de edição
-
-
-
-modo_edicao = st.toggle("Editar", value=False)
+with st.container(horizontal=True, horizontal_alignment="right"):
+    if usuario_interno:
+        editar_cadastro = st.toggle("Editar", key="editar_cadastro_projeto")
+    else:
+        editar_cadastro = False
 
 
 
 # MODO DE VISUALIZAÇÃO
+if not editar_cadastro:
 
-if not modo_edicao:
-
-    st.header(f"{df_projeto['sigla'].values[0]} - {df_projeto['codigo'].values[0]}")
-
-    st.write(f"Edital: {df_projeto['edital'].values[0]}")
-    st.write(f"Organização: {df_projeto['organizacao'].values[0]}")
-    st.write(f"Nome do projeto: {df_projeto['nome_do_projeto'].values[0]}")
-    st.write(f"Objetivo geral: {df_projeto['objetivo_geral'].values[0]}")
-    st.write(f"Duração: {df_projeto['duracao'].values[0]} meses")
+    st.write(f"**Edital:** {df_projeto['edital'].values[0]}")
+    st.write(f"**Organização:** {df_projeto['organizacao'].values[0]}")
+    st.write(f"**Nome do projeto:** {df_projeto['nome_do_projeto'].values[0]}")
+    st.write(f"**Objetivo geral:** {df_projeto['objetivo_geral'].values[0]}")
+    st.write(f"**Duração:** {df_projeto['duracao'].values[0]} meses")
 
     cols = st.columns(3)
-    cols[0].write(f"Início: {df_projeto['data_inicio_contrato'].values[0]}")
-    cols[1].write(f"Fim: {df_projeto['data_fim_contrato'].values[0]}")
-    cols[2].write("Contrato: em breve")
+    cols[0].write(f"**Início:** {df_projeto['data_inicio_contrato'].values[0]}")
+    cols[1].write(f"**Fim:** {df_projeto['data_fim_contrato'].values[0]}")
+    cols[2].write("**Contrato:** em breve")
 
-    st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
-    st.write(f"Padrinho/Madrinha: {df_projeto['padrinho'].values[0]}")
+    st.write(f"**Responsável:** {df_projeto['responsavel'].values[0]}")
+    st.write(f"**Padrinho/Madrinha:** {df_projeto['padrinho'].values[0]}")
 
     direcoes = df_projeto['direcoes_estrategicas'].values[0]
     if direcoes:
-        st.write("Direções estratégicas:")
+        st.write("**Direções estratégicas:**")
         for d in direcoes:
             st.write(f"- {d}")
 
     publicos = df_projeto['publicos'].values[0]
     if publicos:
-        st.write("Público:", " / ".join(publicos))
+        st.write("**Público:**", " / ".join(publicos))
 
 
 
@@ -172,147 +213,247 @@ if not modo_edicao:
 else:
     st.write("**Editar informações cadastrais do projeto**")
 
-    projeto = df_projeto.iloc[0]
+    with st.form("form_editar_projeto", border=False):
 
-    with st.form("form_editar_projeto"):
+        col1, col2, col3 = st.columns(3)
 
-        # ---------- CAMPOS ----------
-        edital = st.text_input("Edital", projeto["edital"])
-        codigo = st.text_input("Código do Projeto", projeto["codigo"])
-        sigla = st.text_input("Sigla do Projeto", projeto["sigla"])
+        # ---------- EDITAL ----------
+        lista_editais = df_editais["codigo_edital"].tolist()
+
+        # Garante que o valor atual exista na lista
+        edital_atual = projeto.get("edital")
+        if edital_atual in lista_editais:
+            index_edital = lista_editais.index(edital_atual)
+        else:
+            index_edital = 0  
+
+        edital = col1.selectbox(    # Coluna 1
+            "Edital",
+            options=lista_editais,
+            index=index_edital
+        )
+        
+        # ---------- CÓDIGO ----------
+        codigo = col2.text_input("Código do Projeto", projeto["codigo"])      # Coluna 2    
+
+        # ---------- SIGLA ----------
+        sigla = col3.text_input("Sigla do Projeto", projeto["sigla"])      # Coluna 3
+
+
+
+        # ---------- ORGANIZAÇÃO ----------
+        lista_organizacoes = df_organizacoes["nome_organizacao"].tolist()
+
+        # Garante que o valor atual exista na lista
+        organizacao_atual = projeto.get("organizacao")
+        if organizacao_atual in lista_organizacoes:
+            index_organizacao = lista_organizacoes.index(organizacao_atual)
+        else:
+            index_organizacao = 0  
+
+        organizacao = st.selectbox(    # Coluna 1
+            "Organização",
+            options=lista_organizacoes,
+            index=index_organizacao
+        )
+
+
+        # ---------- NOME DO PROJETO ----------
         nome = st.text_input("Nome do Projeto", projeto["nome_do_projeto"])
 
-        duracao = st.number_input(
-            "Duração (meses)",
-            min_value=1,
-            value=int(projeto["duracao"])
-        )
-
-        data_inicio = st.date_input(
-            "Data de início",
-            pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True)
-        )
-
-        data_fim = st.date_input(
-            "Data de fim",
-            pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True)
-        )
-
-        responsavel = st.text_input(
-            "Responsável",
-            projeto.get("responsavel", "")
-        )
-
+        # ---------- OBJETIVO GERAL ----------
         objetivo = st.text_area(
             "Objetivo geral",
             projeto.get("objetivo_geral", "")
         )
 
+        col1, col2, col3 = st.columns(3)
+
+        # ---------- DURAÇÃO ----------
+
+        duracao = col1.number_input(
+            "Duração (meses)",
+            min_value=1,
+            value=int(projeto["duracao"])
+        )
+
+        # ---------- DATA DE INÍCIO DO CONTRATO ----------
+        data_inicio = col2.date_input(
+            "Data de início do contrato",
+            value=pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True),
+            format="DD/MM/YYYY"
+        )
+
+        # ---------- DATA DE FIM DO CONTRATO ----------
+        data_fim = col3.date_input(
+            "Data de fim do contrato",
+            value=pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True),
+            format="DD/MM/YYYY"
+        )
+
+
+        # ---------- RESPONSÁVEL(IS) ----------
+
+        # Filtra apenas usuários do tipo beneficiário
+        df_pessoas_benef = df_pessoas[
+            df_pessoas["tipo_usuario"] == "beneficiario"
+        ].copy()
+
+        # Lista de opções
+        lista_beneficiarios = df_pessoas_benef["nome_completo"].dropna().tolist()
+
+        # Valor atual salvo no projeto
+        responsavel_atual = projeto.get("responsavel")
+
+        # Normaliza o valor para lista válida
+        if isinstance(responsavel_atual, list):
+            # remove valores vazios
+            responsavel_atual = [r for r in responsavel_atual if r]
+        elif isinstance(responsavel_atual, str) and responsavel_atual.strip():
+            responsavel_atual = [responsavel_atual]
+        else:
+            responsavel_atual = []  # <- deixa vazio se não houver valor válido
+
+        # Campo de seleção
+        responsavel = st.multiselect(
+            "Responsável",
+            options=lista_beneficiarios,
+            default=responsavel_atual
+        )
+
+        # Converte lista de responsáveis em string separada por vírgula
+        responsavel_str = ", ".join(responsavel) if responsavel else ""
+
+
+        # ---------- DIREÇÕES ESTRATÉGICAS ----------
+
+        # Lista de opções disponíveis
+        opcoes_direcoes = sorted(df_direcoes_estrategicas["tema"].dropna().tolist())
+
+        # Valor salvo no banco
+        direcoes_atual = projeto.get("direcoes_estrategicas")
+
+        # Normaliza para lista válida
+        if isinstance(direcoes_atual, list):
+            direcoes_atual = [d for d in direcoes_atual if d]
+        elif isinstance(direcoes_atual, str) and direcoes_atual.strip():
+            direcoes_atual = [direcoes_atual]
+        else:
+            direcoes_atual = []  # vazio quando não houver dados
+
+        # Campo de seleção
         direcoes = st.multiselect(
             "Direções estratégicas",
-            options=df_direcoes["tema"].tolist(),
-            default=projeto.get("direcoes_estrategicas", [])
+            options=opcoes_direcoes,
+            default=direcoes_atual
         )
 
+        # ---------- PÚBLICOS ----------
+
+        # Lista de opções disponíveis
+        opcoes_publicos = df_publicos["publico"].dropna().tolist()
+
+        # Valor salvo no banco
+        publicos_atual = projeto.get("publicos")
+
+        # Normaliza para lista válida
+        if isinstance(publicos_atual, list):
+            publicos_atual = [p for p in publicos_atual if p]
+        elif isinstance(publicos_atual, str) and publicos_atual.strip():
+            publicos_atual = [publicos_atual]
+        else:
+            publicos_atual = []  # vazio quando não houver dados
+
+        # Campo de seleção
         publicos = st.multiselect(
             "Públicos",
-            options=df_publicos["publico"].tolist(),
-            default=projeto.get("publicos", [])
+            options=opcoes_publicos,
+            default=publicos_atual,
+            key="multi_select_publicos"
         )
 
-        salvar = st.form_submit_button("💾 Salvar alterações")
+        st.write("")
+
+        salvar = st.form_submit_button("Salvar alterações", key="salvar_alteracoes_cadastrais", icon=":material/save:")
 
         # ---------- SALVAR ----------
         if salvar:
-            col_projetos.update_one(
-                {"_id": projeto["_id"]},
-                {
-                    "$set": {
-                        "edital": edital,
-                        "codigo": codigo,
-                        "sigla": sigla,
-                        "nome_do_projeto": nome,
-                        "objetivo_geral": objetivo,
-                        "duracao": duracao,
-                        "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
-                        "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
-                        "responsavel": responsavel,
-                        "direcoes_estrategicas": direcoes,
-                        "publicos": publicos,
-                    }
-                }
-            )
 
-            st.success("✅ Projeto atualizado com sucesso!")
-            st.rerun()
+            # --------------------------------------------------
+            # VALIDAÇÕES ANTES DE SALVAR
+            # --------------------------------------------------
 
+            campos_obrigatorios = {
+                "Edital": edital,
+                "Código do Projeto": codigo,
+                "Sigla do Projeto": sigla,
+                "Organização": organizacao,
+                "Nome do Projeto": nome,
+                "Objetivo Geral": objetivo,
+                "Duração do Projeto": duracao,
+            }
 
+            # Verifica campos vazios
+            campos_faltando = [
+                nome for nome, valor in campos_obrigatorios.items()
+                if not valor
+            ]
 
+            if campos_faltando:
+                st.error(
+                    f":material/warning: Preencha os campos obrigatórios: {', '.join(campos_faltando)}"
+                )
 
+            else:
+                # --------------------------------------------------
+                # VALIDAÇÃO DE UNICIDADE (ignorando o próprio projeto)
+                # --------------------------------------------------
 
+                projeto_id = projeto["_id"]
 
+                sigla_existente = col_projetos.find_one({
+                    "sigla": sigla,
+                    "_id": {"$ne": projeto_id}
+                })
 
-# # Código e sigla do projeto 
-# st.header(f"{df_projeto['sigla'].values[0]} - {df_projeto['codigo'].values[0]}")
+                codigo_existente = col_projetos.find_one({
+                    "codigo": codigo,
+                    "_id": {"$ne": projeto_id}
+                })
 
-# # Edital
-# st.write(f"Edital: {df_projeto['edital'].values[0]}")
+                if sigla_existente:
+                    st.warning(f":material/warning: A sigla **{sigla}** já está cadastrada em outro projeto.")
+                
+                elif codigo_existente:
+                    st.warning(f":material/warning: O código **{codigo}** já está cadastrado em outro projeto.")
 
-# # Organização
-# st.write(f"Organização: {df_projeto['organizacao'].values[0]}")
+                else:
+                    # --------------------------------------------------
+                    # ATUALIZA O PROJETO
+                    # --------------------------------------------------
+                    col_projetos.update_one(
+                        {"_id": projeto_id},
+                        {
+                            "$set": {
+                                "edital": edital,
+                                "codigo": codigo,
+                                "sigla": sigla,
+                                "organizacao": organizacao,
+                                "nome_do_projeto": nome,
+                                "objetivo_geral": objetivo,
+                                "duracao": duracao,
+                                "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
+                                "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
+                                "responsavel": responsavel_str,
+                                "direcoes_estrategicas": direcoes or [],
+                                "publicos": publicos or [],
+                            }
+                        }
+                    )
 
-# # Nome do projeto
-# st.write(f"Nome: {df_projeto['nome_do_projeto'].values[0]}")
-
-# # Objetivo geral
-# st.write(f"Objetivo geral: {df_projeto['objetivo_geral'].values[0]}")
-
-# # Duração do projeto
-# st.write(f"Duração: {df_projeto['duracao'].values[0]} meses")
-
-# cols = st.columns(3)
-
-# # Data de início do contrato
-# cols[0].write(f"Data de início do contrato: {df_projeto['data_inicio_contrato'].values[0]}")
-
-# # Data de fim do contrato
-# cols[1].write(f"Data de fim do contrato: {df_projeto['data_fim_contrato'].values[0]}")
-
-# # Link para o contrato
-# cols[2].write(f"Link para o contrato: *em breve*")
-
-# # Responsável (coordenador)
-# st.write(f"Responsável: {df_projeto['responsavel'].values[0]}")
-
-# # Padrinho
-# st.write(f"Padrinho/Madrinha: {df_projeto['padrinho'].values[0]}")
-
-# # Direções estratégicas (lista)
-# st.write("Direções estratégicas:")
-# direcoes = df_projeto['direcoes_estrategicas'].values[0]
-# if direcoes:
-#     for direcao in direcoes:
-#         st.write(f"- {direcao}")
-
-# # Público (lista)
-# publicos = df_projeto['publicos'].values[0]
-# if publicos:
-#     publicos_formatado = " / ".join(publicos)
-#     st.write(f"Público: {publicos_formatado}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                    st.success(":material/check: Projeto atualizado com sucesso!")
+                    time.sleep(3)
+                    st.rerun()
 
 
 
@@ -342,7 +483,6 @@ elif status_projeto == "Cancelado":
 
 # MENSAGEM DO STATUS
 
-projeto = df_projeto.iloc[0].to_dict()
 parcelas = projeto.get("financeiro", {}).get("parcelas", [])
 relatorios = projeto.get("relatorios", [])
 
@@ -444,7 +584,8 @@ def gerenciar_anotacoes():
         if st.button(
             "Salvar anotação",
             type="primary",
-            icon=":material/save:"
+            icon=":material/save:",
+            key="salvar_nova_anotacao"
         ):
 
             if not texto_anotacao.strip():
@@ -513,7 +654,8 @@ def gerenciar_anotacoes():
         if st.button(
             "Salvar alterações",
             type="primary",
-            icon=":material/save:"
+            icon=":material/save:",
+            key="salvar_editar_anotacao"
         ):
 
             if not novo_texto.strip():
@@ -546,7 +688,8 @@ with st.container(horizontal=True, horizontal_alignment="right"):
         "Gerenciar anotações",
         icon=":material/edit:",
         type="secondary",
-        width=200
+        width=200,
+        key="gerenciar_anotacoes"
     ):
         gerenciar_anotacoes()
 
@@ -563,12 +706,15 @@ anotacoes = (
     else []
 )
 
+
 if not anotacoes:
     st.write("Não há anotações")
 else:
     df_anotacoes = pd.DataFrame(anotacoes)
     df_anotacoes = df_anotacoes[["data", "texto", "autor"]]
-    ui.table(data=df_anotacoes)
+    with st.container():
+        ui.table(data=df_anotacoes, key="tabela_anotacoes_fixa")
+
 
 
 st.write('')
@@ -577,7 +723,14 @@ st.write('')
 
 
 
-# st.divider()
+
+
+
+
+
+
+
+
 
 # Visitas 
 st.markdown('#### Visitas')
@@ -608,7 +761,8 @@ def gerenciar_visitas():
         if st.button(
             "Salvar visita",
             type="primary",
-            icon=":material/save:"
+            icon=":material/save:",
+            key="salvar_nova_visita"
         ):
 
             if not data_visita.strip() or not relato_visita.strip():
@@ -680,7 +834,8 @@ def gerenciar_visitas():
         if st.button(
             "Salvar alterações",
             type="primary",
-            icon=":material/save:"
+            icon=":material/save:",
+            key="salvar_editar_visita"
         ):
 
             if not nova_data.strip() or not novo_relato.strip():
@@ -717,7 +872,8 @@ if usuario_interno:
             "Gerenciar visitas",
             icon=":material/edit:",
             type="secondary",
-            width=200
+            width=200,
+            key="gerenciar_visitas"
         ):
             gerenciar_visitas()
 
@@ -740,7 +896,8 @@ if not visitas:
 else:
     df_visitas = pd.DataFrame(visitas)
     df_visitas = df_visitas[["data_visita", "relato", "autor"]]
-    ui.table(data=df_visitas)
+    with st.container():
+        ui.table(data=df_visitas, key="tabela_visitas_fixa")
 
 
 
