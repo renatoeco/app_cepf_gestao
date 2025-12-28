@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, notificar
 import plotly.express as px
 import pandas as pd
 import datetime
@@ -65,8 +65,8 @@ if "notificacoes" not in st.session_state:
     st.session_state.notificacoes = []
 
 
-def notificar(mensagem: str):
-    st.session_state.notificacoes.append(mensagem)
+# def notificar(mensagem: str):
+#     st.session_state.notificacoes.append(mensagem)
 
 
 
@@ -273,8 +273,11 @@ if df_filtrado.empty:
 
 st.divider()
 
-larguras_colunas = [2, 2, 5, 2, 2, 2, 2]
-col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
+# larguras_colunas = [2, 2, 5, 2, 2, 2, 2]
+# col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
+
+larguras_colunas = [2, 2, 5, 2, 2, 2]
+col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Status", "Botão"]
 
 # Cabeçalhos
 cols = st.columns(larguras_colunas)
@@ -294,26 +297,51 @@ for index, projeto in df_filtrado.iterrows():
     cols[0].write(projeto['codigo'])
     cols[1].write(projeto['sigla'])
     cols[2].write(projeto['organizacao'])
-    cols[3].write(projeto.get('padrinho', '—'))
+
+    # Padrinho
+    valor = projeto.get("padrinho")
+
+    if not valor or (isinstance(valor, float) and pd.isna(valor)):
+        cols[3].markdown(
+            "<span style='color:#d97706; font-style:italic;'>não definido</span>",
+            unsafe_allow_html=True
+        )
+    else:
+        cols[3].write(valor)
 
 
-    # Próxima parcela
-    prox_parcela = ""
-    parcelas = projeto.get("parcelas", [])
-    if isinstance(parcelas, list) and parcelas:
-        parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get("parcela", 0))
-        for p in parcelas_ordenadas:
-            if "data_parcela_realizada" not in p:
-                prox_parcela = p.get("parcela")
-                break
 
-    cols[4].write(str(prox_parcela))
+    # cols[3].write(projeto.get('padrinho', '—'))
+
+
+    # # Próxima parcela
+    # prox_parcela = ""
+    # parcelas = projeto.get("parcelas", [])
+    # if isinstance(parcelas, list) and parcelas:
+    #     parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get("parcela", 0))
+    #     for p in parcelas_ordenadas:
+    #         if "data_parcela_realizada" not in p:
+    #             prox_parcela = p.get("parcela")
+    #             break
+
+    # cols[4].write(str(prox_parcela))
 
     # Status
-    cols[5].write(projeto.get("status", ""))
+    status = projeto.get("status", "")
+
+    if status == "Sem cronograma":
+        cols[4].markdown(
+            "<span style='color:#d97706; font-style:italic;'>sem cronograma</span>",
+            unsafe_allow_html=True
+        )
+    else:
+        cols[4].write(status)
+
+
+    # cols[4].write(projeto.get("status", ""))
 
     # Botão “Ver projeto”
-    if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
+    if cols[5].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
         st.session_state.pagina_atual = "ver_projeto"
         st.session_state.projeto_atual = projeto["codigo"]
         st.rerun()

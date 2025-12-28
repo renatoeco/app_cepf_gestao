@@ -39,17 +39,17 @@ df_publicos = pd.DataFrame(list(col_publicos.find()))
 ###########################################################################################################
 
 
-# CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS (Ajuste conforme seu SO)
-try:
-    # Tenta a configuração comum em sistemas Linux/macOS
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-except locale.Error:
-    try:
-        # Tenta a configuração comum em alguns sistemas Windows
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
-    except locale.Error:
-        # Se falhar, usa a configuração padrão (geralmente inglês)
-        print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
+# # CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS
+# try:
+#     # Tenta a configuração comum em sistemas Linux/macOS
+#     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+# except locale.Error:
+#     try:
+#         # Tenta a configuração comum em alguns sistemas Windows
+#         locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
+#     except locale.Error:
+#         # Se falhar, usa a configuração padrão (geralmente inglês)
+#         print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
 
 
 
@@ -70,7 +70,7 @@ except locale.Error:
 
 
 # Inclulir o status no dataframe de projetos
-df_projetos['status'] = 'Em dia'
+# df_projetos['status'] = 'Em dia'
 
 # Converter object_id para string
 # df_pessoas['_id'] = df_pessoas['_id'].astype(str)
@@ -109,158 +109,6 @@ st.header("Novo projeto")
 
 
 
-######################################################################################################
-# Carregamento da geografia
-######################################################################################################
-
-# FUNÇÕES ------------------------------------------------------------------------
-
-@st.cache_data(show_spinner="Carregando estados...")
-def carregar_ufs(ano=2020):
-    return read_state(year=ano)
-
-@st.cache_data(show_spinner="Carregando municipios...")
-def carregar_municipios(ano=2024):
-    return read_municipality(year=ano)
-
-# @st.cache_data(show_spinner="Carregando terras indígenas...")
-# def carregar_terras_indigenas(data=201907):
-#     return read_indigenous_land(date=data)
-
-# @st.cache_data(show_spinner="Carregando unidades de conservação...")
-# def carregar_uc(data=201909):
-#     return read_conservation_units(date=data)
-
-# @st.cache_data(show_spinner="Carregando biomas...")
-# def carregar_biomas(ano=2019):
-#     return read_biomes(year=ano)
-
-# @st.cache_data(show_spinner="Carregando assentamentos...")
-# def carregar_assentamentos():
-#     return gpd.read_file("shapefiles/Assentamentos-SAB-INCRA.shp")
-
-# @st.cache_data(show_spinner="Carregando quilombos...")
-# def carregar_quilombos():
-#     return gpd.read_file("shapefiles/Quilombos-SAB-INCRA.shp")
-
-# @st.cache_data(show_spinner="Carregando bacias hidrográficas (micro)...")
-# def carregar_bacias_micro():
-#     return gpd.read_file("shapefiles/micro_RH.shp")
-
-# @st.cache_data(show_spinner="Carregando bacias hidrográficas (meso)...")
-# def carregar_bacias_meso():
-#     return gpd.read_file("shapefiles/meso_RH.shp")
-
-# @st.cache_data(show_spinner="Carregando bacias hidrográficas (macro)...")
-# def carregar_bacias_macro():
-#     return gpd.read_file("shapefiles/macro_RH.shp")
-
-
-
-
-
-# # CARREGAR DADOS -----------------------------------------------------------------
-
-dados_ufs = carregar_ufs()
-dados_municipios = carregar_municipios()
-# dados_ti = carregar_terras_indigenas()
-# dados_uc = carregar_uc()
-# dados_assentamentos = carregar_assentamentos()
-# dados_quilombos = carregar_quilombos()
-# dados_bacias_macro = carregar_bacias_macro()
-# dados_bacias_meso = carregar_bacias_meso()
-# dados_bacias_micro = carregar_bacias_micro()
-
-
-# # --- Padronizar nomes das colunas das bacias ---
-# dados_bacias_macro = dados_bacias_macro.rename(columns={"cd_macroRH": "codigo", "nm_macroRH": "nome"})
-# dados_bacias_meso = dados_bacias_meso.rename(columns={"cd_mesoRH": "codigo", "nm_mesoRH": "nome"})
-# dados_bacias_micro = dados_bacias_micro.rename(columns={"cd_microRH": "codigo", "nm_microRH": "nome"})
-
-# # Padronizar assentamentos e quilombos (ajuste conforme seus shapefiles)
-# if "cd_sipra" in dados_assentamentos.columns:
-#     dados_assentamentos = dados_assentamentos.rename(columns={"cd_sipra": "codigo", "nome_proje": "nome"})
-# if "id" in dados_quilombos.columns:
-#     dados_quilombos = dados_quilombos.rename(columns={"id": "codigo", "name": "nome"})
-    
-# # --- Ordenar alfabeticamente pelo nome ---
-# dados_ti = dados_ti.sort_values(by="terrai_nom", ascending=True, ignore_index=True) if "terrai_nom" in dados_ti.columns else dados_ti
-# dados_uc = dados_uc.sort_values(by="name_conservation_unit", ascending=True, ignore_index=True) if "name_conservation_unit" in dados_uc.columns else dados_uc
-# # dados_biomas = dados_biomas.sort_values(by="name_biome", ascending=True, ignore_index=True) if "name_biome" in dados_biomas.columns else dados_biomas
-# dados_bacias_macro = dados_bacias_macro.sort_values(by="nome", ascending=True, ignore_index=True)
-# dados_bacias_meso = dados_bacias_meso.sort_values(by="nome", ascending=True, ignore_index=True)
-# dados_bacias_micro = dados_bacias_micro.sort_values(by="nome", ascending=True, ignore_index=True)
-# dados_assentamentos = dados_assentamentos.sort_values(by="nome", ascending=True, ignore_index=True)
-# dados_quilombos = dados_quilombos.sort_values(by="nome", ascending=True, ignore_index=True)
-# dados_municipios = dados_municipios.sort_values(by="name_muni", ascending=True, ignore_index=True) if "name_muni" in dados_municipios.columns else dados_municipios
-# dados_ufs = dados_ufs.sort_values(by="name_state", ascending=True, ignore_index=True) if "name_state" in dados_ufs.columns else dados_ufs
-
-# # --- Corrigir tipos de código para int (sem casas decimais) ---
-# def corrigir_codigo(df, colunas):
-#     for col in colunas:
-#         if col in df.columns:
-#             df[col] = df[col].apply(lambda x: int(x) if pd.notna(x) else None)
-#     return df
-
-# dados_ufs = corrigir_codigo(dados_ufs, ["code_state"])
-# dados_municipios = corrigir_codigo(dados_municipios, ["code_muni"])
-# # dados_biomas = corrigir_codigo(dados_biomas, ["code_biome"])
-
-
-# # Mapeamentos de código para label
-
-# Estados
-uf_codigo_para_label = {
-    str(row["code_state"]): f"{row['name_state']} ({int(row['code_state'])})"
-    for _, row in dados_ufs.iterrows()
-}
-
-# Municípios
-municipios_codigo_para_label = {
-    str(row["code_muni"]): f"{row['name_muni']} ({int(row['code_muni'])})"
-    for _, row in dados_municipios.iterrows()
-}
-
-# # Terras Indígenas
-# ti_codigo_para_label = {
-#     str(row["code_terrai"]): f"{row['terrai_nom']} ({int(row['code_terrai'])})"
-#     for _, row in dados_ti.iterrows()
-# }
-
-# # Unidades de Conservação
-# uc_codigo_para_label = {
-#     str(row["code_conservation_unit"]): f"{row['name_conservation_unit']} ({row['code_conservation_unit']})"
-#     for _, row in dados_uc.iterrows()
-# }
-
-# # Assentamentos
-# assent_codigo_para_label = {
-#     str(row["codigo"]): f"{row['nome']} ({row['codigo']})"
-#     for _, row in dados_assentamentos.iterrows()
-# }
-
-# # Quilombos
-# quilombo_codigo_para_label = {
-#     str(row["codigo"]): f"{row['nome']} ({row['codigo']})"
-#     for _, row in dados_quilombos.iterrows()
-# }
-
-# # Bacias Hidrográficas
-# bacia_micro_codigo_para_label = {
-#     str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_micro.iterrows()
-# }
-
-# bacia_meso_codigo_para_label = {
-#     str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_meso.iterrows()
-# }
-
-# bacia_macro_codigo_para_label = {
-#     str(row["codigo"]): f"{row['nome']} ({row['codigo']})" for _, row in dados_bacias_macro.iterrows()
-# }
-
-
-# # FIM DA PREPARAÇÃO DA GEOGRAFIA -------------------------------------------------------------------------------------
-
 
 
 
@@ -270,11 +118,11 @@ municipios_codigo_para_label = {
 
 
 
-st.write('Antes de cadastrar o **projeto**, cadastre a **Organização** e as **Pessoas** que estarão envolvidas.')
+st.write('\* Antes de cadastrar o **projeto**, cadastre a **Organização** e as **Pessoas** que estarão envolvidas.')
 st.write('')
 
 
-with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
+with st.form(key="form_novo_projeto", border=False, clear_on_submit=True):
 
     # EDITAL        
     # Obtém a lista de editais e ordena pela coluna data_lancamento
@@ -285,8 +133,8 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
 
     # ORGANIZAÇÃO
     # Obtém a lista de organizações
-    organizacoes = col_organizacoes.find().sort("sigla_organizacao", 1)
-    siglas_organizacoes = [organizacao['sigla_organizacao'] for organizacao in organizacoes]
+    organizacoes = col_organizacoes.find().sort("nome_organizacao", 1)
+    siglas_organizacoes = [organizacao['nome_organizacao'] for organizacao in organizacoes]
     # Lista organizações
     organizacao = st.selectbox("Organização:", siglas_organizacoes)
 
@@ -333,33 +181,13 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
 
 
 
-    # Geografia ------------------------------------------------------------------------------------------------------
-
-    #  ESTADOS E MUNICÍPIOS -----------------------
-    col1, col2, col3 = st.columns(3)
-
-    ufs_selecionadas = col1.multiselect(
-        "Estados",
-        options=list(uf_codigo_para_label.values()),
-        placeholder=""
-    )
-
-    municipios_selecionadas = col2.multiselect(
-        "Municípios",
-        options=list(municipios_codigo_para_label.values()),
-        placeholder=""
-    )
-
-
-    st.write('')
-
-
 
     # --- Botão de salvar ---
     submit = st.form_submit_button("Cadastrar projeto", icon=":material/save:", width=200, type="primary")
     
     if submit:
 
+        # VALIDAÇÕES --------------------------------------------------------
         # Lista de campos obrigatórios com nome e valor
         campos_obrigatorios = {
             "Edital": edital,
@@ -373,8 +201,7 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
             "Data de Fim": data_fim_contrato,
             "Direções estratégicas": direcoes,
             "Públicos": publicos,
-            "Estados (UF)": ufs_selecionadas,
-            "Municípios": municipios_selecionadas
+
         }
 
         # Verificar se algum campo está vazio
@@ -399,28 +226,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
                 # --- Criar ObjectIds ---
                 projeto_id = bson.ObjectId()
 
-                # ----------------------------------------------------------
-                # MONTAR LISTA DE REGIÕES DE ATUAÇÃO PARA SALVAR NO MONGODB
-                # ----------------------------------------------------------
-
-                # Função auxiliar
-                def get_codigo_por_label(dicionario, valor):
-                    return next((codigo for codigo, label in dicionario.items() if label == valor), None)
-
-                regioes_atuacao = []
-
-                # Tipos simples com lookup
-                for tipo, selecionados, dicionario in [
-                    ("uf", ufs_selecionadas, uf_codigo_para_label),
-                    ("municipio", municipios_selecionadas, municipios_codigo_para_label),
-                ]:
-                    for item in selecionados:
-                        codigo_atuacao = get_codigo_por_label(dicionario, item)
-                        if codigo_atuacao:
-                            regioes_atuacao.append({"tipo": tipo, "codigo": codigo_atuacao})
-
-                # ----------------------------------------------------------
-
                 # --- Montar documento ---
                 doc = {
                     "_id": projeto_id,
@@ -436,8 +241,8 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
                     "responsavel": responsavel,
                     "direcoes_estrategicas": direcoes,
                     "publicos": publicos,
-
-                    "regioes_atuacao": regioes_atuacao,
+                    "status": "Em dia",
+                    # "regioes_atuacao": regioes_atuacao,
 
                 }
 
@@ -457,241 +262,6 @@ with st.form(key="projeto_passo_1", border=False, clear_on_submit=True):
 
 
 
-# # PASSO 2: Cadastro de Parcelas ---------------------------------------
-
-# # expandir_parcelas = st.session_state.expand_parcelas
-
-# with st.expander("**Passo 2: Parcelas**", expanded=st.session_state.expand_parcelas):
-
-#     # Inicializando a variável session_state.cadastrando_parcela
-#     if 'cadastrando_parcelas' not in st.session_state:
-#         st.session_state['cadastrando_parcelas'] = None                                                                                                                                                                                                                                  
-
-#     # Se não preencheu o passo 1, dá um aviso
-#     if 'cadastrando_projeto_codigo' not in st.session_state:
-#         st.warning("Conclua o passo 1 antes de prosseguir para o passo 2.")
-    
-    
-#     else:
-#         @st.fragment
-#         def cadastrar_parcelas(colecao):
-
-#             # Se session_state.cadastrando_parcelas existir e for diferente de 'finalizado', mostra o formulário
-#             if 'cadastrando_parcelas' in st.session_state and st.session_state['cadastrando_parcelas'] != 'Finalizado':
-
-#                 st.write('**Cadastre as parcelas**')
-
-#                 # Escolhe o número de parcelas, para
-#                 parcelas = st.number_input("Quantidade de parcelas:", min_value=1, max_value=100, value=1, step=1, width=150)
-
-#                 # Formulário de parcelas
-#                 with st.form(key="parcelas", border=False):
-
-#                     parcelas_data = []  # Lista para armazenar as parcelas
-
-#                     for i in range(1, parcelas + 1):
-#                         st.write('')
-#                         st.write(f"**Parcela {i}:**")
-
-#                         with st.container():
-#                             data_inicio_parcela = st.date_input(
-#                                 f"Data prevista", 
-#                                 key=f"data_parcela_{i}", 
-#                                 format="DD/MM/YYYY"
-#                             )
-#                             valor_parcela = st.number_input(
-#                                 f"Valor (R$)", 
-#                                 key=f"valor_parcela_{i}", 
-#                                 min_value=0.0, 
-#                                 value=0.0, 
-#                                 step=0.01
-#                             )
-
-#                             # Adiciona os dados à lista (convertendo date para string)
-#                             parcelas_data.append({
-#                                 "parcela": i,
-#                                 "data_parcela_prevista": data_inicio_parcela.strftime("%d/%m/%Y"),
-#                                 "valor": float(valor_parcela)
-#                             })
-
-#                     st.write('')
-#                     submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary", width=200)
-
-#                     # Após o submit, salvar no MongoDB
-#                     if submit:
-
-#                         # Verifica se existe um código de projeto salvo na sessão
-#                         if "cadastrando_projeto_codigo" not in st.session_state or not st.session_state.cadastrando_projeto_codigo:
-#                             st.error("Código do projeto não encontrado na sessão.")
-#                         else:
-#                             codigo = st.session_state.cadastrando_projeto_codigo
-
-#                             # Busca documento no MongoDB
-#                             projeto = colecao.find_one({"codigo": codigo})
-
-#                             if not projeto:
-#                                 st.error(f"Projeto com código '{codigo}' não encontrado no banco.")
-#                             else:
-#                                 # Atualiza documento adicionando ou sobrescrevendo 'parcelas'
-#                                 colecao.update_one(
-#                                     {"codigo": codigo},
-#                                     {"$set": {"parcelas": parcelas_data}}
-#                                 )
-
-#                                 st.session_state.cadastrando_parcelas = 'Finalizado'
-#                                 st.session_state.expand_parcelas = False
-#                                 st.session_state.expand_locais = True
-#                                 st.success("Parcelas cadastradas com sucesso!")
-#                                 time.sleep(3)
-#                                 st.rerun()
-
-#             # Se session_state.cadastrando_parcelas existir e for igual a 'finalizado': 
-#             # significa que já foi preenchido o passo 2, segue para o passo 3:
-#             else:
-#                 st.success("Passo 2 concluido! Continue para o passo 3.")
-
-
-#         # Chama a função para cadastrar parcelas
-#         cadastrar_parcelas(col_projetos)
-
-
-# # PASSO 3: Cadastro de Locais ---------------------------------------
-# with st.expander("**Passo 3: Locais**", expanded=st.session_state.expand_locais):
-
-#     # Inicializa variáveis de estado
-#     if "cadastrando_locais" not in st.session_state:
-#         st.session_state["cadastrando_locais"] = None
-
-#     # Bloqueia se o passo 2 não foi concluído
-#     if st.session_state.cadastrando_parcelas != "Finalizado":
-#         st.warning("Conclua o passo 2 antes de prosseguir para o passo 3.")
-#     else:
-
-#         @st.fragment
-#         def cadastrar_locais(colecao):
-#             if st.session_state.get("cadastrando_locais") != "Finalizado":
-#                 st.write("**Cadastre as localidades em que o projeto irá atuar**")
-#                 st.write("Você pode cadastrar vários locais.")
-
-#                 # Escolha do tipo de cadastro
-#                 opcao_local = st.radio(
-#                     "",
-#                     ("Inserir link do Google Maps", "Inserir Latitude e Longitude"),
-#                     key="opcao_local",
-#                 )
-
-#                 # FORM 1 — Google Maps
-#                 if opcao_local == "Inserir link do Google Maps":
-#                     with st.form("form_google_maps", clear_on_submit=True):
-#                         nome_local = st.text_input("Nome do local")
-#                         link_google_maps = st.text_input("Link do Google Maps")
-
-#                         submit = st.form_submit_button(
-#                             "Salvar local", icon=":material/save:", type="primary"
-#                         )
-
-#                         if submit:
-#                             def extrair_lat_long_google_maps(link):
-#                                 try:
-#                                     coordenadas = link.split("@")[1].split(",")
-#                                     latitude = coordenadas[0]
-#                                     longitude = coordenadas[1]
-#                                     return latitude, longitude
-#                                 except (IndexError, AttributeError):
-#                                     return None, None
-
-#                             latitude, longitude = extrair_lat_long_google_maps(link_google_maps)
-
-#                             if not nome_local or not latitude or not longitude:
-#                                 st.warning("⚠️ Preencha corretamente o nome e o link do Google Maps.")
-#                             else:
-#                                 colecao.update_one(
-#                                     {"codigo": st.session_state.cadastrando_projeto_codigo},
-#                                     {"$push": {
-#                                         "locais": {
-#                                             "nome": nome_local.strip(),
-#                                             "latitude": latitude,
-#                                             "longitude": longitude
-#                                         }
-#                                     }},
-#                                     upsert=True
-#                                 )
-#                                 st.success(":material/check: Local cadastrado com sucesso!")
-
-#                     # Botão de finalizar
-#                     if st.button("Finalizar cadastro de locais", key="finalizar_google", type="secondary", icon=":material/check:"):
-#                         st.session_state.cadastrando_locais = "Finalizado"
-#                         st.session_state.expand_locais = False
-#                         st.session_state.expand_contatos = True
-#                         st.success("Cadastro de locais concluído!")
-#                         time.sleep(2)
-#                         st.rerun()
-
-#                 # FORM 2 — Latitude e Longitude
-#                 elif opcao_local == "Inserir Latitude e Longitude":
-#                     with st.form("form_lat_lon", clear_on_submit=True):
-#                         nome_local = st.text_input("Nome do local")
-#                         latitude = st.text_input("Latitude (exemplo: -23.5505)")
-#                         longitude = st.text_input("Longitude (exemplo: -46.6333)")
-
-#                         submit = st.form_submit_button(
-#                             "Salvar local", icon=":material/save:", type="primary"
-#                         )
-
-#                         if submit:
-#                             erro = False
-#                             regex_decimal = r"^-?\d+(\.\d+)?$"
-
-#                             def validar_formato(valor):
-#                                 return bool(re.match(regex_decimal, valor.strip()))
-
-#                             def validar_intervalo(lat, lon):
-#                                 try:
-#                                     lat = float(lat)
-#                                     lon = float(lon)
-#                                     return -90 <= lat <= 90 and -180 <= lon <= 180
-#                                 except ValueError:
-#                                     return False
-
-#                             # Etapa 1 — Validação
-#                             if not nome_local or not latitude or not longitude:
-#                                 st.warning("Preencha todos os campos antes de salvar.")
-#                                 erro = True
-#                             elif not validar_formato(latitude) or not validar_formato(longitude):
-#                                 st.error("Use apenas números e ponto decimal.")
-#                                 erro = True
-#                             elif not validar_intervalo(latitude, longitude):
-#                                 st.error("Coordenadas fora do intervalo válido.")
-#                                 erro = True
-
-#                             if not erro:
-#                                 colecao.update_one(
-#                                     {"codigo": st.session_state.cadastrando_projeto_codigo},
-#                                     {"$push": {
-#                                         "locais": {
-#                                             "nome": nome_local.strip(),
-#                                             "latitude": latitude,
-#                                             "longitude": longitude
-#                                         }
-#                                     }},
-#                                     upsert=True
-#                                 )
-#                                 st.success(":material/check: Local salvo com sucesso!")
-
-#                     # Botão de finalizar
-#                     if st.button("Finalizar cadastro de locais", key="finalizar_lat_lon", type="secondary", icon=":material/check:"):
-#                         st.session_state.cadastrando_locais = "Finalizado"
-#                         st.session_state.expand_locais = False
-#                         st.session_state.expand_contatos = True
-#                         st.success("Cadastro de locais concluído!")
-#                         time.sleep(2)
-#                         st.rerun()
-
-#             else:
-#                 st.success("✅ Locais cadastrados com sucesso!")
-
-#         # Chama o fragment
-#         cadastrar_locais(col_projetos)
 
 
 

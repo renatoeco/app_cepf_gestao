@@ -2,3 +2,4 @@ env_cepf_gestao
 .streamlit/secrets.toml
 __pycache__
 temp_dialogo_relatar_atividade.py
+sandbox.py

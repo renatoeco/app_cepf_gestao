@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, notificar  # Função personalizada para conectar ao MongoDB
 import plotly.express as px
 import pandas as pd
 import datetime
@@ -64,8 +64,8 @@ except locale.Error:
 # ============================================
 
 
-# if "notificacoes" not in st.session_state:
-#     st.session_state.notificacoes = []
+if "notificacoes" not in st.session_state:
+    st.session_state.notificacoes = []
 
 
 # def notificar(mensagem: str):
@@ -167,76 +167,6 @@ df_projetos["data_fim_contrato_dtime"] = pd.to_datetime(
 
 
 
-# ###########################################################################################################
-# # TRATAMENTO DE DADOS   
-# ###########################################################################################################
-
-# # Limpar as notificações, para preencher novamente.
-# st.session_state.notificacoes = []
-
-# # Inclulir o status no dataframe de projetos
-# df_projetos = calcular_status_projetos(df_projetos)
-
-# # Filtar somente tipos de usuário admin e equipe em df_pessoas
-# df_pessoas = df_pessoas[(df_pessoas["tipo_usuario"] == "admin") | (df_pessoas["tipo_usuario"] == "equipe")]
-
-# # Incluir padrinho no dataframe de projetos
-# # Fazendo um dataframe auxiliar de relacionamento
-# # Seleciona apenas colunas necessárias
-# df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
-
-# # Garante que "projetos" seja sempre lista
-# df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
-#     lambda x: x if isinstance(x, list) else []
-# )
-
-# # Explode: uma linha por projeto
-# df_pessoas_proj = df_pessoas_proj.explode("projetos")
-
-# # Remove linhas sem código de projeto
-# df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
-
-# # Renomeia para facilitar o merge
-# df_pessoas_proj = df_pessoas_proj.rename(columns={
-#     "projetos": "codigo",
-#     "nome_completo": "padrinho"
-# })
-
-# # Agrupar (caso haja mais de um padrinho por projeto)
-# df_padrinhos = (
-#     df_pessoas_proj
-#     .groupby("codigo")["padrinho"]
-#     .apply(lambda nomes: ", ".join(sorted(set(nomes))))
-#     .reset_index()
-# )
-
-# # Fazer o merge
-# df_projetos = df_projetos.merge(
-#     df_padrinhos,
-#     on="codigo",
-#     how="left"
-# )
-
-
-
-# # Converter object_id para string
-# df_pessoas['_id'] = df_pessoas['_id'].astype(str)
-# df_projetos['_id'] = df_projetos['_id'].astype(str)
-
-# # Convertendo datas de string para datetime
-# df_projetos['data_inicio_contrato_dtime'] = pd.to_datetime(
-#     df_projetos['data_inicio_contrato'], 
-#     format="%d/%m/%Y", 
-#     dayfirst=True, 
-#     errors="coerce"
-# )
-
-# df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
-#     df_projetos['data_fim_contrato'], 
-#     format="%d/%m/%Y", 
-#     dayfirst=True, 
-#     errors="coerce"
-# )
 
 
 ###########################################################################################################
@@ -276,16 +206,6 @@ edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300
 
 
 
-# # ============================================
-# # FILTRO PRINCIPAL DE PROJETOS
-# # ============================================
-
-# # Base: todos os projetos
-# df_filtrado = df_projetos.copy()
-
-# # Garante que a coluna 'padrinho' exista
-# if "padrinho" not in df_filtrado.columns:
-#     df_filtrado["padrinho"] = None
 
 
 # ============================================
@@ -458,7 +378,9 @@ else:
             'Concluído': '#74a7e4',   # Azul
             'Em dia': '#aedddd',      # Verde
             'Atrasado': '#ffbfb0',    # Vermelho
-            'Cancelado': '#bbb'       # Cinza
+            'Cancelado': '#bbb',        # Cinza,
+            'Sem cronograma': '#fff099'
+
         }
 
         contagens = df_filtrado['status'].value_counts(dropna=True)
@@ -477,7 +399,9 @@ else:
     # Cronograma de contratos
     st.write("**Cronograma de contratos**")
 
+
     df_filtrado_sorted = df_filtrado.sort_values(by='data_fim_contrato', ascending=False)
+
 
     altura_base = 400
     altura_extra = sum([10 / (1 + i * 0.01) for i in range(len(df_filtrado_sorted))])
