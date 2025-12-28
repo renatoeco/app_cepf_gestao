@@ -632,6 +632,14 @@ def gerenciar_anotacoes():
     # ========================================================
     with nova_tab:
 
+        tipo_anotacao = st.radio(
+            "Tipo da anotação",
+            options=["Interna", "Externa"],
+            horizontal=True,
+            key="tipo_anotacao_nova"
+        )
+
+
         texto_anotacao = st.text_area(
             "Escreva aqui a anotação",
             height=150
@@ -653,6 +661,7 @@ def gerenciar_anotacoes():
                 "data": datetime.datetime.now().strftime("%d/%m/%Y"),
                 "autor": st.session_state.nome,
                 "texto": texto_anotacao.strip(),
+                "tipo": tipo_anotacao.lower()
             }
 
             resultado = col_projetos.update_one(
@@ -679,10 +688,21 @@ def gerenciar_anotacoes():
         )
 
         # Filtrar somente anotações do usuário logado
+        
         anotacoes_usuario = [
             a for a in anotacoes_local
             if a.get("autor") == st.session_state.nome
+            and (usuario_interno or a.get("tipo") != "interna")
         ]
+
+        
+        
+        
+        
+        # anotacoes_usuario = [
+        #     a for a in anotacoes_local
+        #     if a.get("autor") == st.session_state.nome
+        # ]
 
         if not anotacoes_usuario:
             st.write("Não há anotações de sua autoria para editar.")
@@ -700,6 +720,16 @@ def gerenciar_anotacoes():
         )
 
         anotacao_selecionada = mapa_anotacoes[anotacao_label]
+
+        # Tipo da anotação (interna / externa)
+        tipo_anotacao_edicao = st.radio(
+            "Tipo da anotação",
+            options=["Interna", "Externa"],
+            index=0 if anotacao_selecionada.get("tipo", "externa") == "externa" else 1,
+            horizontal=True,
+            key="tipo_anotacao_edicao"
+        )
+
 
         novo_texto = st.text_area(
             "Editar anotação",
@@ -724,9 +754,16 @@ def gerenciar_anotacoes():
                     "anotacoes.id": anotacao_selecionada["id"],
                 },
                 {
-                    "$set": {
-                        "anotacoes.$.texto": novo_texto.strip()
-                    }
+
+                "$set": {
+                    "anotacoes.$.texto": novo_texto.strip(),
+                    "anotacoes.$.tipo": tipo_anotacao_edicao.lower()
+                }
+
+
+                    # "$set": {
+                    #     "anotacoes.$.texto": novo_texto.strip()
+                    # }
                 }
             )
 
@@ -756,18 +793,43 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 # ============================================================
 
 
+
 anotacoes = (
     df_projeto["anotacoes"].values[0]
-    if "anotacoes" in df_projeto.columns and df_projeto["anotacoes"].values[0]
+    if "anotacoes" in df_projeto.columns
     else []
 )
 
+# Regra de visibilidade
+if usuario_interno:
+    anotacoes_visiveis = anotacoes
+else:
+    anotacoes_visiveis = [
+        a for a in anotacoes
+        if a.get("tipo") != "interna"
+    ]
 
-if not anotacoes:
+
+
+# anotacoes = (
+#     df_projeto["anotacoes"].values[0]
+#     if "anotacoes" in df_projeto.columns and df_projeto["anotacoes"].values[0]
+#     else []
+# )
+
+
+
+
+
+
+if not anotacoes_visiveis:
+# if not anotacoes:
     st.write("Não há anotações")
 else:
-    df_anotacoes = pd.DataFrame(anotacoes)
-    df_anotacoes = df_anotacoes[["data", "texto", "autor"]]
+    df_anotacoes = pd.DataFrame(anotacoes_visiveis)
+    # df_anotacoes = pd.DataFrame(anotacoes)
+    df_anotacoes = df_anotacoes[["data", "texto", "autor", "tipo"]]
+    # df_anotacoes = df_anotacoes[["data", "texto", "autor"]]
     with st.container():
         ui.table(data=df_anotacoes, key="tabela_anotacoes_fixa")
 
