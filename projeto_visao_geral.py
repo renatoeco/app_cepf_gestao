@@ -674,6 +674,8 @@ def gerenciar_anotacoes():
             height=150
         )
 
+        st.write('')
+
         if st.button(
             "Salvar anotação",
             type="primary",
@@ -758,7 +760,8 @@ def gerenciar_anotacoes():
             value=anotacao_selecionada["texto"],
             height=150
         )
-
+        
+        st.write('')
         if st.button(
             "Salvar alterações",
             type="primary",
@@ -882,6 +885,7 @@ def gerenciar_visitas():
             height=150
         )
 
+        st.write('')
         if st.button(
             "Salvar visita",
             type="primary",
@@ -954,7 +958,8 @@ def gerenciar_visitas():
             value=visita_selecionada["relato"],
             height=150
         )
-
+        
+        st.write('')
         if st.button(
             "Salvar alterações",
             type="primary",
@@ -1060,6 +1065,7 @@ def gerenciar_contatos():
         telefone = st.text_input("Telefone")
         email = st.text_input("E-mail")
 
+        st.write('')
         # Botão de salvar
         if st.button(
             "Salvar contato",
@@ -1136,6 +1142,7 @@ def gerenciar_contatos():
         telefone = st.text_input("Telefone", value=contato_selecionado.get("telefone", ""))
         email = st.text_input("E-mail", value=contato_selecionado.get("email", ""))
 
+        st.write('')
         # Botão de salvar alterações
         if st.button(
             "Salvar alterações",
