@@ -27,22 +27,22 @@ col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
 
 
-###########################################################################################################
-# CONFIGURAÇÃO DE LOCALE
-###########################################################################################################
+# ###########################################################################################################
+# # CONFIGURAÇÃO DE LOCALE
+# ###########################################################################################################
 
 
-# CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS
-try:
-    # Tenta a configuração comum em sistemas Linux/macOS
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-except locale.Error:
-    try:
-        # Tenta a configuração comum em alguns sistemas Windows
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
-    except locale.Error:
-        # Se falhar, usa a configuração padrão (geralmente inglês)
-        print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
+# # CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS
+# try:
+#     # Tenta a configuração comum em sistemas Linux/macOS
+#     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+# except locale.Error:
+#     try:
+#         # Tenta a configuração comum em alguns sistemas Windows
+#         locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
+#     except locale.Error:
+#         # Se falhar, usa a configuração padrão (geralmente inglês)
+#         print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
 
 
 
