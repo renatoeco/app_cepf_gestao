@@ -2,8 +2,8 @@ import streamlit as st
 from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, notificar
 import plotly.express as px
 import pandas as pd
-import datetime
-import locale
+# import datetime
+# import locale
 
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB

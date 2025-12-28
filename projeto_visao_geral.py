@@ -107,12 +107,12 @@ df_projeto = calcular_status_projetos(df_projeto)
 ###########################################################################################################
 
 # Filtra apenas usuários internos (admin e equipe)
-df_pessoas_filtrado = df_pessoas[
+df_pessoas_internos = df_pessoas[
     df_pessoas["tipo_usuario"].isin(["admin", "equipe"])
 ].copy()
 
 # Seleciona apenas colunas necessárias
-df_pessoas_proj = df_pessoas_filtrado[["nome_completo", "projetos"]].copy()
+df_pessoas_proj = df_pessoas_internos[["nome_completo", "projetos"]].copy()
 
 # Garante que "projetos" seja lista
 df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
@@ -325,6 +325,28 @@ else:
         responsavel_str = ", ".join(responsavel) if responsavel else ""
 
 
+        # ---------- PADRINHO / MADRINHA ----------
+
+        # Lista de opções
+        opcoes_padrinho_madrinha = sorted(df_pessoas_internos["nome_completo"].tolist())
+
+        # Pessoas atualmente associadas a este projeto
+        codigo_projeto = projeto["codigo"]
+
+        padrinhos_atuais = df_pessoas_internos[
+            df_pessoas_internos["projetos"].apply(
+                lambda x: isinstance(x, list) and codigo_projeto in x
+            )
+        ]["nome_completo"].tolist()
+
+        padrinho_madrinha = st.multiselect(
+            "Padrinho / Madrinha",
+            options=opcoes_padrinho_madrinha,
+            default=padrinhos_atuais
+        )
+
+
+
         # ---------- DIREÇÕES ESTRATÉGICAS ----------
 
         # Lista de opções disponíveis
@@ -431,6 +453,8 @@ else:
                     # --------------------------------------------------
                     # ATUALIZA O PROJETO
                     # --------------------------------------------------
+                    
+                    # Atualizações na coleção de Projetos
                     col_projetos.update_one(
                         {"_id": projeto_id},
                         {
@@ -450,6 +474,38 @@ else:
                             }
                         }
                     )
+
+
+
+                    # Atualizações na coleção de Pessoas
+                    # ATUALIZA PADRINHOS DO PROJETO
+
+                    # Pessoas que eram padrinhos antes
+                    padrinhos_antes = set(padrinhos_atuais)
+
+                    # Pessoas selecionadas agora
+                    padrinhos_novos = set(padrinho_madrinha)
+
+                    # Pessoas que precisam ser removidas
+                    remover = padrinhos_antes - padrinhos_novos
+
+                    # Pessoas que precisam ser adicionadas
+                    adicionar = padrinhos_novos - padrinhos_antes
+
+                    # Remove projeto das pessoas removidas
+                    for nome in remover:
+                        col_pessoas.update_one(
+                            {"nome_completo": nome},
+                            {"$pull": {"projetos": codigo}}
+                        )
+
+                    # Adiciona projeto às pessoas novas
+                    for nome in adicionar:
+                        col_pessoas.update_one(
+                            {"nome_completo": nome},
+                            {"$addToSet": {"projetos": codigo}}
+                        )
+
 
                     st.success(":material/check: Projeto atualizado com sucesso!")
                     time.sleep(3)
