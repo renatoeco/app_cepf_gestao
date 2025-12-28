@@ -8,10 +8,6 @@ import bson
 
 
 
-
-
-
-
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS
 ###########################################################################################################
@@ -25,7 +21,6 @@ col_projetos = db["projetos"]
 col_editais = db["editais"]
 col_direcoes_estrategicas = db["direcoes_estrategicas"]
 col_publicos = db["publicos"]
-
 
 
 
@@ -394,6 +389,26 @@ else:
             key="multi_select_publicos"
         )
 
+
+        # ---------- TOGGLE DE CANCELADO ----------
+
+        # STATUS ATUAL DO PROJETO
+        status_atual = projeto.get("status")  # pode ser None
+        projeto_cancelado_atual = status_atual == "Cancelado"
+
+        projeto_cancelado = st.toggle(
+            "Projeto cancelado",
+            value=projeto_cancelado_atual
+        )
+
+        # Define o novo status
+        if projeto_cancelado:
+            novo_status = "Cancelado"
+        else:
+            novo_status = None
+
+
+
         st.write("")
 
         salvar = st.form_submit_button("Salvar alterações", key="salvar_alteracoes_cadastrais", icon=":material/save:")
@@ -477,6 +492,19 @@ else:
 
 
 
+                    # Atualiza status separadamente
+                    if novo_status:
+                        col_projetos.update_one(
+                            {"_id": projeto_id},
+                            {"$set": {"status": novo_status}}
+                        )
+                    else:
+                        # Remove o campo se existir
+                        col_projetos.update_one(
+                            {"_id": projeto_id},
+                            {"$unset": {"status": ""}}
+                        )
+
                     # Atualizações na coleção de Pessoas
                     # ATUALIZA PADRINHOS DO PROJETO
 
@@ -519,58 +547,62 @@ st.divider()
 
 
 
-# #############################################################################################
-# BLOCO DE STATUS
-# #############################################################################################
 
 
-# STATUS
+
+
+
+
+
+# #############################################################################################
+# STATUS DO PROJETO
+# #############################################################################################
+
 status_projeto = df_projeto["status"].values[0]
 
-if status_projeto == "Em dia":
-    st.markdown(f"#### O projeto está :green[{status_projeto.lower()}]")
-elif status_projeto == "Atrasado":
-    st.markdown(f"#### O projeto está :orange[{status_projeto.lower()}]")
-elif status_projeto == "Concluído":
-    st.markdown(f"#### O projeto está :green[{status_projeto.lower()}]")
-elif status_projeto == "Cancelado":
-    st.markdown(f"#### O projeto está :red[{status_projeto.lower()}]")
+cores_status = {
+    "Em dia": "green",
+    "Atrasado": "orange",
+    "Concluído": "green",
+    "Cancelado": "gray"
+}
 
+st.markdown(
+    f"#### O projeto está :{cores_status.get(status_projeto, 'gray')}[{status_projeto.lower()}]"
+)
 
+# #############################################################################################
 # MENSAGEM DO STATUS
+# #############################################################################################
 
-parcelas = projeto.get("financeiro", {}).get("parcelas", [])
-relatorios = projeto.get("relatorios", [])
-
-df_cronograma = gerar_cronograma_financeiro(parcelas, relatorios)
-
-# reset index
-df_cronograma = df_cronograma.reset_index(drop=True)
-
-# Garante que o DataFrame não está vazio
-if df_projeto.empty:
-    st.caption("Não há dados no cronograma.")
+# Se o projeto já finalizou
+if status_projeto in ["Concluído", "Cancelado"]:
+    if status_projeto == "Concluído":
+        st.success("🎉 Parabéns! O projeto realizou todas as etapas e está concluído.")
+    else:
+        st.warning("Este projeto foi cancelado.")
 
 else:
-    hoje = datetime.date.today()
+    # Dados já calculados no df_projeto
+    proximo_evento = df_projeto["proximo_evento"].values[0]
+    data_proximo_evento = df_projeto["data_proximo_evento"].values[0]
+    dias_atraso = df_projeto["dias_atraso"].values[0]
 
-    proximo_evento = df_projeto.iloc[0]["proximo_evento"]
-    data_proximo_evento = df_projeto.iloc[0]["data_proximo_evento"]
-    dias_atraso = df_projeto.iloc[0]["dias_atraso"]
-
-    # Projeto concluído
-    if proximo_evento is None:
-        st.success("🎉 Parabéns! O projeto realizou todas as etapas e está concluído.")
+    # Caso não exista cronograma
+    if pd.isna(proximo_evento):
+        st.caption("Este projeto ainda não possui cronograma de Parcelas e Relatórios.")
 
     else:
+        hoje = datetime.date.today()
+
         # Texto da data
         if pd.notna(data_proximo_evento):
             if data_proximo_evento == hoje:
-                texto_data = "previsto para hoje"
+                texto_data = "previsto para hoje."
             else:
-                texto_data = f"previsto para **{data_proximo_evento.strftime('%d/%m/%Y')}**"
+                texto_data = f"previsto para **{data_proximo_evento.strftime('%d/%m/%Y')}**."
         else:
-            texto_data = "com data não informada"
+            texto_data = "com data não informada."
 
         # Mensagem principal
         if str(proximo_evento).startswith("Parcela"):
@@ -588,15 +620,12 @@ else:
                 f"Próximo evento: **{proximo_evento}**, {texto_data}."
             )
 
-        # Exibe atraso / antecedência
+        # Atraso / antecedência
         if dias_atraso is not None:
             if dias_atraso > 0:
                 st.write(f"O projeto acumula **{dias_atraso} dias** de atraso.")
             elif dias_atraso < 0:
                 st.write(f"Faltam **{abs(dias_atraso)} dias**.")
-
-
-
 
 
 
@@ -696,14 +725,7 @@ def gerenciar_anotacoes():
         ]
 
         
-        
-        
-        
-        # anotacoes_usuario = [
-        #     a for a in anotacoes_local
-        #     if a.get("autor") == st.session_state.nome
-        # ]
-
+       
         if not anotacoes_usuario:
             st.write("Não há anotações de sua autoria para editar.")
             return
@@ -755,15 +777,11 @@ def gerenciar_anotacoes():
                 },
                 {
 
-                "$set": {
-                    "anotacoes.$.texto": novo_texto.strip(),
-                    "anotacoes.$.tipo": tipo_anotacao_edicao.lower()
-                }
+                    "$set": {
+                        "anotacoes.$.texto": novo_texto.strip(),
+                        "anotacoes.$.tipo": tipo_anotacao_edicao.lower()
+                    }
 
-
-                    # "$set": {
-                    #     "anotacoes.$.texto": novo_texto.strip()
-                    # }
                 }
             )
 
@@ -810,21 +828,9 @@ else:
     ]
 
 
-
-# anotacoes = (
-#     df_projeto["anotacoes"].values[0]
-#     if "anotacoes" in df_projeto.columns and df_projeto["anotacoes"].values[0]
-#     else []
-# )
-
-
-
-
-
-
 if not anotacoes_visiveis:
 # if not anotacoes:
-    st.write("Não há anotações")
+    st.caption("Não há anotações.")
 else:
     df_anotacoes = pd.DataFrame(anotacoes_visiveis)
     # df_anotacoes = pd.DataFrame(anotacoes)
@@ -1010,7 +1016,7 @@ visitas = (
 )
 
 if not visitas:
-    st.write("Não há visitas registradas")
+    st.caption("Não há visitas registradas.")
 else:
     df_visitas = pd.DataFrame(visitas)
     df_visitas = df_visitas[["data_visita", "relato", "autor"]]
