@@ -793,16 +793,16 @@ def gerenciar_anotacoes():
                 st.error("Erro ao atualizar anotação.")
 
 
-
-with st.container(horizontal=True, horizontal_alignment="right"):
-    if st.button(
-        "Gerenciar anotações",
-        icon=":material/edit:",
-        type="secondary",
-        width=200,
-        key="gerenciar_anotacoes"
-    ):
-        gerenciar_anotacoes()
+if usuario_interno:
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if st.button(
+            "Gerenciar anotações",
+            icon=":material/edit:",
+            type="secondary",
+            width=200,
+            key="gerenciar_anotacoes"
+        ):
+            gerenciar_anotacoes()
 
 
 
@@ -1026,8 +1026,190 @@ else:
 
 
 
+st.write('')
+st.write('')
+st.write('')
 
 
+
+
+# ============================================================
+# CONTATOS
+# ============================================================
+
+st.markdown("#### Contatos")
+
+# ============================================================
+# DIÁLOGO DE GERENCIAMENTO DE CONTATOS
+# ============================================================
+
+@st.dialog("Gerenciar contatos", width="medium")
+def gerenciar_contatos():
+
+    # Abas para criar e editar contatos
+    nova_tab, editar_tab = st.tabs(["Novo contato", "Editar contato"])
+
+    # ========================================================
+    # NOVO CONTATO
+    # ========================================================
+    with nova_tab:
+
+        # Campos do formulário
+        nome = st.text_input("Nome")
+        funcao = st.text_input("Função no projeto")
+        telefone = st.text_input("Telefone")
+        email = st.text_input("E-mail")
+
+        # Botão de salvar
+        if st.button(
+            "Salvar contato",
+            type="primary",
+            icon=":material/save:",
+            key="salvar_novo_contato"
+        ):
+
+            # Validação básica
+            if not nome.strip() or not funcao.strip():
+                st.warning("Nome e função são obrigatórios.")
+                return
+
+            # Estrutura do contato
+            contato = {
+                "nome": nome.strip(),
+                "funcao": funcao.strip(),
+                "telefone": telefone.strip(),
+                "email": email.strip(),
+                "autor": st.session_state.nome,
+            }
+
+            # Insere o contato no projeto
+            resultado = col_projetos.update_one(
+                {"codigo": st.session_state.projeto_atual},
+                {"$push": {"contatos": contato}}
+            )
+
+            if resultado.modified_count == 1:
+                st.success("Contato cadastrado com sucesso!")
+                time.sleep(2)
+                st.rerun()
+            else:
+                st.error("Erro ao salvar contato.")
+
+    # ========================================================
+    # EDITAR CONTATO
+    # ========================================================
+    with editar_tab:
+
+        # Recupera os contatos do projeto
+        contatos_local = (
+            df_projeto["contatos"].values[0]
+            if "contatos" in df_projeto.columns
+            else []
+        )
+
+        # Mostra apenas contatos criados pelo usuário
+        contatos_usuario = [
+            c for c in contatos_local
+            if c.get("autor") == st.session_state.nome
+        ]
+
+        if not contatos_usuario:
+            st.write("Não há contatos cadastrados por você.")
+            return
+
+        # Mapa amigável para seleção
+        mapa_contatos = {
+            f"{c['nome']} — {c['funcao']}": c
+            for c in contatos_usuario
+        }
+
+        contato_label = st.selectbox(
+            "Selecione o contato",
+            list(mapa_contatos.keys())
+        )
+
+        contato_selecionado = mapa_contatos[contato_label]
+
+        # Campos editáveis
+        nome = st.text_input("Nome", value=contato_selecionado["nome"])
+        funcao = st.text_input("Função no projeto", value=contato_selecionado["funcao"])
+        telefone = st.text_input("Telefone", value=contato_selecionado.get("telefone", ""))
+        email = st.text_input("E-mail", value=contato_selecionado.get("email", ""))
+
+        # Botão de salvar alterações
+        if st.button(
+            "Salvar alterações",
+            type="primary",
+            icon=":material/save:",
+            key="salvar_editar_contato"
+        ):
+
+            if not nome.strip() or not funcao.strip():
+                st.warning("Nome e função são obrigatórios.")
+                return
+
+            # Atualiza o contato específico (sem ID)
+            resultado = col_projetos.update_one(
+                {
+                    "codigo": st.session_state.projeto_atual,
+                    "contatos.nome": contato_selecionado["nome"],
+                    "contatos.funcao": contato_selecionado["funcao"],
+                    "contatos.autor": st.session_state.nome,
+                },
+                {
+                    "$set": {
+                        "contatos.$.nome": nome.strip(),
+                        "contatos.$.funcao": funcao.strip(),
+                        "contatos.$.telefone": telefone.strip(),
+                        "contatos.$.email": email.strip(),
+                    }
+                }
+            )
+
+            if resultado.modified_count == 1:
+                st.success("Contato atualizado com sucesso!")
+                time.sleep(2)
+                st.rerun()
+            else:
+                st.error("Erro ao atualizar contato.")
+
+
+with st.container(horizontal=True, horizontal_alignment="right"):
+    if st.button(
+        "Gerenciar contatos",
+        icon=":material/edit:",
+        type="secondary",
+        width=200,
+        key="gerenciar_contatos"
+    ):
+        gerenciar_contatos()
+
+
+
+contatos = (
+    df_projeto["contatos"].values[0]
+    if "contatos" in df_projeto.columns and df_projeto["contatos"].values[0]
+    else []
+)
+
+if not contatos:
+    st.caption("Não há contatos cadastrados.")
+else:
+    df_contatos = pd.DataFrame(contatos)
+
+    # Renomeia colunas para exibição
+    df_contatos = df_contatos.rename(columns={
+        "nome": "Nome",
+        "funcao": "Função no projeto",
+        "telefone": "Telefone",
+        "email": "E-mail"
+    })
+
+    # Define ordem das colunas
+    df_contatos = df_contatos[["Nome", "Função no projeto", "Telefone", "E-mail"]]
+
+    with st.container():
+        ui.table(data=df_contatos, key="tabela_contatos")
 
 
 
