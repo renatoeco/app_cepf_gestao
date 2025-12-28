@@ -260,8 +260,9 @@ if df_filtrado.empty:
     st.stop()
 
 
-
-# Filtrar apenas os projetos do padrinho/madrinha logado
+# -------------------------------------------------
+# FILTRO POR PADRINHO LOGADO
+# -------------------------------------------------
 if ver_meus_projetos:
 
     # Se a coluna padrinho não existir
@@ -300,76 +301,153 @@ if df_filtrado.empty:
 
 
 
-
-
-
-
 else:
 
     # ============================================
     # INTERFACE
     # ============================================
 
-
     st.divider()
 
-    sobre_col1, sobre_col2 = st.columns([7,3])
+    sobre_col1, sobre_col2 = st.columns([7, 3])
 
-    sobre_col1.write(
-        "**Projetos atrasados**"
-    )
+    sobre_col1.write("**Projetos atrasados**")
+    sobre_col2.write("**Status dos projetos**")
 
-    sobre_col2.write(
-        "**Status dos projetos**"
-    )
+    # -------------------------------------------------
+    # FILTRO DE PROJETOS ATRASADOS (ÚNICO PONTO)
+    # -------------------------------------------------
+    if edital_selecionado == "Todos":
+        projetos_atrasados = df_filtrado[df_filtrado["status"] == "Atrasado"]
+    else:
+        projetos_atrasados = df_filtrado[
+            (df_filtrado["edital"] == edital_selecionado) &
+            (df_filtrado["status"] == "Atrasado")
+        ]
 
+    # -------------------------------------------------
+    # COLUNAS
+    # -------------------------------------------------
     col1, col2, col3 = st.columns([1, 6, 3], gap="large")
 
-
-    # Contagem de projetos no edital selecionado
-
+    # -------------------------------------------------
+    # COLUNA 1 — MÉTRICA
+    # -------------------------------------------------
     with col1:
-        if edital_selecionado == "Todos":
-            total_projetos = len(df_filtrado)
-        else:
-            total_projetos = len(df_filtrado[df_filtrado['edital'] == edital_selecionado])
+        total_atrasados = len(projetos_atrasados)
+        st.metric("", total_atrasados)
+        st.write("")
 
-        st.metric("", total_projetos)
-
-        st.write('')
-
-
-    # Lista de projetos atrasados
+    # -------------------------------------------------
+    # COLUNA 2 — LISTA DE PROJETOS ATRASADOS
+    # -------------------------------------------------
     with col2:
-        st.write('')
-
-        if edital_selecionado == "Todos":
-            projetos_atrasados = df_filtrado[df_filtrado['status'] == 'Atrasado']
-        else:
-            projetos_atrasados = df_filtrado[
-                (df_filtrado['edital'] == edital_selecionado) &
-                (df_filtrado['status'] == 'Atrasado')
-            ]
-
+        st.write("")
 
         if not projetos_atrasados.empty:
-            projetos_atrasados = projetos_atrasados.copy()
-            projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso']
-            projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'edital', 'dias_atraso']]
-            projetos_atrasados = projetos_atrasados.rename(columns={
-                'codigo': 'Código',
-                'sigla': 'Sigla',
-                'padrinho': 'Padrinho/Madrinha',
-                'dias_atraso': 'Dias de atraso',
-                'edital': 'edital'
+            df_exibir = projetos_atrasados.copy()
+
+            df_exibir = df_exibir[
+                ["codigo", "sigla", "padrinho", "edital", "dias_atraso"]
+            ]
+
+            df_exibir = df_exibir.rename(columns={
+                "codigo": "Código",
+                "sigla": "Sigla",
+                "padrinho": "Padrinho/Madrinha",
+                "dias_atraso": "Dias de atraso",
+                "edital": "Edital"
             })
 
+            df_exibir = df_exibir.sort_values(
+                by="Dias de atraso",
+                ascending=False
+            )
 
+            st.dataframe(df_exibir, hide_index=True)
 
-            projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
-            st.dataframe(projetos_atrasados, hide_index=True)
         else:
             st.write("Não há projetos atrasados.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# else:
+
+#     # ============================================
+#     # INTERFACE
+#     # ============================================
+
+
+#     st.divider()
+
+#     sobre_col1, sobre_col2 = st.columns([7,3])
+
+#     sobre_col1.write(
+#         "**Projetos atrasados**"
+#     )
+
+#     sobre_col2.write(
+#         "**Status dos projetos**"
+#     )
+
+#     col1, col2, col3 = st.columns([1, 6, 3], gap="large")
+
+
+#     # Contagem de projetos no edital selecionado
+
+#     with col1:
+#         if edital_selecionado == "Todos":
+#             total_projetos = len(df_filtrado)
+#         else:
+#             total_projetos = len(df_filtrado[df_filtrado['edital'] == edital_selecionado])
+
+#         st.metric("", total_projetos)
+
+#         st.write('')
+
+
+#     # Lista de projetos atrasados
+#     with col2:
+#         st.write('')
+
+#         if edital_selecionado == "Todos":
+#             projetos_atrasados = df_filtrado[df_filtrado['status'] == 'Atrasado']
+#         else:
+#             projetos_atrasados = df_filtrado[
+#                 (df_filtrado['edital'] == edital_selecionado) &
+#                 (df_filtrado['status'] == 'Atrasado')
+#             ]
+
+
+#         if not projetos_atrasados.empty:
+#             projetos_atrasados = projetos_atrasados.copy()
+#             projetos_atrasados['dias_atraso'] = projetos_atrasados['dias_atraso']
+#             projetos_atrasados = projetos_atrasados[['codigo', 'sigla', 'padrinho', 'edital', 'dias_atraso']]
+#             projetos_atrasados = projetos_atrasados.rename(columns={
+#                 'codigo': 'Código',
+#                 'sigla': 'Sigla',
+#                 'padrinho': 'Padrinho/Madrinha',
+#                 'dias_atraso': 'Dias de atraso',
+#                 'edital': 'edital'
+#             })
+
+
+
+#             projetos_atrasados = projetos_atrasados.sort_values(by='Dias de atraso', ascending=False)
+#             st.dataframe(projetos_atrasados, hide_index=True)
+#         else:
+#             st.write("Não há projetos atrasados.")
 
     # Gráfico de pizza do status
     with col3:
