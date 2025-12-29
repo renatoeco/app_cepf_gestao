@@ -760,7 +760,7 @@ with plano_trabalho:
         componentes = plano_trabalho.get("componentes", [])
 
         if not componentes:
-            st.info("Este projeto não possui plano de trabalho cadastrado.")
+            st.caption("Este projeto não possui plano de trabalho cadastrado.")
         else:
 
             for componente in componentes:
@@ -1628,7 +1628,7 @@ with indicadores:
         )
 
         if not indicadores_projeto:
-            st.info("Nenhum indicador associado a este projeto.")
+            st.caption("Nenhum indicador associado a este projeto.")
 
         else:
             # --------------------------------------------------
@@ -1707,7 +1707,7 @@ with indicadores:
         # GARANTIA DE DADOS
         # --------------------------------------------------
         if df_indicadores.empty:
-            st.info("Não há indicadores cadastrados.")
+            st.caption("Não há indicadores cadastrados.")
 
         else:
             # --------------------------------------------------

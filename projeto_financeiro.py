@@ -276,166 +276,157 @@ with cron_desemb:
         # -----------------------------
         df_cronograma = pd.DataFrame(linhas_cronograma)
 
+
         if df_cronograma.empty:
-            st.info("Não há dados financeiros para exibição.")
-            st.stop()
+            st.caption("Não há dados financeiros para exibição.")
+        else:
+            
+            # Ordenar por data prevista
+            df_cronograma = df_cronograma.sort_values(
+                by="Data prevista",
+                ascending=True
+            )
 
-        # Ordenar por data prevista
-        df_cronograma = df_cronograma.sort_values(
-            by="Data prevista",
-            ascending=True
-        )
+            # Formatar data prevista para exibição
+            df_cronograma["Data prevista"] = df_cronograma["Data prevista"].dt.strftime(
+                "%d/%m/%Y"
+            )
 
-        # Formatar data prevista para exibição
-        df_cronograma["Data prevista"] = df_cronograma["Data prevista"].dt.strftime(
-            "%d/%m/%Y"
-        )
-
-        # Renomear a coluna evento
-        df_cronograma = df_cronograma.rename(
-            columns={"evento": "Evento"}
-        )
+            # Renomear a coluna evento
+            df_cronograma = df_cronograma.rename(
+                columns={"evento": "Evento"}
+            )
 
 
-        # -----------------------------
-        # Tabela
-        # -----------------------------
+            # -----------------------------
+            # Tabela
+            # -----------------------------
+            
+            ui.table(df_cronograma)
         
-        ui.table(df_cronograma)
-        
 
 
 
 
+            # st.write('')
+            # st.write('')
+            # st.write('')
 
 
 
+            # st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
 
 
+            # # -----------------------------
+            # # Construir cronograma
+            # # -----------------------------
+            # linhas_cronograma = []
+
+            # # ===== Parcelas =====
+            # parcelas = financeiro.get("parcelas", [])
+
+            # for p in parcelas:
+            #     linhas_cronograma.append(
+            #         {
+            #             "evento": f"Parcela {p.get('numero')}",
+            #             "entregas": [],
+            #             "valor": (
+            #                 f"R$ {p['valor']:,.2f}".replace(",", "X")
+            #                 .replace(".", ",")
+            #                 .replace("X", ".")
+            #                 if p.get("valor") is not None else ""
+            #             ),
+            #             "percentual": (
+            #                 f"{int(p['percentual'])} %"
+            #                 if p.get("percentual") is not None else ""
+            #             ),
+            #             "data_prevista": (
+            #                 pd.to_datetime(p.get("data_prevista")).strftime("%d/%m/%Y")
+            #                 if p.get("data_prevista") else ""
+            #             ),
+            #             "data_realizada": (
+            #                 pd.to_datetime(p.get("data_realizada")).strftime("%d/%m/%Y")
+            #                 if p.get("data_realizada") else ""
+            #             ),
+            #         }
+            #     )
+
+            # # ===== Relatórios =====
+            # relatorios = projeto.get("relatorios", [])
+
+            # for r in relatorios:
+            #     linhas_cronograma.append(
+            #         {
+            #             "evento": f"Relatório {r.get('numero')}",
+            #             "entregas": r.get("entregas", []),
+            #             "valor": "",
+            #             "percentual": "",
+            #             "data_prevista": (
+            #                 pd.to_datetime(r.get("data_prevista")).strftime("%d/%m/%Y")
+            #                 if r.get("data_prevista") else ""
+            #             ),
+            #             "data_realizada": (
+            #                 pd.to_datetime(r.get("data_realizada")).strftime("%d/%m/%Y")
+            #                 if r.get("data_realizada") else ""
+            #             ),
+            #         }
+            #     )
+
+            # # Ordenar por data prevista
+            # linhas_cronograma = sorted(
+            #     linhas_cronograma,
+            #     key=lambda x: pd.to_datetime(
+            #         x["data_prevista"], dayfirst=True, errors="coerce"
+            #     )
+            # )
+
+            # # -----------------------------
+            # # Layout das colunas
+            # # -----------------------------
+            # layout_colunas = [2, 7, 2, 2, 2, 2]
 
 
+            # # -----------------------------
+            # # Cabeçalho
+            # # -----------------------------
+            # col_header = st.columns(layout_colunas)
+            # col_header[0].write("**Evento**")
+            # col_header[1].write("**Entregas**")
+            # col_header[2].write("**Valor**")
+            # col_header[3].write("**Percentual**")
+            # col_header[4].write("**Data prevista**")
+            # col_header[5].write("**Data realizada**")
 
+            # st.divider()
 
+            # # -----------------------------
+            # # Linhas
+            # # -----------------------------
+            # for row in linhas_cronograma:
 
-        # st.write('')
-        # st.write('')
-        # st.write('')
+            #     cols = st.columns(layout_colunas)
 
+            #     # Evento
+            #     cols[0].write(row["evento"])
 
+            #     # Entregas (multilinha real)
+            #     if row["entregas"]:
+            #         for entrega in row["entregas"]:
+            #             cols[1].write(f"{entrega}")
+            #     else:
+            #         cols[1].write("")
 
-        # st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
+            #     # Valor
+            #     cols[2].write(row["valor"])
 
+            #     # Percentual
+            #     cols[3].write(row["percentual"])
 
-        # # -----------------------------
-        # # Construir cronograma
-        # # -----------------------------
-        # linhas_cronograma = []
+            #     # Datas
+            #     cols[4].write(row["data_prevista"])
+            #     cols[5].write(row["data_realizada"])
 
-        # # ===== Parcelas =====
-        # parcelas = financeiro.get("parcelas", [])
-
-        # for p in parcelas:
-        #     linhas_cronograma.append(
-        #         {
-        #             "evento": f"Parcela {p.get('numero')}",
-        #             "entregas": [],
-        #             "valor": (
-        #                 f"R$ {p['valor']:,.2f}".replace(",", "X")
-        #                 .replace(".", ",")
-        #                 .replace("X", ".")
-        #                 if p.get("valor") is not None else ""
-        #             ),
-        #             "percentual": (
-        #                 f"{int(p['percentual'])} %"
-        #                 if p.get("percentual") is not None else ""
-        #             ),
-        #             "data_prevista": (
-        #                 pd.to_datetime(p.get("data_prevista")).strftime("%d/%m/%Y")
-        #                 if p.get("data_prevista") else ""
-        #             ),
-        #             "data_realizada": (
-        #                 pd.to_datetime(p.get("data_realizada")).strftime("%d/%m/%Y")
-        #                 if p.get("data_realizada") else ""
-        #             ),
-        #         }
-        #     )
-
-        # # ===== Relatórios =====
-        # relatorios = projeto.get("relatorios", [])
-
-        # for r in relatorios:
-        #     linhas_cronograma.append(
-        #         {
-        #             "evento": f"Relatório {r.get('numero')}",
-        #             "entregas": r.get("entregas", []),
-        #             "valor": "",
-        #             "percentual": "",
-        #             "data_prevista": (
-        #                 pd.to_datetime(r.get("data_prevista")).strftime("%d/%m/%Y")
-        #                 if r.get("data_prevista") else ""
-        #             ),
-        #             "data_realizada": (
-        #                 pd.to_datetime(r.get("data_realizada")).strftime("%d/%m/%Y")
-        #                 if r.get("data_realizada") else ""
-        #             ),
-        #         }
-        #     )
-
-        # # Ordenar por data prevista
-        # linhas_cronograma = sorted(
-        #     linhas_cronograma,
-        #     key=lambda x: pd.to_datetime(
-        #         x["data_prevista"], dayfirst=True, errors="coerce"
-        #     )
-        # )
-
-        # # -----------------------------
-        # # Layout das colunas
-        # # -----------------------------
-        # layout_colunas = [2, 7, 2, 2, 2, 2]
-
-
-        # # -----------------------------
-        # # Cabeçalho
-        # # -----------------------------
-        # col_header = st.columns(layout_colunas)
-        # col_header[0].write("**Evento**")
-        # col_header[1].write("**Entregas**")
-        # col_header[2].write("**Valor**")
-        # col_header[3].write("**Percentual**")
-        # col_header[4].write("**Data prevista**")
-        # col_header[5].write("**Data realizada**")
-
-        # st.divider()
-
-        # # -----------------------------
-        # # Linhas
-        # # -----------------------------
-        # for row in linhas_cronograma:
-
-        #     cols = st.columns(layout_colunas)
-
-        #     # Evento
-        #     cols[0].write(row["evento"])
-
-        #     # Entregas (multilinha real)
-        #     if row["entregas"]:
-        #         for entrega in row["entregas"]:
-        #             cols[1].write(f"{entrega}")
-        #     else:
-        #         cols[1].write("")
-
-        #     # Valor
-        #     cols[2].write(row["valor"])
-
-        #     # Percentual
-        #     cols[3].write(row["percentual"])
-
-        #     # Datas
-        #     cols[4].write(row["data_prevista"])
-        #     cols[5].write(row["data_realizada"])
-
-        #     st.divider()
+            #     st.divider()
 
 
 
@@ -688,7 +679,7 @@ with cron_desemb:
 
 
         # -------------------------------------------------------
-        # Editar Parcelas
+        # Editar Relatórios
 
         if opcao_editar_cron == "Relatórios":
 
@@ -710,7 +701,7 @@ with cron_desemb:
             entregas_projeto = sorted(set(entregas_projeto))
 
             # --------------------------------------------------
-            # Parcelas (fonte da verdade)
+            # Parcelas
             # --------------------------------------------------
             parcelas = financeiro.get("parcelas", [])
 
@@ -722,126 +713,127 @@ with cron_desemb:
 
             # Se não houver parcelas suficientes, não há relatórios
             if len(parcelas) < 2:
-                st.info("É necessário ter ao menos duas parcelas para gerar relatórios.")
-                st.stop()
-
-            # --------------------------------------------------
-            # Montar DataFrame base dos relatórios
-            # (parcelas - última)
-            # --------------------------------------------------
-            linhas_relatorios = []
-
-            for parcela in parcelas[:-1]:  # ignora a última parcela
-                numero = parcela["numero"]
-                data_parcela = pd.to_datetime(parcela["data_prevista"], errors="coerce")
-
-                data_relatorio = (
-                    data_parcela + timedelta(days=15)
-                    if not pd.isna(data_parcela)
-                    else pd.NaT
-                )
-
-                linhas_relatorios.append(
-                    {
-                        "numero": numero,
-                        "data_prevista": data_relatorio,
-                        "entregas": [],
-                    }
-                )
-
-            df_relatorios_base = pd.DataFrame(linhas_relatorios)
-
-            # --------------------------------------------------
-            # Mesclar com relatórios já existentes no banco
-            # (preserva entregas já salvas)
-            # --------------------------------------------------
-            relatorios_existentes = projeto.get("relatorios", [])
-
-            if relatorios_existentes:
-                df_existente = pd.DataFrame(relatorios_existentes)
-
-                for _, row in df_existente.iterrows():
-                    numero = row.get("numero")
-
-                    if numero in df_relatorios_base["numero"].values:
-                        idx = df_relatorios_base.index[
-                            df_relatorios_base["numero"] == numero
-                        ][0]
-
-                        df_relatorios_base.at[idx, "entregas"] = row.get("entregas", [])
+                st.caption("É necessário ter ao menos duas parcelas para gerar relatórios.")
+            else:
 
 
-            # Garantir que entregas seja sempre lista
-            df_relatorios_base["entregas"] = df_relatorios_base["entregas"].apply(
-                lambda x: x if isinstance(x, list) else []
-            )
+                # --------------------------------------------------
+                # Montar DataFrame base dos relatórios
+                # (parcelas - última)
+                # --------------------------------------------------
+                linhas_relatorios = []
 
-            # --------------------------------------------------
-            # Editor (linhas fixas)
-            # --------------------------------------------------
-            df_editado = st.data_editor(
-                df_relatorios_base[["numero", "entregas", "data_prevista"]],
-                num_rows="fixed",
-                column_config={
-                    "numero": st.column_config.NumberColumn(
-                        "Número (auto)",
-                        disabled=True,
-                        width=5
-                    ),
-                    "entregas": st.column_config.MultiselectColumn(
-                        "Entregas",
-                        options=[""] + entregas_projeto,
-                        help="Selecione as entregas relacionadas a este relatório",
-                        width=800
-                    ),
-                    "data_prevista": st.column_config.DateColumn(
-                        "Data prevista (auto)",
-                        format="DD/MM/YYYY",
-                        disabled=True,
-                        width=20
-                    ),
-                },
-                key="editor_relatorios",
-                hide_index=True
-            )
+                for parcela in parcelas[:-1]:  # ignora a última parcela
+                    numero = parcela["numero"]
+                    data_parcela = pd.to_datetime(parcela["data_prevista"], errors="coerce")
 
-            st.write("")
+                    data_relatorio = (
+                        data_parcela + timedelta(days=15)
+                        if not pd.isna(data_parcela)
+                        else pd.NaT
+                    )
 
-            # --------------------------------------------------
-            # Salvar
-            # --------------------------------------------------
-            if st.button("Salvar relatórios", icon=":material/save:"):
-
-                relatorios_salvar = []
-
-                for _, row in df_editado.iterrows():
-
-                    entregas = [e for e in row["entregas"] if e]
-
-                    relatorios_salvar.append(
+                    linhas_relatorios.append(
                         {
-                            "numero": int(row["numero"]),
-                            "entregas": entregas,
-                            "data_prevista": (
-                                None
-                                if pd.isna(row["data_prevista"])
-                                else row["data_prevista"].date().isoformat()
-                            ),
+                            "numero": numero,
+                            "data_prevista": data_relatorio,
+                            "entregas": [],
                         }
                     )
 
-                col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {
-                        "$set": {
-                            "relatorios": relatorios_salvar
-                        }
-                    }
+                df_relatorios_base = pd.DataFrame(linhas_relatorios)
+
+                # --------------------------------------------------
+                # Mesclar com relatórios já existentes no banco
+                # (preserva entregas já salvas)
+                # --------------------------------------------------
+                relatorios_existentes = projeto.get("relatorios", [])
+
+                if relatorios_existentes:
+                    df_existente = pd.DataFrame(relatorios_existentes)
+
+                    for _, row in df_existente.iterrows():
+                        numero = row.get("numero")
+
+                        if numero in df_relatorios_base["numero"].values:
+                            idx = df_relatorios_base.index[
+                                df_relatorios_base["numero"] == numero
+                            ][0]
+
+                            df_relatorios_base.at[idx, "entregas"] = row.get("entregas", [])
+
+
+                # Garantir que entregas seja sempre lista
+                df_relatorios_base["entregas"] = df_relatorios_base["entregas"].apply(
+                    lambda x: x if isinstance(x, list) else []
                 )
 
-                st.success("Relatórios salvos com sucesso!")
-                time.sleep(3)
-                st.rerun()
+                # --------------------------------------------------
+                # Editor (linhas fixas)
+                # --------------------------------------------------
+                df_editado = st.data_editor(
+                    df_relatorios_base[["numero", "entregas", "data_prevista"]],
+                    num_rows="fixed",
+                    column_config={
+                        "numero": st.column_config.NumberColumn(
+                            "Número (auto)",
+                            disabled=True,
+                            width=5
+                        ),
+                        "entregas": st.column_config.MultiselectColumn(
+                            "Entregas",
+                            options=[""] + entregas_projeto,
+                            help="Selecione as entregas relacionadas a este relatório",
+                            width=800
+                        ),
+                        "data_prevista": st.column_config.DateColumn(
+                            "Data prevista (auto)",
+                            format="DD/MM/YYYY",
+                            disabled=True,
+                            width=20
+                        ),
+                    },
+                    key="editor_relatorios",
+                    hide_index=True
+                )
+
+                st.write("")
+
+                # --------------------------------------------------
+                # Salvar
+                # --------------------------------------------------
+                if st.button("Salvar relatórios", icon=":material/save:"):
+
+                    relatorios_salvar = []
+
+                    for _, row in df_editado.iterrows():
+
+                        entregas = [e for e in row["entregas"] if e]
+
+                        relatorios_salvar.append(
+                            {
+                                "numero": int(row["numero"]),
+                                "entregas": entregas,
+                                "data_prevista": (
+                                    None
+                                    if pd.isna(row["data_prevista"])
+                                    else row["data_prevista"].date().isoformat()
+                                ),
+                            }
+                        )
+
+                    col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
+                        {
+                            "$set": {
+                                "relatorios": relatorios_salvar
+                            }
+                        }
+                    )
+
+                    st.success("Relatórios salvos com sucesso!")
+                    time.sleep(3)
+                    st.rerun()
 
 
 
@@ -963,7 +955,7 @@ with orcamento:
         orcamento = financeiro.get("orcamento", [])
 
         if not orcamento:
-            st.info("Nenhuma despesa cadastrada no orçamento.")
+            st.caption("Nenhuma despesa cadastrada no orçamento.")
             st.stop()
 
         df_orcamento = pd.DataFrame(orcamento)
@@ -1104,208 +1096,6 @@ with orcamento:
         if st.session_state.get("abrir_dialogo_despesa"):
             dialog_relatos_fin()
             st.session_state["abrir_dialogo_despesa"] = False
-
-
-
-
-
-
-
-
-    # # ==================================================
-    # # MODO VISUALIZAÇÃO (OPÇÃO COM TABELA DE ORÇAMENTO ÚNICA, SEM SEPARAR POR CATEGORIA)
-    # # ==================================================
-    # if not modo_edicao:
-
-
-
-
-    #     # Métrica do valor total
-
-    #     valor_total = financeiro.get("valor_total")
-
-    #     if valor_total is not None:
-    #         st.metric(
-    #             label="Valor total do projeto",
-    #             value=(
-    #                 f"R$ {valor_total:,.2f}"
-    #                 .replace(",", "X")
-    #                 .replace(".", ",")
-    #                 .replace("X", ".")
-    #             )
-    #         )
-    #     else:
-    #         st.caption("Valor total do projeto ainda não cadastrado.")
-
-
-
-    #     # --------------------------------------------------
-    #     # ESTADOS DO DIÁLOGO (inicialização segura)
-    #     # --------------------------------------------------
-    #     if "despesa_selecionada" not in st.session_state:
-    #         st.session_state["despesa_selecionada"] = None
-
-    #     if "despesa_selecionada_tabela_key" not in st.session_state:
-    #         st.session_state["despesa_selecionada_tabela_key"] = None
-
-    #     if "abrir_dialogo_despesa" not in st.session_state:
-    #         st.session_state["abrir_dialogo_despesa"] = False
-
-
-    #     # --------------------------------------------------
-    #     # CONTEÚDO DO MODO VISUALIZAÇÃO
-    #     # --------------------------------------------------
-    #     orcamento = financeiro.get("orcamento", [])
-
-    #     if not orcamento:
-    #         st.info("Nenhuma despesa cadastrada no orçamento.")
-    #     else:
-
-    #         df_orcamento = pd.DataFrame(orcamento)
-
-    #         # Garantir colunas esperadas
-    #         for col in [
-    #             "categoria",
-    #             "nome_despesa",
-    #             "descricao_despesa",
-    #             "unidade",
-    #             "quantidade",
-    #             "valor_unitario",
-    #             "valor_total",
-    #         ]:
-    #             if col not in df_orcamento.columns:
-    #                 df_orcamento[col] = None
-
-    #         # -----------------------------------
-    #         # Formatação para exibição
-    #         # -----------------------------------
-    #         df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(
-    #             lambda x: (
-    #                 f"R$ {x:,.2f}"
-    #                 .replace(",", "X")
-    #                 .replace(".", ",")
-    #                 .replace("X", ".")
-    #                 if x not in [None, ""]
-    #                 else ""
-    #             )
-    #         )
-
-    #         df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(
-    #             lambda x: (
-    #                 f"R$ {x:,.2f}"
-    #                 .replace(",", "X")
-    #                 .replace(".", ",")
-    #                 .replace("X", ".")
-    #                 if x not in [None, ""]
-    #                 else ""
-    #             )
-    #         )
-
-    #         df_vis = df_orcamento.rename(columns={
-    #             "categoria": "Categoria",
-    #             "nome_despesa": "Despesa",
-    #             "descricao_despesa": "Descrição",
-    #             "unidade": "Unidade",
-    #             "quantidade": "Quantidade",
-    #         })
-
-    #         colunas_vis = [
-    #             "Categoria",
-    #             "Despesa",
-    #             "Descrição",
-    #             "Unidade",
-    #             "Quantidade",
-    #             "Valor unitário",
-    #             "Valor total",
-    #         ]
-
-    #         key_df = "df_vis_orcamento"
-
-
-    #         # ==========================================================================================
-    #         # CALLBACK DE SELEÇÃO — MESMO PADRÃO DA PÁGINA DE ATIVIDADES
-    #         # ==========================================================================================
-
-
-
-    #         def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
-
-    #             def handle_selecao():
-
-    #                 estado_tabela = st.session_state.get(chave_tabela, {})
-    #                 selecao = estado_tabela.get("selection", {})
-    #                 linhas = selecao.get("rows", [])
-
-    #                 if not linhas:
-    #                     return
-
-    #                 idx = linhas[0]
-    #                 linha = dataframe_orc.iloc[idx]
-
-    #                 despesa_escolhida = {
-    #                     # nomes exatamente como no banco
-    #                     "categoria": linha.get("categoria", ""),
-    #                     "nome_despesa": linha.get("nome_despesa", ""),
-    #                     "descricao_despesa": linha.get("descricao_despesa", ""),
-    #                     "unidade": linha.get("unidade", ""),
-    #                     "quantidade": linha.get("quantidade", 0),
-    #                     "valor_unitario": linha.get("valor_unitario", 0),
-    #                     "valor_total": linha.get("valor_total", 0),
-
-    #                     # campos auxiliares
-    #                     "indice": idx,
-    #                 }
-
-    #                 # compatibilidade com o diálogo já existente
-    #                 despesa_escolhida["despesa"] = despesa_escolhida["nome_despesa"]
-    #                 despesa_escolhida["Despesa"] = despesa_escolhida["nome_despesa"]
-
-    #                 st.session_state["despesa_selecionada"] = despesa_escolhida
-    #                 st.session_state["despesa_selecionada_tabela_key"] = chave_tabela
-    #                 st.session_state["abrir_dialogo_despesa"] = True
-
-    #             return handle_selecao
-
-
-    #         callback_selecao = criar_callback_selecao_orcamento(
-    #             df_orcamento,
-    #             key_df
-    #         )
-
-
-    #         # -------------------------------------------
-    #         # TABELA INTERATIVA
-    #         # -------------------------------------------
-    #         st.dataframe(
-    #             df_vis[colunas_vis],
-    #             hide_index=True,
-    #             selection_mode="single-row",
-    #             key=key_df,
-    #             on_select=callback_selecao,
-    #             column_config={
-    #                 "Categoria": st.column_config.TextColumn(width=180),
-    #                 "Despesa": st.column_config.TextColumn(width=200),
-    #                 "Descrição": st.column_config.TextColumn(width=420),
-    #                 "Unidade": st.column_config.TextColumn(width=100),
-    #                 "Quantidade": st.column_config.NumberColumn(width=80),
-    #                 "Valor unitário": st.column_config.TextColumn(width=120),
-    #                 "Valor total": st.column_config.TextColumn(width=120),
-    #             }
-    #         )
-
-
-    #     # --------------------------------------------------
-    #     # ABRIR O DIÁLOGO SE FOI SOLICITADO
-    #     # --------------------------------------------------
-    #     if st.session_state.get("abrir_dialogo_despesa"):
-    #         dialog_relatos_fin()
-    #         st.session_state["abrir_dialogo_despesa"] = False
-
-
-
-
-
-
 
 
 

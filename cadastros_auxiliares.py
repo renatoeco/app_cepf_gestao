@@ -67,108 +67,456 @@ df_editais["_id"] = df_editais["_id"].astype(str)
 # e não recarrega toda a página ao ser utilizada.
 # ==========================================================
 
+
+
+
+
 @st.fragment
 def formulario_nova_pergunta(perguntas, edital_selecionado):
 
-    # Espaçamento visual
-    st.write('')
+    # ------------------------------------------------------
+    # ESPAÇAMENTO VISUAL
+    # ------------------------------------------------------
+    st.write("")
 
-    # Título da seção
+    # ------------------------------------------------------
+    # TÍTULO
+    # ------------------------------------------------------
     st.markdown("##### Cadastrar nova pergunta")
 
     # ------------------------------------------------------
-    # CAMPO: TEXTO DA PERGUNTA
-    # ------------------------------------------------------
-    pergunta = st.text_input("Texto da pergunta")
-
-    # ------------------------------------------------------
-    # CAMPO: TIPO DE RESPOSTA
+    # TIPO DE PERGUNTA
     # ------------------------------------------------------
     tipo = st.selectbox(
-        "Tipo de resposta",
+        "Tipo de pergunta",
         [
             "Resposta curta",
             "Resposta longa",
             "Número inteiro",
             "Múltipla escolha (checkbox)",
-            "Escolha única (radio)"
-        ]
+            "Escolha única (radio)",
+            "Título",
+            "Subtítulo",
+            "Linha divisória"
+        ],
+        key="tipo_pergunta_nova"
     )
 
     # ------------------------------------------------------
-    # CAMPO: OPÇÕES (apenas para checkbox e radio)
+    # CAMPOS DINÂMICOS
     # ------------------------------------------------------
+    pergunta = ""
     opcoes = []
 
-    # Só aparece se o tipo exigir opções
-    if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
-        opcoes_raw = st.text_area(
-            "Opções (uma por linha)"
+    # Define rótulo do campo de texto
+    label_texto = "Texto da pergunta"
+
+    if tipo == "Título":
+        label_texto = "Texto do título"
+    elif tipo == "Subtítulo":
+        label_texto = "Texto do subtítulo"
+
+    # Tipos que exigem texto
+    if tipo in [
+        "Resposta curta",
+        "Resposta longa",
+        "Número inteiro",
+        "Título",
+        "Subtítulo"
+    ]:
+        pergunta = st.text_input(
+            label_texto,
+            key="texto_pergunta_nova"
         )
 
-        # Remove linhas vazias e espaços extras
-        opcoes = [o.strip() for o in opcoes_raw.split("\n") if o.strip()]
+    # Tipos que exigem opções
+    if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+        pergunta = st.text_input(
+            "Texto da pergunta",
+            key="texto_pergunta_opcoes"
+        )
+
+        opcoes = st.text_area(
+            "Opções (uma por linha)"
+        ).split("\n")
 
     # ------------------------------------------------------
     # BOTÃO DE SALVAR
     # ------------------------------------------------------
-    st.write('')
+    st.write("")
+
     if st.button("Salvar pergunta", type="primary", icon=":material/save:"):
 
         # ----------------------------
         # VALIDAÇÕES
         # ----------------------------
 
-        # Texto da pergunta obrigatório
-        if not pergunta.strip():
-            st.warning("A pergunta não pode ficar vazia.")
+        # Campos obrigatórios
+        if tipo != "Linha divisória" and not pergunta.strip():
+            st.warning("Preencha todas as informações.")
             return
 
-        # Opções obrigatórias quando tipo exige
-        if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"] and not opcoes:
-            st.warning("Informe o tipo de resposta.")
-            return
+        if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+            if not [o for o in opcoes if o.strip()]:
+                st.warning("Informe pelo menos uma opção.")
+                return
 
         # --------------------------------------------------
-        # MAPEAMENTO DO TIPO PARA O FORMATO DO BANCO
+        # MAPEAMENTO DE TIPO
         # --------------------------------------------------
         mapa_tipo = {
             "Resposta curta": "texto_curto",
             "Resposta longa": "texto_longo",
             "Número inteiro": "numero",
             "Múltipla escolha (checkbox)": "checkbox",
-            "Escolha única (radio)": "radio"
+            "Escolha única (radio)": "radio",
+            "Título": "titulo",
+            "Subtítulo": "subtitulo",
+            "Linha divisória": "divisoria"
         }
 
         # --------------------------------------------------
-        # CRIA OBJETO DA NOVA PERGUNTA
+        # MONTA OBJETO FINAL
         # --------------------------------------------------
         nova_pergunta = {
-            "pergunta": pergunta.strip(),
             "tipo": mapa_tipo[tipo],
-            "ordem": len(perguntas) + 1  # mantém a sequência correta
+            "ordem": len(perguntas) + 1
         }
 
-        # Adiciona opções se necessário
+        # Texto obrigatório (exceto divisória)
+        if mapa_tipo[tipo] != "divisoria":
+            nova_pergunta["pergunta"] = pergunta.strip()
+
+        # Texto fixo para divisória
+        if mapa_tipo[tipo] == "divisoria":
+            nova_pergunta["pergunta"] = "Divisória"
+
+        # Opções
         if mapa_tipo[tipo] in ["checkbox", "radio"]:
-            nova_pergunta["opcoes"] = opcoes
+            nova_pergunta["opcoes"] = [o.strip() for o in opcoes if o.strip()]
 
         # --------------------------------------------------
-        # SALVA NO BANCO DE DADOS
+        # SALVA NO BANCO
         # --------------------------------------------------
         col_editais.update_one(
             {"codigo_edital": edital_selecionado},
             {"$push": {"perguntas_relatorio": nova_pergunta}}
         )
 
-        # Feedback visual para o usuário
+        # Feedback
         st.success("Pergunta adicionada com sucesso!")
 
-        # Pequena pausa para leitura da mensagem
+        # Mantém padrão
         time.sleep(3)
 
-        # Recarrega a interface
+        # Recarrega
         st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @st.fragment
+# def formulario_nova_pergunta(perguntas, edital_selecionado):
+
+#     st.write("")
+
+#     # ------------------------------------------------------
+#     # TÍTULO DA SEÇÃO
+#     # ------------------------------------------------------
+#     st.markdown("##### Cadastrar nova pergunta")
+
+#     # ------------------------------------------------------
+#     # CAMPO: TIPO DE PERGUNTA
+#     # ------------------------------------------------------
+#     tipo = st.selectbox(
+#         "Tipo de pergunta",
+#         [
+#             "Resposta curta",
+#             "Resposta longa",
+#             "Número inteiro",
+#             "Múltipla escolha (checkbox)",
+#             "Escolha única (radio)",
+#             "Título",
+#             "Subtítulo",
+#             "Linha divisória"
+#         ],
+#         key="tipo_pergunta_nova"
+#     )
+
+
+
+#     # ------------------------------------------------------
+#     # CAMPOS DINÂMICOS CONFORME O TIPO
+#     # ------------------------------------------------------
+
+#     pergunta = ""
+#     opcoes = []
+
+#     # Define o rótulo do campo de texto conforme o tipo
+#     label_texto = "Texto da pergunta"
+
+#     if tipo == "Título":
+#         label_texto = "Texto do título"
+#     elif tipo == "Subtítulo":
+#         label_texto = "Texto do subtítulo"
+
+#     # Tipos que exigem campo de texto
+#     if tipo in [
+#         "Resposta curta",
+#         "Resposta longa",
+#         "Número inteiro",
+#         "Título",
+#         "Subtítulo"
+#     ]:
+#         pergunta = st.text_input(
+#             label_texto,
+#             key="texto_pergunta_nova"
+#         )
+
+#     # Tipos com opções
+#     if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+#         pergunta = st.text_input(
+#             "Texto da pergunta",
+#             key="texto_pergunta_opcoes"
+#         )
+
+#         opcoes = st.text_area(
+#             "Opções (uma por linha)"
+#         ).split("\n")
+
+
+
+
+
+#     # # ------------------------------------------------------
+#     # # CAMPOS DINÂMICOS CONFORME O TIPO
+#     # # ------------------------------------------------------
+
+#     # pergunta = ""
+#     # opcoes = []
+
+#     # # Tipos que exigem texto
+#     # if tipo in [
+#     #     "Resposta curta",
+#     #     "Resposta longa",
+#     #     "Número inteiro",
+#     #     "Título",
+#     #     "Subtítulo"
+#     # ]:
+#     #     pergunta = st.text_input(
+#     #         "Texto da pergunta",
+#     #         key="texto_pergunta_nova"
+#     #     )
+
+#     # # Tipos que exigem texto + opções
+#     # if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+#     #     pergunta = st.text_input(
+#     #         "Texto da pergunta",
+#     #         key="texto_pergunta_opcoes"
+#     #     )
+
+#     #     opcoes_raw = st.text_area(
+#     #         "Opções (uma por linha)"
+#     #     )
+
+#         # Remove linhas vazias
+#         # opcoes = [o.strip() for o in opcoes_raw.split("\n") if o.strip()]
+
+#     # ------------------------------------------------------
+#     # BOTÃO DE SALVAR
+#     # ------------------------------------------------------
+#     st.write("")
+
+#     if st.button("Salvar pergunta", type="primary", icon=":material/save:"):
+
+#         # ----------------------------
+#         # VALIDAÇÕES
+#         # ----------------------------
+
+#         # Tipos que exigem texto
+#         if tipo not in ["Linha divisória"] and not pergunta.strip():
+#             st.warning("O texto não pode ficar vazio.")
+#             return
+
+#         # Tipos que exigem opções
+#         if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"] and not opcoes:
+#             st.warning("Informe pelo menos uma opção.")
+#             return
+
+#         # --------------------------------------------------
+#         # MAPEAMENTO DE TIPO PARA O BANCO
+#         # --------------------------------------------------
+#         mapa_tipo = {
+#             "Resposta curta": "texto_curto",
+#             "Resposta longa": "texto_longo",
+#             "Número inteiro": "numero",
+#             "Múltipla escolha (checkbox)": "checkbox",
+#             "Escolha única (radio)": "radio",
+#             "Título": "titulo",
+#             "Subtítulo": "subtitulo",
+#             "Linha divisória": "divisoria"
+#         }
+
+#         # --------------------------------------------------
+#         # CRIA OBJETO DA NOVA PERGUNTA
+#         # --------------------------------------------------
+#         nova_pergunta = {
+#             "tipo": mapa_tipo[tipo],
+#             "ordem": len(perguntas) + 1
+#         }
+
+#         # Adiciona texto quando aplicável
+#         if mapa_tipo[tipo] not in ["divisoria"]:
+#             nova_pergunta["pergunta"] = pergunta.strip()
+
+#         # Adiciona opções quando aplicável
+#         if mapa_tipo[tipo] in ["checkbox", "radio"]:
+#             nova_pergunta["opcoes"] = opcoes
+
+#         # --------------------------------------------------
+#         # SALVA NO BANCO DE DADOS
+#         # --------------------------------------------------
+#         col_editais.update_one(
+#             {"codigo_edital": edital_selecionado},
+#             {"$push": {"perguntas_relatorio": nova_pergunta}}
+#         )
+
+#         # Feedback visual
+#         st.success("Pergunta adicionada com sucesso!")
+
+#         # Mantém seu padrão
+#         time.sleep(3)
+
+#         # Recarrega a interface
+#         st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @st.fragment
+# def formulario_nova_pergunta(perguntas, edital_selecionado):
+
+#     # Espaçamento visual
+#     st.write('')
+
+#     # Título da seção
+#     st.markdown("##### Cadastrar nova pergunta")
+
+#     # ------------------------------------------------------
+#     # CAMPO: TEXTO DA PERGUNTA
+#     # ------------------------------------------------------
+#     pergunta = st.text_input("Texto da pergunta")
+
+#     # ------------------------------------------------------
+#     # CAMPO: TIPO DE RESPOSTA
+#     # ------------------------------------------------------
+#     tipo = st.selectbox(
+#         "Tipo de resposta",
+#         [
+#             "Resposta curta",
+#             "Resposta longa",
+#             "Número inteiro",
+#             "Múltipla escolha (checkbox)",
+#             "Escolha única (radio)"
+#         ]
+#     )
+
+#     # ------------------------------------------------------
+#     # CAMPO: OPÇÕES (apenas para checkbox e radio)
+#     # ------------------------------------------------------
+#     opcoes = []
+
+#     # Só aparece se o tipo exigir opções
+#     if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+#         opcoes_raw = st.text_area(
+#             "Opções (uma por linha)"
+#         )
+
+#         # Remove linhas vazias e espaços extras
+#         opcoes = [o.strip() for o in opcoes_raw.split("\n") if o.strip()]
+
+#     # ------------------------------------------------------
+#     # BOTÃO DE SALVAR
+#     # ------------------------------------------------------
+#     st.write('')
+#     if st.button("Salvar pergunta", type="primary", icon=":material/save:"):
+
+#         # ----------------------------
+#         # VALIDAÇÕES
+#         # ----------------------------
+
+#         # Texto da pergunta obrigatório
+#         if not pergunta.strip():
+#             st.warning("A pergunta não pode ficar vazia.")
+#             return
+
+#         # Opções obrigatórias quando tipo exige
+#         if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"] and not opcoes:
+#             st.warning("Informe o tipo de resposta.")
+#             return
+
+#         # --------------------------------------------------
+#         # MAPEAMENTO DO TIPO PARA O FORMATO DO BANCO
+#         # --------------------------------------------------
+#         mapa_tipo = {
+#             "Resposta curta": "texto_curto",
+#             "Resposta longa": "texto_longo",
+#             "Número inteiro": "numero",
+#             "Múltipla escolha (checkbox)": "checkbox",
+#             "Escolha única (radio)": "radio"
+#         }
+
+#         # --------------------------------------------------
+#         # CRIA OBJETO DA NOVA PERGUNTA
+#         # --------------------------------------------------
+#         nova_pergunta = {
+#             "pergunta": pergunta.strip(),
+#             "tipo": mapa_tipo[tipo],
+#             "ordem": len(perguntas) + 1  # mantém a sequência correta
+#         }
+
+#         # Adiciona opções se necessário
+#         if mapa_tipo[tipo] in ["checkbox", "radio"]:
+#             nova_pergunta["opcoes"] = opcoes
+
+#         # --------------------------------------------------
+#         # SALVA NO BANCO DE DADOS
+#         # --------------------------------------------------
+#         col_editais.update_one(
+#             {"codigo_edital": edital_selecionado},
+#             {"$push": {"perguntas_relatorio": nova_pergunta}}
+#         )
+
+#         # Feedback visual para o usuário
+#         st.success("Pergunta adicionada com sucesso!")
+
+#         # Pequena pausa para leitura da mensagem
+#         time.sleep(3)
+
+#         # Recarrega a interface
+#         st.rerun()
 
 
 
@@ -185,7 +533,7 @@ def confirmar_exclusao_pergunta(pergunta_atual, perguntas, edital_selecionado):
         if st.button(":material/cancel: Cancelar"):
             st.rerun()
 
-        if st.button(":material/delete: Deletar pergunta", type="primary"):
+        if st.button(":material/delete: Excluir pergunta", type="primary"):
 
             # Remove a pergunta
             novas = [p for p in perguntas if p != pergunta_atual]
@@ -325,6 +673,8 @@ with aba_perguntas:
         with aba_nova:
             formulario_nova_pergunta(perguntas, edital_selecionado_perguntas)
 
+
+
         # ======================================================
         # ABA 3 — EDITAR / EXCLUIR
         # ======================================================
@@ -333,9 +683,13 @@ with aba_perguntas:
 
             if not perguntas:
                 st.caption("Nenhuma pergunta cadastrada.")
+
             else:
                 st.markdown("##### Selecione uma pergunta para EDITAR ou EXCLUIR")
 
+                # ----------------------------------------------
+                # MAPA DE PERGUNTAS
+                # ----------------------------------------------
                 mapa_perguntas = {
                     f"{p['ordem']}. {p['pergunta']}": p
                     for p in perguntas
@@ -346,81 +700,258 @@ with aba_perguntas:
                     list(mapa_perguntas.keys())
                 )
 
+                # Garante que algo foi selecionado
                 if selecionada:
+
                     pergunta_atual = mapa_perguntas[selecionada]
 
                     st.divider()
 
-                    texto = st.text_input(
-                        "Texto da pergunta",
-                        value=pergunta_atual["pergunta"]
-                    )
-
+                    # ----------------------------------------------
+                    # TIPO ATUAL
+                    # ----------------------------------------------
                     mapa_tipo_inv = {
                         "texto_curto": "Resposta curta",
                         "texto_longo": "Resposta longa",
                         "numero": "Número inteiro",
                         "checkbox": "Múltipla escolha (checkbox)",
-                        "radio": "Escolha única (radio)"
+                        "radio": "Escolha única (radio)",
+                        "titulo": "Título",
+                        "subtitulo": "Subtítulo",
+                        "divisoria": "Linha divisória"
                     }
 
+                    tipo_atual = mapa_tipo_inv.get(pergunta_atual["tipo"])
+
                     tipo = st.selectbox(
-                        "Tipo de resposta",
+                        "Tipo de pergunta",
                         list(mapa_tipo_inv.values()),
-                        index=list(mapa_tipo_inv.values()).index(
-                            mapa_tipo_inv[pergunta_atual["tipo"]]
-                        ),
-                        key="selectbox_tipo_resposta"
+                        index=list(mapa_tipo_inv.values()).index(tipo_atual),
+                        key=f"selectbox_tipo_{pergunta_atual['ordem']}"
                     )
 
+
+                    # tipo = st.selectbox(
+                    #     "Tipo de pergunta",
+                    #     list(mapa_tipo_inv.values()),
+                    #     index=list(mapa_tipo_inv.values()).index(tipo_atual),
+                    #     key="selectbox_tipo_resposta"
+                    # )
+
+
+
+                    # ----------------------------------------------
+                    # CAMPOS DINÂMICOS
+                    # ----------------------------------------------
+                    texto = ""
                     opcoes = []
+
+                    label_texto = "Texto da pergunta"
+
+                    if tipo == "Título":
+                        label_texto = "Texto do título"
+                    elif tipo == "Subtítulo":
+                        label_texto = "Texto do subtítulo"
+
+                    if tipo in [
+                        "Resposta curta",
+                        "Resposta longa",
+                        "Número inteiro",
+                        "Título",
+                        "Subtítulo"
+                    ]:
+                        texto = st.text_input(
+                            label_texto,
+                            value=pergunta_atual.get("pergunta", "")
+                        )
+
                     if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+                        texto = st.text_input(
+                            "Texto da pergunta",
+                            value=pergunta_atual.get("pergunta", "")
+                        )
+
                         opcoes = st.text_area(
                             "Opções (uma por linha)",
                             value="\n".join(pergunta_atual.get("opcoes", []))
                         ).split("\n")
 
+                    if tipo == "Linha divisória":
+                        st.write("Este tipo não possui texto editável.")
+
                     st.write("")
 
+                    # ----------------------------------------------
+                    # BOTÕES DE AÇÃO
+                    # ----------------------------------------------
                     with st.container(horizontal=True, horizontal_alignment="left"):
 
+                        # -------- SALVAR --------
                         if st.button("Salvar alterações", type="primary", icon=":material/save:"):
 
-                            nova = {
-                                "pergunta": texto.strip(),
-                                "tipo": {
+                            # Validações
+                            if tipo != "Linha divisória" and not texto.strip():
+                                st.warning("O texto não pode ficar vazio.")
+                            elif tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"] and not any(o.strip() for o in opcoes):
+                                st.warning("Informe pelo menos uma opção.")
+                            else:
+                                mapa_tipo = {
                                     "Resposta curta": "texto_curto",
                                     "Resposta longa": "texto_longo",
                                     "Número inteiro": "numero",
                                     "Múltipla escolha (checkbox)": "checkbox",
-                                    "Escolha única (radio)": "radio"
-                                }[tipo],
-                                "ordem": pergunta_atual["ordem"]
-                            }
+                                    "Escolha única (radio)": "radio",
+                                    "Título": "titulo",
+                                    "Subtítulo": "subtitulo",
+                                    "Linha divisória": "divisoria"
+                                }
 
-                            if nova["tipo"] in ["checkbox", "radio"]:
-                                nova["opcoes"] = [o.strip() for o in opcoes if o.strip()]
+                                nova = {
+                                    "tipo": mapa_tipo[tipo],
+                                    "ordem": pergunta_atual["ordem"]
+                                }
 
-                            perguntas_atualizadas = [
-                                nova if p == pergunta_atual else p
-                                for p in perguntas
-                            ]
+                                if mapa_tipo[tipo] != "divisoria":
+                                    nova["pergunta"] = texto.strip()
+                                else:
+                                    nova["pergunta"] = "Divisória"
 
-                            col_editais.update_one(
-                                {"codigo_edital": edital_selecionado_perguntas},
-                                {"$set": {"perguntas_relatorio": perguntas_atualizadas}}
-                            )
+                                if mapa_tipo[tipo] in ["checkbox", "radio"]:
+                                    nova["opcoes"] = [o.strip() for o in opcoes if o.strip()]
 
-                            st.success(":material/check: Pergunta atualizada!")
-                            time.sleep(3)
-                            st.rerun()
+                                perguntas_atualizadas = [
+                                    nova if p == pergunta_atual else p
+                                    for p in perguntas
+                                ]
 
+                                col_editais.update_one(
+                                    {"codigo_edital": edital_selecionado_perguntas},
+                                    {"$set": {"perguntas_relatorio": perguntas_atualizadas}}
+                                )
+
+                                st.success(":material/check: Pergunta atualizada!")
+                                time.sleep(3)
+                                st.rerun()
+
+                        # -------- EXCLUIR --------
                         if st.button("Excluir pergunta", icon=":material/delete:"):
                             confirmar_exclusao_pergunta(
                                 pergunta_atual=pergunta_atual,
                                 perguntas=perguntas,
                                 edital_selecionado=edital_selecionado_perguntas
                             )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # # ======================================================
+        # # ABA 3 — EDITAR / EXCLUIR
+        # # ======================================================
+
+        # with aba_editar:
+
+        #     if not perguntas:
+        #         st.caption("Nenhuma pergunta cadastrada.")
+        #     else:
+        #         st.markdown("##### Selecione uma pergunta para EDITAR ou EXCLUIR")
+
+        #         mapa_perguntas = {
+        #             f"{p['ordem']}. {p['pergunta']}": p
+        #             for p in perguntas
+        #         }
+
+        #         selecionada = st.selectbox(
+        #             "",
+        #             list(mapa_perguntas.keys())
+        #         )
+
+        #         if selecionada:
+        #             pergunta_atual = mapa_perguntas[selecionada]
+
+        #             st.divider()
+
+        #             texto = st.text_input(
+        #                 "Texto da pergunta",
+        #                 value=pergunta_atual["pergunta"]
+        #             )
+
+        #             mapa_tipo_inv = {
+        #                 "texto_curto": "Resposta curta",
+        #                 "texto_longo": "Resposta longa",
+        #                 "numero": "Número inteiro",
+        #                 "checkbox": "Múltipla escolha (checkbox)",
+        #                 "radio": "Escolha única (radio)"
+        #             }
+
+        #             tipo = st.selectbox(
+        #                 "Tipo de resposta",
+        #                 list(mapa_tipo_inv.values()),
+        #                 index=list(mapa_tipo_inv.values()).index(
+        #                     mapa_tipo_inv[pergunta_atual["tipo"]]
+        #                 ),
+        #                 key="selectbox_tipo_resposta"
+        #             )
+
+        #             opcoes = []
+        #             if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+        #                 opcoes = st.text_area(
+        #                     "Opções (uma por linha)",
+        #                     value="\n".join(pergunta_atual.get("opcoes", []))
+        #                 ).split("\n")
+
+        #             st.write("")
+
+        #             with st.container(horizontal=True, horizontal_alignment="left"):
+
+        #                 if st.button("Salvar alterações", type="primary", icon=":material/save:"):
+
+        #                     nova = {
+        #                         "pergunta": texto.strip(),
+        #                         "tipo": {
+        #                             "Resposta curta": "texto_curto",
+        #                             "Resposta longa": "texto_longo",
+        #                             "Número inteiro": "numero",
+        #                             "Múltipla escolha (checkbox)": "checkbox",
+        #                             "Escolha única (radio)": "radio"
+        #                         }[tipo],
+        #                         "ordem": pergunta_atual["ordem"]
+        #                     }
+
+        #                     if nova["tipo"] in ["checkbox", "radio"]:
+        #                         nova["opcoes"] = [o.strip() for o in opcoes if o.strip()]
+
+        #                     perguntas_atualizadas = [
+        #                         nova if p == pergunta_atual else p
+        #                         for p in perguntas
+        #                     ]
+
+        #                     col_editais.update_one(
+        #                         {"codigo_edital": edital_selecionado_perguntas},
+        #                         {"$set": {"perguntas_relatorio": perguntas_atualizadas}}
+        #                     )
+
+        #                     st.success(":material/check: Pergunta atualizada!")
+        #                     time.sleep(3)
+        #                     st.rerun()
+
+        #                 if st.button("Excluir pergunta", icon=":material/delete:"):
+        #                     confirmar_exclusao_pergunta(
+        #                         pergunta_atual=pergunta_atual,
+        #                         perguntas=perguntas,
+        #                         edital_selecionado=edital_selecionado_perguntas
+        #                     )
 
         # ======================================================
         # ABA 4 — REORDENAR
