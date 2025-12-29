@@ -26,11 +26,6 @@ col_projetos = db["projetos"]
 df_projetos = pd.DataFrame(list(col_projetos.find()))
 
 
-###########################################################################################################
-# CONFIGURAÇÃO DE LOCALE
-###########################################################################################################
-
-
 
 
 ###########################################################################################################
@@ -188,6 +183,8 @@ if opcao_cadastro == "Convite individual":
             st.session_state["tipo_beneficiario"] = ""
 
     e_mail = st.text_input("E-mail", key="e_mail")
+    e_mail = e_mail.strip()
+    
     telefone = st.text_input("Telefone", key="telefone")
 
     # Garante que a key exista com lista vazia caso ainda não exista
