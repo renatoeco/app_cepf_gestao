@@ -605,16 +605,37 @@ with cron_desemb:
             st.write("")
 
             # -----------------------------------
-            # Sincronizar SOMENTE campos editáveis
+            # Reconstruir df_parcelas a partir do editor
             # -----------------------------------
-            df_parcelas.loc[df_editado.index, "numero"] = df_editado["numero"]
-            df_parcelas.loc[df_editado.index, "percentual"] = df_editado["percentual"]
-            df_parcelas.loc[df_editado.index, "data_prevista"] = df_editado["data_prevista"]
+            df_parcelas = df_editado.copy()
 
-            # Recalcular valor após edição
+            # Garantir tipos
+            df_parcelas["numero"] = df_parcelas["numero"].astype("Int64")
+            df_parcelas["percentual"] = df_parcelas["percentual"].astype(float)
+            df_parcelas["data_prevista"] = pd.to_datetime(
+                df_parcelas["data_prevista"], errors="coerce"
+            )
+
+            # Recalcular valor
             df_parcelas["valor"] = (
                 df_parcelas["percentual"].fillna(0) / 100 * valor_total
             )
+
+
+
+
+
+            # # -----------------------------------
+            # # Sincronizar SOMENTE campos editáveis
+            # # -----------------------------------
+            # df_parcelas.loc[df_editado.index, "numero"] = df_editado["numero"]
+            # df_parcelas.loc[df_editado.index, "percentual"] = df_editado["percentual"]
+            # df_parcelas.loc[df_editado.index, "data_prevista"] = df_editado["data_prevista"]
+
+            # # Recalcular valor após edição
+            # df_parcelas["valor"] = (
+            #     df_parcelas["percentual"].fillna(0) / 100 * valor_total
+            # )
 
             # -----------------------------------
             # Total das porcentagens
@@ -687,9 +708,11 @@ with cron_desemb:
 
             st.markdown("#### Relatórios")
 
+
             # --------------------------------------------------
             # Coletar TODAS as entregas do projeto
             # --------------------------------------------------
+
             entregas_projeto = []
 
             plano = projeto.get("plano_trabalho", {})
@@ -699,6 +722,14 @@ with cron_desemb:
                         entregas_projeto.append(entrega["entrega"])
 
             entregas_projeto = sorted(set(entregas_projeto))
+
+            # Agora sim, valida se está vazio
+            if not entregas_projeto:
+                st.warning(
+                    "Nenhuma entrega cadastrada para este projeto. "
+                    "Cadastre as entregas no Plano de Trabalho antes de continuar."
+                )
+
 
             # --------------------------------------------------
             # Parcelas

@@ -21,56 +21,6 @@ import io
 ###########################################################################################################
 
 
-# # Traduzindo o texto do st.file_uploader
-# # Texto interno
-# st.markdown("""
-# <style>
-
-# /* Esconde o texto padrão */
-# [data-testid="stFileUploaderDropzone"] div div::before {
-#     content: "Arraste e solte os arquivos aqui";
-#     color: rgba(49, 51, 63, 0.7);
-#     font-size: 0.9rem;
-#     font-weight: 400;
-#     position: absolute;
-#     top: 50%;
-#     left: 50%;
-#     transform: translate(-50%, 10%);
-#     pointer-events: none;
-# }
-
-# /* Esconde o texto original */
-# [data-testid="stFileUploaderDropzone"] div div span {
-#     visibility: hidden !important;
-# }
-
-# </style>
-# """, unsafe_allow_html=True)
-
-# # Traduzindo Botão do file_uploader
-
-# st.markdown("""
-# <style>
-
-# /* Alvo: apenas o botão dentro do componente de upload */
-# section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
-#     font-size: 0px !important;   /* esconde o texto original */
-#     padding-left: 14px !important;
-#     padding-right: 14px !important;
-#     min-width: 160px !important;
-# }
-
-# /* Insere o texto traduzido */
-# section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
-#     content: "Selecionar arquivo";
-#     font-size: 14px !important;
-#     color: inherit;
-# }
-
-# </style>
-# """, unsafe_allow_html=True)
-
-
 
 
 
@@ -120,6 +70,9 @@ col_indicadores = db["indicadores"]
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+
 
 # # Função para selecionar ou criar a pasta do projeto no Drive
 # def obter_ou_criar_pasta_projeto(servico, codigo, sigla):
@@ -958,6 +911,8 @@ with plano_trabalho:
                         "entrega": ent
                     })
 
+            st.write(lista_entregas)
+
             if not lista_entregas:
                 st.warning("Nenhuma entrega cadastrada. Cadastre entregas antes de adicionar atividades.")
                 st.stop()
@@ -1365,168 +1320,47 @@ with plano_trabalho:
 # IMPACTOS
 # ###################################################################################################
 
+
+# Função auxiliar que salva lista de impactos no banco
+def salvar_impactos(chave, impactos, codigo_projeto):
+    """
+    Salva lista de impactos no banco.
+    """
+    resultado = col_projetos.update_one(
+        {"codigo": codigo_projeto},
+        {"$set": {chave: impactos}}
+    )
+
+    return resultado.modified_count == 1
+
+
+
 with impactos:
 
-    @st.dialog("Editar impactos", width="medium")
-    def editar_impactos():
-
-        tab_cadastrar, tab_editar = st.tabs(["Cadastrar impacto", "Editar impactos"])
-
-        # ========================================================
-        # CADASTRAR IMPACTO
-        # ========================================================
-        with tab_cadastrar:
-
-            tipo = st.radio(
-                "Tipo de impacto",
-                ["Longo prazo", "Curto prazo"],
-                horizontal=True
-            )
-
-            texto_impacto = st.text_area(
-                "Descrição do impacto",
-                height=150
-            )
-
-            if st.button(
-                "Salvar impacto",
-                type="primary",
-                icon=":material/save:"
-            ):
-
-                if not texto_impacto.strip():
-                    st.warning("O impacto não pode estar vazio.")
-                    return
-
-                chave = (
-                    "impactos_longo_prazo"
-                    if tipo == "Longo prazo"
-                    else "impactos_curto_prazo"
-                )
-
-                impacto = {
-                    "id": str(bson.ObjectId()),
-                    "texto": texto_impacto.strip()
-                }
-
-                resultado = col_projetos.update_one(
-                    {"codigo": st.session_state.projeto_atual},
-                    {"$push": {chave: impacto}}
-                )
-
-                if resultado.modified_count == 1:
-                    st.success("Impacto salvo com sucesso!")
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.error("Erro ao salvar impacto.")
-
-        # ========================================================
-        # EDITAR IMPACTO
-        # ========================================================
-        with tab_editar:
-
-            tipo = st.radio(
-                "Tipo de impacto",
-                ["Longo prazo", "Curto prazo"],
-                horizontal=True,
-                key="tipo_editar_impacto"
-            )
-
-            chave = (
-                "impactos_longo_prazo"
-                if tipo == "Longo prazo"
-                else "impactos_curto_prazo"
-            )
-
-            impactos = (
-                df_projeto[chave].values[0]
-                if chave in df_projeto.columns
-                else []
-            )
-
-            if not impactos:
-                st.write("Não há impactos cadastrados.")
-                return
-
-            mapa_impactos = {
-                f"{i['texto'][:80]}": i
-                for i in impactos
-            }
-
-            impacto_label = st.selectbox(
-                "Selecione o impacto",
-                list(mapa_impactos.keys())
-            )
-
-            impacto_selecionado = mapa_impactos[impacto_label]
-
-            novo_texto = st.text_area(
-                "Editar impacto",
-                value=impacto_selecionado["texto"],
-                height=150
-            )
-
-            if st.button(
-                "Salvar alterações",
-                type="primary",
-                icon=":material/save:"
-            ):
-
-                if not novo_texto.strip():
-                    st.warning("O impacto não pode estar vazio.")
-                    return
-
-                resultado = col_projetos.update_one(
-                    {
-                        "codigo": st.session_state.projeto_atual,
-                        f"{chave}.id": impacto_selecionado["id"],
-                    },
-                    {
-                        "$set": {
-                            f"{chave}.$.texto": novo_texto.strip()
-                        }
-                    }
-                )
-
-                if resultado.modified_count == 1:
-                    st.success("Impacto atualizado com sucesso!")
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.error("Erro ao atualizar impacto.")
-
-    # st.write('')
-
-    # Toggle do modo de edição
+    # ============================================================
+    # CONTROLE DE MODO DE EDIÇÃO
+    # ============================================================
 
     if st.session_state.tipo_usuario in ["admin", "equipe"]:
-
         with st.container(horizontal=True, horizontal_alignment="right"):
             modo_edicao = st.toggle("Modo de edição", key="editar_impactos")
+    else:
+        modo_edicao = False
 
 
-
-    # LISTAGEM DOS IMPACTOS DE LONGO PRAZO E CURTO PRAZO
+    # ============================================================
+    # COLUNAS
+    # ============================================================
 
     col_lp, col_cp = st.columns(2, gap="large")
 
+    # ============================================================
+    # IMPACTOS DE LONGO PRAZO
+    # ============================================================
+
     with col_lp:
         st.subheader("Impactos de longo prazo")
-        st.write('*Entre 3 a 5 anos após o final do projeto*')
-
-        # Botões de edição só para admin e equipe. Por isso o try.
-        try:
-            if modo_edicao:
-
-                with st.container(horizontal=True):
-                    if st.button("Editar impactos", icon=":material/edit:", type="secondary"):
-                        editar_impactos()
-        except:
-            pass
-
-
-        st.write('')
+        st.write("*Entre 3 a 5 anos após o final do projeto*")
 
         impactos_lp = (
             df_projeto["impactos_longo_prazo"].values[0]
@@ -1534,30 +1368,72 @@ with impactos:
             else []
         )
 
-        if not impactos_lp:
-            st.write("Não há impactos de longo prazo cadastrados")
+        # ========================
+        # MODO VISUALIZAÇÃO
+        # ========================
+        if not modo_edicao:
+
+            if not impactos_lp:
+                st.write("Não há impactos de longo prazo cadastrados.")
+            else:
+                for i, impacto in enumerate(impactos_lp, 1):
+                    st.write(f"**{i}.** {impacto['texto']}")
+
+        # ========================
+        # MODO EDIÇÃO
+        # ========================
         else:
-            for i, impacto in enumerate(impactos_lp, start=1):
-                st.write(f"**{i}**. {impacto['texto']}")
+            df_lp = pd.DataFrame(
+                [{"texto": i["texto"]} for i in impactos_lp] or [{"texto": ""}]
+            )
+
+            # df_lp = pd.DataFrame(impactos_lp or [{"texto": ""}])
+
+            df_editado_lp = st.data_editor(
+                df_lp,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_lp",
+                column_config={
+                    "texto": st.column_config.TextColumn(
+                        "Impacto de longo prazo",
+                        width=600
+                    )
+                }
+            )
+
+            if st.button("Salvar", key="save_lp", icon=":material/save:"):
+                impactos_salvar = []
+
+                for i, row in df_editado_lp.iterrows():
+                    texto = str(row["texto"]).strip()
+                    if texto:
+                        impacto_id = (
+                            impactos_lp[i]["id"]
+                            if i < len(impactos_lp)
+                            else str(bson.ObjectId())
+                        )
+
+                        impactos_salvar.append({
+                            "id": impacto_id,
+                            "texto": texto
+                        })
+
+                if salvar_impactos("impactos_longo_prazo", impactos_salvar, st.session_state.projeto_atual):
+                    st.success("Impactos de longo prazo salvos com sucesso!")
+                    time.sleep(3)
+                    st.rerun()
+                else:
+                    st.error("Erro ao salvar impactos.")
 
 
-
+    # ============================================================
+    # IMPACTOS DE CURTO PRAZO
+    # ============================================================
 
     with col_cp:
         st.subheader("Impactos de curto prazo")
         st.write("*Durante o projeto ou até o final da subvenção*")
-
-        # Botões de edição só para admin e equipe. Por isso o try.
-        try:
-            if modo_edicao:
-                with st.container(horizontal=True):
-                    if st.button("Editar impactos", icon=":material/edit:", type="secondary", key="editar_impactos_cp"):
-                        editar_impactos()
-        except:
-            pass
-
-
-        st.write('')
 
         impactos_cp = (
             df_projeto["impactos_curto_prazo"].values[0]
@@ -1565,11 +1441,289 @@ with impactos:
             else []
         )
 
-        if not impactos_cp:
-            st.write("Não há impactos de curto prazo cadastrados")
+        # ========================
+        # MODO VISUALIZAÇÃO
+        # ========================
+        if not modo_edicao:
+
+            if not impactos_cp:
+                st.write("Não há impactos de curto prazo cadastrados.")
+            else:
+                for i, impacto in enumerate(impactos_cp, 1):
+                    st.write(f"**{i}.** {impacto['texto']}")
+
+        # ========================
+        # MODO EDIÇÃO
+        # ========================
         else:
-            for i, impacto in enumerate(impactos_cp, start=1):
-                st.write(f"**{i}**. {impacto['texto']}")
+
+            df_cp = pd.DataFrame(
+                [{"texto": i["texto"]} for i in impactos_cp] or [{"texto": ""}]
+            )
+
+            # df_cp = pd.DataFrame(impactos_cp or [{"texto": ""}])
+
+            df_editado_cp = st.data_editor(
+                df_cp,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_cp",
+                column_config={
+                    "texto": st.column_config.TextColumn(
+                        "Impacto de curto prazo",
+                        width=600
+                    )
+                }
+            )
+
+            if st.button("Salvar", key="save_cp", icon=":material/save:"):
+                impactos_salvar = []
+
+                for i, row in df_editado_cp.iterrows():
+                    texto = str(row["texto"]).strip()
+                    if texto:
+                        impacto_id = (
+                            impactos_cp[i]["id"]
+                            if i < len(impactos_cp)
+                            else str(bson.ObjectId())
+                        )
+
+                        impactos_salvar.append({
+                            "id": impacto_id,
+                            "texto": texto
+                        })
+
+                if salvar_impactos("impactos_curto_prazo", impactos_salvar, st.session_state.projeto_atual):
+                    st.success("Impactos de curto prazo salvos com sucesso!")
+                    time.sleep(3)
+                    st.rerun()
+                else:
+                    st.error("Erro ao salvar impactos.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# with impactos:
+
+#     @st.dialog("Editar impactos", width="medium")
+#     def editar_impactos():
+
+#         tab_cadastrar, tab_editar = st.tabs(["Cadastrar impacto", "Editar impactos"])
+
+#         # ========================================================
+#         # CADASTRAR IMPACTO
+#         # ========================================================
+#         with tab_cadastrar:
+
+#             tipo = st.radio(
+#                 "Tipo de impacto",
+#                 ["Longo prazo", "Curto prazo"],
+#                 horizontal=True
+#             )
+
+#             texto_impacto = st.text_area(
+#                 "Descrição do impacto",
+#                 height=150
+#             )
+
+#             if st.button(
+#                 "Salvar impacto",
+#                 type="primary",
+#                 icon=":material/save:"
+#             ):
+
+#                 if not texto_impacto.strip():
+#                     st.warning("O impacto não pode estar vazio.")
+#                     return
+
+#                 chave = (
+#                     "impactos_longo_prazo"
+#                     if tipo == "Longo prazo"
+#                     else "impactos_curto_prazo"
+#                 )
+
+#                 impacto = {
+#                     "id": str(bson.ObjectId()),
+#                     "texto": texto_impacto.strip()
+#                 }
+
+#                 resultado = col_projetos.update_one(
+#                     {"codigo": st.session_state.projeto_atual},
+#                     {"$push": {chave: impacto}}
+#                 )
+
+#                 if resultado.modified_count == 1:
+#                     st.success("Impacto salvo com sucesso!")
+#                     time.sleep(2)
+#                     st.rerun()
+#                 else:
+#                     st.error("Erro ao salvar impacto.")
+
+#         # ========================================================
+#         # EDITAR IMPACTO
+#         # ========================================================
+#         with tab_editar:
+
+#             tipo = st.radio(
+#                 "Tipo de impacto",
+#                 ["Longo prazo", "Curto prazo"],
+#                 horizontal=True,
+#                 key="tipo_editar_impacto"
+#             )
+
+#             chave = (
+#                 "impactos_longo_prazo"
+#                 if tipo == "Longo prazo"
+#                 else "impactos_curto_prazo"
+#             )
+
+#             impactos = (
+#                 df_projeto[chave].values[0]
+#                 if chave in df_projeto.columns
+#                 else []
+#             )
+
+#             if not impactos:
+#                 st.write("Não há impactos cadastrados.")
+#                 return
+
+#             mapa_impactos = {
+#                 f"{i['texto'][:80]}": i
+#                 for i in impactos
+#             }
+
+#             impacto_label = st.selectbox(
+#                 "Selecione o impacto",
+#                 list(mapa_impactos.keys())
+#             )
+
+#             impacto_selecionado = mapa_impactos[impacto_label]
+
+#             novo_texto = st.text_area(
+#                 "Editar impacto",
+#                 value=impacto_selecionado["texto"],
+#                 height=150
+#             )
+
+#             if st.button(
+#                 "Salvar alterações",
+#                 type="primary",
+#                 icon=":material/save:"
+#             ):
+
+#                 if not novo_texto.strip():
+#                     st.warning("O impacto não pode estar vazio.")
+#                     return
+
+#                 resultado = col_projetos.update_one(
+#                     {
+#                         "codigo": st.session_state.projeto_atual,
+#                         f"{chave}.id": impacto_selecionado["id"],
+#                     },
+#                     {
+#                         "$set": {
+#                             f"{chave}.$.texto": novo_texto.strip()
+#                         }
+#                     }
+#                 )
+
+#                 if resultado.modified_count == 1:
+#                     st.success("Impacto atualizado com sucesso!")
+#                     time.sleep(2)
+#                     st.rerun()
+#                 else:
+#                     st.error("Erro ao atualizar impacto.")
+
+#     # st.write('')
+
+#     # Toggle do modo de edição
+
+#     if st.session_state.tipo_usuario in ["admin", "equipe"]:
+
+#         with st.container(horizontal=True, horizontal_alignment="right"):
+#             modo_edicao = st.toggle("Modo de edição", key="editar_impactos")
+
+
+
+#     # LISTAGEM DOS IMPACTOS DE LONGO PRAZO E CURTO PRAZO
+
+#     col_lp, col_cp = st.columns(2, gap="large")
+
+#     with col_lp:
+#         st.subheader("Impactos de longo prazo")
+#         st.write('*Entre 3 a 5 anos após o final do projeto*')
+
+#         # Botões de edição só para admin e equipe. Por isso o try.
+#         try:
+#             if modo_edicao:
+
+#                 with st.container(horizontal=True):
+#                     if st.button("Editar impactos", icon=":material/edit:", type="secondary"):
+#                         editar_impactos()
+#         except:
+#             pass
+
+
+#         st.write('')
+
+#         impactos_lp = (
+#             df_projeto["impactos_longo_prazo"].values[0]
+#             if "impactos_longo_prazo" in df_projeto.columns
+#             else []
+#         )
+
+#         if not impactos_lp:
+#             st.write("Não há impactos de longo prazo cadastrados")
+#         else:
+#             for i, impacto in enumerate(impactos_lp, start=1):
+#                 st.write(f"**{i}**. {impacto['texto']}")
+
+
+
+
+#     with col_cp:
+#         st.subheader("Impactos de curto prazo")
+#         st.write("*Durante o projeto ou até o final da subvenção*")
+
+#         # Botões de edição só para admin e equipe. Por isso o try.
+#         try:
+#             if modo_edicao:
+#                 with st.container(horizontal=True):
+#                     if st.button("Editar impactos", icon=":material/edit:", type="secondary", key="editar_impactos_cp"):
+#                         editar_impactos()
+#         except:
+#             pass
+
+
+#         st.write('')
+
+#         impactos_cp = (
+#             df_projeto["impactos_curto_prazo"].values[0]
+#             if "impactos_curto_prazo" in df_projeto.columns
+#             else []
+#         )
+
+#         if not impactos_cp:
+#             st.write("Não há impactos de curto prazo cadastrados")
+#         else:
+#             for i, impacto in enumerate(impactos_cp, start=1):
+#                 st.write(f"**{i}**. {impacto['texto']}")
 
 
 
