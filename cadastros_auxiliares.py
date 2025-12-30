@@ -652,17 +652,29 @@ with aba_pesquisas:
             "Editar / Excluir"
         ])
 
+
+
+
         # ======================================================
         # ABA 1 — VISUALIZAR
         # ======================================================
+
 
         with aba_visualizar_pesquisas:
 
             if not pesquisas:
                 st.caption("Nenhuma pesquisa cadastrada.")
             else:
-                for i, p in enumerate(pesquisas, start=1):
-                    st.markdown(f"**{i}. {p['nome_pesquisa']}**")
+                for idx, pesquisa in enumerate(pesquisas, start=1):
+
+                    icone = ":material/attach_file:" if pesquisa.get("upload_arquivo") else ""
+
+                    st.markdown(
+                        f"**{idx}. {pesquisa.get('nome_pesquisa')}** {icone}"
+                    )
+
+
+
 
         # ======================================================
         # ABA 2 — NOVA PESQUISA
@@ -670,26 +682,67 @@ with aba_pesquisas:
 
         with aba_nova_pesquisa:
 
-            nome_pesquisa = st.text_input("Nome da pesquisa")
+            with st.form("form_nova_pesquisa", border=False):
 
-            if st.button("Adicionar pesquisa", icon=":material/add:"):
+                # ----------------------------------------------
+                # CAMPO: NOME DA PESQUISA
+                # ----------------------------------------------
+                nome_pesquisa = st.text_input(
+                    "Nome da pesquisa"
+                )
 
-                if not nome_pesquisa.strip():
-                    st.warning("O nome da pesquisa não pode ficar vazio.")
-                else:
-                    nova_pesquisa = {
-                        "id": str(uuid.uuid4()),
-                        "nome_pesquisa": nome_pesquisa.strip()
-                    }
+                # ----------------------------------------------
+                # CAMPO: UPLOAD DE ARQUIVO
+                # ----------------------------------------------
+                upload_arquivo = st.checkbox(
+                    "Haverá upload de arquivo?",
+                    value=False
+                )
 
-                    col_editais.update_one(
-                        {"codigo_edital": edital_selecionado_pesquisas},
-                        {"$push": {"pesquisas_relatorio": nova_pesquisa}}
-                    )
+                st.write("")
 
-                    st.success(":material/check: Pesquisa adicionada com sucesso!")
-                    time.sleep(3)
-                    st.rerun()
+                # ----------------------------------------------
+                # BOTÃO SALVAR
+                # ----------------------------------------------
+                salvar_pesquisa = st.form_submit_button(
+                    "Adicionar pesquisa",
+                    type="primary",
+                    icon=":material/save:",
+                    key="btn_salvar_pesquisa"
+                )
+
+                # ----------------------------------------------
+                # AÇÃO AO SALVAR
+                # ----------------------------------------------
+                if salvar_pesquisa:
+
+                    if not nome_pesquisa.strip():
+                        st.warning("O nome da pesquisa não pode ficar vazio.")
+                    else:
+                        nova_pesquisa = {
+                            "id": str(ObjectId()),
+                            "nome_pesquisa": nome_pesquisa.strip(),
+                            "upload_arquivo": upload_arquivo
+                        }
+
+                        col_editais.update_one(
+                            {"codigo_edital": edital_selecionado_pesquisas},
+                            {
+                                "$push": {
+                                    "pesquisas_relatorio": nova_pesquisa
+                                }
+                            }
+                        )
+
+                        st.success(":material/check: Pesquisa cadastrada com sucesso!")
+                        time.sleep(3)
+                        st.rerun()
+
+
+
+
+
+
 
 
 
@@ -717,17 +770,23 @@ with aba_pesquisas:
                     list(mapa_pesquisas.keys())
                 )
 
-                # Garante seleção
+                # Pesquisa selecionada
                 pesquisa_atual = mapa_pesquisas[selecionada]
 
                 st.divider()
 
                 # ----------------------------------------------
-                # CAMPO DE EDIÇÃO
+                # CAMPOS DE EDIÇÃO
                 # ----------------------------------------------
+
                 novo_nome = st.text_input(
                     "Nome da pesquisa",
-                    value=pesquisa_atual["nome_pesquisa"]
+                    value=pesquisa_atual.get("nome_pesquisa", "")
+                )
+
+                upload_arquivo = st.checkbox(
+                    "Haverá upload de arquivo?",
+                    value=pesquisa_atual.get("upload_arquivo", False)
                 )
 
                 st.write("")
@@ -738,7 +797,12 @@ with aba_pesquisas:
                 with st.container(horizontal=True, horizontal_alignment="left"):
 
                     # -------- SALVAR --------
-                    if st.button("Salvar alterações", type="primary", icon=":material/save:", key="btn_editar_pesquisa"):
+                    if st.button(
+                        "Salvar alterações",
+                        type="primary",
+                        icon=":material/save:",
+                        key="btn_editar_pesquisa"
+                    ):
 
                         if not novo_nome.strip():
                             st.warning("O nome da pesquisa não pode ficar vazio.")
@@ -746,7 +810,8 @@ with aba_pesquisas:
                             pesquisas_atualizadas = [
                                 {
                                     **p,
-                                    "nome_pesquisa": novo_nome.strip()
+                                    "nome_pesquisa": novo_nome.strip(),
+                                    "upload_arquivo": upload_arquivo
                                 } if p["id"] == pesquisa_atual["id"] else p
                                 for p in pesquisas
                             ]
@@ -761,7 +826,11 @@ with aba_pesquisas:
                             st.rerun()
 
                     # -------- EXCLUIR --------
-                    if st.button("Excluir pesquisa", icon=":material/delete:", key="btn_excluir_pesquisa"):
+                    if st.button(
+                        "Excluir pesquisa",
+                        icon=":material/delete:",
+                        key="btn_excluir_pesquisa"
+                    ):
 
                         pesquisas_atualizadas = [
                             p for p in pesquisas
@@ -776,6 +845,101 @@ with aba_pesquisas:
                         st.success(":material/check: Pesquisa excluída com sucesso!")
                         time.sleep(3)
                         st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+        # # ======================================================
+        # # ABA 3 — EDITAR / EXCLUIR
+        # # ======================================================
+
+        # with aba_editar_pesquisa:
+
+        #     if not pesquisas:
+        #         st.caption("Nenhuma pesquisa cadastrada.")
+
+        #     else:
+        #         st.markdown("##### Selecione uma pesquisa para EDITAR ou EXCLUIR")
+
+        #         # ----------------------------------------------
+        #         # MAPA DE PESQUISAS
+        #         # ----------------------------------------------
+        #         mapa_pesquisas = {
+        #             p["nome_pesquisa"]: p for p in pesquisas
+        #         }
+
+        #         selecionada = st.selectbox(
+        #             "",
+        #             list(mapa_pesquisas.keys())
+        #         )
+
+        #         # Garante seleção
+        #         pesquisa_atual = mapa_pesquisas[selecionada]
+
+        #         st.divider()
+
+        #         # ----------------------------------------------
+        #         # CAMPO DE EDIÇÃO
+        #         # ----------------------------------------------
+        #         novo_nome = st.text_input(
+        #             "Nome da pesquisa",
+        #             value=pesquisa_atual["nome_pesquisa"]
+        #         )
+
+        #         st.write("")
+
+        #         # ----------------------------------------------
+        #         # BOTÕES DE AÇÃO
+        #         # ----------------------------------------------
+        #         with st.container(horizontal=True, horizontal_alignment="left"):
+
+        #             # -------- SALVAR --------
+        #             if st.button("Salvar alterações", type="primary", icon=":material/save:", key="btn_editar_pesquisa"):
+
+        #                 if not novo_nome.strip():
+        #                     st.warning("O nome da pesquisa não pode ficar vazio.")
+        #                 else:
+        #                     pesquisas_atualizadas = [
+        #                         {
+        #                             **p,
+        #                             "nome_pesquisa": novo_nome.strip()
+        #                         } if p["id"] == pesquisa_atual["id"] else p
+        #                         for p in pesquisas
+        #                     ]
+
+        #                     col_editais.update_one(
+        #                         {"codigo_edital": edital_selecionado_pesquisas},
+        #                         {"$set": {"pesquisas_relatorio": pesquisas_atualizadas}}
+        #                     )
+
+        #                     st.success(":material/check: Pesquisa atualizada com sucesso!")
+        #                     time.sleep(3)
+        #                     st.rerun()
+
+        #             # -------- EXCLUIR --------
+        #             if st.button("Excluir pesquisa", icon=":material/delete:", key="btn_excluir_pesquisa"):
+
+        #                 pesquisas_atualizadas = [
+        #                     p for p in pesquisas
+        #                     if p["id"] != pesquisa_atual["id"]
+        #                 ]
+
+        #                 col_editais.update_one(
+        #                     {"codigo_edital": edital_selecionado_pesquisas},
+        #                     {"$set": {"pesquisas_relatorio": pesquisas_atualizadas}}
+        #                 )
+
+        #                 st.success(":material/check: Pesquisa excluída com sucesso!")
+        #                 time.sleep(3)
+        #                 st.rerun()
 
 
 

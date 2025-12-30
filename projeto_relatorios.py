@@ -13,7 +13,7 @@ db = conectar_mongo_cepf_gestao()
 
 col_projetos = db["projetos"]
 
-
+col_editais = db["editais"]
 
 
 
@@ -71,9 +71,13 @@ def extrair_atividades(projeto):
 # TRATAMENTO DOS DADOS
 ###########################################################################################################
 
-# Inicia o step no session_state
-if "step" not in st.session_state:
-    st.session_state.step = 0
+# -------------------------------------------
+# CONTROLE DE STEP DO RELATÓRIO
+# -------------------------------------------
+
+if "step_relatorio" not in st.session_state:
+    st.session_state.step_relatorio = "Atividades"
+
 
 
 
@@ -106,6 +110,14 @@ with col_identificacao:
 # UMA ABA PRA CADA RELATÓRIO
 ###########################################################################################################
 
+steps_relatorio = [
+    "Atividades",
+    "Despesas",
+    "Beneficiários",
+    "Pesquisas",
+    "Formulário"
+]
+
 
 if not relatorios:
     st.info("Este projeto ainda não possui relatórios cadastrados.")
@@ -129,23 +141,38 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
         # STEPS --------------------------
         step_key = f"steps_relatorio_{idx}"
 
+
         step = sac.steps(
-            items=[
-                sac.StepsItem(title="Atividades"),
-                sac.StepsItem(title="Despesas"),
-                sac.StepsItem(title="Beneficiários"),
-                sac.StepsItem(title="Pesquisas"),
-                sac.StepsItem(title="Formulário"),
-            ],
-            index=1,   # 👈 sempre começa em 1
-            key=step_key
+            items=[sac.StepsItem(title=s) for s in steps_relatorio],
+            index=steps_relatorio.index(st.session_state.step_relatorio),
+            key=f"steps_relatorio_{idx}"
         )
+
+
+
+
+        # step = sac.steps(
+        #     items=[
+        #         sac.StepsItem(title="Atividades"),
+        #         sac.StepsItem(title="Despesas"),
+        #         sac.StepsItem(title="Beneficiários"),
+        #         sac.StepsItem(title="Pesquisas"),
+        #         sac.StepsItem(title="Formulário"),
+        #     ],
+        #     index=1,   # 👈 sempre começa em 1
+        #     key=step_key
+        # )
 
 
 
         # ---------- ATIVIDADES ----------
 
         if step == "Atividades":
+
+            # # Atualiza o estado global do step
+            # if step != st.session_state.step_relatorio:
+            #     st.session_state.step_relatorio = step
+
 
             atividades = []
 
@@ -189,7 +216,23 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
+        # ---------- PESQUISAS ----------
+        if step == "Pesquisas":
 
+            # Busca o edital correspondente
+            edital = col_editais.find_one(
+                {"codigo_edital": projeto["edital"]}
+            )
+
+            pesquisas = edital.get("pesquisas_relatorio", []) if edital else []
+
+            if not pesquisas:
+                st.caption("Nenhuma pesquisa cadastrada.")
+            else:
+                st.markdown("### Pesquisas cadastradas")
+
+                for idx, pesquisa in enumerate(pesquisas, start=1):
+                    st.markdown(f"**{idx}. {pesquisa.get('nome_pesquisa')}**")
 
 
 
