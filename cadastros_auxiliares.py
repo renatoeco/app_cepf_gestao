@@ -682,7 +682,7 @@ with aba_pesquisas:
 
         with aba_nova_pesquisa:
 
-            with st.form("form_nova_pesquisa", border=False):
+            with st.form("form_nova_pesquisa", border=False, clear_on_submit=True):
 
                 # ----------------------------------------------
                 # CAMPO: NOME DA PESQUISA

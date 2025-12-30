@@ -22,6 +22,9 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 # FUNÇÕES
 ###########################################################################################################
 
+if "notificacoes_mapa" not in st.session_state:
+    st.session_state.notificacoes_mapa = []
+
 # Envia mensagem para a área de notificação
 def notificar_mapa(mensagem: str):
     st.session_state.notificacoes_mapa.append(mensagem)
