@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto
+import streamlit_antd_components as sac
 
 
 ###########################################################################################################
@@ -42,6 +43,37 @@ relatorios = projeto.get("relatorios", [])
 # FUNÇÕES
 ###########################################################################################################
 
+
+def extrair_atividades(projeto):
+    atividades = []
+
+    plano = projeto.get("plano_trabalho", {})
+    componentes = plano.get("componentes", [])
+
+    for componente in componentes:
+        for entrega in componente.get("entregas", []):
+            for atividade in entrega.get("atividades", []):
+                atividades.append({
+                    "id": atividade.get("id"),
+                    "nome": atividade.get("atividade"),
+                    "data_inicio": atividade.get("data_inicio"),
+                    "data_fim": atividade.get("data_fim"),
+                    "componente": componente.get("componente"),
+                    "entrega": entrega.get("entrega"),
+                })
+
+    return atividades
+
+
+
+
+###########################################################################################################
+# TRATAMENTO DOS DADOS
+###########################################################################################################
+
+# Inicia o step no session_state
+if "step" not in st.session_state:
+    st.session_state.step = 0
 
 
 
@@ -85,37 +117,75 @@ abas = [f"Relatório {r.get('numero')}" for r in relatorios]
 tabs = st.tabs(abas)
 
 
-# ------------------------------------------------------------
-# CONTEÚDO DE CADA RELATÓRIO
-# ------------------------------------------------------------
-for tab, relatorio in zip(tabs, relatorios):
+
+
+
+for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
     with tab:
 
-        numero = relatorio.get("numero")
-        entregas = relatorio.get("entregas", [])
-        data_prevista = relatorio.get("data_prevista")
+        st.write('')
+        st.write('')
 
-        st.subheader(f"Relatório {numero}")
+        # STEPS --------------------------
+        step_key = f"steps_relatorio_{idx}"
 
-        # Data prevista
-        if data_prevista:
-            data_formatada = pd.to_datetime(data_prevista).strftime("%d/%m/%Y")
-            st.write(f"**Data prevista:** {data_formatada}")
-        else:
-            st.write("**Data prevista:** Não informada")
-
-        st.divider()
-
-      # Entregas
-        st.markdown("### Entregas previstas")
-
-        if entregas:
-            for i, entrega in enumerate(entregas, start=1):
-                st.markdown(f"- {entrega}")
-        else:
-            st.info("Nenhuma entrega cadastrada para este relatório.")
+        step = sac.steps(
+            items=[
+                sac.StepsItem(title="Atividades"),
+                sac.StepsItem(title="Despesas"),
+                sac.StepsItem(title="Beneficiários"),
+                sac.StepsItem(title="Pesquisas"),
+                sac.StepsItem(title="Formulário"),
+            ],
+            index=1,   # 👈 sempre começa em 1
+            key=step_key
+        )
 
 
+
+        # ---------- ATIVIDADES ----------
+
+        if step == "Atividades":
+
+            atividades = []
+
+            plano = projeto.get("plano_trabalho", {})
+            componentes = plano.get("componentes", [])
+
+            for componente in componentes:
+                for entrega in componente.get("entregas", []):
+                    for atividade in entrega.get("atividades", []):
+                        atividades.append({
+                            "atividade": atividade.get("atividade"),
+                            "componente": componente.get("componente"),
+                            "entrega": entrega.get("entrega"),
+                            "data_inicio": atividade.get("data_inicio"),
+                            "data_fim": atividade.get("data_fim"),
+                        })
+
+            # SELECTBOX
+            if atividades:
+                atividade_selecionada = st.selectbox(
+                    "Atividades",
+                    options=atividades,
+                    format_func=lambda x: x["atividade"],
+                    key=f"atividade_select_{idx}"
+                )
+
+                st.markdown("### Detalhes da atividade")
+
+                st.write(f"**Atividade:** {atividade_selecionada['atividade']}")
+                st.write(f"**Componente:** {atividade_selecionada['componente']}")
+                st.write(f"**Entrega:** {atividade_selecionada['entrega']}")
+
+                if atividade_selecionada["data_inicio"]:
+                    st.write(f"**Início:** {atividade_selecionada['data_inicio']}")
+
+                if atividade_selecionada["data_fim"]:
+                    st.write(f"**Fim:** {atividade_selecionada['data_fim']}")
+
+            else:
+                st.info("Nenhuma atividade cadastrada.")
 
 
 
