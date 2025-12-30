@@ -5,6 +5,68 @@ import streamlit_shadcn_ui as ui
 import datetime
 import time
 import bson
+import io
+
+
+# Google Drive API
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+
+
+
+
+###########################################################################################################
+# CONFIGURAÇÕES DO STREAMLIT
+###########################################################################################################
+
+
+# Traduzindo o texto do st.file_uploader
+# Texto interno
+st.markdown("""
+<style>
+/* Esconde o texto padrão */
+[data-testid="stFileUploaderDropzone"] div div::before {
+    content: "Arraste e solte os arquivos aqui";
+    color: rgba(49, 51, 63, 0.7);
+    font-size: 0.9rem;
+    font-weight: 400;
+    position: absolute;
+    top: 50px;              /* fixa no topo */
+    left: 50%;
+    transform: translate(-50%, 10%);
+    pointer-events: none;
+}
+/* Esconde o texto original */
+[data-testid="stFileUploaderDropzone"] div div span {
+    visibility: hidden !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Traduzindo Botão do file_uploader
+st.markdown("""
+<style>
+/* Alvo: apenas o botão dentro do componente de upload */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
+    font-size: 0px !important;   /* esconde o texto original */
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    min-width: 160px !important;
+}
+/* Insere o texto traduzido */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
+    content: "Selecionar arquivo";
+    font-size: 14px !important;
+    color: inherit;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
+
 
 
 
@@ -21,6 +83,211 @@ col_projetos = db["projetos"]
 col_editais = db["editais"]
 col_direcoes_estrategicas = db["direcoes_estrategicas"]
 col_publicos = db["publicos"]
+
+
+
+
+###########################################################################################################
+# CONEXÃO COM GOOGLE DRIVE
+###########################################################################################################
+
+
+# Escopo mínimo necessário para Drive
+ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
+
+@st.cache_resource
+def obter_servico_drive():
+    """
+    Retorna o cliente autenticado do Google Drive,
+    usando as credenciais armazenadas em st.secrets.
+    """
+    credenciais = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=ESCOPO_DRIVE
+    )
+    return build("drive", "v3", credentials=credenciais)
+
+
+
+
+
+
+###########################################################################################################
+# FUNÇÕES
+###########################################################################################################
+
+
+def obter_ou_criar_pasta(servico, nome_pasta, id_pasta_pai):
+    """
+    Busca uma pasta com o nome especificado dentro da pasta pai no Google Drive.
+    Se a pasta não existir, ela é criada.
+    
+    Retorna o ID da pasta encontrada ou criada.
+    """
+
+    # Monta a query de busca:
+    # - nome exato da pasta
+    # - dentro da pasta pai
+    # - apenas pastas
+    # - não deletadas
+    consulta = (
+        f"name='{nome_pasta}' and "
+        f"'{id_pasta_pai}' in parents and "
+        f"mimeType='application/vnd.google-apps.folder' and trashed=false"
+    )
+
+    # Executa a busca
+    resultado = servico.files().list(
+        q=consulta,
+        fields="files(id)",
+        includeItemsFromAllDrives=True,
+        supportsAllDrives=True
+    ).execute()
+
+    arquivos = resultado.get("files", [])
+
+    # Se encontrou, reutiliza a pasta existente
+    if arquivos:
+        return arquivos[0]["id"]
+
+    # Caso não exista, cria a pasta
+    pasta = servico.files().create(
+        body={
+            "name": nome_pasta,
+            "parents": [id_pasta_pai],
+            "mimeType": "application/vnd.google-apps.folder"
+        },
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+
+    return pasta["id"]
+
+
+
+def obter_pasta_projeto(servico, codigo, sigla):
+    """
+    Retorna o ID da pasta do projeto no Google Drive.
+    Cria se não existir.
+    Usa cache baseado em código + sigla.
+    """
+
+    nome_pasta = f"{codigo} - {sigla}"
+    chave_cache = f"pasta_projeto_{nome_pasta}"
+
+    # Se já foi criada nesta sessão, reutiliza
+    if chave_cache in st.session_state:
+        return st.session_state[chave_cache]
+
+    # Cria ou localiza a pasta
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        nome_pasta,
+        st.secrets["drive"]["pasta_drive_projetos"]
+    )
+
+    # Salva no cache
+    st.session_state[chave_cache] = pasta_id
+
+    return pasta_id
+
+
+
+
+
+# def obter_pasta_projeto(servico, codigo, sigla):
+#     """
+#     Retorna o ID da pasta do projeto no Google Drive.
+
+#     - Usa o nome: 'codigo - sigla'
+#     - Cria a pasta somente se não existir
+#     - Guarda o ID no session_state para evitar duplicações
+#     """
+
+#     chave = f"pasta_projeto_{codigo}"
+
+#     # Se já foi criada nesta sessão, reutiliza
+#     if chave in st.session_state:
+#         return st.session_state[chave]
+
+#     # Cria ou localiza a pasta do projeto
+#     pasta_id = obter_ou_criar_pasta(
+#         servico,
+#         f"{codigo} - {sigla}",
+#         st.secrets["drive"]["pasta_drive_projetos"]
+#     )
+
+#     # Guarda no session_state
+#     st.session_state[chave] = pasta_id
+
+#     return pasta_id
+
+
+def obter_pasta_locais(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Locais' dentro da pasta do projeto.
+
+    Também usa cache no session_state para evitar múltiplas criações.
+    """
+
+    if "pasta_locais_id" in st.session_state:
+        return st.session_state["pasta_locais_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Locais",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_locais_id"] = pasta_id
+    return pasta_id
+
+
+def enviar_arquivo_drive(servico, id_pasta, arquivo):
+    """
+    Faz upload de um arquivo para o Google Drive dentro da pasta informada.
+
+    Retorna o ID do arquivo criado.
+    """
+
+    # Converte o arquivo do Streamlit para bytes
+    media = MediaIoBaseUpload(
+        io.BytesIO(arquivo.read()),
+        mimetype=arquivo.type,
+        resumable=False
+    )
+
+    # Cria o arquivo no Drive
+    arq = servico.files().create(
+        body={
+            "name": arquivo.name,
+            "parents": [id_pasta]
+        },
+        media_body=media,
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+
+    return arq["id"]
+
+
+def gerar_link_drive(id_arquivo):
+    """
+    Gera o link público padrão de visualização do arquivo no Google Drive.
+    """
+    return f"https://drive.google.com/file/d/{id_arquivo}/view"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -143,10 +410,6 @@ df_projeto = df_projeto.merge(
 
 
 
-# ###########################################################################################################
-# # FUNÇÕES
-# ###########################################################################################################
-
 
 
 
@@ -186,10 +449,87 @@ if not editar_cadastro:
     cols = st.columns(3)
     cols[0].write(f"**Início:** {df_projeto['data_inicio_contrato'].values[0]}")
     cols[1].write(f"**Fim:** {df_projeto['data_fim_contrato'].values[0]}")
-    cols[2].write("**Contrato:** em breve")
+
+    # ---------- CONTRATOS ----------
+
+    contratos = df_projeto["contratos"].values[0] if "contratos" in df_projeto.columns else None
+
+    with cols[2]:
+
+
+        if contratos:
+            with st.popover("**Contrato**", type="tertiary"):
+                
+                for c in contratos:
+                    st.markdown(
+                        f"[**{c['descricao_contrato']}**]({c['url_contrato']})"
+                    )
+        else:
+            st.markdown(
+                "**Contrato:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+                unsafe_allow_html=True
+            )
+
+
+
+
+    # # ---------- CONTRATOS ----------
+
+    # contratos = df_projeto["contratos"].values[0] if "contratos" in df_projeto.columns else None
+
+    # with cols[2]:
+
+    #     if contratos:
+
+    #         with st.popover("**Contrato**", type="tertiary"):
+    #             if not contratos:
+    #                 st.markdown(
+    #                     "<span style='color:#c46a00; font-style:italic;'>Nenhum contrato cadastrado</span>",
+    #                     unsafe_allow_html=True
+    #                 )
+    #             else:
+    #                 for c in contratos:
+    #                     st.markdown(
+    #                         f"[**{c['descricao_contrato']}**]({c['url_contrato']})"
+    #                     )
+
+    #     else:
+    #         st.markdown("<span style='color:#c46a00; font-style:italic;'>Nenhum contrato cadastrado</span>"),
+
+
+
+    # # Contrato
+    # valor_contrato = (
+    #     df_projeto["contrato"].values[0]
+    #     if "contrato" in df_projeto.columns
+    #     else None
+    # )
+
+    # if pd.isna(valor_contrato) or str(valor_contrato).strip() == "":
+    #     cols[2].markdown(
+    #         "**Contrato:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+    #         unsafe_allow_html=True
+    #     )
+    # else:
+    #     cols[2].write(f"**Contrato:** {valor_contrato}")
+
+
+
+    # cols[2].write("**Contrato:** em breve")
 
     st.write(f"**Responsável:** {df_projeto['responsavel'].values[0]}")
-    st.write(f"**Padrinho/Madrinha:** {df_projeto['padrinho'].values[0]}")
+
+    # Padrinho
+    valor = df_projeto["padrinho"].values[0]
+    if pd.isna(valor) or str(valor).strip() == "":
+        st.markdown(
+            "**Padrinho/Madrinha:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.write(f"**Padrinho/Madrinha:** {valor}")
+
+    # st.write(f"**Padrinho/Madrinha:** {df_projeto['padrinho'].values[0]}")
 
     direcoes = df_projeto['direcoes_estrategicas'].values[0]
     if direcoes:
@@ -285,6 +625,7 @@ else:
             value=pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True),
             format="DD/MM/YYYY"
         )
+
 
 
         # ---------- RESPONSÁVEL(IS) ----------
@@ -390,7 +731,51 @@ else:
         )
 
 
+        # ---------- CONTRATO ----------
+        
+        st.divider()
+        
+        st.write('**Contratos e Emendas de contrato**')
+        
+        contratos = projeto.get("contratos", [])
+
+        if contratos:
+
+            col1, col2 = st.columns([1, 5])
+
+            col1.markdown("Contratos cadastrados:")
+
+            for c in contratos:
+                col2.markdown(f"[**{c['descricao_contrato']}**]({c['url_contrato']})")
+
+                # col2.markdown(f"**{c['descricao_contrato']}**")
+                # st.markdown(f"[Abrir contrato]({c['url_contrato']})")
+        else:
+            st.markdown(
+            "<span style='color:#c46a00; font-style:italic; margin-left: 20px;'>Nenhum documento cadastrado</span>",
+            unsafe_allow_html=True
+        )
+
+        st.write('')
+        st.write(":material/add: Adicionar documento")
+
+        descricao_contrato = st.text_input(
+            "Descrição do documento",
+            placeholder="Ex: Contrato principal, Aditivo 01..."
+        )
+
+        arquivo_contrato = st.file_uploader(
+            "Selecione o arquivo",
+            type=["pdf", "docx", "doc", "jpg", "png"],
+            accept_multiple_files=False,
+        )
+
+        st.divider()
+
         # ---------- TOGGLE DE CANCELADO ----------
+
+        # st.write('')
+        # st.write('')
 
         # STATUS ATUAL DO PROJETO
         status_atual = projeto.get("status")  # pode ser None
@@ -465,79 +850,133 @@ else:
                     st.warning(f":material/warning: O código **{codigo}** já está cadastrado em outro projeto.")
 
                 else:
-                    # --------------------------------------------------
-                    # ATUALIZA O PROJETO
-                    # --------------------------------------------------
-                    
-                    # Atualizações na coleção de Projetos
-                    col_projetos.update_one(
-                        {"_id": projeto_id},
-                        {
-                            "$set": {
-                                "edital": edital,
-                                "codigo": codigo,
-                                "sigla": sigla,
-                                "organizacao": organizacao,
-                                "nome_do_projeto": nome,
-                                "objetivo_geral": objetivo,
-                                "duracao": duracao,
-                                "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
-                                "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
-                                "responsavel": responsavel_str,
-                                "direcoes_estrategicas": direcoes or [],
-                                "publicos": publicos or [],
+                    with st.spinner("Salvando alterações..."):
+                        # --------------------------------------------------
+                        # ATUALIZA O PROJETO
+                        # --------------------------------------------------
+                        
+                        # Atualizações na coleção de Projetos
+                        col_projetos.update_one(
+                            {"_id": projeto_id},
+                            {
+                                "$set": {
+                                    "edital": edital,
+                                    "codigo": codigo,
+                                    "sigla": sigla,
+                                    "organizacao": organizacao,
+                                    "nome_do_projeto": nome,
+                                    "objetivo_geral": objetivo,
+                                    "duracao": duracao,
+                                    "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
+                                    "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
+                                    "responsavel": responsavel_str,
+                                    "direcoes_estrategicas": direcoes or [],
+                                    "publicos": publicos or [],
+                                }
                             }
-                        }
-                    )
-
-
-
-                    # Atualiza status separadamente
-                    if novo_status:
-                        col_projetos.update_one(
-                            {"_id": projeto_id},
-                            {"$set": {"status": novo_status}}
-                        )
-                    else:
-                        # Remove o campo se existir
-                        col_projetos.update_one(
-                            {"_id": projeto_id},
-                            {"$unset": {"status": ""}}
-                        )
-
-                    # Atualizações na coleção de Pessoas
-                    # ATUALIZA PADRINHOS DO PROJETO
-
-                    # Pessoas que eram padrinhos antes
-                    padrinhos_antes = set(padrinhos_atuais)
-
-                    # Pessoas selecionadas agora
-                    padrinhos_novos = set(padrinho_madrinha)
-
-                    # Pessoas que precisam ser removidas
-                    remover = padrinhos_antes - padrinhos_novos
-
-                    # Pessoas que precisam ser adicionadas
-                    adicionar = padrinhos_novos - padrinhos_antes
-
-                    # Remove projeto das pessoas removidas
-                    for nome in remover:
-                        col_pessoas.update_one(
-                            {"nome_completo": nome},
-                            {"$pull": {"projetos": codigo}}
-                        )
-
-                    # Adiciona projeto às pessoas novas
-                    for nome in adicionar:
-                        col_pessoas.update_one(
-                            {"nome_completo": nome},
-                            {"$addToSet": {"projetos": codigo}}
                         )
 
 
-                    st.success(":material/check: Projeto atualizado com sucesso!")
-                    time.sleep(3)
-                    st.rerun()
+
+                        # Atualiza status separadamente
+                        if novo_status:
+                            col_projetos.update_one(
+                                {"_id": projeto_id},
+                                {"$set": {"status": novo_status}}
+                            )
+                        else:
+                            # Remove o campo se existir
+                            col_projetos.update_one(
+                                {"_id": projeto_id},
+                                {"$unset": {"status": ""}}
+                            )
+
+                        # Atualizações na coleção de Pessoas
+                        # ATUALIZA PADRINHOS DO PROJETO
+
+                        # Pessoas que eram padrinhos antes
+                        padrinhos_antes = set(padrinhos_atuais)
+
+                        # Pessoas selecionadas agora
+                        padrinhos_novos = set(padrinho_madrinha)
+
+                        # Pessoas que precisam ser removidas
+                        remover = padrinhos_antes - padrinhos_novos
+
+                        # Pessoas que precisam ser adicionadas
+                        adicionar = padrinhos_novos - padrinhos_antes
+
+                        # Remove projeto das pessoas removidas
+                        for nome in remover:
+                            col_pessoas.update_one(
+                                {"nome_completo": nome},
+                                {"$pull": {"projetos": codigo}}
+                            )
+
+                        # Adiciona projeto às pessoas novas
+                        for nome in adicionar:
+                            col_pessoas.update_one(
+                                {"nome_completo": nome},
+                                {"$addToSet": {"projetos": codigo}}
+                            )
+
+
+                        # --------------------------------------------------
+                        # SALVAR CONTRATO (SE INFORMADO)
+                        # --------------------------------------------------
+                        if descricao_contrato or arquivo_contrato:
+                            if not descricao_contrato or not arquivo_contrato:
+                                st.warning("Para adicionar um contrato, informe a descrição e selecione o arquivo.")
+                            else:
+
+
+                                # Conecta ao Drive
+                                servico = obter_servico_drive()
+
+                                # Pasta do projeto
+                                pasta_projeto = obter_pasta_projeto(
+                                    servico,
+                                    projeto["codigo"],
+                                    projeto["sigla"]
+                                )
+
+                                # Pasta "Contratos"
+                                pasta_contratos = obter_ou_criar_pasta(
+                                    servico,
+                                    "Contratos",
+                                    pasta_projeto
+                                )
+
+                                # Upload do arquivo
+                                id_arquivo = enviar_arquivo_drive(
+                                    servico,
+                                    pasta_contratos,
+                                    arquivo_contrato
+                                )
+
+                                # Gera link público
+                                url_contrato = gerar_link_drive(id_arquivo)
+
+                                # Salva no MongoDB
+                                col_projetos.update_one(
+                                    {"_id": projeto_id},
+                                    {
+                                        "$push": {
+                                            "contratos": {
+                                                "descricao_contrato": descricao_contrato,
+                                                "url_contrato": url_contrato
+                                            }
+                                        }
+                                    }
+                                )
+
+
+
+
+
+                        st.success(":material/check: Projeto atualizado com sucesso!")
+                        time.sleep(3)
+                        st.rerun()
 
 
 
@@ -564,7 +1003,8 @@ cores_status = {
     "Em dia": "green",
     "Atrasado": "orange",
     "Concluído": "green",
-    "Cancelado": "gray"
+    "Cancelado": "gray",
+    "Sem cronograma": "orange"
 }
 
 st.markdown(

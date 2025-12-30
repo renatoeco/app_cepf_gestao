@@ -853,6 +853,7 @@ with plano_trabalho:
 
                     st.write("")
 
+                st.write('')
 
         # --------------------------------------------------
         # ABRIR O DIÁLOGO SE FOI SOLICITADO
@@ -921,8 +922,6 @@ with plano_trabalho:
                         "componente": comp,
                         "entrega": ent
                     })
-
-            st.write(lista_entregas)
 
             if not lista_entregas:
                 st.warning("Nenhuma entrega cadastrada. Cadastre entregas antes de adicionar atividades.")
@@ -1106,7 +1105,7 @@ with plano_trabalho:
 
                 if resultado.matched_count == 1:
                     st.success("Atividades atualizadas com sucesso!")
-                    time.sleep(1)
+                    time.sleep(3)
                     st.rerun()
                 else:
                     st.error("Erro ao atualizar atividades.")
@@ -1223,7 +1222,7 @@ with plano_trabalho:
 
                 if resultado.matched_count == 1:
                     st.success("Entregas atualizadas com sucesso!")
-                    time.sleep(1)
+                    time.sleep(3)
                     st.rerun()
                 else:
                     st.error("Erro ao atualizar entregas.")
@@ -1313,7 +1312,7 @@ with plano_trabalho:
 
                 if resultado.matched_count == 1:
                     st.success("Componentes atualizados com sucesso!")
-                    time.sleep(1)
+                    time.sleep(3)
                     st.rerun()
                 else:
                     st.error("Erro ao atualizar o Plano de Trabalho.")
@@ -1385,7 +1384,12 @@ with impactos:
         if not modo_edicao:
 
             if not impactos_lp:
-                st.write("Não há impactos de longo prazo cadastrados.")
+                st.markdown(
+                    "<span style='color:#c46a00; font-style:italic; '>Não há impactos de longo prazo cadastrados</span>",
+                    unsafe_allow_html=True
+                )
+                
+
             else:
                 for i, impacto in enumerate(impactos_lp, 1):
                     st.write(f"**{i}.** {impacto['texto']}")
@@ -1458,7 +1462,11 @@ with impactos:
         if not modo_edicao:
 
             if not impactos_cp:
-                st.write("Não há impactos de curto prazo cadastrados.")
+                st.markdown(
+                    "<span style='color:#c46a00; font-style:italic; '>Não há impactos de curto prazo cadastrados</span>",
+                    unsafe_allow_html=True
+                )
+
             else:
                 for i, impacto in enumerate(impactos_cp, 1):
                     st.write(f"**{i}.** {impacto['texto']}")
