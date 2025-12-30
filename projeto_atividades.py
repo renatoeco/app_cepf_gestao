@@ -641,8 +641,19 @@ if "_id" in df_indicadores.columns:
 st.logo("images/cepf_logo.png", size='large')
 
 
-# Título da página
-st.header("Marco Lógico")
+
+# Título da página e identificação
+col_titulo, col_identificacao = st.columns([3, 2])
+
+with col_titulo:
+    st.header("Marco Lógico")
+
+with col_identificacao:
+    st.markdown(
+        f"<div style='text-align: right; margin-top: 30px;'>{df_projeto['codigo'].values[0]} - {df_projeto['sigla'].values[0]}</div>",
+        unsafe_allow_html=True
+    )
+
 
 
 plano_trabalho, impactos, indicadores, monitoramento = st.tabs(["Plano de trabalho", "Impactos", "Indicadores", "Monitoramento"])
