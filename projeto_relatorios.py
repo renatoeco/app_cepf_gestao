@@ -55,9 +55,6 @@ section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-s
 """, unsafe_allow_html=True)
 
 
-
-
-
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################
@@ -93,6 +90,11 @@ projeto = df_projeto.iloc[0]
 
 relatorios = projeto.get("relatorios", [])
 
+edital = col_editais.find_one({"codigo_edital": projeto["edital"]})
+
+tipo_usuario = st.session_state.get("tipo_usuario")
+
+
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
@@ -124,6 +126,8 @@ def extrair_atividades(projeto):
 ###########################################################################################################
 # TRATAMENTO DOS DADOS
 ###########################################################################################################
+
+
 
 # -------------------------------------------
 # CONTROLE DE STEP DO RELATÓRIO
@@ -185,7 +189,7 @@ tabs = st.tabs(abas)
 
 
 
-
+# Cria uma aba para cada relatório
 for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
     with tab:
 
@@ -264,12 +268,11 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             # ============================
             # CONTROLE DE USUÁRIO
             # ============================
-            tipo_usuario = st.session_state.get("tipo_usuario")
 
             usuario_admin = tipo_usuario == "admin"
             usuario_equipe = tipo_usuario == "equipe"
             usuario_beneficiario = tipo_usuario == "beneficiario"
-            usuario_visitante = tipo_usuario not in ["admin", "equipe", "beneficiario"]
+            # usuario_visitante = tipo_usuario not in ["admin", "equipe", "beneficiario"]
 
             pode_editar = usuario_admin or usuario_equipe or usuario_beneficiario
             pode_verificar = usuario_admin or usuario_equipe
@@ -277,7 +280,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             # ============================
             # BUSCA DADOS
             # ============================
-            edital = col_editais.find_one({"codigo_edital": projeto["edital"]})
             pesquisas = edital.get("pesquisas_relatorio", []) if edital else []
 
             if not pesquisas:
@@ -356,6 +358,229 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     st.success(":material/check: Pesquisas atualizadas com sucesso!")
                     time.sleep(3)
                     st.rerun()
+
+
+
+
+
+        # ---------- FORMULÁRIO ----------
+        if step == "Formulário":
+
+            ###########################################################################
+            # 1. BUSCA O EDITAL CORRESPONDENTE AO PROJETO
+            ###########################################################################
+
+            edital = col_editais.find_one(
+                {"codigo_edital": projeto["edital"]}
+            )
+
+            if not edital:
+                st.error("Edital não encontrado para este projeto.")
+                st.stop()
+
+            perguntas = edital.get("perguntas_relatorio", [])
+
+            if not perguntas:
+                st.info("Este edital não possui perguntas cadastradas.")
+                st.stop()
+
+            # Ordena as perguntas pela ordem definida no edital
+            perguntas = sorted(perguntas, key=lambda x: x.get("ordem", 0))
+
+
+            ###########################################################################
+            # 2. CONTROLE DE ESTADO POR RELATÓRIO (EVITA VAZAMENTO ENTRE ABAS)
+            ###########################################################################
+
+            # Identificador único do relatório atual
+            relatorio_numero = relatorio["numero"]
+            chave_relatorio_ativo = f"form_relatorio_{relatorio_numero}"
+
+            # Se mudou de relatório, recarrega respostas do banco
+            if st.session_state.get("form_relatorio_ativo") != chave_relatorio_ativo:
+                st.session_state.form_relatorio_ativo = chave_relatorio_ativo
+
+                # Carrega respostas já existentes ou inicializa vazio
+                st.session_state.respostas_formulario = (
+                    relatorio.get("respostas_formulario", {}).copy()
+                )
+
+
+            ###########################################################################
+            # 3. RENDERIZAÇÃO DO FORMULÁRIO
+            ###########################################################################
+
+            st.markdown("### Formulário do Relatório")
+            st.write("")
+
+
+            for pergunta in perguntas:
+                tipo = pergunta.get("tipo")
+                texto = pergunta.get("pergunta")
+                opcoes = pergunta.get("opcoes", [])
+                ordem = pergunta.get("ordem")
+
+                # Chave única da pergunta dentro do relatório
+                chave = f"pergunta_{ordem}"
+
+
+                # ---------------------------------------------------------------------
+                # TÍTULO (não salva resposta)
+                # ---------------------------------------------------------------------
+                if tipo == "titulo":
+                    st.subheader(texto)
+                    st.write("")
+                    continue
+
+
+                # ---------------------------------------------------------------------
+                # SUBTÍTULO (não salva resposta)
+                # ---------------------------------------------------------------------
+                elif tipo == "subtitulo":
+                    st.markdown(f"##### {texto}")
+                    st.write("")
+                    continue
+
+
+                # ---------------------------------------------------------------------
+                # DIVISÓRIA (não usa texto)
+                # ---------------------------------------------------------------------
+                elif tipo == "divisoria":
+                    st.divider()
+                    continue
+
+
+                # ---------------------------------------------------------------------
+                # PARÁGRAFO → apenas texto informativo
+                # ---------------------------------------------------------------------
+                elif tipo == "paragrafo":
+                    st.write(texto)
+                    st.write("")
+                    continue
+
+
+                # ---------------------------------------------------------------------
+                # TEXTO CURTO
+                # ---------------------------------------------------------------------
+                elif tipo == "texto_curto":
+                    st.session_state.respostas_formulario[chave] = st.text_input(
+                        label=texto,
+                        value=st.session_state.respostas_formulario.get(chave, ""),
+                        key=chave
+                    )
+
+
+                # ---------------------------------------------------------------------
+                # TEXTO LONGO
+                # ---------------------------------------------------------------------
+                elif tipo == "texto_longo":
+                    st.session_state.respostas_formulario[chave] = st.text_area(
+                        label=texto,
+                        value=st.session_state.respostas_formulario.get(chave, ""),
+                        height=150,
+                        key=chave
+                    )
+
+
+                # ---------------------------------------------------------------------
+                # NÚMERO
+                # ---------------------------------------------------------------------
+                elif tipo == "numero":
+                    st.session_state.respostas_formulario[chave] = st.number_input(
+                        label=texto,
+                        value=st.session_state.respostas_formulario.get(chave, 0),
+                        step=1,
+                        key=chave
+                    )
+
+
+                # ---------------------------------------------------------------------
+                # ESCOLHA ÚNICA
+                # ---------------------------------------------------------------------
+                elif tipo == "escolha_unica":
+
+                    resposta_atual = st.session_state.respostas_formulario.get(chave)
+
+                    if resposta_atual in opcoes:
+                        index = opcoes.index(resposta_atual)
+                    else:
+                        index = 0
+
+                    st.session_state.respostas_formulario[chave] = st.radio(
+                        label=texto,
+                        options=opcoes,
+                        index=index,
+                        key=chave
+                    )
+
+
+                # ---------------------------------------------------------------------
+                # MÚLTIPLA ESCOLHA
+                # ---------------------------------------------------------------------
+                elif tipo == "multipla_escolha":
+                    st.session_state.respostas_formulario[chave] = st.multiselect(
+                        label=texto,
+                        options=opcoes,
+                        default=st.session_state.respostas_formulario.get(chave, []),
+                        key=chave
+                    )
+
+
+                # ---------------------------------------------------------------------
+                # TIPO NÃO SUPORTADO
+                # ---------------------------------------------------------------------
+                else:
+                    st.warning(f"Tipo de pergunta não suportado: {tipo}")
+
+                st.write("")  # Espaçamento entre perguntas
+
+
+
+
+
+            ###########################################################################
+            # 4. BOTÃO PARA SALVAR RESPOSTAS NO RELATÓRIO CORRETO (MONGODB)
+            ###########################################################################
+
+            if st.button("Salvar formulário", type="primary", icon=":material/save:"):
+
+                col_projetos.update_one(
+                    {
+                        "codigo": projeto["codigo"],
+                        "relatorios.numero": relatorio_numero
+                    },
+                    {
+                        "$set": {
+                            "relatorios.$.respostas_formulario":
+                                st.session_state.respostas_formulario
+                        }
+                    }
+                )
+
+                st.success(":material/check: Respostas salvas com sucesso!")
+                time.sleep(3)
+                st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -95,8 +95,8 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "Resposta curta",
             "Resposta longa",
             "Número inteiro",
-            "Múltipla escolha (checkbox)",
-            "Escolha única (radio)",
+            "Múltipla escolha",
+            "Escolha única",
             "Título",
             "Subtítulo",
             "Parágrafo",
@@ -141,7 +141,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
         )
 
     # Tipos que exigem opções
-    if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+    if tipo in ["Múltipla escolha", "Escolha única"]:
         pergunta = st.text_input(
             "Texto da pergunta",
             key="texto_pergunta_opcoes"
@@ -167,7 +167,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             st.warning("Preencha todas as informações.")
             return
 
-        if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+        if tipo in ["Múltipla escolha", "Escolha única"]:
             if not [o for o in opcoes if o.strip()]:
                 st.warning("Informe pelo menos uma opção.")
                 return
@@ -179,8 +179,8 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "Resposta curta": "texto_curto",
             "Resposta longa": "texto_longo",
             "Número inteiro": "numero",
-            "Múltipla escolha (checkbox)": "checkbox",
-            "Escolha única (radio)": "radio",
+            "Múltipla escolha": "multipla_escolha",
+            "Escolha única": "escolha_unica",
             "Título": "titulo",
             "Subtítulo": "subtitulo",
             "Linha divisória": "divisoria",
@@ -204,7 +204,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             nova_pergunta["pergunta"] = "Divisória"
 
         # Opções
-        if mapa_tipo[tipo] in ["checkbox", "radio"]:
+        if mapa_tipo[tipo] in ["multipla_escolha", "escolha_unica"]:
             nova_pergunta["opcoes"] = [o.strip() for o in opcoes if o.strip()]
 
         # --------------------------------------------------
@@ -364,13 +364,13 @@ with aba_perguntas:
                         "texto_curto": "Resposta curta",
                         "texto_longo": "Resposta longa",
                         "numero": "Número",
-                        "checkbox": "Múltipla escolha",
-                        "radio": "Escolha única"
+                        "multipla_escolha": "Múltipla escolha",
+                        "escolha_unica": "Escolha única"
                     }.get(p["tipo"], p["tipo"])
 
                     st.caption(f"Tipo: {tipo_legivel}")
 
-                    if p["tipo"] in ["checkbox", "radio"]:
+                    if p["tipo"] in ["multipla_escolha", "escolha_unica"]:
                         for opcao in p.get("opcoes", []):
                             st.write(f"• {opcao}")
 
@@ -424,8 +424,8 @@ with aba_perguntas:
                         "texto_curto": "Resposta curta",
                         "texto_longo": "Resposta longa",
                         "numero": "Número inteiro",
-                        "checkbox": "Múltipla escolha (checkbox)",
-                        "radio": "Escolha única (radio)",
+                        "multipla_escolha": "Múltipla escolha",
+                        "escolha_unica": "Escolha única",
                         "titulo": "Título",
                         "subtitulo": "Subtítulo",
                         "divisoria": "Linha divisória",
@@ -476,7 +476,7 @@ with aba_perguntas:
                             value=pergunta_atual.get("pergunta", "")
                         )
 
-                    elif tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+                    elif tipo in ["Múltipla escolha", "Escolha única"]:
                         texto = st.text_input(
                             "Texto da pergunta",
                             value=pergunta_atual.get("pergunta", "")
@@ -503,15 +503,15 @@ with aba_perguntas:
                             # Validações
                             if tipo != "Linha divisória" and not texto.strip():
                                 st.warning("O texto não pode ficar vazio.")
-                            elif tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"] and not any(o.strip() for o in opcoes):
+                            elif tipo in ["Múltipla escolha", "Escolha única"] and not any(o.strip() for o in opcoes):
                                 st.warning("Informe pelo menos uma opção.")
                             else:
                                 mapa_tipo = {
                                     "Resposta curta": "texto_curto",
                                     "Resposta longa": "texto_longo",
                                     "Número inteiro": "numero",
-                                    "Múltipla escolha (checkbox)": "checkbox",
-                                    "Escolha única (radio)": "radio",
+                                    "Múltipla escolha": "multipla_escolha",
+                                    "Escolha única": "escolha_unica",
                                     "Título": "titulo",
                                     "Subtítulo": "subtitulo",
                                     "Linha divisória": "divisoria",
@@ -528,7 +528,7 @@ with aba_perguntas:
                                 else:
                                     nova["pergunta"] = "Divisória"
 
-                                if mapa_tipo[tipo] in ["checkbox", "radio"]:
+                                if mapa_tipo[tipo] in ["multipla_escolha", "escolha_unica"]:
                                     nova["opcoes"] = [o.strip() for o in opcoes if o.strip()]
 
                                 perguntas_atualizadas = [
