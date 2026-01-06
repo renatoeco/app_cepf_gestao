@@ -284,7 +284,9 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 st.caption("Nenhuma pesquisa cadastrada.")
                 st.stop()
 
-            st.markdown("### Pesquisas cadastradas")
+            st.write('')
+            st.markdown("##### Pesquisas / Ferramentas de Monitoramento")
+            st.write('')
 
             pesquisas_projeto = projeto.get("pesquisas", [])
             status_map = {p["id_pesquisa"]: p for p in pesquisas_projeto}

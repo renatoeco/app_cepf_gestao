@@ -113,14 +113,14 @@ def ajustar_altura_dataframe(
     altura_maxima=None,  # Se None, não aplica limite
     use_container_width=True,
     hide_index=True,
-    column_config={
-        "Link": st.column_config.Column(
-            width="medium"  
-        ),
-        "Data da Última Ação Legislativa": st.column_config.Column(
-            label="Última ação",  
-        )
-    }
+    # column_config={
+    #     "Link": st.column_config.Column(
+    #         width="medium"  
+    #     ),
+    #     "Data da Última Ação Legislativa": st.column_config.Column(
+    #         label="Última ação",  
+    #     )
+    # }
 ):
     """
     Ajusta a altura da exibição de um DataFrame no Streamlit com base no número de linhas.
@@ -143,7 +143,7 @@ def ajustar_altura_dataframe(
         height=altura_total,
         use_container_width=use_container_width,
         hide_index=hide_index,
-        column_config=column_config
+        # column_config=column_config
     )
 
 
@@ -237,7 +237,7 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         # ----------------------------------------------------------
         if not parcelas or not relatorios:
             notificar(
-                f"O projeto {codigo} - {sigla} não possui parcelas e/ou relatórios cadastrados."
+                f"O projeto {codigo} - {sigla} não possui parcelas e/ou relatórios cadastrados. Não é possível determinar o status."
             )
 
             df_projetos.at[idx, "status"] = "Sem cronograma"

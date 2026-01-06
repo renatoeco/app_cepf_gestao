@@ -517,7 +517,7 @@ with cron_desemb:
             valor_total = valor_atual if valor_atual is not None else 0.0
 
             # -----------------------------------
-            # Dados atuais (fonte da verdade)
+            # Dados atuais
             # -----------------------------------
             parcelas = financeiro.get("parcelas", [])
 

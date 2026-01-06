@@ -99,6 +99,8 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "Escolha única (radio)",
             "Título",
             "Subtítulo",
+            "Parágrafo",
+            # "Subtítulo",
             "Linha divisória"
         ],
         key="tipo_pergunta_nova"
@@ -117,16 +119,23 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
         label_texto = "Texto do título"
     elif tipo == "Subtítulo":
         label_texto = "Texto do subtítulo"
+    elif tipo == "Parágrafo":
+        label_texto = "Texto do parágrafo"
 
-    # Tipos que exigem texto
+    # Tipos que exigem input de texto
     if tipo in [
         "Resposta curta",
         "Resposta longa",
         "Número inteiro",
         "Título",
-        "Subtítulo"
+        "Subtítulo",
     ]:
         pergunta = st.text_input(
+            label_texto,
+            key="texto_pergunta_nova"
+        )
+    elif tipo == "Parágrafo":
+        pergunta = st.text_area(
             label_texto,
             key="texto_pergunta_nova"
         )
@@ -174,7 +183,8 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "Escolha única (radio)": "radio",
             "Título": "titulo",
             "Subtítulo": "subtitulo",
-            "Linha divisória": "divisoria"
+            "Linha divisória": "divisoria",
+            "Parágrafo": "paragrafo"
         }
 
         # --------------------------------------------------
@@ -418,7 +428,8 @@ with aba_perguntas:
                         "radio": "Escolha única (radio)",
                         "titulo": "Título",
                         "subtitulo": "Subtítulo",
-                        "divisoria": "Linha divisória"
+                        "divisoria": "Linha divisória",
+                        "paragrafo": "Parágrafo"
                     }
 
                     tipo_atual = mapa_tipo_inv.get(pergunta_atual["tipo"])
@@ -429,14 +440,6 @@ with aba_perguntas:
                         index=list(mapa_tipo_inv.values()).index(tipo_atual),
                         key=f"selectbox_tipo_{pergunta_atual['ordem']}"
                     )
-
-
-                    # tipo = st.selectbox(
-                    #     "Tipo de pergunta",
-                    #     list(mapa_tipo_inv.values()),
-                    #     index=list(mapa_tipo_inv.values()).index(tipo_atual),
-                    #     key="selectbox_tipo_resposta"
-                    # )
 
 
 
@@ -452,6 +455,8 @@ with aba_perguntas:
                         label_texto = "Texto do título"
                     elif tipo == "Subtítulo":
                         label_texto = "Texto do subtítulo"
+                    elif tipo == "Parágrafo":
+                        label_texto = "Texto do parágrafo"
 
                     if tipo in [
                         "Resposta curta",
@@ -465,7 +470,13 @@ with aba_perguntas:
                             value=pergunta_atual.get("pergunta", "")
                         )
 
-                    if tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
+                    elif tipo == "Parágrafo":
+                        texto = st.text_area(
+                            label_texto,
+                            value=pergunta_atual.get("pergunta", "")
+                        )
+
+                    elif tipo in ["Múltipla escolha (checkbox)", "Escolha única (radio)"]:
                         texto = st.text_input(
                             "Texto da pergunta",
                             value=pergunta_atual.get("pergunta", "")
@@ -503,7 +514,8 @@ with aba_perguntas:
                                     "Escolha única (radio)": "radio",
                                     "Título": "titulo",
                                     "Subtítulo": "subtitulo",
-                                    "Linha divisória": "divisoria"
+                                    "Linha divisória": "divisoria",
+                                    "Parágrafo": "paragrafo"
                                 }
 
                                 nova = {
@@ -552,7 +564,8 @@ with aba_perguntas:
             if not perguntas:
                 st.caption("Nenhuma pergunta para ordenar.")
             else:
-                st.markdown("##### Arraste para reordenar as perguntas")
+                st.write('')
+                st.write('**Arraste para reordenar as perguntas**')
 
                 estilo = """
                     .sortable-component {
@@ -845,232 +858,6 @@ with aba_pesquisas:
                         st.success(":material/check: Pesquisa excluída com sucesso!")
                         time.sleep(3)
                         st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-        # # ======================================================
-        # # ABA 3 — EDITAR / EXCLUIR
-        # # ======================================================
-
-        # with aba_editar_pesquisa:
-
-        #     if not pesquisas:
-        #         st.caption("Nenhuma pesquisa cadastrada.")
-
-        #     else:
-        #         st.markdown("##### Selecione uma pesquisa para EDITAR ou EXCLUIR")
-
-        #         # ----------------------------------------------
-        #         # MAPA DE PESQUISAS
-        #         # ----------------------------------------------
-        #         mapa_pesquisas = {
-        #             p["nome_pesquisa"]: p for p in pesquisas
-        #         }
-
-        #         selecionada = st.selectbox(
-        #             "",
-        #             list(mapa_pesquisas.keys())
-        #         )
-
-        #         # Garante seleção
-        #         pesquisa_atual = mapa_pesquisas[selecionada]
-
-        #         st.divider()
-
-        #         # ----------------------------------------------
-        #         # CAMPO DE EDIÇÃO
-        #         # ----------------------------------------------
-        #         novo_nome = st.text_input(
-        #             "Nome da pesquisa",
-        #             value=pesquisa_atual["nome_pesquisa"]
-        #         )
-
-        #         st.write("")
-
-        #         # ----------------------------------------------
-        #         # BOTÕES DE AÇÃO
-        #         # ----------------------------------------------
-        #         with st.container(horizontal=True, horizontal_alignment="left"):
-
-        #             # -------- SALVAR --------
-        #             if st.button("Salvar alterações", type="primary", icon=":material/save:", key="btn_editar_pesquisa"):
-
-        #                 if not novo_nome.strip():
-        #                     st.warning("O nome da pesquisa não pode ficar vazio.")
-        #                 else:
-        #                     pesquisas_atualizadas = [
-        #                         {
-        #                             **p,
-        #                             "nome_pesquisa": novo_nome.strip()
-        #                         } if p["id"] == pesquisa_atual["id"] else p
-        #                         for p in pesquisas
-        #                     ]
-
-        #                     col_editais.update_one(
-        #                         {"codigo_edital": edital_selecionado_pesquisas},
-        #                         {"$set": {"pesquisas_relatorio": pesquisas_atualizadas}}
-        #                     )
-
-        #                     st.success(":material/check: Pesquisa atualizada com sucesso!")
-        #                     time.sleep(3)
-        #                     st.rerun()
-
-        #             # -------- EXCLUIR --------
-        #             if st.button("Excluir pesquisa", icon=":material/delete:", key="btn_excluir_pesquisa"):
-
-        #                 pesquisas_atualizadas = [
-        #                     p for p in pesquisas
-        #                     if p["id"] != pesquisa_atual["id"]
-        #                 ]
-
-        #                 col_editais.update_one(
-        #                     {"codigo_edital": edital_selecionado_pesquisas},
-        #                     {"$set": {"pesquisas_relatorio": pesquisas_atualizadas}}
-        #                 )
-
-        #                 st.success(":material/check: Pesquisa excluída com sucesso!")
-        #                 time.sleep(3)
-        #                 st.rerun()
-
-
-
-
-
-
-
-        # # ======================================================
-        # # ABA 3 — EDITAR / EXCLUIR
-        # # ======================================================
-
-        # with aba_editar_pesquisa:
-
-        #     if not pesquisas:
-        #         st.caption("Nenhuma pesquisa cadastrada.")
-        #     else:
-        #         # Mapeia pesquisas pelo nome
-        #         mapa_pesquisas = {
-        #             p["nome_pesquisa"]: p for p in pesquisas
-        #         }
-
-        #         selecionada = st.selectbox(
-        #             "Selecione a pesquisa",
-        #             list(mapa_pesquisas.keys())
-        #         )
-
-        #         pesquisa_atual = mapa_pesquisas[selecionada]
-
-        #         st.divider()
-
-        #         novo_nome = st.text_input(
-        #             "Nome da pesquisa",
-        #             value=pesquisa_atual["nome_pesquisa"]
-        #         )
-
-        #         # ----------------------------------------------
-        #         # AÇÕES
-        #         # ----------------------------------------------
-        #         col1, col2 = st.columns(2)
-
-        #         # -------- SALVAR --------
-        #         with col1:
-        #             if st.button("Salvar alterações", icon=":material/save:"):
-
-        #                 if not novo_nome.strip():
-        #                     st.warning("O nome da pesquisa não pode ficar vazio.")
-        #                 else:
-        #                     novas_pesquisas = [
-        #                         {
-        #                             **p,
-        #                             "nome_pesquisa": novo_nome.strip()
-        #                         } if p["id"] == pesquisa_atual["id"] else p
-        #                         for p in pesquisas
-        #                     ]
-
-        #                     col_editais.update_one(
-        #                         {"codigo_edital": edital_selecionado_pesquisas},
-        #                         {"$set": {"pesquisas_relatorio": novas_pesquisas}}
-        #                     )
-
-        #                     st.success("Pesquisa atualizada com sucesso!")
-        #                     time.sleep(3)
-        #                     st.rerun()
-
-        #         # -------- EXCLUIR --------
-        #         with col2:
-        #             if st.button("Excluir", icon=":material/delete:"):
-
-        #                 novas_pesquisas = [
-        #                     p for p in pesquisas
-        #                     if p["id"] != pesquisa_atual["id"]
-        #                 ]
-
-        #                 col_editais.update_one(
-        #                     {"codigo_edital": edital_selecionado_pesquisas},
-        #                     {"$set": {"pesquisas_relatorio": novas_pesquisas}}
-        #                 )
-
-        #                 st.success("Pesquisa excluída com sucesso!")
-        #                 time.sleep(3)
-        #                 st.rerun()
-
-
-
-
-
-# # ==========================================================
-# # ABA PESQUISAS
-# # ==========================================================
-
-# with aba_pesquisas:
-
-#     # ------------------------------------------------------
-#     # TÍTULO DA ABA
-#     # ------------------------------------------------------
-#     st.subheader("Pesquisas / Ferramentas de Monitoramento")
-#     st.write("")
-
-#     # ------------------------------------------------------
-#     # SELEÇÃO DO EDITAL
-#     # ------------------------------------------------------
-
-#     lista_editais = df_editais["codigo_edital"].unique().tolist()
-
-#     edital_selecionado_pesquisas = st.selectbox(
-#         "Selecione o Edital:",
-#         options=[""] + lista_editais,
-#         index=0,
-#         width=300,
-#         key="edital_selecionado_pesquisas"
-#     )
-
-#     # Se nenhum edital foi selecionado
-#     if not edital_selecionado_pesquisas:
-#         st.caption("Selecione um edital para continuar.")
-
-#     else:
-#         # ------------------------------------------------------
-#         # BUSCA O EDITAL
-#         # ------------------------------------------------------
-
-#         edital_pesquisas = col_editais.find_one(
-#             {"codigo_edital": edital_selecionado_pesquisas}
-#         )
-
-#         pesquisas = sorted(
-#             edital_pesquisas.get("pesquisas_relatorio", []),
-#             key=lambda x: x.get("ordem", 9999)
-#         )
-
-
 
 
 
