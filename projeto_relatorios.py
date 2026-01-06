@@ -414,6 +414,12 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             st.write("")
 
 
+
+
+            respostas_formulario = []
+
+
+
             for pergunta in perguntas:
                 tipo = pergunta.get("tipo")
                 texto = pergunta.get("pergunta")
@@ -430,7 +436,14 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 if tipo == "titulo":
                     st.subheader(texto)
                     st.write("")
+
+                    respostas_formulario.append({
+                        "tipo": "titulo",
+                        "texto": texto,
+                        "ordem": ordem
+                    })
                     continue
+
 
 
                 # ---------------------------------------------------------------------
@@ -439,7 +452,14 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 elif tipo == "subtitulo":
                     st.markdown(f"##### {texto}")
                     st.write("")
+
+                    respostas_formulario.append({
+                        "tipo": "subtitulo",
+                        "texto": texto,
+                        "ordem": ordem
+                    })
                     continue
+
 
 
                 # ---------------------------------------------------------------------
@@ -447,6 +467,11 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # ---------------------------------------------------------------------
                 elif tipo == "divisoria":
                     st.divider()
+
+                    respostas_formulario.append({
+                        "tipo": "divisoria",
+                        "ordem": ordem
+                    })
                     continue
 
 
@@ -456,6 +481,12 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 elif tipo == "paragrafo":
                     st.write(texto)
                     st.write("")
+
+                    respostas_formulario.append({
+                        "tipo": "paragrafo",
+                        "texto": texto,
+                        "ordem": ordem
+                    })
                     continue
 
 
@@ -463,35 +494,63 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # TEXTO CURTO
                 # ---------------------------------------------------------------------
                 elif tipo == "texto_curto":
-                    st.session_state.respostas_formulario[chave] = st.text_input(
+                    resposta = st.text_input(
                         label=texto,
                         value=st.session_state.respostas_formulario.get(chave, ""),
                         key=chave
                     )
+
+                    st.session_state.respostas_formulario[chave] = resposta
+
+                    respostas_formulario.append({
+                        "tipo": "texto_curto",
+                        "ordem": ordem,
+                        "pergunta": texto,
+                        "resposta": resposta
+                    })
+
 
 
                 # ---------------------------------------------------------------------
                 # TEXTO LONGO
                 # ---------------------------------------------------------------------
                 elif tipo == "texto_longo":
-                    st.session_state.respostas_formulario[chave] = st.text_area(
+                    resposta = st.text_area(
                         label=texto,
                         value=st.session_state.respostas_formulario.get(chave, ""),
                         height=150,
                         key=chave
                     )
 
+                    st.session_state.respostas_formulario[chave] = resposta
+
+                    respostas_formulario.append({
+                        "tipo": "texto_longo",
+                        "ordem": ordem,
+                        "pergunta": texto,
+                        "resposta": resposta
+                    })
 
                 # ---------------------------------------------------------------------
                 # NÚMERO
                 # ---------------------------------------------------------------------
                 elif tipo == "numero":
-                    st.session_state.respostas_formulario[chave] = st.number_input(
+                    resposta = st.number_input(
                         label=texto,
                         value=st.session_state.respostas_formulario.get(chave, 0),
                         step=1,
                         key=chave
                     )
+
+                    st.session_state.respostas_formulario[chave] = resposta
+
+                    respostas_formulario.append({
+                        "tipo": "numero",
+                        "ordem": ordem,
+                        "pergunta": texto,
+                        "resposta": resposta
+                    })
+
 
 
                 # ---------------------------------------------------------------------
@@ -500,30 +559,48 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 elif tipo == "escolha_unica":
 
                     resposta_atual = st.session_state.respostas_formulario.get(chave)
+                    index = opcoes.index(resposta_atual) if resposta_atual in opcoes else 0
 
-                    if resposta_atual in opcoes:
-                        index = opcoes.index(resposta_atual)
-                    else:
-                        index = 0
-
-                    st.session_state.respostas_formulario[chave] = st.radio(
+                    resposta = st.radio(
                         label=texto,
                         options=opcoes,
                         index=index,
                         key=chave
                     )
 
+                    st.session_state.respostas_formulario[chave] = resposta
+
+                    respostas_formulario.append({
+                        "tipo": "escolha_unica",
+                        "ordem": ordem,
+                        "pergunta": texto,
+                        "opcoes": opcoes,
+                        "resposta": resposta
+                    })
+
+
 
                 # ---------------------------------------------------------------------
                 # MÚLTIPLA ESCOLHA
                 # ---------------------------------------------------------------------
                 elif tipo == "multipla_escolha":
-                    st.session_state.respostas_formulario[chave] = st.multiselect(
+                    resposta = st.multiselect(
                         label=texto,
                         options=opcoes,
                         default=st.session_state.respostas_formulario.get(chave, []),
                         key=chave
                     )
+
+                    st.session_state.respostas_formulario[chave] = resposta
+
+                    respostas_formulario.append({
+                        "tipo": "multipla_escolha",
+                        "ordem": ordem,
+                        "pergunta": texto,
+                        "opcoes": opcoes,
+                        "resposta": resposta
+                    })
+
 
 
                 # ---------------------------------------------------------------------
@@ -538,9 +615,11 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
+
             ###########################################################################
             # 4. BOTÃO PARA SALVAR RESPOSTAS NO RELATÓRIO CORRETO (MONGODB)
             ###########################################################################
+
 
             if st.button("Salvar formulário", type="primary", icon=":material/save:"):
 
@@ -551,8 +630,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     },
                     {
                         "$set": {
-                            "relatorios.$.respostas_formulario":
-                                st.session_state.respostas_formulario
+                            "relatorios.$.respostas_formulario": respostas_formulario
                         }
                     }
                 )
@@ -560,10 +638,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 st.success(":material/check: Respostas salvas com sucesso!")
                 time.sleep(3)
                 st.rerun()
-
-
-
-
 
 
 
