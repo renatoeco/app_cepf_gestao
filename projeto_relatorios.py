@@ -381,7 +381,8 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             perguntas = edital.get("perguntas_relatorio", [])
 
             if not perguntas:
-                st.info("Este edital não possui perguntas cadastradas.")
+                st.write('')
+                st.error("O edital não possui perguntas cadastradas.")
                 st.stop()
 
             # Ordena as perguntas pela ordem definida no edital
@@ -535,12 +536,35 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # NÚMERO
                 # ---------------------------------------------------------------------
                 elif tipo == "numero":
+
+                    valor_bruto = st.session_state.respostas_formulario.get(chave)
+
+                    try:
+                        valor_inicial = float(valor_bruto)
+                    except (TypeError, ValueError):
+                        valor_inicial = 0.0
+
                     resposta = st.number_input(
                         label=texto,
-                        value=st.session_state.respostas_formulario.get(chave, 0),
-                        step=1,
+                        value=valor_inicial,
+                        step=1.0,
+                        format="%g",
                         key=chave
                     )
+
+                    st.session_state.respostas_formulario[chave] = resposta
+
+
+
+
+
+                # elif tipo == "numero":
+                #     resposta = st.number_input(
+                #         label=texto,
+                #         value=st.session_state.respostas_formulario.get(chave, 0),
+                #         step=1,
+                #         key=chave
+                #     )
 
                     st.session_state.respostas_formulario[chave] = resposta
 

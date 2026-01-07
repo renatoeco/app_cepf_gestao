@@ -64,13 +64,6 @@ df_editais["_id"] = df_editais["_id"].astype(str)
 # ==========================================================
 # FUNÇÃO: FORMULÁRIO DE NOVA PERGUNTA
 # ==========================================================
-# Esta função é um fragmento do Streamlit (@st.fragment),
-# o que significa que ela é renderizada de forma independente
-# e não recarrega toda a página ao ser utilizada.
-# ==========================================================
-
-
-
 
 
 @st.fragment
@@ -84,7 +77,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
     # ------------------------------------------------------
     # TÍTULO
     # ------------------------------------------------------
-    st.markdown("##### Cadastrar nova pergunta")
+    st.markdown("##### Cadastrar nova pergunta", help="Use asteriscos para **\**negrito**\** e para *\*itálico*\*.")
 
     # ------------------------------------------------------
     # TIPO DE PERGUNTA
@@ -94,14 +87,13 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
         [
             "Resposta curta",
             "Resposta longa",
-            "Número inteiro",
+            "Número",
             "Múltipla escolha",
             "Escolha única",
             "Título",
             "Subtítulo",
             "Parágrafo",
-            # "Subtítulo",
-            "Linha divisória"
+            # "Linha divisória"
         ],
         key="tipo_pergunta_nova"
     )
@@ -126,7 +118,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
     if tipo in [
         "Resposta curta",
         "Resposta longa",
-        "Número inteiro",
+        "Número",
         "Título",
         "Subtítulo",
     ]:
@@ -163,7 +155,8 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
         # ----------------------------
 
         # Campos obrigatórios
-        if tipo != "Linha divisória" and not pergunta.strip():
+        # if tipo != "Linha divisória" and not pergunta.strip():
+        if not pergunta.strip():
             st.warning("Preencha todas as informações.")
             return
 
@@ -178,12 +171,12 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
         mapa_tipo = {
             "Resposta curta": "texto_curto",
             "Resposta longa": "texto_longo",
-            "Número inteiro": "numero",
+            "Número": "numero",
             "Múltipla escolha": "multipla_escolha",
             "Escolha única": "escolha_unica",
             "Título": "titulo",
             "Subtítulo": "subtitulo",
-            "Linha divisória": "divisoria",
+            # "Linha divisória": "divisoria",
             "Parágrafo": "paragrafo"
         }
 
@@ -195,13 +188,16 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "ordem": len(perguntas) + 1
         }
 
-        # Texto obrigatório (exceto divisória)
-        if mapa_tipo[tipo] != "divisoria":
-            nova_pergunta["pergunta"] = pergunta.strip()
+        # Texto obrigatório
+        nova_pergunta["pergunta"] = pergunta.strip()
 
-        # Texto fixo para divisória
-        if mapa_tipo[tipo] == "divisoria":
-            nova_pergunta["pergunta"] = "Divisória"
+        # # Texto obrigatório (exceto divisória)
+        # if mapa_tipo[tipo] != "divisoria":
+        #     nova_pergunta["pergunta"] = pergunta.strip()
+
+        # # Texto fixo para divisória
+        # if mapa_tipo[tipo] == "divisoria":
+        #     nova_pergunta["pergunta"] = "Divisória"
 
         # Opções
         if mapa_tipo[tipo] in ["multipla_escolha", "escolha_unica"]:
@@ -215,14 +211,33 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             {"$push": {"perguntas_relatorio": nova_pergunta}}
         )
 
+
         # Feedback
         st.success("Pergunta adicionada com sucesso!")
-
-        # Mantém padrão
         time.sleep(3)
 
-        # Recarrega
+        # Limpa campos dinâmicos
+        for chave in [
+            "tipo_pergunta_nova",
+            "texto_pergunta_nova",
+            "texto_pergunta_opcoes"
+        ]:
+            if chave in st.session_state:
+                del st.session_state[chave]
+
         st.rerun()
+
+
+
+
+        # # Feedback
+        # st.success("Pergunta adicionada com sucesso!")
+
+        # # Mantém padrão
+        # time.sleep(3)
+
+        # # Recarrega
+        # st.rerun()
 
 
 
@@ -423,12 +438,12 @@ with aba_perguntas:
                     mapa_tipo_inv = {
                         "texto_curto": "Resposta curta",
                         "texto_longo": "Resposta longa",
-                        "numero": "Número inteiro",
+                        "numero": "Número",
                         "multipla_escolha": "Múltipla escolha",
                         "escolha_unica": "Escolha única",
                         "titulo": "Título",
                         "subtitulo": "Subtítulo",
-                        "divisoria": "Linha divisória",
+                        # "divisoria": "Linha divisória",
                         "paragrafo": "Parágrafo"
                     }
 
@@ -461,7 +476,7 @@ with aba_perguntas:
                     if tipo in [
                         "Resposta curta",
                         "Resposta longa",
-                        "Número inteiro",
+                        "Número",
                         "Título",
                         "Subtítulo"
                     ]:
@@ -487,8 +502,8 @@ with aba_perguntas:
                             value="\n".join(pergunta_atual.get("opcoes", []))
                         ).split("\n")
 
-                    if tipo == "Linha divisória":
-                        st.write("Este tipo não possui texto editável.")
+                    # if tipo == "Linha divisória":
+                    #     st.write("Este tipo não possui texto editável.")
 
                     st.write("")
 
@@ -501,7 +516,8 @@ with aba_perguntas:
                         if st.button("Salvar alterações", type="primary", icon=":material/save:"):
 
                             # Validações
-                            if tipo != "Linha divisória" and not texto.strip():
+                            if not texto.strip():
+                            # if tipo != "Linha divisória" and not texto.strip():
                                 st.warning("O texto não pode ficar vazio.")
                             elif tipo in ["Múltipla escolha", "Escolha única"] and not any(o.strip() for o in opcoes):
                                 st.warning("Informe pelo menos uma opção.")
@@ -509,12 +525,12 @@ with aba_perguntas:
                                 mapa_tipo = {
                                     "Resposta curta": "texto_curto",
                                     "Resposta longa": "texto_longo",
-                                    "Número inteiro": "numero",
+                                    "Número": "numero",
                                     "Múltipla escolha": "multipla_escolha",
                                     "Escolha única": "escolha_unica",
                                     "Título": "titulo",
                                     "Subtítulo": "subtitulo",
-                                    "Linha divisória": "divisoria",
+                                    # "Linha divisória": "divisoria",
                                     "Parágrafo": "paragrafo"
                                 }
 
@@ -522,11 +538,13 @@ with aba_perguntas:
                                     "tipo": mapa_tipo[tipo],
                                     "ordem": pergunta_atual["ordem"]
                                 }
-
-                                if mapa_tipo[tipo] != "divisoria":
-                                    nova["pergunta"] = texto.strip()
-                                else:
-                                    nova["pergunta"] = "Divisória"
+                                
+                                nova["pergunta"] = texto.strip()
+                                
+                                # if mapa_tipo[tipo] != "divisoria":
+                                #     nova["pergunta"] = texto.strip()
+                                # else:
+                                #     nova["pergunta"] = "Divisória"
 
                                 if mapa_tipo[tipo] in ["multipla_escolha", "escolha_unica"]:
                                     nova["opcoes"] = [o.strip() for o in opcoes if o.strip()]
