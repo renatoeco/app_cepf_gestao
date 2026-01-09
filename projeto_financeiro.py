@@ -61,45 +61,138 @@ financeiro = projeto.get("financeiro", {})
 ###########################################################################################################
 
 
+
+
+
 def atualizar_datas_relatorios(col_projetos, codigo_projeto):
+    # Busca o projeto no MongoDB
     projeto = col_projetos.find_one({"codigo": codigo_projeto})
 
+    # Recupera a lista de parcelas do financeiro
+    # Caso não exista, retorna uma lista vazia
     parcelas = projeto.get("financeiro", {}).get("parcelas", [])
+
+    # Recupera a lista de relatórios do projeto
+    # Caso não exista, retorna uma lista vazia
     relatorios = projeto.get("relatorios", [])
 
+    # Se não houver parcelas ou relatórios, não há nada a atualizar
     if not parcelas or not relatorios:
         return
 
-    # Mapear parcelas por número
+    # Cria um dicionário para mapear as parcelas pelo número
+    # Exemplo: {1: parcela1, 2: parcela2, ...}
+    # Isso facilita e otimiza a busca da parcela correspondente ao relatório
     mapa_parcelas = {
-        p["numero"]: p for p in parcelas if p.get("numero") is not None
+        p["numero"]: p
+        for p in parcelas
+        if p.get("numero") is not None
     }
 
+    # Lista que irá armazenar os relatórios atualizados
     novos_relatorios = []
 
+    # Percorre todos os relatórios existentes no banco
     for r in relatorios:
+        # Obtém o número do relatório (normalmente vinculado à parcela)
         numero = r.get("numero")
 
+        # Verifica se existe uma parcela correspondente a esse número
         if numero in mapa_parcelas:
+            # Converte a data prevista da parcela para datetime
             data_parcela = pd.to_datetime(
                 mapa_parcelas[numero]["data_prevista"]
             )
-            data_relatorio = (data_parcela + timedelta(days=15)).date().isoformat()
+
+            # Define a data prevista do relatório como
+            # 15 dias após a data prevista da parcela
+            data_relatorio = (
+                data_parcela + timedelta(days=15)
+            ).date().isoformat()
         else:
+            # Caso não exista parcela correspondente,
+            # a data do relatório fica indefinida
             data_relatorio = None
 
+        # Monta o novo objeto de relatório
         novos_relatorios.append(
             {
+                # Mantém o número do relatório
                 "numero": numero,
+
+                # Mantém as entregas já existentes no banco
                 "entregas": r.get("entregas", []),
-                "data_prevista": data_relatorio
+
+                # Atualiza (ou mantém) a data prevista calculada
+                "data_prevista": data_relatorio,
+
+                # Define o status do relatório da seguinte forma:
+                # - Se já existir um status no banco, ele é preservado
+                # - Se NÃO existir, define como "modo_edicao"
+                "status_relatorio": r.get("status_relatorio", "modo_edicao")
             }
         )
 
+    # Atualiza o documento do projeto no MongoDB
+    # Substitui completamente o array de relatórios
+    # pelos novos relatórios processados
     col_projetos.update_one(
         {"codigo": codigo_projeto},
         {"$set": {"relatorios": novos_relatorios}}
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def atualizar_datas_relatorios(col_projetos, codigo_projeto):
+#     projeto = col_projetos.find_one({"codigo": codigo_projeto})
+
+#     parcelas = projeto.get("financeiro", {}).get("parcelas", [])
+#     relatorios = projeto.get("relatorios", [])
+
+#     if not parcelas or not relatorios:
+#         return
+
+#     # Mapear parcelas por número
+#     mapa_parcelas = {
+#         p["numero"]: p for p in parcelas if p.get("numero") is not None
+#     }
+
+#     novos_relatorios = []
+
+#     for r in relatorios:
+#         numero = r.get("numero")
+
+#         if numero in mapa_parcelas:
+#             data_parcela = pd.to_datetime(
+#                 mapa_parcelas[numero]["data_prevista"]
+#             )
+#             data_relatorio = (data_parcela + timedelta(days=15)).date().isoformat()
+#         else:
+#             data_relatorio = None
+
+#         novos_relatorios.append(
+#             {
+#                 "numero": numero,
+#                 "entregas": r.get("entregas", []),
+#                 "data_prevista": data_relatorio,
+#                 "status_relatorio": "modo_edicao"
+#             }
+#         )
+
+#     col_projetos.update_one(
+#         {"codigo": codigo_projeto},
+#         {"$set": {"relatorios": novos_relatorios}}
+#     )
 
 
 
@@ -630,20 +723,6 @@ with cron_desemb:
             )
 
 
-
-
-
-            # # -----------------------------------
-            # # Sincronizar SOMENTE campos editáveis
-            # # -----------------------------------
-            # df_parcelas.loc[df_editado.index, "numero"] = df_editado["numero"]
-            # df_parcelas.loc[df_editado.index, "percentual"] = df_editado["percentual"]
-            # df_parcelas.loc[df_editado.index, "data_prevista"] = df_editado["data_prevista"]
-
-            # # Recalcular valor após edição
-            # df_parcelas["valor"] = (
-            #     df_parcelas["percentual"].fillna(0) / 100 * valor_total
-            # )
 
             # -----------------------------------
             # Total das porcentagens
