@@ -79,7 +79,7 @@ with col2:
             </style>
         """, unsafe_allow_html=True)
 
-        projetos_cursor = col_projetos.find({"sigla": {"$in": projetos_usuario}})
+        projetos_cursor = col_projetos.find({"codigo": {"$in": projetos_usuario}})
         projetos = list(projetos_cursor)
 
         if projetos:
@@ -101,78 +101,4 @@ with col2:
     else:
         st.write("Não há projetos associados a este usuário.")
         st.write("Entre em contato com os administradores do sistema.")
-
-
-
-
-
-
-
-
-# # =====================================================================
-# # OBTÉM OS PROJETOS DO BENEFICIÁRIO LOGADO
-# # =====================================================================
-# projetos_usuario = st.session_state.get("projetos", [])
-# nome_usuario = st.session_state.get("nome", "Usuário")
-# # tipo_usuario = st.session_state.get("tipo_usuario", "")
-# # email_usuario = st.session_state.get("email_para_recuperar", "")
-
-# nome_usuario_split = nome_usuario.split(" ")
-# nome_usuario_primeiro_nome = nome_usuario_split[0]
-
-
-# col1, col2, col3 = st.columns([1, 3, 1])
-
-# with col2:
-#     st.header(f"Olá {nome_usuario_primeiro_nome}")
-#     st.write('')
-
-
-#     # =====================================================================
-#     # FILTRA OS PROJETOS DO BANCO DE DADOS
-#     # =====================================================================
-
-#     # ??????????????????
-#     # st.write(st.session_state)
-
-
-#     if projetos_usuario:
-#         st.subheader("Selecione o projeto que deseja acessar:")
-
-#         # CSS: alinhamento à esquerda
-#         st.markdown("""
-#             <style>
-#             div.stButton > button {
-#                 text-align: left !important;
-#                 justify-content: flex-start !important;
-#             }
-#             </style>
-#         """, unsafe_allow_html=True)
-
-#         projetos_cursor = col_projetos.find({"sigla": {"$in": projetos_usuario}})
-#         projetos = list(projetos_cursor)
-
-#         if projetos:
-#             for i, projeto in enumerate(projetos):
-#                 codigo = str(projeto.get("codigo", "")).strip()
-#                 sigla = projeto.get("sigla", "")
-#                 nome_proj = projeto.get("nome_do_projeto", "")
-#                 texto_botao = f"**{codigo} - {sigla} - {nome_proj}**"
-
-#                 # Chave única
-#                 key = f"btn_proj_{i}_{codigo}"
-
-#                 # Quando o botão for clicado:
-#                 if st.button(texto_botao, key=key, type="tertiary"):
-#                     # Atualiza imediatamente o session_state
-#                     st.session_state.projeto_atual = codigo
-#                     st.session_state.pagina_atual = "ver_projeto"
-
-#                     # Força rerun aqui mesmo
-#                     st.rerun()
-
-#         else:
-#             st.warning("Nenhum projeto encontrado para este usuário.")
-#     else:
-#         st.info("Este usuário não possui projetos associados.")
 

@@ -676,6 +676,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                 icon=":material/save:",
                             ):
 
+
                                 with st.spinner("Salvando..."):
 
                                     # Conecta ao Drive SOMENTE aqui
@@ -688,19 +689,18 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                         projeto["sigla"]
                                     )
 
+                                    # Pasta Pesquisas (direto no projeto)
                                     pasta_pesquisas = obter_pasta_pesquisas(
                                         servico,
                                         pasta_projeto,
                                         projeto["codigo"]
                                     )
 
+                                    url_anexo_final = url_anexo_db  # valor já salvo no banco (se existir)
 
-                                    update_fields = {
-                                        "pesquisas.$.respondida": respondida_ui,
-                                        "pesquisas.$.verificada": verificada_ui
-                                    }
-
-                                    # Upload SOMENTE se ainda não foi salvo
+                                    # ------------------------------
+                                    # UPLOAD (somente se houver novo arquivo)
+                                    # ------------------------------
                                     if (
                                         arquivo is not None
                                         and not st.session_state.get(upload_salvo_key, False)
@@ -710,21 +710,57 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                             pasta_pesquisas,
                                             arquivo
                                         )
-                                        update_fields["pesquisas.$.url_anexo"] = gerar_link_drive(id_drive)
+
+                                        url_anexo_final = gerar_link_drive(id_drive)
 
                                         # Marca upload como concluído
                                         st.session_state[upload_salvo_key] = True
 
-                                    # Atualiza apenas essa pesquisa
-                                    col_projetos.update_one(
+                                    # ------------------------------
+                                    # MONTA O OBJETO DA PESQUISA
+                                    # ------------------------------
+                                    pesquisa_obj = {
+                                        "id_pesquisa": pesquisa["id"],
+                                        "respondida": respondida_ui,
+                                        "verificada": verificada_ui
+                                    }
+
+                                    if url_anexo_final:
+                                        pesquisa_obj["url_anexo"] = url_anexo_final
+
+                                    # ------------------------------
+                                    # VERIFICA SE JÁ EXISTE NO PROJETO
+                                    # ------------------------------
+                                    existe = col_projetos.count_documents(
                                         {
                                             "codigo": codigo_projeto_atual,
                                             "pesquisas.id_pesquisa": pesquisa["id"]
-                                        },
-                                        {
-                                            "$set": update_fields
                                         }
-                                    )
+                                    ) > 0
+
+                                    if existe:
+                                        col_projetos.update_one(
+                                            {
+                                                "codigo": codigo_projeto_atual,
+                                                "pesquisas.id_pesquisa": pesquisa["id"]
+                                            },
+                                            {
+                                                "$set": {
+                                                    "pesquisas.$": pesquisa_obj
+                                                }
+                                            }
+                                        )
+                                    else:
+                                        col_projetos.update_one(
+                                            {"codigo": codigo_projeto_atual},
+                                            {
+                                                "$push": {
+                                                    "pesquisas": pesquisa_obj
+                                                }
+                                            }
+                                        )
+
+
 
                                 # Limpa estados temporários
                                 st.session_state.pop(upload_key, None)
