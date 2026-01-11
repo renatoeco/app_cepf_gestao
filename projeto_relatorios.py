@@ -567,60 +567,80 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                             "Respondida",
 
                             # Valor inicial do checkbox:
-                            # - Busca no status salvo da pesquisa se ela já foi marcada como respondida
-                            # - Se não existir ainda no banco, assume False
+                            # - Usa o valor salvo no banco
+                            # - Se não existir, assume False
                             value=status.get("respondida", False),
 
-                            # Controle de bloqueio (disabled) do checkbox "Respondida"
+                            # Controle completo de bloqueio do checkbox
                             disabled=(
 
-                                # Regra geral já existente:
-                                # Se o usuário NÃO pode editar esta seção,
-                                # o checkbox fica desabilitado independentemente de qualquer outra condição
+                                # 1️⃣ REGRA GLOBAL DE STATUS DO RELATÓRIO
+                                # Se o relatório NÃO estiver em modo de edição,
+                                # ninguém pode alterar Respondida
+                                status_atual_db in ["em_analise", "aprovado"]
+
+                                # OU
+
+                                or
+
+                                # 2️⃣ REGRA DE PERMISSÃO GERAL
+                                # Se o usuário não pode editar pesquisas,
+                                # o checkbox fica bloqueado
                                 not pode_editar
 
                                 # OU
 
                                 or (
 
-                                    # Regra ESPECÍFICA solicitada:
-                                    # Se o usuário for beneficiário OU visitante
+                                    # 3️⃣ REGRA ESPECÍFICA PARA BENEFICIÁRIO / VISITANTE
+                                    # Se o usuário for beneficiário ou visitante
                                     tipo_usuario in ["beneficiario", "visitante"]
 
                                     # E
 
                                     and
 
-                                    # Se a pesquisa já estiver marcada como "verificada"
-                                    # (ou seja, já foi conferida por admin/equipe)
+                                    # Se a pesquisa já estiver marcada como verificada
+                                    # (ou seja, já passou pela conferência)
                                     status.get("verificada", False)
                                 )
                             ),
 
-                            # Chave única do checkbox no Streamlit:
-                            # - Usa o id da pesquisa para evitar conflito entre linhas
-                            # - Garante que cada checkbox mantenha seu próprio estado
+                            # Chave única do checkbox no Streamlit
+                            # Garante que cada linha tenha estado próprio
                             key=f"resp_{pesquisa['id']}"
                         )
 
 
 
-
-                        # respondida = st.checkbox(
-                        #     "Respondida",
-                        #     value=status.get("respondida", False),
-                        #     disabled=not pode_editar,
-                        #     key=f"resp_{pesquisa['id']}"
-                        # )
-
                     # -------- VERIFICADA --------
                     with col4:
                         verificada = st.checkbox(
                             "Verificada",
+
+                            # Valor inicial do checkbox
                             value=status.get("verificada", False),
-                            disabled=not pode_verificar,
+
+                            # Controle de bloqueio
+                            disabled=(
+
+                                # 1️⃣ REGRA GLOBAL DE STATUS DO RELATÓRIO
+                                # Em análise ou aprovado → ninguém altera
+                                status_atual_db in ["em_analise", "aprovado"]
+
+                                # OU
+
+                                or
+
+                                # 2️⃣ REGRA DE PERMISSÃO
+                                # Apenas admin/equipe podem verificar
+                                not pode_verificar
+                            ),
+
+                            # Chave única por pesquisa
                             key=f"verif_{pesquisa['id']}"
                         )
+
 
                     novos_status.append({
                         "id_pesquisa": pesquisa["id"],
