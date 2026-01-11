@@ -538,6 +538,57 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
+
+
+
+
+            # ---------- BENEFICIÁRIOS ----------
+            if step == "Beneficiários":
+                st.write("")
+                st.write("Registre aqui as **comunidades** beneficiadas pelo projeto. Em cada comunidade, registre os tipos de **Beneficiários** e de **Benefícios** relacionados.")
+
+
+                with st.expander("Nova comunidade", expanded=False):
+
+                    nome_comunidade = st.text_input(
+                        "Nome da comunidade",
+                        key=f"nova_comunidade_{idx}"
+                    )
+
+                    if st.button(
+                        "Adicionar comunidade",
+                        type="primary",
+                        key=f"btn_add_comunidade_{idx}"
+                    ):
+                        if not nome_comunidade.strip():
+                            st.warning("Informe o nome da comunidade.")
+                        else:
+                            col_projetos.update_one(
+                                {"codigo": projeto["codigo"]},
+                                {
+                                    "$push": {
+                                        "beneficiarios": {
+                                            "nome_comunidade": nome_comunidade.strip()
+                                        }
+                                    }
+                                }
+                            )
+
+                            st.success("Comunidade adicionada com sucesso!")
+                            st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
             # ---------- PESQUISAS ----------
             if step == "Pesquisas":
 

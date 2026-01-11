@@ -18,7 +18,7 @@ db = conectar_mongo_cepf_gestao()
 
 # Importa coleções e cria dataframes
 
-# Públicos
+# Beneficiários
 col_publicos = db["publicos"]
 
 # Direções Estratégicas
@@ -292,10 +292,10 @@ st.write('')
 
 # abas = st.tabs(['Públicos', 'Direções Estratégicas', 'Indicadores'])
 
-aba_perguntas, aba_pesquisas, aba_publicos, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
+aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
     'Perguntas do Relatório',
     'Pesquisas',
-    'Públicos',
+    'Beneficiários',
     'Direções Estratégicas',
     'Indicadores',
     'Categorias de despesa',
@@ -887,13 +887,13 @@ with aba_pesquisas:
 
 
 # ==========================================================
-# ABA PÚBLICOS
+# ABA BENEFICIÁRIOS
 # ==========================================================
 
 
-with aba_publicos:
+with aba_beneficiarios:
 
-    st.subheader("Públicos")
+    st.subheader("Beneficiários")
     st.write('')
 
     # 1) Carrega documentos da coleção (ordenados)
@@ -917,7 +917,7 @@ with aba_publicos:
     # -------------------------
     if not editar_publicos:
         if df_publicos.empty:
-            st.info("Nenhum público cadastrado.")
+            st.info("Nenhum tipo de beneficiário cadastrado.")
         else:
             st.dataframe(
                 df_publicos[["publico"]].sort_values("publico"),
@@ -933,7 +933,7 @@ with aba_publicos:
         st.write("Edite, adicione e exclua linhas.")
 
         if df_publicos.empty:
-            st.warning("Ainda não há públicos cadastrados. Você pode adicionar novos abaixo.")
+            st.warning("Ainda não há tipos de beneficiário cadastrados. Você pode adicionar novos abaixo.")
 
             df_editor = pd.DataFrame(
                 {"publico": pd.Series(dtype="str")}
@@ -998,7 +998,7 @@ with aba_publicos:
                     st.stop()
                 col_publicos.insert_one({"publico": publico})
 
-            st.success("Públicos atualizados com sucesso!")
+            st.success("Beneficiários atualizados com sucesso!")
             time.sleep(3)
             st.rerun()
 
