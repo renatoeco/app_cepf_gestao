@@ -19,12 +19,6 @@ from funcoes_auxiliares import (
 
 
 
-# Google Drive API
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-
-
 
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT
@@ -81,15 +75,16 @@ section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-s
 # Conecta-se ao banco de dados MongoDB (usa cache automático para melhorar performance)
 db = conectar_mongo_cepf_gestao()
 
-col_projetos = db["projetos"]
-
-col_editais = db["editais"]
 
 
 
 ###########################################################################################################
 # CARREGAMENTO DOS DADOS
 ###########################################################################################################
+
+col_projetos = db["projetos"]
+
+col_editais = db["editais"]
 
 codigo_projeto_atual = st.session_state.projeto_atual
 
@@ -151,8 +146,6 @@ def liberar_proximo_relatorio(projeto_codigo, relatorios):
                     }
                 }
             )
-
-
 
 
 
@@ -236,7 +229,7 @@ def extrair_atividades(projeto):
 
 
 
-
+# Função para formatar números no padrão brasileiro, com poucas casas decimais (dinamicamente)
 def formatar_numero_br_dinamico(valor):
     """
     Formata número no padrão brasileiro:
@@ -269,7 +262,7 @@ def formatar_numero_br_dinamico(valor):
 
 
 ###########################################################################################################
-# TRATAMENTO DOS DADOS
+# TRATAMENTO DOS DADOS E CONTROLES DE SESSÃO
 ###########################################################################################################
 
 
@@ -344,12 +337,6 @@ abas = [f"Relatório {r.get('numero')}" for r in relatorios]
 tabs = st.tabs(abas)
 
 
-
-
-# Cria uma aba para cada relatório
-
-
-
 for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
     with tab:
 
@@ -373,20 +360,33 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             and tipo_usuario == "beneficiario"
         )
 
+
         # -------------------------------
-        # REGRA DE BLOQUEIO (a partir do 2º)
+        # REGRA DE BLOQUEIO (a partir do 2º relatório)
         # -------------------------------
+        # A partir do segundo relatório (idx > 0),
+        # este relatório só pode ser liberado se o anterior estiver APROVADO.
         if idx > 0:
+
+            # Recupera o status do relatório imediatamente anterior
             status_anterior = relatorios[idx - 1].get("status_relatorio")
 
+            # Se o relatório anterior NÃO estiver aprovado,
+            # este relatório deve ficar bloqueado
             if status_anterior != "aprovado":
+
+                # Flag usada pela UI para:
+                # - desabilitar o segmented_control
+                # - impedir edição do conteúdo
                 aguardando = True
 
-                # força status aguardando no banco (sem loop)
+                # Força o status "aguardando" no banco de dados
+                # Apenas se ainda não estiver como "aguardando"
+                # (evita update desnecessário e loop de escrita)
                 col_projetos.update_one(
                     {
-                        "codigo": projeto_codigo,
-                        "relatorios.numero": relatorio_numero,
+                        "codigo": projeto_codigo,                   # projeto atual
+                        "relatorios.numero": relatorio_numero,       # relatório atual
                         "relatorios.status_relatorio": {"$ne": "aguardando"}
                     },
                     {
@@ -396,8 +396,13 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     }
                 )
 
-                # UI fica travada, mas mantém um valor válido
+                # Na interface:
+                # - o segmented_control fica travado
+                # - mas precisa exibir um valor válido
+                # - "Modo edição" é apenas visual (não altera o banco)
                 status_atual_ui = "Modo edição"
+
+
 
 
 
@@ -419,14 +424,21 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-
-
-
         # -------------------------------
-        # INICIALIZA SESSION_STATE
+        # SINCRONIZA STATUS DO RELATÓRIO COM A UI
         # -------------------------------
-        if f"status_relatorio_{idx}" not in st.session_state:
-            st.session_state[f"status_relatorio_{idx}"] = status_atual_ui
+
+        status_key = f"status_relatorio_{idx}"
+
+        # Converte SEMPRE o status do banco para o rótulo da interface
+        status_atual_ui = STATUS_DB_TO_UI.get(status_atual_db, "Modo edição")
+
+        # Se o valor salvo no session_state estiver diferente do banco,
+        # atualiza para manter o segmented_control sincronizado
+        if st.session_state.get(status_key) != status_atual_ui:
+            st.session_state[status_key] = status_atual_ui
+
+
 
         # -------------------------------
         # SEGMENTED CONTROL somente para equipe interna
@@ -583,12 +595,13 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     # -------- ANEXO --------
                     arquivo = None
 
+
                     with col2:
                         # Caso a pesquisa exija upload
                         if pesquisa.get("upload_arquivo"):
 
                             # -----------------------------
-                            # BENEFICIÁRIO → pode enviar
+                            # BENEFICIÁRIO → pode anexar
                             # -----------------------------
                             if (
                                 tipo_usuario == "beneficiario"
@@ -601,16 +614,18 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                 )
 
                             # -----------------------------
-                            # NÃO BENEFICIÁRIO → só aviso
+                            # NÃO BENEFICIÁRIO
+                            # Mostra aviso SOMENTE se não houver anexo salvo
                             # -----------------------------
-                            elif tipo_usuario != "beneficiario":
-                                st.write(":material/attachment: Demanda anexo")
+                            elif tipo_usuario != "beneficiario" and not url_anexo_db:
+                                st.write(":material/attach_file: Demanda anexo")
 
                         # -----------------------------
                         # Link do anexo (se existir)
                         # -----------------------------
                         if url_anexo_db:
-                            st.markdown(f"[Ver anexo]({url_anexo_db})")
+                            st.markdown(f":material/attach_file: [Ver anexo]({url_anexo_db})")
+
 
 
                     # -------- RESPONDIDA --------
