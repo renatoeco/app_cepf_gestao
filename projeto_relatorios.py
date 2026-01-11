@@ -562,12 +562,56 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                     # -------- RESPONDIDA --------
                     with col3:
+                        # Para beneficiários e visitantes, sempre que a pesquisa for verificara, desabilita o checkbox de respondida
                         respondida = st.checkbox(
                             "Respondida",
+
+                            # Valor inicial do checkbox:
+                            # - Busca no status salvo da pesquisa se ela já foi marcada como respondida
+                            # - Se não existir ainda no banco, assume False
                             value=status.get("respondida", False),
-                            disabled=not pode_editar,
+
+                            # Controle de bloqueio (disabled) do checkbox "Respondida"
+                            disabled=(
+
+                                # Regra geral já existente:
+                                # Se o usuário NÃO pode editar esta seção,
+                                # o checkbox fica desabilitado independentemente de qualquer outra condição
+                                not pode_editar
+
+                                # OU
+
+                                or (
+
+                                    # Regra ESPECÍFICA solicitada:
+                                    # Se o usuário for beneficiário OU visitante
+                                    tipo_usuario in ["beneficiario", "visitante"]
+
+                                    # E
+
+                                    and
+
+                                    # Se a pesquisa já estiver marcada como "verificada"
+                                    # (ou seja, já foi conferida por admin/equipe)
+                                    status.get("verificada", False)
+                                )
+                            ),
+
+                            # Chave única do checkbox no Streamlit:
+                            # - Usa o id da pesquisa para evitar conflito entre linhas
+                            # - Garante que cada checkbox mantenha seu próprio estado
                             key=f"resp_{pesquisa['id']}"
                         )
+
+
+
+
+                        # respondida = st.checkbox(
+                        #     "Respondida",
+                        #     value=status.get("respondida", False),
+                        #     disabled=not pode_editar,
+                        #     key=f"resp_{pesquisa['id']}"
+                        # )
 
                     # -------- VERIFICADA --------
                     with col4:
