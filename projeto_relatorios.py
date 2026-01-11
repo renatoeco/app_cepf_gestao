@@ -95,9 +95,45 @@ edital = col_editais.find_one({"codigo_edital": projeto["edital"]})
 tipo_usuario = st.session_state.get("tipo_usuario")
 
 
+
+# ?????????????????
+# Nome do usuário
+st.write(st.session_state.get("nome"))
+
+
+
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+# Função para liberar o próximo relatório quando o relatório anterior for aprovado
+def liberar_proximo_relatorio(projeto_codigo, relatorios):
+    """
+    Se um relatório estiver aprovado, libera o próximo
+    caso ele esteja como 'aguardando'.
+    """
+    for i in range(len(relatorios) - 1):
+        status_atual = relatorios[i].get("status_relatorio")
+        status_proximo = relatorios[i + 1].get("status_relatorio")
+
+        if status_atual == "aprovado" and status_proximo == "aguardando":
+            col_projetos.update_one(
+                {
+                    "codigo": projeto_codigo,
+                    "relatorios.numero": relatorios[i + 1]["numero"]
+                },
+                {
+                    "$set": {
+                        "relatorios.$.status_relatorio": "modo_edicao"
+                    }
+                }
+            )
+
+
+
+
+
 
 # Renderiza as perguntas em modo visualização
 def renderizar_visualizacao(pergunta, resposta):
@@ -123,9 +159,6 @@ STATUS_UI_TO_DB = {
     "Em análise": "em_analise",
     "Aprovado": "aprovado",
 }
-
-STATUS_DB_TO_UI = {v: k for k, v in STATUS_UI_TO_DB.items()}
-
 
 STATUS_DB_TO_UI = {v: k for k, v in STATUS_UI_TO_DB.items()}
 
@@ -155,23 +188,6 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
             }
         }
     )
-
-
-# Os relatórios seguintes ficam aguardando (bloqueados), até que o relatório anterior seja aprovado.
-def forcar_status_aguardando(projeto_codigo, relatorio_numero):
-    col_projetos.update_one(
-        {
-            "codigo": projeto_codigo,
-            "relatorios.numero": relatorio_numero,
-            "relatorios.status_relatorio": {"$ne": "aguardando"}
-        },
-        {
-            "$set": {
-                "relatorios.$.status_relatorio": "aguardando"
-            }
-        }
-    )
-
 
 
 
@@ -235,6 +251,15 @@ def formatar_numero_br_dinamico(valor):
 ###########################################################################################################
 
 
+# Libera automaticamente o próximo relatório, se aplicável
+liberar_proximo_relatorio(projeto["codigo"], relatorios)
+
+# Recarrega o projeto para refletir possíveis mudanças
+projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
+relatorios = projeto.get("relatorios", [])
+
+
+
 
 # -------------------------------------------
 # CONTROLE DE STEP DO RELATÓRIO
@@ -266,6 +291,9 @@ with col_identificacao:
         f"<div style='text-align: right; margin-top: 30px;'>{df_projeto['codigo'].values[0]} - {df_projeto['sigla'].values[0]}</div>",
         unsafe_allow_html=True
     )
+
+
+
 
 
 
@@ -314,6 +342,15 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
         aguardando = False
 
+
+        # -------------------------------
+        # Controle central de permissão de edição
+        # -------------------------------
+        pode_editar_relatorio = (
+            status_atual_db == "modo_edicao"
+            and tipo_usuario == "beneficiario"
+        )
+
         # -------------------------------
         # REGRA DE BLOQUEIO (a partir do 2º)
         # -------------------------------
@@ -340,6 +377,29 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # UI fica travada, mas mantém um valor válido
                 status_atual_ui = "Modo edição"
 
+
+
+
+        ###########################################################################################################
+        # MENSAGEM DE STATUS DO RELATÓRIO PARA BENEFICIÁRIO E VISITANTE
+        ###########################################################################################################
+
+        if tipo_usuario in ["beneficiario", "visitante"]:
+
+            if status_atual_db == "em_analise":
+                st.write('')
+                st.warning("Relatório em análise. Aguarde o retorno.", icon=":material/manage_search:")
+
+            elif status_atual_db == "aprovado":
+                st.write('')
+                st.success("Relatório aprovado", icon=":material/check:")
+
+
+
+
+
+
+
         # -------------------------------
         # INICIALIZA SESSION_STATE
         # -------------------------------
@@ -347,23 +407,26 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             st.session_state[f"status_relatorio_{idx}"] = status_atual_ui
 
         # -------------------------------
-        # SEGMENTED CONTROL
+        # SEGMENTED CONTROL somente para equipe interna
         # -------------------------------
-        with st.container(horizontal=True, horizontal_alignment="center"):
-            st.segmented_control(
-                label="",
-                options=["Modo edição", "Em análise", "Aprovado"],
-                key=f"status_relatorio_{idx}",
-                disabled=aguardando,
-                on_change=atualizar_status_relatorio if not aguardando else None,
-                args=(idx, relatorio_numero, projeto_codigo) if not aguardando else None
-            )
+
+        if tipo_usuario in ["equipe", "admin"]:
+            with st.container(horizontal=True, horizontal_alignment="center"):
+                st.segmented_control(
+                    label="",
+                    options=["Modo edição", "Em análise", "Aprovado"],
+                    key=f"status_relatorio_{idx}",
+                    disabled=aguardando,
+                    on_change=atualizar_status_relatorio if not aguardando else None,
+                    args=(idx, relatorio_numero, projeto_codigo) if not aguardando else None
+                )
 
         if aguardando:
             st.write('')
             st.info(
                 # ":material/hourglass_top: Aguardando a aprovação do relatório anterior."
-                ":material/nest_clock_farsight_analog: Aguardando a aprovação do relatório anterior."
+                "Aguardando a aprovação do relatório anterior.",
+                icon=":material/nest_clock_farsight_analog:"
 
             )
 
@@ -451,7 +514,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 usuario_admin = tipo_usuario == "admin"
                 usuario_equipe = tipo_usuario == "equipe"
                 usuario_beneficiario = tipo_usuario == "beneficiario"
-                # usuario_visitante = tipo_usuario not in ["admin", "equipe", "beneficiario"]
+                usuario_visitante = tipo_usuario not in ["visitante"]
 
                 pode_editar = usuario_admin or usuario_equipe or usuario_beneficiario
                 pode_verificar = usuario_admin or usuario_equipe
@@ -580,10 +643,23 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 if st.session_state.get("form_relatorio_ativo") != chave_relatorio_ativo:
                     st.session_state.form_relatorio_ativo = chave_relatorio_ativo
 
-                    # Carrega respostas já existentes ou inicializa vazio
-                    st.session_state.respostas_formulario = (
-                        relatorio.get("respostas_formulario", {}).copy()
-                    )
+
+                    # -------------------------------------------
+                    # CARREGA RESPOSTAS DO RELATÓRIO (DICT DE OBJETOS)
+                    # -------------------------------------------
+
+                    # Identificador único do relatório
+                    relatorio_numero = relatorio["numero"]
+
+                    # Evita vazamento entre abas
+                    if st.session_state.get("form_relatorio_ativo") != relatorio_numero:
+                        st.session_state.form_relatorio_ativo = relatorio_numero
+
+                        # Sempre trabalha com dict (novo modelo)
+                        st.session_state.respostas_formulario = (
+                            relatorio.get("respostas_formulario", {}).copy()
+                        )
+
 
 
                 ###########################################################################
@@ -596,7 +672,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-                respostas_formulario = []
+                # respostas_formulario = []
 
 
 
@@ -617,11 +693,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.subheader(texto)
                         st.write("")
 
-                        respostas_formulario.append({
-                            "tipo": "titulo",
-                            "texto": texto,
-                            "ordem": ordem
-                        })
+
                         continue
 
 
@@ -633,11 +705,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.markdown(f"##### {texto}")
                         st.write("")
 
-                        respostas_formulario.append({
-                            "tipo": "subtitulo",
-                            "texto": texto,
-                            "ordem": ordem
-                        })
+
                         continue
 
 
@@ -662,11 +730,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.write(texto)
                         st.write("")
 
-                        respostas_formulario.append({
-                            "tipo": "paragrafo",
-                            "texto": texto,
-                            "ordem": ordem
-                        })
                         continue
 
 
@@ -674,96 +737,62 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     # TEXTO CURTO
                     # ---------------------------------------------------------------------
                     elif tipo == "texto_curto":
+                    
+                    
+                        resposta_atual = (
+                            st.session_state.respostas_formulario
+                            .get(chave, {})
+                            .get("resposta", "")
+                        )
 
-                        resposta = st.session_state.respostas_formulario.get(chave, "")
-
-                        if status_atual_db == "modo_edicao":
+                        if pode_editar_relatorio:
                             resposta = st.text_input(
                                 label=texto,
-                                value=resposta,
-                                key=chave
+                                value=resposta_atual,
+                                key=f"input_{chave}"
                             )
+
+                            st.session_state.respostas_formulario[chave] = {
+                                "tipo": tipo,
+                                "ordem": ordem,
+                                "pergunta": texto,
+                                "resposta": resposta
+                            }
                         else:
-                            renderizar_visualizacao(texto, resposta)
-
-                        st.session_state.respostas_formulario[chave] = resposta
-
-                        respostas_formulario.append({
-                            "tipo": "texto_curto",
-                            "ordem": ordem,
-                            "pergunta": texto,
-                            "resposta": resposta
-                        })
+                            renderizar_visualizacao(texto, resposta_atual)
 
 
-
-
-
-                    # elif tipo == "texto_curto":
-                    #     resposta = st.text_input(
-                    #         label=texto,
-                    #         value=st.session_state.respostas_formulario.get(chave, ""),
-                    #         key=chave
-                    #     )
-
-                    #     st.session_state.respostas_formulario[chave] = resposta
-
-                    #     respostas_formulario.append({
-                    #         "tipo": "texto_curto",
-                    #         "ordem": ordem,
-                    #         "pergunta": texto,
-                    #         "resposta": resposta
-                    #     })
 
 
 
                     # ---------------------------------------------------------------------
                     # TEXTO LONGO
                     # ---------------------------------------------------------------------
-
                     elif tipo == "texto_longo":
+                    
+                    
+                        resposta_atual = (
+                            st.session_state.respostas_formulario
+                            .get(chave, {})
+                            .get("resposta", "")
+                        )
 
-                        resposta = st.session_state.respostas_formulario.get(chave, "")
-
-                        if status_atual_db == "modo_edicao":
+                        if pode_editar_relatorio:
                             resposta = st.text_area(
                                 label=texto,
-                                value=resposta,
+                                value=resposta_atual,
                                 height=150,
-                                key=chave
+                                key=f"input_{chave}"
                             )
+
+                            st.session_state.respostas_formulario[chave] = {
+                                "tipo": tipo,
+                                "ordem": ordem,
+                                "pergunta": texto,
+                                "resposta": resposta
+                            }
                         else:
-                            renderizar_visualizacao(texto, resposta)
-
-                        st.session_state.respostas_formulario[chave] = resposta
-
-                        respostas_formulario.append({
-                            "tipo": "texto_longo",
-                            "ordem": ordem,
-                            "pergunta": texto,
-                            "resposta": resposta
-                        })
-
-
-
-
-
-                    # elif tipo == "texto_longo":
-                    #     resposta = st.text_area(
-                    #         label=texto,
-                    #         value=st.session_state.respostas_formulario.get(chave, ""),
-                    #         height=150,
-                    #         key=chave
-                    #     )
-
-                    #     st.session_state.respostas_formulario[chave] = resposta
-
-                    #     respostas_formulario.append({
-                    #         "tipo": "texto_longo",
-                    #         "ordem": ordem,
-                    #         "pergunta": texto,
-                    #         "resposta": resposta
-                    #     })
+                            renderizar_visualizacao(texto, resposta_atual)
 
 
 
@@ -771,66 +800,35 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     # NÚMERO
                     # ---------------------------------------------------------------------
                     elif tipo == "numero":
+                    
+                    
+                        resposta_atual = (
+                            st.session_state.respostas_formulario
+                            .get(chave, {})
+                            .get("resposta", 0)
+                        )
 
-                        resposta = st.session_state.respostas_formulario.get(chave)
-
-                        try:
-                            valor_inicial = float(resposta)
-                        except (TypeError, ValueError):
-                            valor_inicial = 0.0
-
-                        if status_atual_db == "modo_edicao":
+                        if pode_editar_relatorio:
                             resposta = st.number_input(
                                 label=texto,
-                                value=valor_inicial,
+                                value=float(resposta_atual),
                                 step=1.0,
                                 format="%g",
-                                key=chave
+                                key=f"input_{chave}"
                             )
+
+                            st.session_state.respostas_formulario[chave] = {
+                                "tipo": tipo,
+                                "ordem": ordem,
+                                "pergunta": texto,
+                                "resposta": resposta
+                            }
                         else:
                             renderizar_visualizacao(
                                 texto,
-                                formatar_numero_br_dinamico(resposta)
+                                formatar_numero_br_dinamico(resposta_atual)
                             )
 
-                        st.session_state.respostas_formulario[chave] = resposta
-
-
-
-
-
-
-
-
-                    # # ---------------------------------------------------------------------
-                    # # NÚMERO
-                    # # ---------------------------------------------------------------------
-                    # elif tipo == "numero":
-
-                    #     valor_bruto = st.session_state.respostas_formulario.get(chave)
-
-                    #     try:
-                    #         valor_inicial = float(valor_bruto)
-                    #     except (TypeError, ValueError):
-                    #         valor_inicial = 0.0
-
-                    #     resposta = st.number_input(
-                    #         label=texto,
-                    #         value=valor_inicial,
-                    #         step=1.0,
-                    #         format="%g",
-                    #         key=chave
-                    #     )
-
-
-                    #     st.session_state.respostas_formulario[chave] = resposta
-
-                    #     respostas_formulario.append({
-                    #         "tipo": "numero",
-                    #         "ordem": ordem,
-                    #         "pergunta": texto,
-                    #         "resposta": resposta
-                    #     })
 
 
 
@@ -838,120 +836,69 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     # ESCOLHA ÚNICA
                     # ---------------------------------------------------------------------
                     elif tipo == "escolha_unica":
+                    
+                    
+                        resposta_atual = (
+                            st.session_state.respostas_formulario
+                            .get(chave, {})
+                            .get("resposta", opcoes[0] if opcoes else "")
+                        )
 
-                        resposta = st.session_state.respostas_formulario.get(chave)
-
-                        if status_atual_db == "modo_edicao":
-                            index = opcoes.index(resposta) if resposta in opcoes else 0
+                        if pode_editar_relatorio:
                             resposta = st.radio(
                                 label=texto,
                                 options=opcoes,
-                                index=index,
-                                key=chave
+                                index=opcoes.index(resposta_atual) if resposta_atual in opcoes else 0,
+                                key=f"input_{chave}"
                             )
+
+                            st.session_state.respostas_formulario[chave] = {
+                                "tipo": tipo,
+                                "ordem": ordem,
+                                "pergunta": texto,
+                                "resposta": resposta
+                            }
                         else:
-                            renderizar_visualizacao(texto, resposta)
+                            renderizar_visualizacao(texto, resposta_atual)
 
-                        st.session_state.respostas_formulario[chave] = resposta
-
-                        respostas_formulario.append({
-                            "tipo": "escolha_unica",
-                            "ordem": ordem,
-                            "pergunta": texto,
-                            "opcoes": opcoes,
-                            "resposta": resposta
-                        })
-
-
-
-
-
-                    # # ---------------------------------------------------------------------
-                    # # ESCOLHA ÚNICA
-                    # # ---------------------------------------------------------------------
-                    # elif tipo == "escolha_unica":
-
-                    #     resposta_atual = st.session_state.respostas_formulario.get(chave)
-                    #     index = opcoes.index(resposta_atual) if resposta_atual in opcoes else 0
-
-                    #     resposta = st.radio(
-                    #         label=texto,
-                    #         options=opcoes,
-                    #         index=index,
-                    #         key=chave
-                    #     )
-
-                    #     st.session_state.respostas_formulario[chave] = resposta
-
-                    #     respostas_formulario.append({
-                    #         "tipo": "escolha_unica",
-                    #         "ordem": ordem,
-                    #         "pergunta": texto,
-                    #         "opcoes": opcoes,
-                    #         "resposta": resposta
-                    #     })
 
 
 
                     # ---------------------------------------------------------------------
                     # MÚLTIPLA ESCOLHA
                     # ---------------------------------------------------------------------
+
                     elif tipo == "multipla_escolha":
+                    
+                    
+                        resposta_atual = (
+                            st.session_state.respostas_formulario
+                            .get(chave, {})
+                            .get("resposta", [])
+                        )
 
-                        resposta = st.session_state.respostas_formulario.get(chave, [])
-
-                        if status_atual_db == "modo_edicao":
+                        if pode_editar_relatorio:
                             resposta = st.multiselect(
                                 label=texto,
                                 options=opcoes,
-                                default=resposta,
-                                key=chave
+                                default=resposta_atual,
+                                key=f"input_{chave}"
                             )
+
+                            st.session_state.respostas_formulario[chave] = {
+                                "tipo": tipo,
+                                "ordem": ordem,
+                                "pergunta": texto,
+                                "resposta": resposta
+                            }
                         else:
                             renderizar_visualizacao(
                                 texto,
-                                ", ".join(resposta) if resposta else ""
+                                ", ".join(resposta_atual)
                             )
 
-                        st.session_state.respostas_formulario[chave] = resposta
-
-                        respostas_formulario.append({
-                            "tipo": "multipla_escolha",
-                            "ordem": ordem,
-                            "pergunta": texto,
-                            "opcoes": opcoes,
-                            "resposta": resposta
-                        })
 
 
-
-
-
-
-
-
-
-
-                    # # ---------------------------------------------------------------------
-                    # # MÚLTIPLA ESCOLHA
-                    # # ---------------------------------------------------------------------
-                    # elif tipo == "multipla_escolha":
-                    #     resposta = st.multiselect(
-                    #         label=texto,
-                    #         options=opcoes,
-                    #         default=st.session_state.respostas_formulario.get(chave, []),
-                    #         key=chave
-                    #     )
-
-                    #     st.session_state.respostas_formulario[chave] = resposta
-
-                    #     respostas_formulario.append({
-                    #         "tipo": "multipla_escolha",
-                    #         "ordem": ordem,
-                    #         "pergunta": texto,
-                    #         "opcoes": opcoes,
-                    #         "resposta": resposta
-                    #     })
 
 
 
@@ -971,25 +918,43 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 ###########################################################################
                 # 4. BOTÃO PARA SALVAR RESPOSTAS NO RELATÓRIO CORRETO (MONGODB)
                 ###########################################################################
+                if pode_editar_relatorio:
+                    if st.button("Salvar formulário", type="primary", icon=":material/save:"):
 
-
-                if st.button("Salvar formulário", type="primary", icon=":material/save:"):
-
-                    col_projetos.update_one(
-                        {
-                            "codigo": projeto["codigo"],
-                            "relatorios.numero": relatorio_numero
-                        },
-                        {
-                            "$set": {
-                                "relatorios.$.respostas_formulario": respostas_formulario
+                        col_projetos.update_one(
+                            {
+                                "codigo": projeto["codigo"],
+                                "relatorios.numero": relatorio_numero
+                            },
+                            {
+                                "$set": {
+                                    "relatorios.$.respostas_formulario":
+                                        st.session_state.respostas_formulario
+                                }
                             }
-                        }
-                    )
+                        )
 
-                    st.success(":material/check: Respostas salvas com sucesso!")
-                    time.sleep(3)
-                    st.rerun()
+                        st.success("Respostas salvas com sucesso!")
+                        time.sleep(3)
+                        st.rerun()
+
+                # if st.button("Salvar formulário", type="primary", icon=":material/save:"):
+
+                #     col_projetos.update_one(
+                #         {
+                #             "codigo": projeto["codigo"],
+                #             "relatorios.numero": relatorio_numero
+                #         },
+                #         {
+                #             "$set": {
+                #                 "relatorios.$.respostas_formulario": respostas_formulario
+                #             }
+                #         }
+                #     )
+
+                #     st.success(":material/check: Respostas salvas com sucesso!")
+                #     time.sleep(3)
+                #     st.rerun()
 
 
 
