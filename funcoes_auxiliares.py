@@ -103,6 +103,30 @@ def obter_pasta_projeto(servico, codigo, sigla):
     return pasta_id
 
 
+# Função para obter o ID da pasta 'Locais' no Drive, para salvar os anexos dos locais.
+
+def obter_pasta_locais(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Locais' dentro da pasta do projeto.
+
+    Também usa cache no session_state para evitar múltiplas criações.
+    """
+
+    if "pasta_locais_id" in st.session_state:
+        return st.session_state["pasta_locais_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Locais",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_locais_id"] = pasta_id
+    return pasta_id
+
+
+
+
 # Função para obter o ID da pasta 'Pesquisas' no Drive, para salvar os anexos das pesquisas.
 def obter_pasta_pesquisas(servico, pasta_projeto_id, codigo_projeto):
     """

@@ -1,16 +1,24 @@
 import streamlit as st
 import time
 import pandas as pd
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto  
 import io
 import folium
 from streamlit_folium import st_folium
 
+from funcoes_auxiliares import (
+    conectar_mongo_cepf_gestao,
+    sidebar_projeto,
+    # ajustar_altura_data_editor,
 
-# Google Drive API
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+    # Google Drive
+    obter_servico_drive,
+    obter_ou_criar_pasta,
+    obter_pasta_locais,
+    obter_pasta_projeto,
+    enviar_arquivo_drive,
+    gerar_link_drive
+)
+
 
 
 
@@ -192,137 +200,6 @@ lista_kbas = list(
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
-
-
-def obter_ou_criar_pasta(servico, nome_pasta, id_pasta_pai):
-    """
-    Busca uma pasta com o nome especificado dentro da pasta pai no Google Drive.
-    Se a pasta não existir, ela é criada.
-    
-    Retorna o ID da pasta encontrada ou criada.
-    """
-
-    # Monta a query de busca:
-    # - nome exato da pasta
-    # - dentro da pasta pai
-    # - apenas pastas
-    # - não deletadas
-    consulta = (
-        f"name='{nome_pasta}' and "
-        f"'{id_pasta_pai}' in parents and "
-        f"mimeType='application/vnd.google-apps.folder' and trashed=false"
-    )
-
-    # Executa a busca
-    resultado = servico.files().list(
-        q=consulta,
-        fields="files(id)",
-        includeItemsFromAllDrives=True,
-        supportsAllDrives=True
-    ).execute()
-
-    arquivos = resultado.get("files", [])
-
-    # Se encontrou, reutiliza a pasta existente
-    if arquivos:
-        return arquivos[0]["id"]
-
-    # Caso não exista, cria a pasta
-    pasta = servico.files().create(
-        body={
-            "name": nome_pasta,
-            "parents": [id_pasta_pai],
-            "mimeType": "application/vnd.google-apps.folder"
-        },
-        fields="id",
-        supportsAllDrives=True
-    ).execute()
-
-    return pasta["id"]
-
-
-def obter_pasta_projeto(servico, codigo, sigla):
-    """
-    Retorna o ID da pasta do projeto no Google Drive.
-
-    - Usa o nome: 'codigo - sigla'
-    - Cria a pasta somente se não existir
-    - Guarda o ID no session_state para evitar duplicações
-    """
-
-    chave = f"pasta_projeto_{codigo}"
-
-    # Se já foi criada nesta sessão, reutiliza
-    if chave in st.session_state:
-        return st.session_state[chave]
-
-    # Cria ou localiza a pasta do projeto
-    pasta_id = obter_ou_criar_pasta(
-        servico,
-        f"{codigo} - {sigla}",
-        st.secrets["drive"]["pasta_drive_projetos"]
-    )
-
-    # Guarda no session_state
-    st.session_state[chave] = pasta_id
-
-    return pasta_id
-
-
-def obter_pasta_locais(servico, pasta_projeto_id):
-    """
-    Retorna o ID da subpasta 'Locais' dentro da pasta do projeto.
-
-    Também usa cache no session_state para evitar múltiplas criações.
-    """
-
-    if "pasta_locais_id" in st.session_state:
-        return st.session_state["pasta_locais_id"]
-
-    pasta_id = obter_ou_criar_pasta(
-        servico,
-        "Locais",
-        pasta_projeto_id
-    )
-
-    st.session_state["pasta_locais_id"] = pasta_id
-    return pasta_id
-
-
-def enviar_arquivo_drive(servico, id_pasta, arquivo):
-    """
-    Faz upload de um arquivo para o Google Drive dentro da pasta informada.
-
-    Retorna o ID do arquivo criado.
-    """
-
-    # Converte o arquivo do Streamlit para bytes
-    media = MediaIoBaseUpload(
-        io.BytesIO(arquivo.read()),
-        mimetype=arquivo.type,
-        resumable=False
-    )
-
-    # Cria o arquivo no Drive
-    arq = servico.files().create(
-        body={
-            "name": arquivo.name,
-            "parents": [id_pasta]
-        },
-        media_body=media,
-        fields="id",
-        supportsAllDrives=True
-    ).execute()
-
-    return arq["id"]
-
-
-def gerar_link_drive(id_arquivo):
-    """
-    Gera o link público padrão de visualização do arquivo no Google Drive.
-    """
-    return f"https://drive.google.com/file/d/{id_arquivo}/view"
-
 
 
 
@@ -1002,7 +879,7 @@ def dialog_mapas():
                 )
 
             # Mensagem exibida após o spinner finalizar
-            st.success("Arquivos cadastrados com sucesso!")
+            st.success("Arquivos cadastrados com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
