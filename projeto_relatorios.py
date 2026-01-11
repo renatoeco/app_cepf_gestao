@@ -536,7 +536,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 usuario_admin = tipo_usuario == "admin"
                 usuario_equipe = tipo_usuario == "equipe"
                 usuario_beneficiario = tipo_usuario == "beneficiario"
-                usuario_visitante = tipo_usuario not in ["visitante"]
 
                 pode_editar = usuario_admin or usuario_equipe or usuario_beneficiario
                 pode_verificar = usuario_admin or usuario_equipe
@@ -544,250 +543,188 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # ============================
                 # BUSCA DADOS
                 # ============================
+
                 pesquisas = edital.get("pesquisas_relatorio", []) if edital else []
 
                 if not pesquisas:
                     st.caption("Nenhuma pesquisa cadastrada.")
                     st.stop()
 
-                st.write('')
+                st.write("")
                 st.markdown("##### Pesquisas / Ferramentas de Monitoramento")
-                st.write('')
+                st.write("")
 
                 pesquisas_projeto = projeto.get("pesquisas", [])
                 status_map = {p["id_pesquisa"]: p for p in pesquisas_projeto}
 
-                # # Ordena as pesquisas em ordem alfabética pelo nome
-                # pesquisas = sorted(
-                #     pesquisas,
-                #     key=lambda p: p.get("nome_pesquisa", "").lower()
-                # )
-
-
                 # ============================
                 # RENDERIZAÇÃO DAS LINHAS
                 # ============================
-                novos_status = []
 
                 for pesquisa in pesquisas:
 
                     status = status_map.get(pesquisa["id"], {})
 
-                    col1, col2, col3, col4 = st.columns([4, 3, 1, 1])
+                    # Valores atuais do banco
+                    respondida_db = status.get("respondida", False)
+                    verificada_db = status.get("verificada", False)
+                    url_anexo_db = status.get("url_anexo")
+
+                    # Chaves únicas
+                    upload_key = f"upload_{relatorio_numero}_{pesquisa['id']}"
+                    upload_salvo_key = f"upload_salvo_{relatorio_numero}_{pesquisa['id']}"
+
+                    col1, col2, col3, col4, col5 = st.columns([4, 3, 1, 1, 1])
 
                     # -------- PESQUISA --------
                     with col1:
                         st.markdown(f"**{pesquisa['nome_pesquisa']}**")
 
                     # -------- ANEXO --------
+                    arquivo = None
+
                     with col2:
+                        # Caso a pesquisa exija upload
                         if pesquisa.get("upload_arquivo"):
 
-                            arquivo_upload = st.file_uploader(
-                                "Anexo",
-                                key=f"upload_{relatorio_numero}_{pesquisa['id']}",
-                                disabled=(
-                                    not pode_editar
-                                    or status_atual_db in ["em_analise", "aprovado"]
-                                ),
-                                help=(
-                                    'Para inserir um link use "[texto_do_link](url_do_link)". '
-                                    'Exemplo: Nome da pesquisa - [clique aqui](https://www.google.com)'
+                            # -----------------------------
+                            # BENEFICIÁRIO → pode enviar
+                            # -----------------------------
+                            if (
+                                tipo_usuario == "beneficiario"
+                                and not verificada_db
+                                and status_atual_db == "modo_edicao"
+                            ):
+                                arquivo = st.file_uploader(
+                                    "Anexo",
+                                    key=f"upload_{relatorio_numero}_{pesquisa['id']}"
                                 )
-                            )
 
+                            # -----------------------------
+                            # NÃO BENEFICIÁRIO → só aviso
+                            # -----------------------------
+                            elif tipo_usuario != "beneficiario":
+                                st.write(":material/attachment: Demanda anexo")
+
+                        # -----------------------------
+                        # Link do anexo (se existir)
+                        # -----------------------------
+                        if url_anexo_db:
+                            st.markdown(f"[Ver anexo]({url_anexo_db})")
 
 
                     # -------- RESPONDIDA --------
                     with col3:
-                        # Para beneficiários e visitantes, sempre que a pesquisa for verificara, desabilita o checkbox de respondida
-                        respondida = st.checkbox(
+                        respondida_ui = st.checkbox(
                             "Respondida",
-
-                            # Valor inicial do checkbox:
-                            # - Usa o valor salvo no banco
-                            # - Se não existir, assume False
-                            value=status.get("respondida", False),
-
-                            # Controle completo de bloqueio do checkbox
+                            value=respondida_db,
                             disabled=(
-
-                                # REGRA GLOBAL DE STATUS DO RELATÓRIO
-                                # Se o relatório NÃO estiver em modo de edição,
-                                # ninguém pode alterar Respondida
                                 status_atual_db in ["em_analise", "aprovado"]
-
-                                # OU
-
-                                or
-
-                                # REGRA DE PERMISSÃO GERAL
-                                # Se o usuário não pode editar pesquisas,
-                                # o checkbox fica bloqueado
-                                not pode_editar
-
-                                # OU
-
+                                or not pode_editar
                                 or (
-
-                                    # REGRA ESPECÍFICA PARA BENEFICIÁRIO / VISITANTE
-                                    # Se o usuário for beneficiário ou visitante
-                                    tipo_usuario in ["beneficiario", "visitante"]
-
-                                    # E
-
-                                    and
-
-                                    # Se a pesquisa já estiver marcada como verificada
-                                    # (ou seja, já passou pela conferência)
-                                    status.get("verificada", False)
+                                    usuario_beneficiario and verificada_db
                                 )
                             ),
-
-                            # Chave única do checkbox no Streamlit
-                            # Garante que cada linha tenha estado próprio
                             key=f"resp_{relatorio_numero}_{pesquisa['id']}"
                         )
 
-
-
                     # -------- VERIFICADA --------
                     with col4:
-                        verificada = st.checkbox(
+                        verificada_ui = st.checkbox(
                             "Verificada",
-
-                            # Valor inicial do checkbox
-                            value=status.get("verificada", False),
-
-                            # Controle de bloqueio
+                            value=verificada_db,
                             disabled=(
-
-                                # REGRA GLOBAL DE STATUS DO RELATÓRIO
-                                # Em análise ou aprovado → ninguém altera
                                 status_atual_db in ["em_analise", "aprovado"]
-
-                                # OU
-
-                                or
-
-                                # REGRA DE PERMISSÃO
-                                # Apenas admin/equipe podem verificar
-                                not pode_verificar
+                                or not pode_verificar
                             ),
-
-                            # Chave única por pesquisa
                             key=f"verif_{relatorio_numero}_{pesquisa['id']}"
                         )
 
+                    # -------- DETECTA ALTERAÇÃO --------
+                    linha_modificada = (
+                        respondida_ui != respondida_db
+                        or verificada_ui != verificada_db
+                        or (
+                            arquivo is not None
+                            and not st.session_state.get(upload_salvo_key, False)
+                        )
+                    )
 
-                    novos_status.append({
-                        "id_pesquisa": pesquisa["id"],
-                        "respondida": respondida,
-                        "verificada": verificada
-                    })
+                    # -------- BOTÃO SALVAR --------
+                    with col5:
+                        if linha_modificada and pode_editar:
 
-                    st.divider()
+                            if st.button(
+                                "Salvar",
+                                type="primary",
+                                key=f"salvar_{relatorio_numero}_{pesquisa['id']}",
+                                icon=":material/save:",
+                            ):
 
-                # ============================
-                # BOTÃO SALVAR
-                # ============================
-                if pode_editar:
+                                with st.spinner("Salvando..."):
 
-                    if st.button(
-                        "Salvar alterações",
-                        type="primary",
-                        icon=":material/save:",
-                        key=f"salvar_pesquisas_{relatorio_numero}"
-                    ):
+                                    # Conecta ao Drive SOMENTE aqui
+                                    servico = obter_servico_drive()
 
-                        with st.spinner("Salvando pesquisas e anexos..."):
-
-                            # Conecta no Drive SOMENTE aqui
-                            servico = obter_servico_drive()
-
-                            # Pasta do projeto
-                            pasta_projeto = obter_pasta_projeto(
-                                servico,
-                                projeto["codigo"],
-                                projeto["sigla"]
-                            )
-
-                            # Subpasta "Pesquisas"
-                            pasta_pesquisas = obter_pasta_pesquisas(
-                                servico,
-                                pasta_projeto
-                            )
-
-                            novos_status = []
-
-                            # Loop por pesquisa
-                            for pesquisa in pesquisas:
-
-                                # Recupera estados dos checkboxes
-                                respondida = st.session_state.get(
-                                    f"resp_{relatorio_numero}_{pesquisa['id']}",
-                                    False
-                                )
-
-                                verificada = st.session_state.get(
-                                    f"verif_{relatorio_numero}_{pesquisa['id']}",
-                                    False
-                                )
-
-                                dados = {
-                                    "id_pesquisa": pesquisa["id"],
-                                    "respondida": respondida,
-                                    "verificada": verificada
-                                }
-
-                                # ------------------------------
-                                # UPLOAD DE ARQUIVO (SE EXISTIR)
-                                # ------------------------------
-                                if pesquisa.get("upload_arquivo"):
-
-                                    arquivo = st.session_state.get(
-                                        f"upload_{relatorio_numero}_{pesquisa['id']}"
+                                    # Pasta do projeto
+                                    pasta_projeto = obter_pasta_projeto(
+                                        servico,
+                                        projeto["codigo"],
+                                        projeto["sigla"]
                                     )
-                                    
-                                    if arquivo is not None:
+
+                                    pasta_pesquisas = obter_pasta_pesquisas(
+                                        servico,
+                                        pasta_projeto,
+                                        projeto["codigo"]
+                                    )
+
+                                    # # Pasta Pesquisas (direto no projeto)
+                                    # pasta_pesquisas = obter_pasta_pesquisas(
+                                    #     servico,
+                                    #     pasta_projeto
+                                    # )
+
+                                    update_fields = {
+                                        "pesquisas.$.respondida": respondida_ui,
+                                        "pesquisas.$.verificada": verificada_ui
+                                    }
+
+                                    # Upload SOMENTE se ainda não foi salvo
+                                    if (
+                                        arquivo is not None
+                                        and not st.session_state.get(upload_salvo_key, False)
+                                    ):
                                         id_drive = enviar_arquivo_drive(
                                             servico,
                                             pasta_pesquisas,
                                             arquivo
                                         )
-                                    
-                                    # if arquivo:
-                                    #     # Envia para o Drive
-                                    #     id_drive = enviar_arquivo_drive(
-                                    #         servico,
-                                    #         pasta_pesquisas,
-                                    #         arquivo
-                                    #     )
+                                        update_fields["pesquisas.$.url_anexo"] = gerar_link_drive(id_drive)
 
-                                        # Salva URL no objeto da pesquisa
-                                        dados["url_anexo"] = gerar_link_drive(id_drive)
+                                        # Marca upload como concluído
+                                        st.session_state[upload_salvo_key] = True
 
-                                novos_status.append(dados)
+                                    # Atualiza apenas essa pesquisa
+                                    col_projetos.update_one(
+                                        {
+                                            "codigo": codigo_projeto_atual,
+                                            "pesquisas.id_pesquisa": pesquisa["id"]
+                                        },
+                                        {
+                                            "$set": update_fields
+                                        }
+                                    )
 
-                            # ------------------------------
-                            # ATUALIZA MONGODB
-                            # ------------------------------
-                            col_projetos.update_one(
-                                {
-                                    "codigo": codigo_projeto_atual,
-                                    "relatorios.numero": relatorio_numero
-                                },
-                                {
-                                    "$set": {
-                                        "relatorios.$.pesquisas": novos_status
-                                    }
-                                }
-                            )
+                                # Limpa estados temporários
+                                st.session_state.pop(upload_key, None)
+                                st.session_state.pop(upload_salvo_key, None)
 
-                        st.success("Pesquisas salvas com sucesso!")
-                        time.sleep(3)
-                        st.rerun()
+                                st.success(":material/check: Salvo!")
+                                time.sleep(3)
+                                st.rerun()
 
+                    st.divider()
 
 
 

@@ -104,17 +104,23 @@ def obter_pasta_projeto(servico, codigo, sigla):
 
 
 # Função para obter o ID da pasta 'Pesquisas' no Drive, para salvar os anexos das pesquisas.
-def obter_pasta_pesquisas(servico, pasta_projeto_id):
+def obter_pasta_pesquisas(servico, pasta_projeto_id, codigo_projeto):
     """
-    Retorna o ID da subpasta 'Pesquisas' dentro da pasta do projeto.
+    Retorna o ID da pasta 'Pesquisas' dentro da pasta do projeto.
 
     - Cria a pasta se não existir
-    - Usa session_state para evitar múltiplas criações
+    - Cache separado por projeto
+    - Garante parent válido
     """
 
-    # Chave única no session_state
-    if "pasta_pesquisas_id" in st.session_state:
-        return st.session_state["pasta_pesquisas_id"]
+    # Cache por projeto (NUNCA global)
+    chave = f"pasta_pesquisas_{codigo_projeto}"
+
+    if chave in st.session_state:
+        return st.session_state[chave]
+
+    if not pasta_projeto_id:
+        raise ValueError("ID da pasta do projeto inválido")
 
     pasta_id = obter_ou_criar_pasta(
         servico,
@@ -122,8 +128,11 @@ def obter_pasta_pesquisas(servico, pasta_projeto_id):
         pasta_projeto_id
     )
 
-    st.session_state["pasta_pesquisas_id"] = pasta_id
+    # Guarda no session_state
+    st.session_state[chave] = pasta_id
     return pasta_id
+
+
 
 
 ###########################################################################################################
@@ -132,28 +141,42 @@ def obter_pasta_pesquisas(servico, pasta_projeto_id):
 
 def enviar_arquivo_drive(servico, id_pasta, arquivo):
     """
-    Faz upload de um arquivo do Streamlit para o Google Drive.
+    Faz upload seguro de um arquivo do Streamlit para o Google Drive.
 
-    Retorna o ID do arquivo criado.
+    - Usa upload resumable (mais estável)
+    - Trata erros de rede/SSL
+    - NÃO propaga exceção para a UI
+    - Retorna None em caso de erro
     """
 
-    media = MediaIoBaseUpload(
-        io.BytesIO(arquivo.read()),
-        mimetype=arquivo.type,
-        resumable=False
-    )
+    try:
+        # Garante que o ponteiro do arquivo está no início
+        arquivo.seek(0)
 
-    arq = servico.files().create(
-        body={
-            "name": arquivo.name,
-            "parents": [id_pasta]
-        },
-        media_body=media,
-        fields="id",
-        supportsAllDrives=True
-    ).execute()
+        media = MediaIoBaseUpload(
+            arquivo,
+            mimetype=arquivo.type,
+            resumable=True
+        )
 
-    return arq["id"]
+        arq = servico.files().create(
+            body={
+                "name": arquivo.name,
+                "parents": [id_pasta]
+            },
+            media_body=media,
+            fields="id",
+            supportsAllDrives=True
+        ).execute()
+
+        return arq["id"]
+
+    except Exception as e:
+        st.error("Erro temporário ao enviar arquivo. Tente novamente mais tarde.")
+
+        # Retorna None para a camada de UI decidir o que fazer
+        return None
+
 
 
 def gerar_link_drive(id_arquivo):
