@@ -2,6 +2,166 @@ import streamlit as st
 from pymongo import MongoClient
 import datetime
 import pandas as pd
+import io
+
+# Google Drive API
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+
+
+
+
+###########################################################################################################
+# CONEXÃO COM GOOGLE DRIVE
+###########################################################################################################
+
+# Escopo mínimo necessário para Drive
+ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
+
+@st.cache_resource
+def obter_servico_drive():
+    """
+    Retorna o cliente autenticado do Google Drive,
+    usando as credenciais armazenadas em st.secrets.
+
+    IMPORTANTE:
+    - Não cria conexão automaticamente
+    - Só executa quando chamada
+    - Cache evita recriar o cliente
+    """
+    credenciais = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=ESCOPO_DRIVE
+    )
+    return build("drive", "v3", credentials=credenciais)
+
+
+###########################################################################################################
+# FUNÇÕES DE PASTAS NO GOOGLE DRIVE
+###########################################################################################################
+
+def obter_ou_criar_pasta(servico, nome_pasta, id_pasta_pai):
+    """
+    Busca uma pasta com o nome especificado dentro da pasta pai no Google Drive.
+    Se não existir, cria a pasta.
+
+    Retorna o ID da pasta.
+    """
+
+    consulta = (
+        f"name='{nome_pasta}' and "
+        f"'{id_pasta_pai}' in parents and "
+        f"mimeType='application/vnd.google-apps.folder' and trashed=false"
+    )
+
+    resultado = servico.files().list(
+        q=consulta,
+        fields="files(id)",
+        includeItemsFromAllDrives=True,
+        supportsAllDrives=True
+    ).execute()
+
+    arquivos = resultado.get("files", [])
+
+    if arquivos:
+        return arquivos[0]["id"]
+
+    pasta = servico.files().create(
+        body={
+            "name": nome_pasta,
+            "parents": [id_pasta_pai],
+            "mimeType": "application/vnd.google-apps.folder"
+        },
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+
+    return pasta["id"]
+
+
+def obter_pasta_projeto(servico, codigo, sigla):
+    """
+    Retorna o ID da pasta do projeto no Google Drive.
+    Cria se não existir.
+
+    Usa session_state para evitar duplicação.
+    """
+
+    chave = f"pasta_projeto_{codigo}"
+
+    if chave in st.session_state:
+        return st.session_state[chave]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        f"{codigo} - {sigla}",
+        st.secrets["drive"]["pasta_drive_projetos"]
+    )
+
+    st.session_state[chave] = pasta_id
+    return pasta_id
+
+
+# Função para obter o ID da pasta 'Pesquisas' no Drive, para salvar os anexos das pesquisas.
+def obter_pasta_pesquisas(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Pesquisas' dentro da pasta do projeto.
+
+    - Cria a pasta se não existir
+    - Usa session_state para evitar múltiplas criações
+    """
+
+    # Chave única no session_state
+    if "pasta_pesquisas_id" in st.session_state:
+        return st.session_state["pasta_pesquisas_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Pesquisas",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_pesquisas_id"] = pasta_id
+    return pasta_id
+
+
+###########################################################################################################
+# UPLOAD E LINK DE ARQUIVOS
+###########################################################################################################
+
+def enviar_arquivo_drive(servico, id_pasta, arquivo):
+    """
+    Faz upload de um arquivo do Streamlit para o Google Drive.
+
+    Retorna o ID do arquivo criado.
+    """
+
+    media = MediaIoBaseUpload(
+        io.BytesIO(arquivo.read()),
+        mimetype=arquivo.type,
+        resumable=False
+    )
+
+    arq = servico.files().create(
+        body={
+            "name": arquivo.name,
+            "parents": [id_pasta]
+        },
+        media_body=media,
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+
+    return arq["id"]
+
+
+def gerar_link_drive(id_arquivo):
+    """
+    Gera o link público padrão de visualização do Google Drive.
+    """
+    return f"https://drive.google.com/file/d/{id_arquivo}/view"
+
 
 
 

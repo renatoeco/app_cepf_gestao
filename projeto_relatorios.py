@@ -1,9 +1,28 @@
 import streamlit as st
 import pandas as pd
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, ajustar_altura_data_editor
 import streamlit_antd_components as sac
 import time
 
+from funcoes_auxiliares import (
+    conectar_mongo_cepf_gestao,
+    sidebar_projeto,
+    # ajustar_altura_data_editor,
+
+    # Google Drive
+    obter_servico_drive,
+    obter_ou_criar_pasta,
+    obter_pasta_pesquisas,
+    obter_pasta_projeto,
+    enviar_arquivo_drive,
+    gerar_link_drive
+)
+
+
+
+# Google Drive API
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 
 
@@ -98,13 +117,16 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 
 # ?????????????????
 # Nome do usuário
-st.write(st.session_state.get("nome"))
+st.sidebar.write(st.session_state.get("nome"))
 
 
 
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+
 
 
 # Função para liberar o próximo relatório quando o relatório anterior for aprovado
@@ -535,6 +557,13 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 pesquisas_projeto = projeto.get("pesquisas", [])
                 status_map = {p["id_pesquisa"]: p for p in pesquisas_projeto}
 
+                # # Ordena as pesquisas em ordem alfabética pelo nome
+                # pesquisas = sorted(
+                #     pesquisas,
+                #     key=lambda p: p.get("nome_pesquisa", "").lower()
+                # )
+
+
                 # ============================
                 # RENDERIZAÇÃO DAS LINHAS
                 # ============================
@@ -553,12 +582,21 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     # -------- ANEXO --------
                     with col2:
                         if pesquisa.get("upload_arquivo"):
-                            st.file_uploader(
+
+                            arquivo_upload = st.file_uploader(
                                 "Anexo",
-                                disabled=not pode_editar,
-                                key=f"upload_{pesquisa['id']}",
-                                width=400
+                                key=f"upload_{relatorio_numero}_{pesquisa['id']}",
+                                disabled=(
+                                    not pode_editar
+                                    or status_atual_db in ["em_analise", "aprovado"]
+                                ),
+                                help=(
+                                    'Para inserir um link use "[texto_do_link](url_do_link)". '
+                                    'Exemplo: Nome da pesquisa - [clique aqui](https://www.google.com)'
+                                )
                             )
+
+
 
                     # -------- RESPONDIDA --------
                     with col3:
@@ -574,7 +612,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                             # Controle completo de bloqueio do checkbox
                             disabled=(
 
-                                # 1️⃣ REGRA GLOBAL DE STATUS DO RELATÓRIO
+                                # REGRA GLOBAL DE STATUS DO RELATÓRIO
                                 # Se o relatório NÃO estiver em modo de edição,
                                 # ninguém pode alterar Respondida
                                 status_atual_db in ["em_analise", "aprovado"]
@@ -583,7 +621,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                                 or
 
-                                # 2️⃣ REGRA DE PERMISSÃO GERAL
+                                # REGRA DE PERMISSÃO GERAL
                                 # Se o usuário não pode editar pesquisas,
                                 # o checkbox fica bloqueado
                                 not pode_editar
@@ -592,7 +630,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                                 or (
 
-                                    # 3️⃣ REGRA ESPECÍFICA PARA BENEFICIÁRIO / VISITANTE
+                                    # REGRA ESPECÍFICA PARA BENEFICIÁRIO / VISITANTE
                                     # Se o usuário for beneficiário ou visitante
                                     tipo_usuario in ["beneficiario", "visitante"]
 
@@ -608,7 +646,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                             # Chave única do checkbox no Streamlit
                             # Garante que cada linha tenha estado próprio
-                            key=f"resp_{pesquisa['id']}"
+                            key=f"resp_{relatorio_numero}_{pesquisa['id']}"
                         )
 
 
@@ -624,7 +662,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                             # Controle de bloqueio
                             disabled=(
 
-                                # 1️⃣ REGRA GLOBAL DE STATUS DO RELATÓRIO
+                                # REGRA GLOBAL DE STATUS DO RELATÓRIO
                                 # Em análise ou aprovado → ninguém altera
                                 status_atual_db in ["em_analise", "aprovado"]
 
@@ -632,13 +670,13 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                                 or
 
-                                # 2️⃣ REGRA DE PERMISSÃO
+                                # REGRA DE PERMISSÃO
                                 # Apenas admin/equipe podem verificar
                                 not pode_verificar
                             ),
 
                             # Chave única por pesquisa
-                            key=f"verif_{pesquisa['id']}"
+                            key=f"verif_{relatorio_numero}_{pesquisa['id']}"
                         )
 
 
@@ -654,16 +692,104 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # BOTÃO SALVAR
                 # ============================
                 if pode_editar:
-                    if st.button("Salvar alterações", type="primary", icon=":material/save:"):
 
-                        col_projetos.update_one(
-                            {"codigo": projeto["codigo"]},
-                            {"$set": {"pesquisas": novos_status}}
-                        )
+                    if st.button(
+                        "Salvar alterações",
+                        type="primary",
+                        icon=":material/save:",
+                        key=f"salvar_pesquisas_{relatorio_numero}"
+                    ):
 
-                        st.success(":material/check: Pesquisas atualizadas com sucesso!")
+                        with st.spinner("Salvando pesquisas e anexos..."):
+
+                            # Conecta no Drive SOMENTE aqui
+                            servico = obter_servico_drive()
+
+                            # Pasta do projeto
+                            pasta_projeto = obter_pasta_projeto(
+                                servico,
+                                projeto["codigo"],
+                                projeto["sigla"]
+                            )
+
+                            # Subpasta "Pesquisas"
+                            pasta_pesquisas = obter_pasta_pesquisas(
+                                servico,
+                                pasta_projeto
+                            )
+
+                            novos_status = []
+
+                            # Loop por pesquisa
+                            for pesquisa in pesquisas:
+
+                                # Recupera estados dos checkboxes
+                                respondida = st.session_state.get(
+                                    f"resp_{relatorio_numero}_{pesquisa['id']}",
+                                    False
+                                )
+
+                                verificada = st.session_state.get(
+                                    f"verif_{relatorio_numero}_{pesquisa['id']}",
+                                    False
+                                )
+
+                                dados = {
+                                    "id_pesquisa": pesquisa["id"],
+                                    "respondida": respondida,
+                                    "verificada": verificada
+                                }
+
+                                # ------------------------------
+                                # UPLOAD DE ARQUIVO (SE EXISTIR)
+                                # ------------------------------
+                                if pesquisa.get("upload_arquivo"):
+
+                                    arquivo = st.session_state.get(
+                                        f"upload_{relatorio_numero}_{pesquisa['id']}"
+                                    )
+                                    
+                                    if arquivo is not None:
+                                        id_drive = enviar_arquivo_drive(
+                                            servico,
+                                            pasta_pesquisas,
+                                            arquivo
+                                        )
+                                    
+                                    # if arquivo:
+                                    #     # Envia para o Drive
+                                    #     id_drive = enviar_arquivo_drive(
+                                    #         servico,
+                                    #         pasta_pesquisas,
+                                    #         arquivo
+                                    #     )
+
+                                        # Salva URL no objeto da pesquisa
+                                        dados["url_anexo"] = gerar_link_drive(id_drive)
+
+                                novos_status.append(dados)
+
+                            # ------------------------------
+                            # ATUALIZA MONGODB
+                            # ------------------------------
+                            col_projetos.update_one(
+                                {
+                                    "codigo": codigo_projeto_atual,
+                                    "relatorios.numero": relatorio_numero
+                                },
+                                {
+                                    "$set": {
+                                        "relatorios.$.pesquisas": novos_status
+                                    }
+                                }
+                            )
+
+                        st.success("Pesquisas salvas com sucesso!")
                         time.sleep(3)
                         st.rerun()
+
+
+
 
 
 
@@ -1001,25 +1127,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.success("Respostas salvas com sucesso!")
                         time.sleep(3)
                         st.rerun()
-
-                # if st.button("Salvar formulário", type="primary", icon=":material/save:"):
-
-                #     col_projetos.update_one(
-                #         {
-                #             "codigo": projeto["codigo"],
-                #             "relatorios.numero": relatorio_numero
-                #         },
-                #         {
-                #             "$set": {
-                #                 "relatorios.$.respostas_formulario": respostas_formulario
-                #             }
-                #         }
-                #     )
-
-                #     st.success(":material/check: Respostas salvas com sucesso!")
-                #     time.sleep(3)
-                #     st.rerun()
-
 
 
 

@@ -719,7 +719,11 @@ with aba_pesquisas:
                 # CAMPO: NOME DA PESQUISA
                 # ----------------------------------------------
                 nome_pesquisa = st.text_input(
-                    "Nome da pesquisa"
+                    "Nome da pesquisa",
+                    help=(
+                        'Para inserir um link use "nome_da_pesquisa - \\[texto_do_link\\](url_do_link)". '
+                        'Exemplo: "Pesquisa de monitoramento final - \\[clique aqui para acessar o formulário\\](https://docs.google.com/forms)"'
+                    )
                 )
 
                 # ----------------------------------------------
