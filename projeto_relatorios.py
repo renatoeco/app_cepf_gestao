@@ -86,6 +86,14 @@ col_projetos = db["projetos"]
 
 col_editais = db["editais"]
 
+col_publicos = db["publicos"]
+col_publicos = db["publicos"]
+
+lista_publicos = list(col_publicos.find({}, {"_id": 0, "publico": 1}))
+opcoes_publicos = sorted([p["publico"] for p in lista_publicos])
+
+
+
 codigo_projeto_atual = st.session_state.projeto_atual
 
 df_projeto = pd.DataFrame(
@@ -360,6 +368,12 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             and tipo_usuario == "beneficiario"
         )
 
+        # -------------------------------------------
+        # CONTROLE DE ESTADO – NOVA COMUNIDADE NO STEP "Beneficiários"
+        # -------------------------------------------
+        if f"mostrar_nova_comunidade_{idx}" not in st.session_state:
+            st.session_state[f"mostrar_nova_comunidade_{idx}"] = False
+
 
         # -------------------------------
         # REGRA DE BLOQUEIO (a partir do 2º relatório)
@@ -543,41 +557,443 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
             # ---------- BENEFICIÁRIOS ----------
+            # =========================================================
+            # STEP: BENEFICIÁRIOS (SALVAR POR COMUNIDADE)
+            # LAYOUT: DUAS COLUNAS + CONTAINER HORIZONTAL
+            # =========================================================
+
+            OPCOES_BENEFICIOS = [
+                "Maior acesso à água potável",
+                "Maior segurança alimentar",
+                "Maior acesso à energia",
+                "Maior acesso a serviços públicos (ex. saúde, educação)",
+                "Maior resiliência às mudanças climáticas",
+                "Melhora na posse de terra",
+                "Melhora no reconhecimento do conhecimento tradicional",
+                "Melhora na representação e tomada de decisão",
+                "Melhora no acesso aos serviços ecossistêmicos",
+                "Superar as barreiras para a inclusão de gênero",
+            ]
+
+
             if step == "Beneficiários":
+
+                st.subheader("Tipos de Beneficiários e Benefícios")
+                st.write(
+                    "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto "
+                    "para cada comunidade."
+                )
                 st.write("")
-                st.write("Registre aqui as **comunidades** beneficiadas pelo projeto. Em cada comunidade, registre os tipos de **Beneficiários** e de **Benefícios** relacionados.")
 
+                # -----------------------------------------------------
+                # Sempre recarrega o projeto atualizado do banco
+                # -----------------------------------------------------
+                projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
 
-                with st.expander("Nova comunidade", expanded=False):
+                localidades = projeto.get("locais", {}).get("localidades", [])
 
-                    nome_comunidade = st.text_input(
-                        "Nome da comunidade",
-                        key=f"nova_comunidade_{idx}"
+                if not localidades:
+                    st.info(
+                        "Nenhuma comunidade cadastrada no projeto. "
+                        "Adicione comunidades na página **Locais**."
                     )
+                    st.stop()
 
-                    if st.button(
-                        "Adicionar comunidade",
-                        type="primary",
-                        key=f"btn_add_comunidade_{idx}"
-                    ):
-                        if not nome_comunidade.strip():
-                            st.warning("Informe o nome da comunidade.")
-                        else:
+                # -----------------------------------------------------
+                # LOOP DAS COMUNIDADES
+                # -----------------------------------------------------
+                for localidade in localidades:
+
+                    nome_localidade = localidade.get("nome_localidade")
+
+                    # Beneficiários salvos no banco (estado original)
+                    beneficiarios_bd = localidade.get("beneficiarios", [])
+
+                    # Normaliza para comparação
+                    estado_original = {
+                        b["tipo_beneficiario"]: sorted(b.get("beneficios", []))
+                        for b in beneficiarios_bd
+                    }
+
+                    # Estado reconstruído a partir da UI
+                    estado_atual = {}
+
+                    houve_alteracao = False
+
+                    # -------------------------------------------------
+                    # DUAS COLUNAS
+                    # -------------------------------------------------
+                    col1, col2 = st.columns([1, 3])
+
+                    # -------- COLUNA 1: COMUNIDADE --------
+                    with col1:
+                        st.markdown(f"**{nome_localidade}**")
+
+                    # -------- COLUNA 2: TIPOS DE BENEFICIÁRIOS --------
+                    with col2:
+
+                        st.write("**Tipos de Beneficiários:**")
+
+                        for publico in opcoes_publicos:
+
+                            # Chaves únicas e estáveis
+                            chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
+                            ms_key = f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
+
+                            # Checkbox pré-marcado conforme o banco
+                            marcado_inicial = publico in estado_original
+
+                            with st.container(horizontal=True):
+
+                                marcado = st.checkbox(
+                                    publico,
+                                    value=marcado_inicial,
+                                    key=chk_key,
+                                    width=300
+                                )
+
+                                if marcado:
+                                    beneficios_iniciais = estado_original.get(publico, [])
+
+                                    beneficios = st.multiselect(
+                                        "Benefícios",
+                                        options=OPCOES_BENEFICIOS,
+                                        default=beneficios_iniciais,
+                                        key=ms_key,
+                                        placeholder="Escolha um ou mais benefícios"
+                                    )
+
+                                    estado_atual[publico] = sorted(beneficios)
+
+                                    # Detecta alteração
+                                    if (
+                                        publico not in estado_original
+                                        or sorted(beneficios) != estado_original.get(publico, [])
+                                    ):
+                                        houve_alteracao = True
+
+                                else:
+                                    # Se estava salvo e foi desmarcado
+                                    if publico in estado_original:
+                                        houve_alteracao = True
+
+                    # -------------------------------------------------
+                    # BOTÃO SALVAR (ABAIXO DAS COLUNAS)
+                    # -------------------------------------------------
+                    if houve_alteracao:
+
+                        if st.button(
+                            f"Salvar beneficiários – {nome_localidade}",
+                            type="primary",
+                            key=f"salvar_{projeto['codigo']}_{nome_localidade}"
+                        ):
+
+                            erros = []
+
+                            beneficiarios_para_salvar = []
+
+                            # Validação: benefício obrigatório
+                            for tipo, beneficios in estado_atual.items():
+                                if not beneficios:
+                                    erros.append(
+                                        f"Selecione ao menos um benefício para "
+                                        f"**{tipo}** na comunidade **{nome_localidade}**."
+                                    )
+                                else:
+                                    beneficiarios_para_salvar.append({
+                                        "tipo_beneficiario": tipo,
+                                        "beneficios": beneficios
+                                    })
+
+                            if erros:
+                                for erro in erros:
+                                    st.error(erro)
+                                st.stop()
+
+                            # Salva SOMENTE esta comunidade
                             col_projetos.update_one(
-                                {"codigo": projeto["codigo"]},
                                 {
-                                    "$push": {
-                                        "beneficiarios": {
-                                            "nome_comunidade": nome_comunidade.strip()
-                                        }
+                                    "codigo": projeto["codigo"],
+                                    "locais.localidades.nome_localidade": nome_localidade
+                                },
+                                {
+                                    "$set": {
+                                        "locais.localidades.$.beneficiarios":
+                                            beneficiarios_para_salvar
                                     }
                                 }
                             )
 
-                            st.success("Comunidade adicionada com sucesso!")
+                            st.success(
+                                f"Beneficiários da comunidade "
+                                f"**{nome_localidade}** salvos com sucesso."
+                            )
+                            time.sleep(3)
                             st.rerun()
 
+                    # st.divider()
 
+
+
+
+
+
+
+
+
+
+
+
+
+            # OPCOES_BENEFICIOS = [
+            #     "Maior acesso à água potável",
+            #     "Maior segurança alimentar",
+            #     "Maior acesso à energia",
+            #     "Maior acesso a serviços públicos (ex. saúde, educação)",
+            #     "Maior resiliência às mudanças climáticas",
+            #     "Melhora na posse de terra",
+            #     "Melhora no reconhecimento do conhecimento tradicional",
+            #     "Melhora na representação e tomada de decisão",
+            #     "Melhora no acesso aos serviços ecossistêmicos",
+            #     "Superar as barreiras para a inclusão de gênero",
+            # ]
+
+
+
+            # # ---------- BENEFICIÁRIOS ----------
+            # if step == "Beneficiários":
+
+            #     st.write("")
+            #     st.subheader("Tipos de Beneficiários e Benefícios")
+            #     st.write(
+            #         "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto "
+            #         "para cada comunidade."
+            #     )
+            #     st.write("")
+
+            #     # ---------------------------------------------------
+            #     # Recupera as localidades (Comunidades)
+            #     # ---------------------------------------------------
+            #     localidades = (
+            #         projeto
+            #         .get("locais", {})
+            #         .get("localidades", [])
+            #     )
+
+            #     if not localidades:
+            #         st.info(
+            #             "Nenhuma comunidade cadastrada no projeto. "
+            #             "Adicione comunidades na página **Locais**."
+            #         )
+            #         st.stop()
+
+            #     # ---------------------------------------------------
+            #     # RENDERIZAÇÃO DAS COMUNIDADES
+            #     # ---------------------------------------------------
+            #     for idx_local, localidade in enumerate(localidades):
+
+            #         # Beneficiários já salvos nesta localidade
+            #         beneficiarios_salvos = localidade.get("beneficiarios", [])
+
+            #         # Converte lista em dicionário para facilitar lookup
+            #         # { tipo_beneficiario: [beneficios] }
+            #         mapa_beneficiarios = {
+            #             b["tipo_beneficiario"]: b.get("beneficios", [])
+            #             for b in beneficiarios_salvos
+            #         }
+
+            #         col1, col2 = st.columns([1, 3])
+
+            #         # -------- NOME DA COMUNIDADE --------
+            #         with col1:
+            #             st.markdown(
+            #                 f"**{localidade.get('nome_localidade', '—')}**"
+            #             )
+
+            #         # -------- TIPOS DE BENEFICIÁRIOS --------
+            #         with col2:
+
+            #             st.write("**Tipos de Beneficiários:**")
+
+            #             for publico in opcoes_publicos:
+
+            #                 chk_key = f"chk_{idx}_{idx_local}_{publico}"
+            #                 ms_key = f"benef_{idx}_{idx_local}_{publico}"
+
+            #                 # ---------------------------------------------------
+            #                 # PRÉ-CARGA NO SESSION_STATE (UMA ÚNICA VEZ)
+            #                 # ---------------------------------------------------
+            #                 if chk_key not in st.session_state:
+            #                     st.session_state[chk_key] = publico in mapa_beneficiarios
+
+            #                 if ms_key not in st.session_state:
+            #                     st.session_state[ms_key] = mapa_beneficiarios.get(publico, [])
+
+            #                 with st.container(horizontal=True):
+
+            #                     selecionado = st.checkbox(
+            #                         publico,
+            #                         key=chk_key,
+            #                         width=300
+            #                     )
+
+            #                     if selecionado:
+            #                         st.multiselect(
+            #                             "Selecione os benefícios",
+            #                             options=OPCOES_BENEFICIOS,
+            #                             default=st.session_state.get(ms_key, []),
+            #                             key=ms_key,
+            #                             placeholder="Escolha um ou mais benefícios"
+            #                         )
+
+
+            #                     # if selecionado:
+            #                     #     st.multiselect(
+            #                     #         "Selecione os benefícios",
+            #                     #         options=OPCOES_BENEFICIOS,
+            #                     #         key=ms_key,
+            #                     #         placeholder="Escolha um ou mais benefícios"
+            #                     #     )
+
+            #         st.divider()
+
+            #     # ---------------------------------------------------
+            #     # BOTÃO SALVAR BENEFICIÁRIOS
+            #     # ---------------------------------------------------
+            #     if st.button(
+            #         "Salvar beneficiários",
+            #         type="primary",
+            #         icon=":material/save:"
+            #     ):
+
+            #         erros = []
+            #         localidades_atualizadas = []
+
+            #         # -----------------------------------------------
+            #         # MONTA E VALIDA OS DADOS
+            #         # -----------------------------------------------
+            #         for idx_local, localidade in enumerate(localidades):
+
+            #             beneficiarios_local = []
+
+            #             for publico in opcoes_publicos:
+
+            #                 chk_key = f"chk_{idx}_{idx_local}_{publico}"
+            #                 ms_key = f"benef_{idx}_{idx_local}_{publico}"
+
+            #                 selecionado = st.session_state.get(chk_key, False)
+            #                 beneficios = st.session_state.get(ms_key, [])
+
+            #                 if selecionado:
+            #                     if not beneficios:
+            #                         erros.append(
+            #                             f"Selecione ao menos um benefício para "
+            #                             f"**{publico}** na comunidade "
+            #                             f"**{localidade.get('nome_localidade')}**."
+            #                         )
+            #                     else:
+            #                         beneficiarios_local.append({
+            #                             "tipo_beneficiario": publico,
+            #                             "beneficios": beneficios
+            #                         })
+
+            #             localidade_atualizada = localidade.copy()
+            #             localidade_atualizada["beneficiarios"] = beneficiarios_local
+            #             localidades_atualizadas.append(localidade_atualizada)
+
+            #         # -----------------------------------------------
+            #         # SE HOUVER ERROS, NÃO SALVA
+            #         # -----------------------------------------------
+            #         if erros:
+            #             for erro in erros:
+            #                 st.error(erro)
+            #             st.stop()
+
+            #         # -----------------------------------------------
+            #         # SALVA NO MONGODB
+            #         # -----------------------------------------------
+            #         col_projetos.update_one(
+            #             {"codigo": projeto["codigo"]},
+            #             {
+            #                 "$set": {
+            #                     "locais.localidades": localidades_atualizadas
+            #                 }
+            #             }
+            #         )
+
+            #         st.success("Beneficiários salvos com sucesso!")
+            #         time.sleep(3)
+            #         st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+            # if step == "Beneficiários":
+
+            #     st.write("")
+            #     st.subheader('Tipos de Beneficiários e Benefícios')
+            #     st.write(
+            #         "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto para cada comunidade."
+            #     )
+
+            #     st.write("")
+
+            #     localidades = (
+            #         projeto
+            #         .get("locais", {})
+            #         .get("localidades", [])
+            #     )
+
+            #     if not localidades:
+            #         st.info("Nenhuma comunidade cadastrada no projeto. Adicione na página 'Locais'.")
+            #         st.stop()
+
+
+            #     for idx_local, localidade in enumerate(localidades):
+
+            #         col1, col2 = st.columns([1, 3])
+
+            #         with col1:
+            #             st.markdown(f"**{localidade.get('nome_localidade', '—')}**")
+
+            #         with col2:
+                        
+            #             st.write('**Tipos de Beneficiários:**')
+
+            #             for publico in opcoes_publicos:
+
+            #                 with st.container(horizontal=True):
+
+            #                     chk_key = f"chk_{idx}_{idx_local}_{publico}"
+            #                     ms_key = f"benef_{idx}_{idx_local}_{publico}"
+
+
+            #                     selecionado = st.checkbox(
+            #                         publico,
+            #                         key=chk_key,
+            #                         width=300
+            #                     )
+
+            #                     if selecionado:
+            #                         st.multiselect(
+            #                             "Selecione os benefícios",
+            #                             options=OPCOES_BENEFICIOS,
+            #                             key=ms_key,
+            #                             placeholder="Escolha um ou mais benefícios"
+
+            #                         )
+
+
+
+                    st.divider()
 
 
 

@@ -539,7 +539,7 @@ if not editar_cadastro:
 
     publicos = df_projeto['publicos'].values[0]
     if publicos:
-        st.write("**Público:**", " / ".join(publicos))
+        st.write("**Beneficiários:**", " / ".join(publicos))
 
 
 
