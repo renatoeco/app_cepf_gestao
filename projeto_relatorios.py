@@ -592,9 +592,9 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     with col1:
                         st.markdown(f"**{pesquisa['nome_pesquisa']}**")
 
+
                     # -------- ANEXO --------
                     arquivo = None
-
 
                     with col2:
                         # Caso a pesquisa exija upload
@@ -694,11 +694,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                         projeto["codigo"]
                                     )
 
-                                    # # Pasta Pesquisas (direto no projeto)
-                                    # pasta_pesquisas = obter_pasta_pesquisas(
-                                    #     servico,
-                                    #     pasta_projeto
-                                    # )
 
                                     update_fields = {
                                         "pesquisas.$.respondida": respondida_ui,
@@ -797,7 +792,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     if st.session_state.get("form_relatorio_ativo") != relatorio_numero:
                         st.session_state.form_relatorio_ativo = relatorio_numero
 
-                        # Sempre trabalha com dict (novo modelo)
+                        # Dicionário
                         st.session_state.respostas_formulario = (
                             relatorio.get("respostas_formulario", {}).copy()
                         )
@@ -808,14 +803,8 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # 3. RENDERIZAÇÃO DO FORMULÁRIO
                 ###########################################################################
 
-                # st.markdown("### Formulário do Relatório")
                 st.write("")
                 st.write("")
-
-
-
-                # respostas_formulario = []
-
 
 
                 for pergunta in perguntas:
@@ -835,7 +824,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.subheader(texto)
                         st.write("")
 
-
                         continue
 
 
@@ -846,7 +834,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     elif tipo == "subtitulo":
                         st.markdown(f"##### {texto}")
                         st.write("")
-
 
                         continue
 
@@ -1079,10 +1066,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.success("Respostas salvas com sucesso!")
                         time.sleep(3)
                         st.rerun()
-
-
-
-
 
 
 
