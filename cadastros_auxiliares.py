@@ -290,9 +290,8 @@ st.write('')
 
 
 
-# abas = st.tabs(['Públicos', 'Direções Estratégicas', 'Indicadores'])
-
-aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
+aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
+# aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
     'Perguntas do Relatório',
     'Pesquisas',
     'Beneficiários',
@@ -301,7 +300,7 @@ aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, 
     'Categorias de despesa',
     'Corredores',
     'KBAs',
-    'Tipos de manejo',
+    # 'Tipos de manejo',
 ])
 
 
@@ -1757,174 +1756,174 @@ with aba_kbas:
 
 
 
-# ==========================================================
-# ABA TIPOS DE MANEJO
-# ==========================================================
+# # ==========================================================
+# # ABA TIPOS DE MANEJO
+# # ==========================================================
 
-with aba_tipos_manejo:
+# with aba_tipos_manejo:
 
-    # ------------------------------------------------------
-    # TÍTULO DA ABA
-    # ------------------------------------------------------
-    st.subheader("Tipos de manejo")
-    st.write("")
+#     # ------------------------------------------------------
+#     # TÍTULO DA ABA
+#     # ------------------------------------------------------
+#     st.subheader("Tipos de manejo")
+#     st.write("")
 
-    # ------------------------------------------------------
-    # SELEÇÃO DO EDITAL
-    # ------------------------------------------------------
+#     # ------------------------------------------------------
+#     # SELEÇÃO DO EDITAL
+#     # ------------------------------------------------------
 
-    lista_editais = df_editais["codigo_edital"].unique().tolist()
+#     lista_editais = df_editais["codigo_edital"].unique().tolist()
 
-    edital_selecionado_manejo = st.selectbox(
-        "Selecione o Edital:",
-        options=[""] + lista_editais,
-        index=0,
-        width=300,
-        key="edital_tipos_manejo"
-    )
+#     edital_selecionado_manejo = st.selectbox(
+#         "Selecione o Edital:",
+#         options=[""] + lista_editais,
+#         index=0,
+#         width=300,
+#         key="edital_tipos_manejo"
+#     )
 
-    # Caso nenhum edital seja selecionado
-    if not edital_selecionado_manejo:
-        st.caption("Selecione um edital para continuar.")
+#     # Caso nenhum edital seja selecionado
+#     if not edital_selecionado_manejo:
+#         st.caption("Selecione um edital para continuar.")
 
-    else:
-        # ------------------------------------------------------
-        # BUSCA O EDITAL NO BANCO
-        # ------------------------------------------------------
+#     else:
+#         # ------------------------------------------------------
+#         # BUSCA O EDITAL NO BANCO
+#         # ------------------------------------------------------
 
-        edital = col_editais.find_one(
-            {"codigo_edital": edital_selecionado_manejo}
-        )
+#         edital = col_editais.find_one(
+#             {"codigo_edital": edital_selecionado_manejo}
+#         )
 
-        # Recupera os tipos de manejo (se existirem)
-        tipos_manejo = edital.get("tipos_manejo", [])
+#         # Recupera os tipos de manejo (se existirem)
+#         tipos_manejo = edital.get("tipos_manejo", [])
 
-        # ======================================================
-        # CRIAÇÃO DAS ABAS INTERNAS
-        # ======================================================
+#         # ======================================================
+#         # CRIAÇÃO DAS ABAS INTERNAS
+#         # ======================================================
 
-        aba_visualizar, aba_novo, aba_editar = st.tabs([
-            "Tipos de manejo",
-            "Novo",
-            "Editar / Excluir"
-        ])
+#         aba_visualizar, aba_novo, aba_editar = st.tabs([
+#             "Tipos de manejo",
+#             "Novo",
+#             "Editar / Excluir"
+#         ])
 
-        # ======================================================
-        # ABA 1 — VISUALIZAR TIPOS
-        # ======================================================
+#         # ======================================================
+#         # ABA 1 — VISUALIZAR TIPOS
+#         # ======================================================
 
-        with aba_visualizar:
+#         with aba_visualizar:
 
-            if not tipos_manejo:
-                st.caption("Nenhum tipo de manejo cadastrado.")
-            else:
-                for idx, tipo in enumerate(tipos_manejo, start=1):
-                    st.markdown(f"**{idx}. {tipo['nome_tipo_manejo']}**")
+#             if not tipos_manejo:
+#                 st.caption("Nenhum tipo de manejo cadastrado.")
+#             else:
+#                 for idx, tipo in enumerate(tipos_manejo, start=1):
+#                     st.markdown(f"**{idx}. {tipo['nome_tipo_manejo']}**")
 
-        # ======================================================
-        # ABA 2 — NOVO TIPO DE MANEJO
-        # ======================================================
+#         # ======================================================
+#         # ABA 2 — NOVO TIPO DE MANEJO
+#         # ======================================================
 
-        with aba_novo:
+#         with aba_novo:
 
-            st.markdown("##### Cadastrar novo tipo de manejo")
+#             st.markdown("##### Cadastrar novo tipo de manejo")
 
-            nome_tipo = st.text_input(
-                "Nome do tipo de manejo",
-                key="novo_tipo_manejo"
-            )
+#             nome_tipo = st.text_input(
+#                 "Nome do tipo de manejo",
+#                 key="novo_tipo_manejo"
+#             )
 
-            st.write('')
-            if st.button("Salvar tipo de manejo", type="primary", icon=":material/save:", key="btn_novo_tipo_manejo"):
+#             st.write('')
+#             if st.button("Salvar tipo de manejo", type="primary", icon=":material/save:", key="btn_novo_tipo_manejo"):
 
-                if not nome_tipo.strip():
-                    st.warning("O nome do tipo de manejo não pode estar vazio.")
-                else:
-                    novo_tipo = {
-                        "nome_tipo_manejo": nome_tipo.strip()
-                    }
+#                 if not nome_tipo.strip():
+#                     st.warning("O nome do tipo de manejo não pode estar vazio.")
+#                 else:
+#                     novo_tipo = {
+#                         "nome_tipo_manejo": nome_tipo.strip()
+#                     }
 
-                    col_editais.update_one(
-                        {"codigo_edital": edital_selecionado_manejo},
-                        {"$push": {"tipos_manejo": novo_tipo}}
-                    )
+#                     col_editais.update_one(
+#                         {"codigo_edital": edital_selecionado_manejo},
+#                         {"$push": {"tipos_manejo": novo_tipo}}
+#                     )
 
-                    st.success(":material/check: Tipo de manejo cadastrado com sucesso!")
-                    time.sleep(3)
-                    st.rerun()
+#                     st.success(":material/check: Tipo de manejo cadastrado com sucesso!")
+#                     time.sleep(3)
+#                     st.rerun()
 
-        # ======================================================
-        # ABA 3 — EDITAR / EXCLUIR
-        # ======================================================
+#         # ======================================================
+#         # ABA 3 — EDITAR / EXCLUIR
+#         # ======================================================
 
-        with aba_editar:
+#         with aba_editar:
 
-            if not tipos_manejo:
-                st.caption("Nenhum tipo de manejo cadastrado.")
-            else:
-                st.markdown("##### Selecione um tipo para editar ou excluir")
+#             if not tipos_manejo:
+#                 st.caption("Nenhum tipo de manejo cadastrado.")
+#             else:
+#                 st.markdown("##### Selecione um tipo para editar ou excluir")
 
-                mapa_tipos = {
-                    t["nome_tipo_manejo"]: t
-                    for t in tipos_manejo
-                }
+#                 mapa_tipos = {
+#                     t["nome_tipo_manejo"]: t
+#                     for t in tipos_manejo
+#                 }
 
-                selecionado = st.selectbox(
-                    "",
-                    list(mapa_tipos.keys()),
-                    key="select_tipo_manejo"
-                )
+#                 selecionado = st.selectbox(
+#                     "",
+#                     list(mapa_tipos.keys()),
+#                     key="select_tipo_manejo"
+#                 )
 
-                if selecionado:
-                    tipo_atual = mapa_tipos[selecionado]
+#                 if selecionado:
+#                     tipo_atual = mapa_tipos[selecionado]
 
-                    st.divider()
+#                     st.divider()
 
-                    novo_nome = st.text_input(
-                        "Nome do tipo de manejo",
-                        value=tipo_atual["nome_tipo_manejo"],
-                        key="editar_tipo_manejo"
-                    )
+#                     novo_nome = st.text_input(
+#                         "Nome do tipo de manejo",
+#                         value=tipo_atual["nome_tipo_manejo"],
+#                         key="editar_tipo_manejo"
+#                     )
 
-                    st.write('')
+#                     st.write('')
 
-                    with st.container(horizontal=True):
+#                     with st.container(horizontal=True):
 
                         
-                        # -------- SALVAR --------
-                        if st.button("Salvar alterações", type="primary", icon=":material/save:", key="btn_editar_tipo_manejo"):
+#                         # -------- SALVAR --------
+#                         if st.button("Salvar alterações", type="primary", icon=":material/save:", key="btn_editar_tipo_manejo"):
 
-                            novo = {
-                                "nome_tipo_manejo": novo_nome.strip()
-                            }
+#                             novo = {
+#                                 "nome_tipo_manejo": novo_nome.strip()
+#                             }
 
-                            tipos_atualizados = [
-                                novo if t == tipo_atual else t
-                                for t in tipos_manejo
-                            ]
+#                             tipos_atualizados = [
+#                                 novo if t == tipo_atual else t
+#                                 for t in tipos_manejo
+#                             ]
 
-                            col_editais.update_one(
-                                {"codigo_edital": edital_selecionado_manejo},
-                                {"$set": {"tipos_manejo": tipos_atualizados}}
-                            )
+#                             col_editais.update_one(
+#                                 {"codigo_edital": edital_selecionado_manejo},
+#                                 {"$set": {"tipos_manejo": tipos_atualizados}}
+#                             )
 
-                            st.success(":material/check: Tipo de manejo atualizado com sucesso!")
-                            time.sleep(3)
-                            st.rerun()
+#                             st.success(":material/check: Tipo de manejo atualizado com sucesso!")
+#                             time.sleep(3)
+#                             st.rerun()
 
-                        # -------- EXCLUIR --------
-                        if st.button("Excluir tipo", icon=":material/delete:", key="btn_excluir_tipo_manejo"):
+#                         # -------- EXCLUIR --------
+#                         if st.button("Excluir tipo", icon=":material/delete:", key="btn_excluir_tipo_manejo"):
 
-                            novos = [
-                                t for t in tipos_manejo
-                                if t != tipo_atual
-                            ]
+#                             novos = [
+#                                 t for t in tipos_manejo
+#                                 if t != tipo_atual
+#                             ]
 
-                            col_editais.update_one(
-                                {"codigo_edital": edital_selecionado_manejo},
-                                {"$set": {"tipos_manejo": novos}}
-                            )
+#                             col_editais.update_one(
+#                                 {"codigo_edital": edital_selecionado_manejo},
+#                                 {"$set": {"tipos_manejo": novos}}
+#                             )
 
-                            st.success("Tipo de manejo removido com sucesso!")
-                            time.sleep(3)
-                            st.rerun()
+#                             st.success("Tipo de manejo removido com sucesso!")
+#                             time.sleep(3)
+#                             st.rerun()
