@@ -91,6 +91,7 @@ col_publicos = db["publicos"]
 
 lista_publicos = list(col_publicos.find({}, {"_id": 0, "publico": 1}))
 
+
 # SEMPRE insere a opção Outros
 opcoes_publicos = sorted({p["publico"] for p in lista_publicos} - {"Outros"})
 opcoes_publicos.append("Outros")
@@ -561,11 +562,10 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-            # ---------- BENEFICIÁRIOS ----------
-            # =========================================================
-            # STEP: BENEFICIÁRIOS (SALVAR POR COMUNIDADE)
-            # LAYOUT: DUAS COLUNAS + CONTAINER HORIZONTAL
-            # =========================================================
+
+            # =====================================================
+            # CONSTANTES
+            # =====================================================
 
             OPCOES_BENEFICIOS = [
                 "Maior acesso à água potável",
@@ -580,17 +580,37 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 "Superar as barreiras para a inclusão de gênero",
             ]
 
+            # =====================================================
+            # CONTROLE DE USUÁRIO
+            # =====================================================
+
+            usuario_admin = tipo_usuario == "admin"
+            usuario_equipe = tipo_usuario == "equipe"
+            usuario_beneficiario = tipo_usuario == "beneficiario"
+            usuario_visitante = tipo_usuario == "visitante"
+
+            modo_edicao_benef = usuario_beneficiario
+            modo_visualizacao_benef = not usuario_beneficiario
+
+            # =====================================================
+            # STEP BENEFICIÁRIOS
+            # =====================================================
 
             if step == "Beneficiários":
 
                 st.subheader("Tipos de Beneficiários e Benefícios")
-                st.write(
-                    "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto "
-                    "para cada comunidade."
-                )
+
+                if usuario_beneficiario:
+
+                    st.write("")
+                    st.write(
+                        "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto para cada comunidade."
+                    )
+
+                st.write("")
                 st.write("")
 
-                # Sempre recarrega o projeto atualizado
+
                 projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
                 localidades = projeto.get("locais", {}).get("localidades", [])
 
@@ -607,997 +627,248 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 for localidade in localidades:
 
                     nome_localidade = localidade.get("nome_localidade")
+                    beneficiarios_bd = localidade.get("beneficiarios", []) or []
 
-                    beneficiarios_bd = localidade.get("beneficiarios", [])
-
-                    # -----------------------------
-                    # SEPARA PADRÃO E OUTROS
-                    # -----------------------------
-                    estado_original_padrao = {
-                        b["tipo_beneficiario"]: sorted(b.get("beneficios", []))
+                    # -------------------------------------------------
+                    # ESTADO ORIGINAL DO BANCO
+                    # -------------------------------------------------
+                    estado_original = {
+                        b["tipo_beneficiario"]: sorted(b.get("beneficios") or [])
                         for b in beneficiarios_bd
-                        if b.get("tipo_beneficiario") in opcoes_publicos
+                        if b.get("tipo_beneficiario")
                     }
 
-                    outros_bd = [
-                        {
-                            "tipo_beneficiario": b.get("tipo_beneficiario", ""),
-                            "beneficios": b.get("beneficios", [])
-                        }
-                        for b in beneficiarios_bd
-                        if b.get("tipo_beneficiario") not in opcoes_publicos
-                    ]
+                    # -------------------------------------------------
+                    # PÚBLICOS PARA RENDERIZAÇÃO
+                    # -------------------------------------------------
+                    publicos_renderizacao = list(opcoes_publicos[:-1])
 
-                    estado_atual_padrao = {}
+                    for tipo in estado_original.keys():
+                        if tipo not in publicos_renderizacao:
+                            publicos_renderizacao.append(tipo)
+
+                    publicos_renderizacao = sorted(publicos_renderizacao)
+
+                    estado_atual = {}
                     houve_alteracao = False
 
                     col1, col2 = st.columns([1, 3])
 
-                    # -------- COLUNA 1: COMUNIDADE --------
+                    # -------- COLUNA 1 --------
+
                     with col1:
                         st.markdown(f"**{nome_localidade}**")
+
+                        municipio = localidade.get("municipio")
+
+                        if municipio:
+                            st.write(municipio)
+
+
+
+                    # with col1:
+                    #     st.markdown(f"**{nome_localidade}**")
+
+
+
 
                     # -------- COLUNA 2 --------
                     with col2:
 
                         st.write("**Tipos de Beneficiários:**")
 
-                        outros_marcado = False
+                        # =====================================================
+                        # MODO VISUALIZAÇÃO
+                        # =====================================================
+                        if modo_visualizacao_benef:
 
-                        # =================================================
-                        # CHECKBOXES DOS PÚBLICOS (INCLUINDO OUTROS)
-                        # =================================================
-                        for publico in opcoes_publicos:
+                            if not beneficiarios_bd:
+                                st.write("Nenhum beneficiário cadastrado.")
+                            else:
+                                for b in beneficiarios_bd:
 
-                            chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
+                                    tipo = b.get("tipo_beneficiario")
+                                    beneficios = b.get("beneficios") or []
 
-                            marcado_inicial = (
-                                publico in estado_original_padrao
-                                or (publico == "Outros" and outros_bd)
-                            )
+                                    with st.container():
+                                        st.write(' ')
+                                        if beneficios:
+                                            st.pills(
+                                                label=tipo,
+                                                options=beneficios,
+                                                width="content",
+                                                key=f"pill_{projeto['codigo']}_{nome_localidade}_{tipo}"
+                                            )
+                                        else:
+                                            st.pills(
+                                                label=tipo,
+                                                options=["Nenhum benefício informado"],
+                                                width="content",
+                                                key=f"pill_{projeto['codigo']}_{nome_localidade}_{tipo}"
+                                            )
 
-                            marcado = st.checkbox(
-                                publico,
-                                value=marcado_inicial,
-                                key=chk_key
-                            )
 
-                            # -----------------------------
-                            # PÚBLICOS PADRÃO
-                            # -----------------------------
-                            if publico != "Outros":
+                        # =====================================================
+                        # MODO EDIÇÃO
+                        # =====================================================
+                        if modo_edicao_benef:
 
-                                if marcado:
-                                    beneficios_iniciais = estado_original_padrao.get(publico, [])
+                            # =============================================
+                            # BENEFICIÁRIOS EXISTENTES
+                            # =============================================
+                            for publico in publicos_renderizacao:
 
-                                    beneficios = st.multiselect(
-                                        f"Benefícios para {publico.lower()}",
-                                        options=OPCOES_BENEFICIOS,
-                                        default=beneficios_iniciais,
-                                        key=f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
+                                with st.container(horizontal=True):
+
+                                    chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
+
+                                    marcado_inicial = publico in estado_original
+
+                                    marcado = st.checkbox(
+                                        publico,
+                                        value=marcado_inicial,
+                                        key=chk_key,
+                                        width=300
                                     )
 
-                                    estado_atual_padrao[publico] = sorted(beneficios)
+                                    if marcado:
 
-                                    if (
-                                        publico not in estado_original_padrao
-                                        or sorted(beneficios) != estado_original_padrao.get(publico, [])
-                                    ):
-                                        houve_alteracao = True
+                                        beneficios_iniciais = estado_original.get(publico, [])
 
-                                else:
-                                    if publico in estado_original_padrao:
-                                        houve_alteracao = True
+                                        beneficios = st.multiselect(
+                                            f"Benefícios para {publico.lower()}",
+                                            options=OPCOES_BENEFICIOS,
+                                            default=beneficios_iniciais,
+                                            key=f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
+                                        )
 
-                            # -----------------------------
-                            # OUTROS (APENAS CONTROLE)
-                            # -----------------------------
-                            else:
-                                outros_marcado = marcado
-                                if bool(outros_bd) != marcado:
+                                        estado_atual[publico] = sorted(beneficios)
+
+                                        if (
+                                            publico not in estado_original
+                                            or sorted(beneficios) != estado_original.get(publico, [])
+                                        ):
+                                            houve_alteracao = True
+
+                                    else:
+                                        if publico in estado_original:
+                                            houve_alteracao = True
+
+                            # =============================================
+                            # CHECKBOX OUTROS
+                            # =============================================
+                            with st.container(horizontal=True):
+
+                                chk_outros_key = f"chk_outros_{projeto['codigo']}_{nome_localidade}"
+
+                                outros_marcado = st.checkbox(
+                                    "Outros",
+                                    value=False,
+                                    key=chk_outros_key,
+                                    width=300
+                                )
+
+                            # =============================================
+                            # FORMULÁRIO SIMPLES — OUTROS
+                            # =============================================
+                            if outros_marcado:
+
+                                with st.container(horizontal=True):
+
+                                    st.text_input(
+                                        "Tipo de beneficiário",
+                                        key=f"novo_tipo_{projeto['codigo']}_{nome_localidade}"
+                                    )
+
+                                    st.multiselect(
+                                        "Benefícios",
+                                        options=OPCOES_BENEFICIOS,
+                                        key=f"novo_beneficios_{projeto['codigo']}_{nome_localidade}"
+                                    )
+
+                                novo_tipo = st.session_state.get(
+                                    f"novo_tipo_{projeto['codigo']}_{nome_localidade}", ""
+                                ).strip()
+
+                                novos_beneficios = st.session_state.get(
+                                    f"novo_beneficios_{projeto['codigo']}_{nome_localidade}", []
+                                )
+
+                                if novo_tipo and novos_beneficios:
                                     houve_alteracao = True
 
-                    # =================================================
-                    # DATA EDITOR — SOMENTE SE "OUTROS" MARCADO
-                    # (FORA DO CONTAINER HORIZONTAL)
-                    # =================================================
-                    df_outros = None
+                            # =================================================
+                            # BOTÃO SALVAR
+                            # =================================================
+                            if houve_alteracao:
 
-                    if outros_marcado:
+                                st.write("")
 
-                        st.write("**Outros tipos de beneficiários:**")
+                                erros = []
 
-                        df_outros_inicial = pd.DataFrame(
-                            outros_bd,
-                            columns=["tipo_beneficiario", "beneficios"]
-                        )
-
-                        outros_key = f"outros_{projeto['codigo']}_{nome_localidade}"
-
-                        df_outros = st.data_editor(
-                            df_outros_inicial,
-                            num_rows="dynamic",
-                            key=outros_key,
-                            column_config={
-                                "tipo_beneficiario": st.column_config.TextColumn(
-                                    "Tipo de beneficiário"
-                                ),
-                                "beneficios": st.column_config.MultiselectColumn(
-                                    "Benefícios",
-                                    options=OPCOES_BENEFICIOS
-                                ),
-                            }
-                        )
-
-                        if not df_outros.equals(df_outros_inicial):
-                            houve_alteracao = True
-
-                    # =================================================
-                    # BOTÃO SALVAR
-                    # =================================================
-                    if houve_alteracao:
-
-                        erros = []
-
-                        with st.container(horizontal=True, horizontal_alignment="right"):
-                            clicou_salvar = st.button(
-                                f"Atualizar {nome_localidade}",
-                                type="primary",
-                                key=f"salvar_{projeto['codigo']}_{nome_localidade}",
-                                icon=":material/save:"
-                            )
-
-                        if clicou_salvar:
-
-                            beneficiarios_para_salvar = []
-
-                            # -----------------------------
-                            # VALIDAÇÃO — SOMENTE PADRÃO
-                            # -----------------------------
-                            for tipo, beneficios in estado_atual_padrao.items():
-                                if not beneficios:
-                                    erros.append(
-                                        f"Selecione ao menos um benefício para **{tipo}**."
+                                with st.container(horizontal=True, horizontal_alignment="right"):
+                                    clicou_salvar = st.button(
+                                        f"Atualizar {nome_localidade}",
+                                        type="primary",
+                                        key=f"salvar_{projeto['codigo']}_{nome_localidade}",
+                                        icon=":material/save:"
                                     )
-                                else:
-                                    beneficiarios_para_salvar.append({
-                                        "tipo_beneficiario": tipo,
-                                        "beneficios": beneficios
-                                    })
 
-                            if erros:
-                                for erro in erros:
-                                    st.error(erro)
-                                time.sleep(5)
-                                st.rerun()
+                                if clicou_salvar:
 
-                            # -----------------------------
-                            # OUTROS — SEM VALIDAÇÃO
-                            # -----------------------------
-                            if outros_marcado and isinstance(df_outros, pd.DataFrame):
+                                    beneficiarios_para_salvar = []
 
-                                linhas_outros = df_outros.to_dict(orient="records")
+                                    # -----------------------------------------
+                                    # BENEFICIÁRIOS EXISTENTES
+                                    # -----------------------------------------
+                                    for tipo, beneficios in estado_atual.items():
+                                        if not beneficios:
+                                            erros.append(
+                                                f"Selecione ao menos um benefício para **{tipo}**."
+                                            )
+                                        else:
+                                            beneficiarios_para_salvar.append({
+                                                "tipo_beneficiario": tipo,
+                                                "beneficios": beneficios
+                                            })
 
-                                for linha in linhas_outros:
-                                    tipo = linha.get("tipo_beneficiario", "").strip()
-                                    beneficios = linha.get("beneficios", [])
-
-                                    if tipo:
+                                    # -----------------------------------------
+                                    # NOVO BENEFICIÁRIO (OUTROS)
+                                    # -----------------------------------------
+                                    if outros_marcado and novo_tipo:
                                         beneficiarios_para_salvar.append({
-                                            "tipo_beneficiario": tipo,
-                                            "beneficios": beneficios
+                                            "tipo_beneficiario": novo_tipo,
+                                            "beneficios": novos_beneficios
                                         })
 
-                            # -----------------------------
-                            # SALVA NO BANCO
-                            # -----------------------------
-                            col_projetos.update_one(
-                                {
-                                    "codigo": projeto["codigo"],
-                                    "locais.localidades.nome_localidade": nome_localidade
-                                },
-                                {
-                                    "$set": {
-                                        "locais.localidades.$.beneficiarios":
-                                            beneficiarios_para_salvar
-                                    }
-                                }
-                            )
-
-                            st.success(
-                                f"Beneficiários da comunidade "
-                                f"**{nome_localidade}** salvos com sucesso."
-                            )
-                            time.sleep(3)
-                            st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            # if step == "Beneficiários":
-
-            #     st.subheader("Tipos de Beneficiários e Benefícios")
-            #     st.write(
-            #         "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto "
-            #         "para cada comunidade."
-            #     )
-            #     st.write("")
-
-            #     # -----------------------------------------------------
-            #     # Sempre recarrega o projeto atualizado do banco
-            #     # -----------------------------------------------------
-            #     projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
-
-            #     localidades = projeto.get("locais", {}).get("localidades", [])
-
-            #     if not localidades:
-            #         st.info(
-            #             "Nenhuma comunidade cadastrada no projeto. "
-            #             "Adicione comunidades na página **Locais**."
-            #         )
-            #         st.stop()
-
-            #     # -----------------------------------------------------
-            #     # LOOP DAS COMUNIDADES
-            #     # -----------------------------------------------------
-            #     for localidade in localidades:
-
-            #         nome_localidade = localidade.get("nome_localidade")
-
-            #         # -----------------------------
-            #         # DADOS DO BANCO
-            #         # -----------------------------
-            #         beneficiarios_bd = localidade.get("beneficiarios", [])
-
-            #         # Beneficiários padrão (presentes em opcoes_publicos)
-            #         beneficiarios_padrao_bd = {
-            #             b["tipo_beneficiario"]: sorted(b.get("beneficios", []))
-            #             for b in beneficiarios_bd
-            #             if b["tipo_beneficiario"] in opcoes_publicos
-            #         }
-
-            #         # Beneficiários customizados (OUTROS)
-            #         beneficiarios_outros_bd = [
-            #             {
-            #                 "tipo_beneficiario": b["tipo_beneficiario"],
-            #                 "beneficios": b.get("beneficios", [])
-            #             }
-            #             for b in beneficiarios_bd
-            #             if b["tipo_beneficiario"] not in opcoes_publicos
-            #         ]
-
-            #         # -----------------------------
-            #         # ESTADO DA UI
-            #         # -----------------------------
-            #         estado_atual = {}
-            #         houve_alteracao = False
-
-            #         # -------------------------------------------------
-            #         # DUAS COLUNAS
-            #         # -------------------------------------------------
-            #         col1, col2 = st.columns([1, 3])
-
-            #         # -------- COLUNA 1: COMUNIDADE --------
-            #         with col1:
-            #             st.markdown(f"**{nome_localidade}**")
-
-            #         # -------- COLUNA 2: TIPOS DE BENEFICIÁRIOS --------
-            #         with col2:
-
-            #             st.write("**Tipos de Beneficiários:**")
-
-            #             for publico in opcoes_publicos:
-
-            #                 chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
-            #                 ms_key = f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
-
-            #                 # Checkbox marcado se existir no banco
-            #                 marcado_inicial = (
-            #                     publico in beneficiarios_padrao_bd
-            #                     or (publico == "Outros" and beneficiarios_outros_bd)
-            #                 )
-
-            #                 with st.container(horizontal=True):
-
-            #                     marcado = st.checkbox(
-            #                         publico,
-            #                         value=marcado_inicial,
-            #                         key=chk_key,
-            #                         width=300
-            #                     )
-
-            #                     # ---------------------------------------------
-            #                     # CASO PADRÃO (NÃO OUTROS)
-            #                     # ---------------------------------------------
-            #                     if marcado and publico != "Outros":
-
-            #                         beneficios_iniciais = beneficiarios_padrao_bd.get(publico, [])
-
-            #                         beneficios = st.multiselect(
-            #                             f"Benefícios para {publico.lower()}",
-            #                             options=OPCOES_BENEFICIOS,
-            #                             default=beneficios_iniciais,
-            #                             key=ms_key,
-            #                             placeholder="Escolha um ou mais benefícios"
-            #                         )
-
-            #                         estado_atual[publico] = sorted(beneficios)
-
-            #                         if (
-            #                             publico not in beneficiarios_padrao_bd
-            #                             or sorted(beneficios) != beneficiarios_padrao_bd.get(publico, [])
-            #                         ):
-            #                             houve_alteracao = True
-
-            #                     # ---------------------------------------------
-            #                     # CASO OUTROS → DATA_EDITOR
-            #                     # ---------------------------------------------
-            #                     elif marcado and publico == "Outros":
-
-            #                         df_outros_inicial = pd.DataFrame(
-            #                             beneficiarios_outros_bd,
-            #                             columns=["tipo_beneficiario", "beneficios"]
-            #                         )
-
-            #                         df_outros = st.data_editor(
-            #                             df_outros_inicial,
-            #                             num_rows="dynamic",
-            #                             use_container_width=True,
-            #                             column_config={
-            #                                 "tipo_beneficiario": st.column_config.TextColumn(
-            #                                     "Tipo de beneficiário"
-            #                                 ),
-            #                                 "beneficios": st.column_config.MultiselectColumn(
-            #                                     "Benefícios",
-            #                                     options=OPCOES_BENEFICIOS
-            #                                 )
-            #                             },
-            #                             key=f"outros_{projeto['codigo']}_{nome_localidade}"
-            #                         )
-
-            #                         estado_atual["__outros__"] = df_outros.to_dict("records")
-
-            #                         if df_outros.to_dict("records") != beneficiarios_outros_bd:
-            #                             houve_alteracao = True
-
-            #                     # ---------------------------------------------
-            #                     # SE OUTROS FOI DESMARCADO
-            #                     # ---------------------------------------------
-            #                     elif not marcado and publico == "Outros":
-            #                         if beneficiarios_outros_bd:
-            #                             houve_alteracao = True
-            #                         estado_atual["__outros__"] = []
-
-            #                     # ---------------------------------------------
-            #                     # PADRÃO DESMARCADO
-            #                     # ---------------------------------------------
-            #                     elif not marcado and publico in beneficiarios_padrao_bd:
-            #                         houve_alteracao = True
-
-            #         # -------------------------------------------------
-            #         # BOTÃO SALVAR
-            #         # -------------------------------------------------
-            #         if houve_alteracao:
-
-            #             erros = []
-
-            #             with st.container(horizontal=True, horizontal_alignment="right"):
-            #                 clicou_salvar = st.button(
-            #                     f"Atualizar {nome_localidade}",
-            #                     type="primary",
-            #                     key=f"salvar_{projeto['codigo']}_{nome_localidade}",
-            #                     icon=":material/save:"
-            #                 )
-
-            #             if clicou_salvar:
-
-            #                 beneficiarios_para_salvar = []
-
-            #                 for tipo, beneficios in estado_atual.items():
-
-            #                     # -----------------------------
-            #                     # OUTROS
-            #                     # -----------------------------
-            #                     if tipo == "__outros__":
-            #                         for linha in beneficios:
-            #                             if (
-            #                                 linha.get("tipo_beneficiario")
-            #                                 and linha.get("beneficios")
-            #                             ):
-            #                                 beneficiarios_para_salvar.append({
-            #                                     "tipo_beneficiario": linha["tipo_beneficiario"],
-            #                                     "beneficios": linha["beneficios"]
-            #                                 })
-            #                             else:
-            #                                 erros.append(
-            #                                     "Todos os campos de beneficiários em 'Outros' devem ser preenchidos."
-            #                                 )
-
-            #                     # -----------------------------
-            #                     # PADRÃO
-            #                     # -----------------------------
-            #                     else:
-            #                         if not beneficios:
-            #                             erros.append(
-            #                                 f"Selecione ao menos um benefício para **{tipo}**."
-            #                             )
-            #                         else:
-            #                             beneficiarios_para_salvar.append({
-            #                                 "tipo_beneficiario": tipo,
-            #                                 "beneficios": beneficios
-            #                             })
-
-            #                 # -----------------------------
-            #                 # MOSTRA ERROS
-            #                 # -----------------------------
-            #                 if erros:
-            #                     for erro in erros:
-            #                         st.error(erro)
-
-            #                     time.sleep(5)
-            #                     st.rerun()
-
-
-            #                 # -----------------------------
-            #                 # SALVA NO BANCO
-            #                 # -----------------------------
-            #                 col_projetos.update_one(
-            #                     {
-            #                         "codigo": projeto["codigo"],
-            #                         "locais.localidades.nome_localidade": nome_localidade
-            #                     },
-            #                     {
-            #                         "$set": {
-            #                             "locais.localidades.$.beneficiarios":
-            #                                 beneficiarios_para_salvar
-            #                         }
-            #                     }
-            #                 )
-
-            #                 st.success(
-            #                     f"Beneficiários da comunidade "
-            #                     f"**{nome_localidade}** salvos com sucesso."
-            #                 )
-            #                 time.sleep(3)
-            #                 st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            # if step == "Beneficiários":
-
-            #     st.subheader("Tipos de Beneficiários e Benefícios")
-            #     st.write(
-            #         "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto "
-            #         "para cada comunidade."
-            #     )
-            #     st.write("")
-
-            #     # -----------------------------------------------------
-            #     # Sempre recarrega o projeto atualizado do banco
-            #     # -----------------------------------------------------
-            #     projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
-
-            #     localidades = projeto.get("locais", {}).get("localidades", [])
-
-            #     if not localidades:
-            #         st.info(
-            #             "Nenhuma comunidade cadastrada no projeto. "
-            #             "Adicione comunidades na página **Locais**."
-            #         )
-            #         st.stop()
-
-            #     # -----------------------------------------------------
-            #     # LOOP DAS COMUNIDADES
-            #     # -----------------------------------------------------
-            #     for localidade in localidades:
-
-            #         nome_localidade = localidade.get("nome_localidade")
-
-            #         # Beneficiários salvos no banco (estado original)
-            #         beneficiarios_bd = localidade.get("beneficiarios", [])
-
-            #         # Normaliza para comparação
-            #         estado_original = {
-            #             b["tipo_beneficiario"]: sorted(b.get("beneficios", []))
-            #             for b in beneficiarios_bd
-            #         }
-
-            #         # Estado reconstruído a partir da UI
-            #         estado_atual = {}
-
-            #         houve_alteracao = False
-
-            #         # -------------------------------------------------
-            #         # DUAS COLUNAS
-            #         # -------------------------------------------------
-            #         col1, col2 = st.columns([1, 3])
-
-            #         # -------- COLUNA 1: COMUNIDADE --------
-            #         with col1:
-            #             st.markdown(f"**{nome_localidade}**")
-
-            #         # -------- COLUNA 2: TIPOS DE BENEFICIÁRIOS --------
-            #         with col2:
-
-            #             st.write("**Tipos de Beneficiários:**")
-
-            #             for publico in opcoes_publicos:
-
-            #                 # Chaves únicas e estáveis
-            #                 chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
-            #                 ms_key = f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
-
-            #                 # Checkbox pré-marcado conforme o banco
-            #                 marcado_inicial = publico in estado_original
-
-            #                 with st.container(horizontal=True):
-
-            #                     marcado = st.checkbox(
-            #                         publico,
-            #                         value=marcado_inicial,
-            #                         key=chk_key,
-            #                         width=300
-            #                     )
-
-            #                     if marcado:
-            #                         beneficios_iniciais = estado_original.get(publico, [])
-
-            #                         beneficios = st.multiselect(
-            #                             f"Benefícios para {publico.lower()}",
-            #                             options=OPCOES_BENEFICIOS,
-            #                             default=beneficios_iniciais,
-            #                             key=ms_key,
-            #                             placeholder="Escolha um ou mais benefícios"
-            #                         )
-
-
-            #                         # beneficios = st.multiselect(
-            #                         #     "Benefícios",
-            #                         #     options=OPCOES_BENEFICIOS,
-            #                         #     default=beneficios_iniciais,
-            #                         #     key=ms_key,
-            #                         #     placeholder="Escolha um ou mais benefícios"
-            #                         # )
-
-            #                         estado_atual[publico] = sorted(beneficios)
-
-            #                         # Detecta alteração
-            #                         if (
-            #                             publico not in estado_original
-            #                             or sorted(beneficios) != estado_original.get(publico, [])
-            #                         ):
-            #                             houve_alteracao = True
-
-            #                     else:
-            #                         # Se estava salvo e foi desmarcado
-            #                         if publico in estado_original:
-            #                             houve_alteracao = True
-
-
-
-            #         # -------------------------------------------------
-            #         # BOTÃO SALVAR (ABAIXO DAS COLUNAS)
-            #         # -------------------------------------------------
-            #         if houve_alteracao:
-
-            #             # Guarda erros fora do container
-            #             erros = []
-
-            #             # -----------------------------
-            #             # BOTÃO (alinhado à direita)
-            #             # -----------------------------
-            #             with st.container(horizontal=True, horizontal_alignment="right"):
-            #                 clicou_salvar = st.button(
-            #                     f"Atualizar {nome_localidade}",
-            #                     type="primary",
-            #                     key=f"salvar_{projeto['codigo']}_{nome_localidade}",
-            #                     icon=":material/save:"
-            #                 )
-
-            #             # -----------------------------
-            #             # AÇÃO DO BOTÃO
-            #             # -----------------------------
-            #             if clicou_salvar:
-
-            #                 beneficiarios_para_salvar = []
-
-            #                 # Validação: benefício obrigatório
-            #                 for tipo, beneficios in estado_atual.items():
-            #                     if not beneficios:
-            #                         erros.append(
-            #                             f"Selecione ao menos um benefício para **{tipo}**."
-            #                         )
-            #                     else:
-            #                         beneficiarios_para_salvar.append({
-            #                             "tipo_beneficiario": tipo,
-            #                             "beneficios": beneficios
-            #                         })
-
-            #                 # -----------------------------
-            #                 # MOSTRA ERROS (fora do container)
-            #                 # -----------------------------
-            #                 if erros:
-            #                     for erro in erros:
-            #                         st.error(erro)
-
-            #                     time.sleep(5)
-            #                     st.rerun()
-
-
-            #                 # -----------------------------
-            #                 # SALVA NO BANCO
-            #                 # -----------------------------
-            #                 col_projetos.update_one(
-            #                     {
-            #                         "codigo": projeto["codigo"],
-            #                         "locais.localidades.nome_localidade": nome_localidade
-            #                     },
-            #                     {
-            #                         "$set": {
-            #                             "locais.localidades.$.beneficiarios":
-            #                                 beneficiarios_para_salvar
-            #                         }
-            #                     }
-            #                 )
-
-            #                 st.success(
-            #                     f"Beneficiários da comunidade "
-            #                     f"**{nome_localidade}** salvos com sucesso."
-            #                 )
-            #                 time.sleep(3)
-            #                 st.rerun()
-
-
-
-
-
-
-                    # # -------------------------------------------------
-                    # # BOTÃO SALVAR (ABAIXO DAS COLUNAS)
-                    # # -------------------------------------------------
-                    # if houve_alteracao:
-
-                    #     with st.container(horizontal=True, horizontal_alignment="right"):
-                    #         if st.button(
-                    #             f"Atualizar {nome_localidade}",
-                    #             type="primary",
-                    #             key=f"salvar_{projeto['codigo']}_{nome_localidade}",
-                    #             icon=":material/save:"
-                    #         ):
-
-                    #             erros = []
-
-                    #             beneficiarios_para_salvar = []
-
-                    #             # Validação: benefício obrigatório
-                    #             for tipo, beneficios in estado_atual.items():
-                    #                 if not beneficios:
-                    #                     erros.append(
-                    #                         f"Selecione ao menos um benefício para **{tipo}**."
-                    #                     )
-                    #                 else:
-                    #                     beneficiarios_para_salvar.append({
-                    #                         "tipo_beneficiario": tipo,
-                    #                         "beneficios": beneficios
-                    #                     })
-
-                    #             if erros:
-                    #                 for erro in erros:
-                    #                     st.error(erro)
-                    #                 st.stop()
-
-                    #             # Salva SOMENTE esta comunidade
-                    #             col_projetos.update_one(
-                    #                 {
-                    #                     "codigo": projeto["codigo"],
-                    #                     "locais.localidades.nome_localidade": nome_localidade
-                    #                 },
-                    #                 {
-                    #                     "$set": {
-                    #                         "locais.localidades.$.beneficiarios":
-                    #                             beneficiarios_para_salvar
-                    #                     }
-                    #                 }
-                    #             )
-
-                    #             st.success(
-                    #                 f"Beneficiários da comunidade "
-                    #                 f"**{nome_localidade}** salvos com sucesso."
-                    #             )
-                    #             time.sleep(3)
-                    #             st.rerun()
-
-                    # st.divider()
-
-
-
-
-
-
-
-
-
-
-
-
-
-            # OPCOES_BENEFICIOS = [
-            #     "Maior acesso à água potável",
-            #     "Maior segurança alimentar",
-            #     "Maior acesso à energia",
-            #     "Maior acesso a serviços públicos (ex. saúde, educação)",
-            #     "Maior resiliência às mudanças climáticas",
-            #     "Melhora na posse de terra",
-            #     "Melhora no reconhecimento do conhecimento tradicional",
-            #     "Melhora na representação e tomada de decisão",
-            #     "Melhora no acesso aos serviços ecossistêmicos",
-            #     "Superar as barreiras para a inclusão de gênero",
-            # ]
-
-
-
-            # # ---------- BENEFICIÁRIOS ----------
-            # if step == "Beneficiários":
-
-            #     st.write("")
-            #     st.subheader("Tipos de Beneficiários e Benefícios")
-            #     st.write(
-            #         "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto "
-            #         "para cada comunidade."
-            #     )
-            #     st.write("")
-
-            #     # ---------------------------------------------------
-            #     # Recupera as localidades (Comunidades)
-            #     # ---------------------------------------------------
-            #     localidades = (
-            #         projeto
-            #         .get("locais", {})
-            #         .get("localidades", [])
-            #     )
-
-            #     if not localidades:
-            #         st.info(
-            #             "Nenhuma comunidade cadastrada no projeto. "
-            #             "Adicione comunidades na página **Locais**."
-            #         )
-            #         st.stop()
-
-            #     # ---------------------------------------------------
-            #     # RENDERIZAÇÃO DAS COMUNIDADES
-            #     # ---------------------------------------------------
-            #     for idx_local, localidade in enumerate(localidades):
-
-            #         # Beneficiários já salvos nesta localidade
-            #         beneficiarios_salvos = localidade.get("beneficiarios", [])
-
-            #         # Converte lista em dicionário para facilitar lookup
-            #         # { tipo_beneficiario: [beneficios] }
-            #         mapa_beneficiarios = {
-            #             b["tipo_beneficiario"]: b.get("beneficios", [])
-            #             for b in beneficiarios_salvos
-            #         }
-
-            #         col1, col2 = st.columns([1, 3])
-
-            #         # -------- NOME DA COMUNIDADE --------
-            #         with col1:
-            #             st.markdown(
-            #                 f"**{localidade.get('nome_localidade', '—')}**"
-            #             )
-
-            #         # -------- TIPOS DE BENEFICIÁRIOS --------
-            #         with col2:
-
-            #             st.write("**Tipos de Beneficiários:**")
-
-            #             for publico in opcoes_publicos:
-
-            #                 chk_key = f"chk_{idx}_{idx_local}_{publico}"
-            #                 ms_key = f"benef_{idx}_{idx_local}_{publico}"
-
-            #                 # ---------------------------------------------------
-            #                 # PRÉ-CARGA NO SESSION_STATE (UMA ÚNICA VEZ)
-            #                 # ---------------------------------------------------
-            #                 if chk_key not in st.session_state:
-            #                     st.session_state[chk_key] = publico in mapa_beneficiarios
-
-            #                 if ms_key not in st.session_state:
-            #                     st.session_state[ms_key] = mapa_beneficiarios.get(publico, [])
-
-            #                 with st.container(horizontal=True):
-
-            #                     selecionado = st.checkbox(
-            #                         publico,
-            #                         key=chk_key,
-            #                         width=300
-            #                     )
-
-            #                     if selecionado:
-            #                         st.multiselect(
-            #                             "Selecione os benefícios",
-            #                             options=OPCOES_BENEFICIOS,
-            #                             default=st.session_state.get(ms_key, []),
-            #                             key=ms_key,
-            #                             placeholder="Escolha um ou mais benefícios"
-            #                         )
-
-
-            #                     # if selecionado:
-            #                     #     st.multiselect(
-            #                     #         "Selecione os benefícios",
-            #                     #         options=OPCOES_BENEFICIOS,
-            #                     #         key=ms_key,
-            #                     #         placeholder="Escolha um ou mais benefícios"
-            #                     #     )
-
-            #         st.divider()
-
-            #     # ---------------------------------------------------
-            #     # BOTÃO SALVAR BENEFICIÁRIOS
-            #     # ---------------------------------------------------
-            #     if st.button(
-            #         "Salvar beneficiários",
-            #         type="primary",
-            #         icon=":material/save:"
-            #     ):
-
-            #         erros = []
-            #         localidades_atualizadas = []
-
-            #         # -----------------------------------------------
-            #         # MONTA E VALIDA OS DADOS
-            #         # -----------------------------------------------
-            #         for idx_local, localidade in enumerate(localidades):
-
-            #             beneficiarios_local = []
-
-            #             for publico in opcoes_publicos:
-
-            #                 chk_key = f"chk_{idx}_{idx_local}_{publico}"
-            #                 ms_key = f"benef_{idx}_{idx_local}_{publico}"
-
-            #                 selecionado = st.session_state.get(chk_key, False)
-            #                 beneficios = st.session_state.get(ms_key, [])
-
-            #                 if selecionado:
-            #                     if not beneficios:
-            #                         erros.append(
-            #                             f"Selecione ao menos um benefício para "
-            #                             f"**{publico}** na comunidade "
-            #                             f"**{localidade.get('nome_localidade')}**."
-            #                         )
-            #                     else:
-            #                         beneficiarios_local.append({
-            #                             "tipo_beneficiario": publico,
-            #                             "beneficios": beneficios
-            #                         })
-
-            #             localidade_atualizada = localidade.copy()
-            #             localidade_atualizada["beneficiarios"] = beneficiarios_local
-            #             localidades_atualizadas.append(localidade_atualizada)
-
-            #         # -----------------------------------------------
-            #         # SE HOUVER ERROS, NÃO SALVA
-            #         # -----------------------------------------------
-            #         if erros:
-            #             for erro in erros:
-            #                 st.error(erro)
-            #             st.stop()
-
-            #         # -----------------------------------------------
-            #         # SALVA NO MONGODB
-            #         # -----------------------------------------------
-            #         col_projetos.update_one(
-            #             {"codigo": projeto["codigo"]},
-            #             {
-            #                 "$set": {
-            #                     "locais.localidades": localidades_atualizadas
-            #                 }
-            #             }
-            #         )
-
-            #         st.success("Beneficiários salvos com sucesso!")
-            #         time.sleep(3)
-            #         st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-            # if step == "Beneficiários":
-
-            #     st.write("")
-            #     st.subheader('Tipos de Beneficiários e Benefícios')
-            #     st.write(
-            #         "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto para cada comunidade."
-            #     )
-
-            #     st.write("")
-
-            #     localidades = (
-            #         projeto
-            #         .get("locais", {})
-            #         .get("localidades", [])
-            #     )
-
-            #     if not localidades:
-            #         st.info("Nenhuma comunidade cadastrada no projeto. Adicione na página 'Locais'.")
-            #         st.stop()
-
-
-            #     for idx_local, localidade in enumerate(localidades):
-
-            #         col1, col2 = st.columns([1, 3])
-
-            #         with col1:
-            #             st.markdown(f"**{localidade.get('nome_localidade', '—')}**")
-
-            #         with col2:
-                        
-            #             st.write('**Tipos de Beneficiários:**')
-
-            #             for publico in opcoes_publicos:
-
-            #                 with st.container(horizontal=True):
-
-            #                     chk_key = f"chk_{idx}_{idx_local}_{publico}"
-            #                     ms_key = f"benef_{idx}_{idx_local}_{publico}"
-
-
-            #                     selecionado = st.checkbox(
-            #                         publico,
-            #                         key=chk_key,
-            #                         width=300
-            #                     )
-
-            #                     if selecionado:
-            #                         st.multiselect(
-            #                             "Selecione os benefícios",
-            #                             options=OPCOES_BENEFICIOS,
-            #                             key=ms_key,
-            #                             placeholder="Escolha um ou mais benefícios"
-
-            #                         )
-
+                                    if erros:
+                                        for erro in erros:
+                                            st.error(erro)
+                                        time.sleep(3)
+                                        st.rerun()
+
+                                    # -----------------------------------------
+                                    # SALVA NO BANCO
+                                    # -----------------------------------------
+                                    col_projetos.update_one(
+                                        {
+                                            "codigo": projeto["codigo"],
+                                            "locais.localidades.nome_localidade": nome_localidade
+                                        },
+                                        {
+                                            "$set": {
+                                                "locais.localidades.$.beneficiarios":
+                                                    beneficiarios_para_salvar
+                                            }
+                                        }
+                                    )
+
+                                    st.success(
+                                        f"Beneficiários da comunidade "
+                                        f"**{nome_localidade}** salvos com sucesso."
+                                    )
+                                    time.sleep(3)
+                                    st.rerun()
 
 
                     st.divider()
@@ -1622,6 +893,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 usuario_admin = tipo_usuario == "admin"
                 usuario_equipe = tipo_usuario == "equipe"
                 usuario_beneficiario = tipo_usuario == "beneficiario"
+                
 
                 pode_editar = usuario_admin or usuario_equipe or usuario_beneficiario
                 pode_verificar = usuario_admin or usuario_equipe
