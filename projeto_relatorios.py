@@ -561,6 +561,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
+            # ---------- BENEFÍCIOS ----------
 
 
             # =====================================================
@@ -580,23 +581,48 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 "Superar as barreiras para a inclusão de gênero",
             ]
 
-            # =====================================================
-            # CONTROLE DE USUÁRIO
-            # =====================================================
+
+
+            # ============================
+            # CONTROLE DE USUÁRIO / STATUS
+            # ============================
 
             usuario_admin = tipo_usuario == "admin"
             usuario_equipe = tipo_usuario == "equipe"
             usuario_beneficiario = tipo_usuario == "beneficiario"
             usuario_visitante = tipo_usuario == "visitante"
 
-            modo_edicao_benef = usuario_beneficiario
-            modo_visualizacao_benef = not usuario_beneficiario
+            # Se o relatório NÃO estiver em modo_edicao,
+            # força modo VISUALIZAÇÃO dos beneficiários
+            if status_atual_db != "modo_edicao":
+                modo_edicao_benef = False
+                modo_visualizacao_benef = True
+            else:
+                modo_edicao_benef = usuario_beneficiario
+                modo_visualizacao_benef = not usuario_beneficiario
+
+
+
+            # # =====================================================
+            # # CONTROLE DE USUÁRIO
+            # # =====================================================
+
+            # usuario_admin = tipo_usuario == "admin"
+            # usuario_equipe = tipo_usuario == "equipe"
+            # usuario_beneficiario = tipo_usuario == "beneficiario"
+            # usuario_visitante = tipo_usuario == "visitante"
+
+            # modo_edicao_benef = usuario_beneficiario
+            # modo_visualizacao_benef = not usuario_beneficiario
 
             # =====================================================
             # STEP BENEFICIÁRIOS
             # =====================================================
 
             if step == "Beneficiários":
+
+
+                # PARTE 1 - TIPOS DE BENEFICIÁRIOS E BENEFICIOS ------------------------------------------------------
 
                 st.subheader("Tipos de Beneficiários e Benefícios")
 
