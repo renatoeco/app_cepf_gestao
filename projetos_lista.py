@@ -1,5 +1,6 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, notificar
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos
+# from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, notificar
 import plotly.express as px
 import pandas as pd
 # import datetime
@@ -27,26 +28,6 @@ col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
 
 
-# ###########################################################################################################
-# # CONFIGURAÇÃO DE LOCALE
-# ###########################################################################################################
-
-
-# # CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS
-# try:
-#     # Tenta a configuração comum em sistemas Linux/macOS
-#     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-# except locale.Error:
-#     try:
-#         # Tenta a configuração comum em alguns sistemas Windows
-#         locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
-#     except locale.Error:
-#         # Se falhar, usa a configuração padrão (geralmente inglês)
-#         print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
-
-
-
-
 
 
 ###########################################################################################################
@@ -56,26 +37,12 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 
 
 
-# ============================================
-# ÁREA DE NOTIFICAÇÕES
-# ============================================
-
-
-if "notificacoes" not in st.session_state:
-    st.session_state.notificacoes = []
-
-
-# def notificar(mensagem: str):
-#     st.session_state.notificacoes.append(mensagem)
 
 
 
 ###########################################################################################################
 # TRATAMENTO DE DADOS   
 ###########################################################################################################
-
-# Limpar as notificações, para preencher novamente.
-st.session_state.notificacoes = []
 
 # Inclulir o status no dataframe de projetos
 df_projetos = calcular_status_projetos(df_projetos)
@@ -156,16 +123,6 @@ st.header("Projetos")
 
 st.write('')
 
-# Área de notificações
-
-if st.session_state.notificacoes:
-    with st.expander("Notificações", expanded=False, icon=":material/warning:"):
-        for msg in st.session_state.notificacoes:
-            st.warning(msg)
-
-st.write('')
-st.write('')
-
 # ============================================
 # SELEÇÃO DO EDITAL
 # ============================================
@@ -179,33 +136,43 @@ lista_editais = ["Todos"] + lista_editais
 # Selectbox de edital
 edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
 
+st.write('')
 
-# TÍTULO + TOGGLE no mesmo container
+# TÍTULO + TOGGLE 
+# Colunas lado a lado dentro do container
+col_titulo, col_toggle = st.columns([4, 1])
 
-with st.container(horizontal=True):
-    
-    # Colunas lado a lado dentro do container
-    col_titulo, col_toggle = st.columns([4, 1])
 
-    # --- TÍTULO ---
-    with col_titulo:
-        if edital_selecionado == "Todos":
-            st.subheader("Todos os editais")
-        else:
-            nome_edital = df_editais.loc[
-                df_editais["codigo_edital"] == edital_selecionado,
-                "nome_edital"
-            ].values[0]
+# --- TÍTULO ---
+with col_titulo:
+    if edital_selecionado == "Todos":
+        st.subheader("Todos os editais")
 
-            st.subheader(f"{edital_selecionado} — {nome_edital}")
+        # Contagem de projetos
+        total_projetos = len(df_projetos)
+        st.markdown(f"##### {total_projetos} projetos")
 
-    # --- TOGGLE ---
-    with col_toggle:
-        st.write('')
-        ver_meus_projetos = st.toggle(
-            "Ver somente os meus projetos",
-            False,
-        )
+
+    else:
+        nome_edital = df_editais.loc[
+            df_editais["codigo_edital"] == edital_selecionado,
+            "nome_edital"
+        ].values[0]
+
+        st.subheader(f"{edital_selecionado} — {nome_edital}")
+
+        # Contagem de projetos
+        total_projetos = len(df_projetos[df_projetos['edital'] == edital_selecionado])
+        st.markdown(f"##### {total_projetos} projetos")
+        
+
+# --- TOGGLE ---
+with col_toggle:
+    st.write('')
+    ver_meus_projetos = st.toggle(
+        "Ver somente os meus projetos",
+        False,
+    )
 
 
 
