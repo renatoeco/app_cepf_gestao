@@ -21,6 +21,9 @@ db = conectar_mongo_cepf_gestao()
 # Beneficiários
 col_publicos = db["publicos"]
 
+# Benefícios
+col_beneficios = db["beneficios"]
+
 # Direções Estratégicas
 col_direcoes = db["direcoes_estrategicas"]
 
@@ -290,11 +293,12 @@ st.write('')
 
 
 
-aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
+aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_beneficios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
 # aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
     'Perguntas do Relatório',
     'Pesquisas',
     'Beneficiários',
+    'Benefícios',
     'Direções Estratégicas',
     'Indicadores',
     'Categorias de despesa',
@@ -916,7 +920,7 @@ with aba_beneficiarios:
     # -------------------------
     if not editar_publicos:
         if df_publicos.empty:
-            st.info("Nenhum tipo de beneficiário cadastrado.")
+            st.caption("Nenhum tipo de beneficiário cadastrado.")
         else:
             st.dataframe(
                 df_publicos[["publico"]].sort_values("publico"),
@@ -1005,6 +1009,386 @@ with aba_beneficiarios:
 
 
 
+
+
+
+
+
+
+# ==========================================================
+# ABA TIPOS DE BENEFÍCIO
+# ==========================================================
+
+
+with aba_beneficios:
+
+    st.subheader("Tipos de benefício")
+    st.write('')
+
+    # 1) Carrega documentos da coleção (ordenados)
+    dados_beneficios = list(
+        col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
+    )
+
+    df_beneficios = pd.DataFrame(dados_beneficios)
+
+    # Converte ObjectId para string
+    if "_id" in df_beneficios.columns:
+        df_beneficios["_id"] = df_beneficios["_id"].astype(str)
+    else:
+        df_beneficios["_id"] = ""
+
+    editar_beneficios = st.toggle("Editar", key="editar_beneficios")
+    st.write('')
+
+    # -------------------------
+    # MODO VISUALIZAÇÃO
+    # -------------------------
+    if not editar_beneficios:
+        if df_beneficios.empty:
+            st.caption("Nenhum tipo de benefício cadastrado.")
+        else:
+            st.dataframe(
+                df_beneficios[["beneficio"]].sort_values("beneficio"),
+                hide_index=True,
+                width=500
+            )
+
+    # -------------------------
+    # MODO EDIÇÃO
+    # -------------------------
+    else:
+        st.write("Edite, adicione e exclua linhas.")
+
+        if df_beneficios.empty:
+            
+            df_editor = pd.DataFrame(
+                {"beneficio": pd.Series(dtype="str")}
+            )
+        else:
+            df_editor = df_beneficios[["beneficio"]].copy()
+            df_editor["beneficio"] = df_editor["beneficio"].astype(str)
+
+        df_editado = st.data_editor(
+            df_editor,
+            num_rows="dynamic",
+            hide_index=True,
+            key="editor_beneficios",
+            width=500
+        )
+
+        if st.button("Salvar alterações", icon=":material/save:", type="primary"):
+
+            if "beneficio" not in df_editado.columns:
+                st.error("Nenhum dado válido para salvar.")
+                st.stop()
+
+            # -------------------------
+            # NORMALIZAÇÃO
+            # -------------------------
+            df_editado["beneficio"] = (
+                df_editado["beneficio"]
+                .astype(str)
+                .str.strip()
+            )
+            df_editado = df_editado[df_editado["beneficio"] != ""]
+
+            if df_editado.empty:
+                st.warning("Nenhum tipo de benefício informado.")
+                st.stop()
+
+            df_editado = df_editado.sort_values("beneficio")
+
+            # -------------------------
+            # VERIFICA DUPLICADOS
+            # -------------------------
+            lista_editada = df_editado["beneficio"].tolist()
+            duplicados_local = {
+                x for x in lista_editada if lista_editada.count(x) > 1
+            }
+
+            if duplicados_local:
+                st.error(
+                    f"Existem valores duplicados na lista: "
+                    f"{', '.join(duplicados_local)}"
+                )
+                st.stop()
+
+            valores_orig = (
+                set(df_beneficios["beneficio"])
+                if "beneficio" in df_beneficios.columns
+                else set()
+            )
+            valores_editados = set(lista_editada)
+
+            # -------------------------
+            # REMOVIDOS
+            # -------------------------
+            for beneficio in valores_orig - valores_editados:
+                col_beneficios.delete_one({"beneficio": beneficio})
+
+            # -------------------------
+            # NOVOS
+            # -------------------------
+            for beneficio in valores_editados - valores_orig:
+                if col_beneficios.find_one({"beneficio": beneficio}):
+                    st.error(
+                        f"O valor '{beneficio}' já existe "
+                        "e não será inserido."
+                    )
+                    st.stop()
+
+                col_beneficios.insert_one({"beneficio": beneficio})
+
+            st.success("Tipos de benefício atualizados com sucesso!")
+            time.sleep(3)
+            st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# with aba_beneficios:
+
+#     # ------------------------------------------------------
+#     # TÍTULO DA ABA
+#     # ------------------------------------------------------
+#     st.subheader("Tipos de benefício")
+#     st.write("")
+
+#     # ------------------------------------------------------
+#     # SELEÇÃO DO EDITAL
+#     # ------------------------------------------------------
+
+#     lista_editais = df_editais["codigo_edital"].unique().tolist()
+
+#     edital_selecionado_beneficio = st.selectbox(
+#         "Selecione o Edital:",
+#         options=[""] + lista_editais,
+#         index=0,
+#         width=300,
+#         key="edital_tipos_beneficio"
+#     )
+
+#     if not edital_selecionado_beneficio:
+#         st.caption("Selecione um edital para continuar.")
+
+#     else:
+#         # ------------------------------------------------------
+#         # BUSCA O EDITAL NO BANCO
+#         # ------------------------------------------------------
+
+#         edital = col_editais.find_one(
+#             {"codigo_edital": edital_selecionado_beneficio}
+#         )
+
+#         # Recupera os tipos de benefício
+#         tipos_beneficio = edital.get("tipos_beneficio", [])
+
+#         # ======================================================
+#         # CRIAÇÃO DAS ABAS INTERNAS
+#         # ======================================================
+
+#         aba_visualizar, aba_novo, aba_editar = st.tabs([
+#             "Tipos de benefício",
+#             "Novo",
+#             "Editar / Excluir"
+#         ])
+
+
+#         # ======================================================
+#         # ABA 1 — VISUALIZAR TIPOS
+#         # ======================================================
+
+#         with aba_visualizar:
+
+#             if not tipos_beneficio:
+#                 st.caption("Nenhum tipo de benefício cadastrado.")
+#             else:
+        
+#                 st.write('')
+
+#                 for idx, tipo in enumerate(tipos_beneficio, start=1):
+#                     st.markdown(f"**{idx}. {tipo['nome_tipo_beneficio']}**")
+
+
+
+
+
+#         # ======================================================
+#         # ABA 2 — NOVO TIPO DE BENEFÍCIO
+#         # ======================================================
+
+#         with aba_novo:
+
+#             st.write("")
+
+#             st.markdown("##### Cadastrar novo tipo de benefício")
+
+#             with st.form(
+#                 key="form_novo_tipo_beneficio",
+#                 clear_on_submit=True,
+#                 border=False
+#             ):
+
+#                 nome_tipo = st.text_input(
+#                     "Nome do tipo de benefício"
+#                 )
+
+#                 st.write("")
+
+#                 submitted = st.form_submit_button(
+#                     "Salvar tipo de benefício",
+#                     type="primary",
+#                     icon=":material/save:"
+#                 )
+
+#                 if submitted:
+
+#                     if not nome_tipo.strip():
+#                         st.warning("O nome do tipo de benefício não pode estar vazio.")
+#                     else:
+#                         novo_tipo = {
+#                             "nome_tipo_beneficio": nome_tipo.strip()
+#                         }
+
+#                         col_editais.update_one(
+#                             {"codigo_edital": edital_selecionado_beneficio},
+#                             {"$push": {"tipos_beneficio": novo_tipo}}
+#                         )
+
+#                         st.success("Tipo de benefício cadastrado com sucesso!")
+#                         time.sleep(3)
+#                         st.rerun()
+
+
+
+#         # ======================================================
+#         # ABA 3 — EDITAR / EXCLUIR
+#         # ======================================================
+
+#         with aba_editar:
+
+#             st.write("")
+
+#             if not tipos_beneficio:
+#                 st.caption("Nenhum tipo de benefício cadastrado.")
+#             else:
+#                 st.markdown("##### Selecione um tipo para editar ou excluir")
+
+#                 mapa_tipos = {
+#                     t["nome_tipo_beneficio"]: t
+#                     for t in tipos_beneficio
+#                 }
+
+#                 selecionado = st.selectbox(
+#                     "",
+#                     list(mapa_tipos.keys()),
+#                     key="select_tipo_beneficio"
+#                 )
+
+#                 if selecionado:
+#                     tipo_atual = mapa_tipos[selecionado]
+
+#                     st.divider()
+
+#                     novo_nome = st.text_input(
+#                         "Nome do tipo de benefício",
+#                         value=tipo_atual["nome_tipo_beneficio"],
+#                         key="editar_tipo_beneficio"
+#                     )
+
+#                     st.write('')
+
+#                     with st.container(horizontal=True):
+
+#                         # -------- SALVAR --------
+#                         if st.button(
+#                             "Salvar alterações",
+#                             type="primary",
+#                             icon=":material/save:",
+#                             key="btn_editar_tipo_beneficio"
+#                         ):
+
+#                             novo = {
+#                                 "nome_tipo_beneficio": novo_nome.strip()
+#                             }
+
+#                             tipos_atualizados = [
+#                                 novo if t == tipo_atual else t
+#                                 for t in tipos_beneficio
+#                             ]
+
+#                             col_editais.update_one(
+#                                 {"codigo_edital": edital_selecionado_beneficio},
+#                                 {"$set": {"tipos_beneficio": tipos_atualizados}}
+#                             )
+
+#                             st.success("Tipo de benefício atualizado com sucesso!")
+#                             time.sleep(3)
+#                             st.rerun()
+
+#                         # -------- EXCLUIR --------
+#                         if st.button(
+#                             "Excluir tipo",
+#                             icon=":material/delete:",
+#                             key="btn_excluir_tipo_beneficio"
+#                         ):
+
+#                             novos = [
+#                                 t for t in tipos_beneficio
+#                                 if t != tipo_atual
+#                             ]
+
+#                             col_editais.update_one(
+#                                 {"codigo_edital": edital_selecionado_beneficio},
+#                                 {"$push": {"tipos_beneficio": novo_tipo}}
+#                             )
+
+#                             # Limpa o campo de texto
+#                             st.session_state["novo_tipo_beneficio"] = ""
+
+#                             st.success("Tipo de benefício cadastrado com sucesso!")
+#                             time.sleep(3)
+#                             st.rerun()
+
+
+
+#                             # col_editais.update_one(
+#                             #     {"codigo_edital": edital_selecionado_beneficio},
+#                             #     {"$set": {"tipos_beneficio": novos}}
+#                             # )
+
+#                             # st.success("Tipo de benefício removido com sucesso!")
+#                             # time.sleep(3)
+#                             # st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ==========================================================
 # ABA DIREÇÕES ESTRATÉGICAS
 # ==========================================================
@@ -1035,7 +1419,7 @@ with aba_direcoes:
     # -------------------------
     if not editar_direcoes:
         if df_direcoes.empty:
-            st.info("Nenhuma direção estratégica cadastrada.")
+            st.caption("Nenhuma direção estratégica cadastrada.")
         else:
 
             df_tabela = (
@@ -1162,7 +1546,7 @@ with aba_indicadores:
     # -------------------------
     if not editar_indicadores:
         if df_indicadores.empty:
-            st.info("Nenhum indicador cadastrado.")
+            st.caption("Nenhum indicador cadastrado.")
         else:
 
             df_tabela = (
@@ -1295,7 +1679,7 @@ with aba_categorias_despesa:
     if not editar_categorias:
 
         if df_categorias.empty:
-            st.info("Nenhuma categoria de despesa cadastrada.")
+            st.caption("Nenhuma categoria de despesa cadastrada.")
         else:
             df_tabela = (
                 df_categorias[["categoria"]]
@@ -1452,7 +1836,7 @@ with aba_corredores:
     if not editar_corredores:
 
         if df_corredores.empty:
-            st.info("Nenhum corredor cadastrado.")
+            st.caption("Nenhum corredor cadastrado.")
         else:
 
             df_tabela = (
@@ -1625,7 +2009,7 @@ with aba_kbas:
     if not editar_kbas:
 
         if df_kbas.empty:
-            st.info("Nenhuma KBA cadastrada.")
+            st.caption("Nenhuma KBA cadastrada.")
         else:
 
             df_tabela = (
@@ -1749,6 +2133,14 @@ with aba_kbas:
             st.success("KBAs atualizadas com sucesso!")
             time.sleep(3)
             st.rerun()
+
+
+
+
+
+
+
+
 
 
 

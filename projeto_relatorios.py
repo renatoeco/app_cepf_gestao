@@ -89,6 +89,10 @@ col_editais = db["editais"]
 col_publicos = db["publicos"]
 col_publicos = db["publicos"]
 
+col_beneficios = db["beneficios"]
+
+
+
 lista_publicos = list(col_publicos.find({}, {"_id": 0, "publico": 1}))
 
 
@@ -564,28 +568,27 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             # ---------- BENEFÍCIOS ----------
 
 
+
             # =====================================================
-            # CONSTANTES
+            # CARREGA TIPOS DE BENEFÍCIO DO BANCO
             # =====================================================
 
+            dados_beneficios = list(
+                col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
+            )
+
             OPCOES_BENEFICIOS = [
-                "Maior acesso à água potável",
-                "Maior segurança alimentar",
-                "Maior acesso à energia",
-                "Maior acesso a serviços públicos (ex. saúde, educação)",
-                "Maior resiliência às mudanças climáticas",
-                "Melhora na posse de terra",
-                "Melhora no reconhecimento do conhecimento tradicional",
-                "Melhora na representação e tomada de decisão",
-                "Melhora no acesso aos serviços ecossistêmicos",
-                "Superar as barreiras para a inclusão de gênero",
+                d["beneficio"]
+                for d in dados_beneficios
+                if d.get("beneficio")
             ]
 
 
 
-            # ============================
-            # CONTROLE DE USUÁRIO / STATUS
-            # ============================
+
+            # ============================================
+            # CONTROLE DE USUÁRIO / STATUS DO RELATÓRIO
+            # ============================================
 
             usuario_admin = tipo_usuario == "admin"
             usuario_equipe = tipo_usuario == "equipe"
@@ -603,17 +606,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-            # # =====================================================
-            # # CONTROLE DE USUÁRIO
-            # # =====================================================
-
-            # usuario_admin = tipo_usuario == "admin"
-            # usuario_equipe = tipo_usuario == "equipe"
-            # usuario_beneficiario = tipo_usuario == "beneficiario"
-            # usuario_visitante = tipo_usuario == "visitante"
-
-            # modo_edicao_benef = usuario_beneficiario
-            # modo_visualizacao_benef = not usuario_beneficiario
 
             # =====================================================
             # STEP BENEFICIÁRIOS
