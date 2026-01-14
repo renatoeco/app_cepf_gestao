@@ -162,33 +162,6 @@ def primeiro_acesso_dialog():
                     st.rerun()
 
 
-    # # --- FORMULÁRIO 2: Nova Senha ---
-    # if st.session_state.usuario_validado:
-    #     with container_nova_senha.form("form_nova_senha", clear_on_submit=False):
-    #         nova_senha = st.text_input("Nova senha", type="password")
-    #         confirmar_senha = st.text_input("Confirme a senha", type="password")
-    #         salvar_senha = st.form_submit_button("Salvar")
-
-    #         if salvar_senha:
-    #             if nova_senha != confirmar_senha:
-    #                 st.error("As senhas não coincidem.")
-    #             elif not validar_senha(nova_senha):
-    #                 st.error("Senha deve ter pelo menos 8 caracteres e conter letras e números.")
-    #             else:
-    #                 # Hash da senha
-    #                 hash_senha = bcrypt.hashpw(nova_senha.encode("utf-8"), bcrypt.gensalt())
-    #                 # Atualiza banco
-    #                 col_pessoas.update_one(
-    #                     {"_id": st.session_state.usuario_id},
-    #                     {"$set": {"senha": hash_senha, "status": "ativo"},
-    #                      "$unset": {"codigo_convite": ""}}
-    #                 )
-    #                 st.success("Senha cadastrada com sucesso! Agora você pode acessar o sistema.")
-    #                 # Limpa sessão
-    #                 for key in ["usuario_validado", "usuario_id"]:
-    #                     st.session_state.pop(key, None)
-    #                 container_nova_senha.empty()
-
 
 ##############################################################################################################
 # CAIXA DE DIÁLOGO PARA RECUPERAÇÃO DE SENHA
@@ -510,6 +483,7 @@ else:
             st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/payments:"),
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
             st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
+            st.Page("fotos.py", title="Fotos", icon=":material/image:"),
         ],
 
 
