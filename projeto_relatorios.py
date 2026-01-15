@@ -86,23 +86,15 @@ col_projetos = db["projetos"]
 
 col_editais = db["editais"]
 
-col_publicos = db["publicos"]
-col_publicos = db["publicos"]
-
 col_beneficios = db["beneficios"]
 
-
+col_publicos = db["publicos"]
 
 lista_publicos = list(col_publicos.find({}, {"_id": 0, "publico": 1}))
-
 
 # SEMPRE insere a opção Outros
 opcoes_publicos = sorted({p["publico"] for p in lista_publicos} - {"Outros"})
 opcoes_publicos.append("Outros")
-
-# opcoes_publicos = sorted([p["publico"] for p in lista_publicos])
-
-
 
 codigo_projeto_atual = st.session_state.projeto_atual
 
@@ -128,17 +120,11 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 
 
 
-# ?????????????????
-# Nome do usuário
-st.sidebar.write(st.session_state.get("nome"))
-
 
 
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
-
-
 
 
 
@@ -179,9 +165,6 @@ def renderizar_visualizacao(pergunta, resposta):
     else:
         st.write(resposta)
     st.write("")
-
-
-
 
 
 
@@ -346,7 +329,7 @@ steps_relatorio = [
 
 
 if not relatorios:
-    st.info("Este projeto ainda não possui relatórios cadastrados.")
+    st.warning("Este projeto ainda não possui relatórios cadastrados.")
     st.stop()
 
 
@@ -561,49 +544,12 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
+            # ---------- DESPESAS ----------
 
 
 
 
             # ---------- BENEFÍCIOS ----------
-
-
-
-            # =====================================================
-            # CARREGA TIPOS DE BENEFÍCIO DO BANCO
-            # =====================================================
-
-            dados_beneficios = list(
-                col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
-            )
-
-            OPCOES_BENEFICIOS = [
-                d["beneficio"]
-                for d in dados_beneficios
-                if d.get("beneficio")
-            ]
-
-
-
-
-            # ============================================
-            # CONTROLE DE USUÁRIO / STATUS DO RELATÓRIO
-            # ============================================
-
-            usuario_admin = tipo_usuario == "admin"
-            usuario_equipe = tipo_usuario == "equipe"
-            usuario_beneficiario = tipo_usuario == "beneficiario"
-            usuario_visitante = tipo_usuario == "visitante"
-
-            # Se o relatório NÃO estiver em modo_edicao,
-            # força modo VISUALIZAÇÃO dos beneficiários
-            if status_atual_db != "modo_edicao":
-                modo_edicao_benef = False
-                modo_visualizacao_benef = True
-            else:
-                modo_edicao_benef = usuario_beneficiario
-                modo_visualizacao_benef = not usuario_beneficiario
-
 
 
 
@@ -614,8 +560,354 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
             if step == "Beneficiários":
 
 
-                # PARTE 1 - TIPOS DE BENEFICIÁRIOS E BENEFICIOS ------------------------------------------------------
+                # =====================================================
+                # CARREGA TIPOS DE BENEFÍCIO DO BANCO
+                # =====================================================
 
+                dados_beneficios = list(
+                    col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
+                )
+
+                OPCOES_BENEFICIOS = [
+                    d["beneficio"]
+                    for d in dados_beneficios
+                    if d.get("beneficio")
+                ]
+
+
+                # ============================================
+                # CONTROLE DE USUÁRIO / STATUS DO RELATÓRIO
+                # ============================================
+
+                usuario_admin = tipo_usuario == "admin"
+                usuario_equipe = tipo_usuario == "equipe"
+                usuario_beneficiario = tipo_usuario == "beneficiario"
+                usuario_visitante = tipo_usuario == "visitante"
+
+                # Se o relatório NÃO estiver em modo_edicao,
+                # força modo VISUALIZAÇÃO dos beneficiários
+                if status_atual_db != "modo_edicao":
+                    modo_edicao_benef = False
+                    modo_visualizacao_benef = True
+                else:
+                    modo_edicao_benef = usuario_beneficiario
+                    modo_visualizacao_benef = not usuario_beneficiario
+
+
+
+
+
+                # PARTE 1 - QUANTITATIVO DE BENEFICIÁRIOS ---------------------------------------------------------------------------------------------------------------------------
+                st.write('')
+                st.write('')
+
+
+
+
+                # ======================================================
+                # INICIALIZAÇÃO DO ESTADO DA MATRIZ DE BENEFICIÁRIOS
+                # ======================================================
+
+                if "beneficiarios_quant" not in st.session_state:
+                    st.session_state.beneficiarios_quant = (
+                        relatorio.get("beneficiarios_quant") or {
+                            "mulheres": {
+                                "jovens": 0,
+                                "adultas": 0,
+                                "idosas": 0
+                            },
+                            "homens": {
+                                "jovens": 0,
+                                "adultos": 0,
+                                "idosos": 0
+                            },
+                            "nao_binarios": {
+                                "jovens": 0,
+                                "adultos": 0,
+                                "idosos": 0
+                            }
+                        }
+                    )
+
+
+                # ======================================================
+                # TÍTULO DO BLOCO
+                # ======================================================
+
+                st.subheader("Número de beneficiários por gênero e faixa etária")
+                st.write("")
+
+
+                # ======================================================
+                # MODO EDIÇÃO
+                # ======================================================
+
+                if pode_editar_relatorio:
+
+
+                    # Coluna à esquerda para diminuir a largura dos inputs de beneficiários
+                    content, vazio_d = st.columns([7, 6])
+
+                    # -------------------------------
+                    # LINHA: JOVENS
+                    # -------------------------------
+                    col_m, col_h, col_nb = content.columns(3)
+
+                    with col_m:
+                        st.session_state.beneficiarios_quant["mulheres"]["jovens"] = st.number_input(
+                            "Mulheres – Jovens (até 24 anos)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["mulheres"]["jovens"],
+                            key="bq_mulheres_jovens"
+                        )
+
+                    with col_h:
+                        st.session_state.beneficiarios_quant["homens"]["jovens"] = st.number_input(
+                            "Homens – Jovens (até 24 anos)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["homens"]["jovens"],
+                            key="bq_homens_jovens"
+                        )
+
+                    with col_nb:
+                        st.session_state.beneficiarios_quant["nao_binarios"]["jovens"] = st.number_input(
+                            "Não-binários – Jovens (até 24 anos)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["nao_binarios"]["jovens"],
+                            key="bq_nb_jovens"
+                        )
+
+                    # -------------------------------
+                    # LINHA: ADULTOS
+                    # -------------------------------
+                    col_m, col_h, col_nb = content.columns(3)
+
+                    with col_m:
+                        st.session_state.beneficiarios_quant["mulheres"]["adultas"] = st.number_input(
+                            "Mulheres – Adultas",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["mulheres"]["adultas"],
+                            key="bq_mulheres_adultas"
+                        )
+
+                    with col_h:
+                        st.session_state.beneficiarios_quant["homens"]["adultos"] = st.number_input(
+                            "Homens – Adultos",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["homens"]["adultos"],
+                            key="bq_homens_adultos"
+                        )
+
+                    with col_nb:
+                        st.session_state.beneficiarios_quant["nao_binarios"]["adultos"] = st.number_input(
+                            "Não-binários – Adultos",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["nao_binarios"]["adultos"],
+                            key="bq_nb_adultos"
+                        )
+
+                    # -------------------------------
+                    # LINHA: IDOSOS
+                    # -------------------------------
+                    col_m, col_h, col_nb = content.columns(3)
+
+                    with col_m:
+                        st.session_state.beneficiarios_quant["mulheres"]["idosas"] = st.number_input(
+                            "Mulheres – Idosas (60+ anos)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["mulheres"]["idosas"],
+                            key="bq_mulheres_idosas"
+                        )
+
+                    with col_h:
+                        st.session_state.beneficiarios_quant["homens"]["idosos"] = st.number_input(
+                            "Homens – Idosos (60+ anos)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["homens"]["idosos"],
+                            key="bq_homens_idosos"
+                        )
+
+                    with col_nb:
+                        st.session_state.beneficiarios_quant["nao_binarios"]["idosos"] = st.number_input(
+                            "Não-binários – Idosos (60+ anos)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.beneficiarios_quant["nao_binarios"]["idosos"],
+                            key="bq_nb_idosos"
+                        )
+
+
+
+
+                    # ======================================================
+                    # BOTÃO DE SALVAR EXCLUSIVO DA MATRIZ
+                    # ======================================================
+                    # Este botão salva SOMENTE a matriz de quantitativos
+
+                    if pode_editar_relatorio:
+
+                        st.write("")
+
+                        salvar_matriz = st.button(
+                            "Atualizar beneficiários",
+                            type="primary",
+                            key=f"salvar_beneficiarios_quant_{relatorio_numero}",
+                            icon=":material/save:"
+                        )
+
+                        if salvar_matriz:
+
+                            # Atualiza apenas a chave 'beneficiarios_quant' no relatório correto
+                            col_projetos.update_one(
+                                {
+                                    "codigo": projeto["codigo"],
+                                    "relatorios.numero": relatorio_numero
+                                },
+                                {
+                                    "$set": {
+                                        "relatorios.$.beneficiarios_quant":
+                                            st.session_state.beneficiarios_quant
+                                    }
+                                }
+                            )
+
+                            st.success("Quantitativo de beneficiários salvo com sucesso.")
+                            time.sleep(3)
+                            st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+                # ======================================================
+                # MODO VISUALIZAÇÃO
+                # ======================================================
+
+                else:
+
+                    dados = st.session_state.beneficiarios_quant
+
+                    # -------------------------------
+                    # Totais por gênero
+                    # -------------------------------
+                    total_mulheres = sum(dados["mulheres"].values())
+                    total_homens = sum(dados["homens"].values())
+                    total_nb = sum(dados["nao_binarios"].values())
+
+                    # -------------------------------
+                    # Totais por faixa etária
+                    # -------------------------------
+                    total_jovens = (
+                        dados["mulheres"]["jovens"]
+                        + dados["homens"]["jovens"]
+                        + dados["nao_binarios"]["jovens"]
+                    )
+
+                    total_adultos = (
+                        dados["mulheres"]["adultas"]
+                        + dados["homens"]["adultos"]
+                        + dados["nao_binarios"]["adultos"]
+                    )
+
+                    total_idosos = (
+                        dados["mulheres"]["idosas"]
+                        + dados["homens"]["idosos"]
+                        + dados["nao_binarios"]["idosos"]
+                    )
+
+                    total_geral = total_mulheres + total_homens + total_nb
+
+                    st.write("")
+
+                    # -------------------------------
+                    # LAYOUT EM 4 COLUNAS
+                    # -------------------------------
+                    col_m, col_h, col_nb, col_totais = st.columns(4)
+
+                    # -------- MULHERES --------
+                    with col_m:
+                        l, v = st.columns(2)
+                        l.write("Mulheres jovens"); v.write(str(dados["mulheres"]["jovens"]))
+
+                        l, v = st.columns(2)
+                        l.write("Mulheres adultas"); v.write(str(dados["mulheres"]["adultas"]))
+
+                        l, v = st.columns(2)
+                        l.write("Mulheres idosas"); v.write(str(dados["mulheres"]["idosas"]))
+
+                        l, v = st.columns(2)
+                        l.markdown("**Total de mulheres**"); v.markdown(f"**{total_mulheres}**")
+
+                    # -------- HOMENS --------
+                    with col_h:
+                        l, v = st.columns(2)
+                        l.write("Homens jovens"); v.write(str(dados["homens"]["jovens"]))
+
+                        l, v = st.columns(2)
+                        l.write("Homens adultos"); v.write(str(dados["homens"]["adultos"]))
+
+                        l, v = st.columns(2)
+                        l.write("Homens idosos"); v.write(str(dados["homens"]["idosos"]))
+
+                        l, v = st.columns(2)
+                        l.markdown("**Total de homens**"); v.markdown(f"**{total_homens}**")
+
+                    # -------- NÃO-BINÁRIOS --------
+                    with col_nb:
+                        l, v = st.columns(2)
+                        l.write("Não-binários jovens"); v.write(str(dados["nao_binarios"]["jovens"]))
+
+                        l, v = st.columns(2)
+                        l.write("Não-binários adultos"); v.write(str(dados["nao_binarios"]["adultos"]))
+
+                        l, v = st.columns(2)
+                        l.write("Não-binários idosos"); v.write(str(dados["nao_binarios"]["idosos"]))
+
+                        l, v = st.columns(2)
+                        l.markdown("**Total de não-binários**"); v.markdown(f"**{total_nb}**")
+
+                    # -------- TOTAIS GERAIS (NEGRITO) --------
+                    with col_totais:
+                        l, v = st.columns(2)
+                        l.markdown("**Total de jovens**"); v.markdown(f"**{total_jovens}**")
+
+                        l, v = st.columns(2)
+                        l.markdown("**Total de adultos**"); v.markdown(f"**{total_adultos}**")
+
+                        l, v = st.columns(2)
+                        l.markdown("**Total de idosos**"); v.markdown(f"**{total_idosos}**")
+
+                        l, v = st.columns(2)
+                        l.markdown("**Total geral**"); v.markdown(f"**{total_geral}**")
+
+
+
+
+
+
+
+
+                st.divider()
+
+                # ============================================================================================================
+                # PARTE 2 - TIPOS DE BENEFICIÁRIOS E BENEFICIOS 
+                # ============================================================================================================
+
+                st.write('')
                 st.subheader("Tipos de Beneficiários e Benefícios")
 
                 if usuario_beneficiario:
@@ -684,19 +976,44 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-                    # with col1:
-                    #     st.markdown(f"**{nome_localidade}**")
-
-
-
 
                     # -------- COLUNA 2 --------
                     with col2:
 
-                        st.write("**Tipos de Beneficiários:**")
+                        st.write("**Tipos de Beneficiários e Benefícios:**")
+
+                        # # =====================================================
+                        # # MODO VISUALIZAÇÃO COM LISTA EM TÓPICOS - Para demostração de segunda opção !!!!!!!!!!!!!!!!!!!!!!!!!
+                        # # =====================================================
+                        # if modo_visualizacao_benef:
+
+                        #     if not beneficiarios_bd:
+                        #         st.write("Nenhum beneficiário cadastrado.")
+                        #     else:
+                        #         for b in beneficiarios_bd:
+
+                        #             tipo = b.get("tipo_beneficiario")
+                        #             beneficios = b.get("beneficios") or []
+
+                        #             with st.container():
+                        #                 st.write("")
+
+                        #                 # Título: tipo de beneficiário
+                        #                 st.markdown(f"**{tipo}**")
+
+                        #                 # Lista de benefícios
+                        #                 if beneficios:
+                        #                     for beneficio in beneficios:
+                        #                         st.markdown(f"- {beneficio}")
+                        #                 else:
+                        #                     st.markdown("_Nenhum benefício informado._")
+
+
+                        # st.write('///////////////////////////')
+
 
                         # =====================================================
-                        # MODO VISUALIZAÇÃO
+                        # MODO VISUALIZAÇÃO COM LISTA EM PILLS
                         # =====================================================
                         if modo_visualizacao_benef:
 
@@ -787,7 +1104,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                 )
 
                             # =============================================
-                            # FORMULÁRIO SIMPLES — OUTROS
+                            # FORMULÁRIO OUTROS
                             # =============================================
                             if outros_marcado:
 
@@ -890,12 +1207,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
                     st.divider()
-
-
-
-
-
-
 
 
 
@@ -1135,9 +1446,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                 st.rerun()
 
                     st.divider()
-
-
-
 
 
 
@@ -1466,12 +1774,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         st.success("Respostas salvas com sucesso!")
                         time.sleep(3)
                         st.rerun()
-
-
-
-
-
-
 
 
 
