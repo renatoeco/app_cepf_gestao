@@ -358,7 +358,9 @@ with cron_desemb:
             linhas_cronograma.append(
                 {
                     "evento": f"Relatório {numero}",
-                    "Entregas": "\n".join(entregas) if entregas else "",
+                    "Entregas": " / ".join(entregas) if entregas else "",
+
+                    # "Entregas": "\n".join(entregas) if entregas else "",
                     # "Entregas": "<br>".join(entregas) if entregas else "",
                     "Valor R$": "",
                     # "Percentual": "",

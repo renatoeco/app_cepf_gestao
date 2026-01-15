@@ -796,7 +796,7 @@ else:
 
         st.write("")
 
-        salvar = st.form_submit_button("Salvar alterações", key="salvar_alteracoes_cadastrais", icon=":material/save:")
+        salvar = st.form_submit_button("Salvar alterações", key="salvar_alteracoes_cadastrais", icon=":material/save:", type="primary", width=250)
 
         # ---------- SALVAR ----------
         if salvar:
