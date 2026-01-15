@@ -13,6 +13,7 @@ from funcoes_auxiliares import (
     obter_ou_criar_pasta,
     obter_pasta_pesquisas,
     obter_pasta_projeto,
+    obter_pasta_relatos_atividades,
     enviar_arquivo_drive,
     gerar_link_drive
 )
@@ -125,6 +126,479 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+
+# ==========================================================
+# LOCALIZA UMA ATIVIDADE NO DOCUMENTO DO PROJETO
+# ==========================================================
+def obter_atividade_mongo(projeto, id_atividade):
+    """
+    Percorre plano_trabalho → componentes → entregas → atividades
+    e retorna a atividade correspondente ao id informado.
+    """
+
+    componentes = projeto.get("plano_trabalho", {}).get("componentes", [])
+
+    for componente in componentes:
+        for entrega in componente.get("entregas", []):
+            for atividade in entrega.get("atividades", []):
+                if atividade.get("id") == id_atividade:
+                    return atividade
+
+    return None
+
+
+# ==========================================================
+# LISTA OS RELATOS DE UMA ATIVIDADE (UI)
+# ==========================================================
+def listar_relatos_atividade(atividade, relatorio_numero):
+    """
+    Lista os relatos cadastrados para a atividade,
+    filtrando pelo relatório atual.
+    """
+
+    relatos = atividade.get("relatos", [])
+
+    relatos = [
+        r for r in relatos
+        if r.get("relatorio_numero") == relatorio_numero
+    ]
+
+    if not relatos:
+        st.info("Nenhum relato cadastrado para esta atividade neste relatório.")
+        return
+
+    for relato in relatos:
+        with st.expander(
+            f"{relato.get('id_relato')} — {relato.get('quando')}"
+        ):
+            st.write(f"Relato: {relato.get('relato')}")
+            st.write(f"Onde: {relato.get('onde', '—')}")
+            st.write(f"Autor: {relato.get('autor', '—')}")
+
+            if relato.get("anexos"):
+                st.write("Anexos:")
+                for a in relato["anexos"]:
+                    st.write(f"- {a['nome_arquivo']}")
+
+            if relato.get("fotos"):
+                st.write("Fotografias:")
+                for f in relato["fotos"]:
+                    st.write(
+                        f"- {f.get('nome_arquivo')} | "
+                        f"{f.get('descricao', '')} | "
+                        f"{f.get('fotografo', '')}"
+                    )
+
+
+
+
+# Função para salvar o relato
+def salvar_relato():
+    """
+    Salva um relato de atividade:
+    - valida campos obrigatórios
+    - cria pastas no Google Drive (Relatos_atividades/relato_xxx)
+    - envia anexos e fotos
+    - grava no MongoDB
+    - limpa o session_state
+    - executa rerun ao final
+    """
+
+    # --------------------------------------------------
+    # 1. CAMPOS DO FORMULÁRIO
+    # --------------------------------------------------
+    texto_relato = st.session_state.get("campo_relato", "")
+    quando = st.session_state.get("campo_quando", "")
+    onde = st.session_state.get("campo_onde", "")
+    anexos = st.session_state.get("campo_anexos", [])
+    fotos = st.session_state.get("fotos_relato", [])
+
+    # --------------------------------------------------
+    # 2. VALIDAÇÕES
+    # --------------------------------------------------
+    erros = []
+    if not texto_relato.strip():
+        erros.append("O campo Relato é obrigatório.")
+    if not quando.strip():
+        erros.append("O campo Quando é obrigatório.")
+
+    if erros:
+        for e in erros:
+            st.error(e)
+        return
+
+    # --------------------------------------------------
+    # 3. CONEXÃO COM GOOGLE DRIVE
+    # --------------------------------------------------
+    servico = obter_servico_drive()
+
+    projeto = st.session_state.get("projeto_mongo")
+    if not projeto:
+        st.error("Projeto não encontrado na sessão.")
+        return
+
+    codigo = projeto["codigo"]
+    sigla = projeto["sigla"]
+
+    # Pasta do projeto (padrão já usado em Locais)
+    pasta_projeto_id = obter_pasta_projeto(
+        servico,
+        codigo,
+        sigla
+    )
+
+    # Pasta Relatos_atividades
+    pasta_relatos_id = obter_ou_criar_pasta(
+        servico,
+        "Relatos_atividades",
+        pasta_projeto_id
+    )
+
+    # --------------------------------------------------
+    # 4. ATIVIDADE SELECIONADA
+    # --------------------------------------------------
+    atividade = st.session_state.get("atividade_selecionada_drive")
+    if not atividade:
+        st.error("Atividade não selecionada.")
+        return
+
+    id_atividade = atividade.get("id")
+
+    # --------------------------------------------------
+    # 5. LOCALIZA ATIVIDADE NO MONGO
+    # --------------------------------------------------
+    atividade_mongo = obter_atividade_mongo(projeto, id_atividade)
+    if not atividade_mongo:
+        st.error("Atividade não encontrada no banco de dados.")
+        return
+
+    # relatos_existentes = atividade_mongo.get("relatos", [])
+    # numero = len(relatos_existentes) + 1
+    # id_relato = f"relato_{numero:03d}"
+
+    # --------------------------------------------------
+    # GERA ID DE RELATO GLOBALMENTE ÚNICO
+    # --------------------------------------------------
+    maior_numero = 0
+
+    for componente in projeto["plano_trabalho"]["componentes"]:
+        for entrega in componente["entregas"]:
+            for atividade in entrega["atividades"]:
+                for relato in atividade.get("relatos", []):
+                    id_existente = relato.get("id_relato", "")
+                    if id_existente.startswith("relato_"):
+                        try:
+                            numero = int(id_existente.replace("relato_", ""))
+                            maior_numero = max(maior_numero, numero)
+                        except ValueError:
+                            pass
+
+    # Próximo número disponível
+    novo_numero = maior_numero + 1
+    id_relato = f"relato_{novo_numero:03d}"
+
+
+
+
+    # --------------------------------------------------
+    # 6. PASTA DO RELATO (DIRETAMENTE EM Relatos_atividades)
+    # --------------------------------------------------
+    pasta_relato_id = obter_ou_criar_pasta(
+        servico,
+        id_relato,
+        pasta_relatos_id
+    )
+
+
+    # --------------------------------------------------
+    # 7. UPLOAD DE ANEXOS
+    # --------------------------------------------------
+    lista_anexos = []
+
+    if anexos:
+        pasta_anexos_id = obter_ou_criar_pasta(
+            servico,
+            "anexos",
+            pasta_relato_id
+        )
+
+        for arq in anexos:
+            id_drive = enviar_arquivo_drive(
+                servico,
+                pasta_anexos_id,
+                arq
+            )
+
+            if id_drive:
+                lista_anexos.append({
+                    "nome_arquivo": arq.name,
+                    "id_arquivo": id_drive
+                })
+
+
+
+    # --------------------------------------------------
+    # 8. UPLOAD DE FOTOGRAFIAS
+    # --------------------------------------------------
+    lista_fotos = []
+
+    fotos_validas = [
+        f for f in fotos
+        if f.get("arquivo") is not None
+    ]
+
+    if fotos_validas:
+        pasta_fotos_id = obter_ou_criar_pasta(
+            servico,
+            "fotos",
+            pasta_relato_id
+        )
+
+        for foto in fotos_validas:
+            arq = foto["arquivo"]
+
+            id_drive = enviar_arquivo_drive(
+                servico,
+                pasta_fotos_id,
+                arq
+            )
+
+            if id_drive:
+                lista_fotos.append({
+                    "nome_arquivo": arq.name,
+                    "descricao": foto.get("descricao", ""),
+                    "fotografo": foto.get("fotografo", ""),
+                    "id_arquivo": id_drive
+                })
+
+
+
+
+    # --------------------------------------------------
+    # 9. OBJETO FINAL DO RELATO
+    # --------------------------------------------------
+    novo_relato = {
+        "id_relato": id_relato,
+        "relatorio_numero": st.session_state.get("relatorio_numero"),
+        "relato": texto_relato.strip(),
+        "quando": quando.strip(),
+        "onde": onde.strip(),
+        "autor": st.session_state.get("nome", "Usuário")
+    }
+
+    if lista_anexos:
+        novo_relato["anexos"] = lista_anexos
+
+    if lista_fotos:
+        novo_relato["fotos"] = lista_fotos
+
+    atividade_mongo.setdefault("relatos", []).append(novo_relato)
+
+    col_projetos.update_one(
+        {"codigo": codigo},
+        {
+            "$set": {
+                "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+            }
+        }
+    )
+
+    # --------------------------------------------------
+    # 10. LIMPEZA DO SESSION_STATE (CRÍTICO)
+    # --------------------------------------------------
+    for chave in [
+        "campo_relato",
+        "campo_quando",
+        "campo_onde",
+        "campo_anexos",
+        "fotos_relato"
+    ]:
+        if chave in st.session_state:
+            del st.session_state[chave]
+
+    # Remove chaves dinâmicas das fotos
+    for k in list(st.session_state.keys()):
+        if k.startswith("foto_"):
+            del st.session_state[k]
+
+    # --------------------------------------------------
+    # 11. FINALIZAÇÃO
+    # --------------------------------------------------
+    st.success("Relato salvo com sucesso.", icon=":material/save:")
+    time.sleep(3)
+    st.rerun()
+
+
+
+
+
+# ==========================================================================================
+# DIÁLOGO: RELATAR ATIVIDADE
+# ==========================================================================================
+@st.dialog("Relatar atividade", width="large")
+def dialog_relatos():
+
+    projeto = st.session_state.get("projeto_mongo")
+    if not projeto:
+        st.error("Projeto não encontrado.")
+        return
+
+    # --------------------------------------------------
+    # 1. MONTA LISTA DE ATIVIDADES
+    # --------------------------------------------------
+    atividades = []
+
+    for componente in projeto["plano_trabalho"]["componentes"]:
+        for entrega in componente["entregas"]:
+            for atividade in entrega["atividades"]:
+                atividades.append({
+                    "id": atividade["id"],
+                    "atividade": atividade["atividade"],
+                    "componente": componente["componente"],
+                    "entrega": entrega["entrega"],
+                    "data_inicio": atividade.get("data_inicio"),
+                    "data_fim": atividade.get("data_fim"),
+                    "relatos": atividade.get("relatos", [])
+                })
+
+    if not atividades:
+        st.info("Nenhuma atividade cadastrada.")
+        time.sleep(3)
+        return
+
+    # --------------------------------------------------
+    # 2. SELECTBOX DE ATIVIDADES
+    # --------------------------------------------------
+    atividade_selecionada = st.selectbox(
+        "Selecione a atividade",
+        atividades,
+        format_func=lambda x: x["atividade"],
+        key="atividade_select_dialog"
+    )
+
+    # Salva no session_state para uso no salvar_relato
+    st.session_state["atividade_selecionada"] = atividade_selecionada
+    st.session_state["atividade_selecionada_drive"] = atividade_selecionada
+
+    st.divider()
+
+    # ==================================================
+    # 3. FORMULÁRIO DO RELATO
+    # ==================================================
+    @st.fragment
+    def corpo_formulario():
+
+        # with st.expander("Novo relato", expanded=True):
+
+        # -----------------------------
+        # CAMPOS BÁSICOS
+        # -----------------------------
+        st.text_area(
+            "Relato",
+            placeholder="Descreva o que foi feito",
+            key="campo_relato"
+        )
+
+        st.text_input(
+            "Quando?",
+            placeholder="DD/MM/AAAA",
+            key="campo_quando"
+        )
+
+        st.text_input(
+            "Onde?",
+            key="campo_onde"
+        )
+
+        st.divider()
+
+        # -----------------------------
+        # ANEXOS
+        # -----------------------------
+        st.markdown("Anexos")
+        st.file_uploader(
+            "Arquivos",
+            type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
+            accept_multiple_files=True,
+            key="campo_anexos"
+        )
+
+        st.divider()
+
+        # -----------------------------
+        # FOTOGRAFIAS
+        # -----------------------------
+        st.subheader("Fotografias")
+
+        if "fotos_relato" not in st.session_state:
+            st.session_state["fotos_relato"] = []
+
+        if st.button("Adicionar fotografia"):
+            st.session_state["fotos_relato"].append({
+                "arquivo": None,
+                "descricao": "",
+                "fotografo": ""
+            })
+
+        for i, foto in enumerate(st.session_state["fotos_relato"]):
+
+            with st.container(border=True):
+
+                # Upload do arquivo
+                arquivo_foto = st.file_uploader(
+                    f"Arquivo da foto {i+1}",
+                    type=["jpg", "jpeg", "png"],
+                    key=f"foto_arquivo_{i}"
+                )
+
+                # Campos de texto
+                descricao = st.text_input(
+                    f"Descrição {i+1}",
+                    key=f"foto_descricao_{i}"
+                )
+
+                fotografo = st.text_input(
+                    f"Fotógrafo(a) {i+1}",
+                    key=f"foto_autor_{i}"
+                )
+
+            # SINCRONIZA COM O session_state USADO NO salvar_relato
+            foto["arquivo"] = arquivo_foto
+            foto["descricao"] = descricao
+            foto["fotografo"] = fotografo
+
+
+
+        # --------------------------------------------------
+        # AÇÕES FINAIS: BOTÃO + SPINNER + FEEDBACK
+        # --------------------------------------------------
+
+        col_btn, col_status = st.columns([1, 4])
+
+        # Placeholder único para spinner e success
+        status_placeholder = col_status.empty()
+
+        with col_btn:
+            salvar = st.button(
+                "Salvar relato",
+                width="stretch",
+                type="primary",
+                icon=":material/save:"
+            )
+
+        if salvar:
+            # Mostra spinner primeiro
+            with status_placeholder:
+                with st.spinner("Salvando, aguarde..."):
+                    salvar_relato()
+
+            status_placeholder.success("Relato salvo com sucesso.")
+
+
+    corpo_formulario()
+
 
 
 
@@ -324,7 +798,8 @@ steps_relatorio = [
     "Despesas",
     "Beneficiários",
     "Pesquisas",
-    "Formulário"
+    "Formulário",
+    "Enviar"
 ]
 
 
@@ -494,52 +969,129 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
             # ---------- ATIVIDADES ----------
 
+
             if step == "Atividades":
 
-                # # Atualiza o estado global do step
-                # if step != st.session_state.step_relatorio:
-                #     st.session_state.step_relatorio = step
+                # Guarda para uso no diálogo e no salvar_relato
+                st.session_state["projeto_mongo"] = projeto
+                st.session_state["relatorio_numero"] = relatorio_numero
+
+                st.write("")
+                st.write("")
+
+                with st.container(horizontal=True, horizontal_alignment="right"):
+
+                    # Botão abre o diálogo
+                    if pode_editar_relatorio:
+                        if st.button("Relatar atividade",
+                                    type="primary",
+                                    key=f"btn_relatar_atividade_{idx}",
+                                    icon=":material/edit:",
+                                    width=300):
+                            dialog_relatos()
+                
+
+                # --------------------------------------------------
+                # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
+                # AGRUPADOS POR ATIVIDADE
+                # --------------------------------------------------
+
+                st.markdown(f"### Relatos de atividades do Relatório {relatorio_numero}")
+                st.write('')
+
+                tem_relato = False
+
+                for componente in projeto["plano_trabalho"]["componentes"]:
+                    for entrega in componente["entregas"]:
+                        for atividade in entrega["atividades"]:
+
+                            relatos = atividade.get("relatos", [])
+
+                            # Filtra apenas relatos do relatório atual
+                            relatos = [
+                                r for r in relatos
+                                if r.get("relatorio_numero") == relatorio_numero
+                            ]
+
+                            if not relatos:
+                                continue
+
+                            tem_relato = True
+
+                            st.write('')
+                            # Título da atividade
+                            st.markdown(f"#### Atividade: {atividade['atividade']}")
+
+                            # Lista de relatos
+                            for relato in relatos:
+
+                                with st.container(border=True):
+                                    # st.write('')
+
+                                    # Relato
+                                    st.write(f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}")
+
+                                    col1, col2 = st.columns([2, 3])
+                                    
+                                    # Quando
+                                    col1.write(f"**Quando:** {relato.get('quando')}")
+
+                                    # Onde
+                                    col2.write(f"**Onde:** {relato.get('onde')}")
+
+                                    # Anexos
+                                    if relato.get("anexos"):
+                                        with col1:
+
+                                            c1, c2 = st.columns([1, 5])    
+                                            c1.write("**Anexos:**")
+
+                                            for a in relato["anexos"]:
+                                                if a.get("id_arquivo"):
+                                                    link = gerar_link_drive(a["id_arquivo"])
+                                                    c2.markdown(
+                                                        f"[{a['nome_arquivo']}]({link})",
+                                                        unsafe_allow_html=True
+                                                    )
 
 
-                atividades = []
 
-                plano = projeto.get("plano_trabalho", {})
-                componentes = plano.get("componentes", [])
 
-                for componente in componentes:
-                    for entrega in componente.get("entregas", []):
-                        for atividade in entrega.get("atividades", []):
-                            atividades.append({
-                                "atividade": atividade.get("atividade"),
-                                "componente": componente.get("componente"),
-                                "entrega": entrega.get("entrega"),
-                                "data_inicio": atividade.get("data_inicio"),
-                                "data_fim": atividade.get("data_fim"),
-                            })
+                                    # Fotografias
+                                    if relato.get("fotos"):
 
-                # SELECTBOX
-                if atividades:
-                    atividade_selecionada = st.selectbox(
-                        "Atividades",
-                        options=atividades,
-                        format_func=lambda x: x["atividade"],
-                        key=f"atividade_select_{idx}"
-                    )
+                                        with col2:
+                                            c1, c2 = st.columns([1, 5])
+                                            c1.write("**Fotografias:**")
 
-                    st.markdown("### Detalhes da atividade")
+                                            for f in relato["fotos"]:
+                                                if f.get("id_arquivo"):
+                                                    link = gerar_link_drive(f["id_arquivo"])
 
-                    st.write(f"**Atividade:** {atividade_selecionada['atividade']}")
-                    st.write(f"**Componente:** {atividade_selecionada['componente']}")
-                    st.write(f"**Entrega:** {atividade_selecionada['entrega']}")
+                                                    nome = f.get("nome_arquivo", "")
+                                                    descricao = f.get("descricao", "")
+                                                    fotografo = f.get("fotografo", "")
 
-                    if atividade_selecionada["data_inicio"]:
-                        st.write(f"**Início:** {atividade_selecionada['data_inicio']}")
+                                                    # Monta a linha com pipe
+                                                    linha = f"[{nome}]({link})"
 
-                    if atividade_selecionada["data_fim"]:
-                        st.write(f"**Fim:** {atividade_selecionada['data_fim']}")
+                                                    if descricao:
+                                                        linha += f" | {descricao}"
 
-                else:
-                    st.info("Nenhuma atividade cadastrada.")
+                                                    if fotografo:
+                                                        linha += f" | {fotografo}"
+
+                                                    c2.markdown(linha, unsafe_allow_html=True)
+
+
+
+                                
+
+                            # st.divider()
+
+                if not tem_relato:
+                    st.caption("Nenhum relato cadastrado neste relatório.")
+
 
 
 
@@ -1779,6 +2331,14 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
+
+
+            # ---------- ENVIAR ----------
+            if step == "Enviar":
+                st.write('')
+                st.write('')
+
+                st.markdown('##### Enviar relatório')
 
 
 

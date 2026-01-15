@@ -156,6 +156,26 @@ def obter_pasta_pesquisas(servico, pasta_projeto_id, codigo_projeto):
     st.session_state[chave] = pasta_id
     return pasta_id
 
+# Função para obter o ID da pasta 'Relatos_atividades' no Drive, para salvar os anexos das atividades.
+def obter_pasta_relatos_atividades(servico, pasta_projeto_id):
+    """
+    Retorna o ID da pasta 'Relatos_atividades' dentro da pasta do projeto.
+
+    - Cria a pasta se não existir
+    - Usa cache no session_state
+    """
+
+    if "pasta_relatos_atividades_id" in st.session_state:
+        return st.session_state["pasta_relatos_atividades_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Relatos_atividades",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_relatos_atividades_id"] = pasta_id
+    return pasta_id
 
 
 
@@ -305,12 +325,12 @@ def conectar_mongo_cepf_gestao():
     # return db_portal_ispn
 
 
-@st.cache_resource
-def conectar_mongo_pls():
-    cliente_2 = MongoClient(
-    st.secrets["senhas"]["senha_mongo_pls"])
-    db_pls = cliente_2["db_pls"]
-    return db_pls
+# @st.cache_resource
+# def conectar_mongo_pls():
+#     cliente_2 = MongoClient(
+#     st.secrets["senhas"]["senha_mongo_pls"])
+#     db_pls = cliente_2["db_pls"]
+#     return db_pls
 
 
 
