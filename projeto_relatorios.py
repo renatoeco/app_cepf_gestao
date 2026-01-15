@@ -634,7 +634,8 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # TÍTULO DO BLOCO
                 # ======================================================
 
-                st.subheader("Número de beneficiários por gênero e faixa etária")
+                st.markdown("##### Número de beneficiários por gênero e faixa etária")
+
                 st.write("")
 
 
@@ -908,7 +909,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # ============================================================================================================
 
                 st.write('')
-                st.subheader("Tipos de Beneficiários e Benefícios")
+                st.markdown("##### Tipos de Beneficiários e Benefícios")
 
                 if usuario_beneficiario:
 
@@ -1132,78 +1133,78 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                 if novo_tipo and novos_beneficios:
                                     houve_alteracao = True
 
-                            # =================================================
-                            # BOTÃO SALVAR
-                            # =================================================
-                            if houve_alteracao:
+                    # =================================================
+                    # BOTÃO SALVAR
+                    # =================================================
+                    if houve_alteracao:
 
-                                st.write("")
+                        st.write("")
 
-                                erros = []
+                        erros = []
 
-                                with st.container(horizontal=True, horizontal_alignment="right"):
-                                    clicou_salvar = st.button(
-                                        f"Atualizar {nome_localidade}",
-                                        type="primary",
-                                        key=f"salvar_{projeto['codigo']}_{nome_localidade}",
-                                        icon=":material/save:"
+                        # with st.container(horizontal=True, horizontal_alignment="right"):
+                        clicou_salvar = st.button(
+                            f"Atualizar {nome_localidade}",
+                            type="primary",
+                            key=f"salvar_{projeto['codigo']}_{nome_localidade}",
+                            icon=":material/save:"
+                        )
+
+                        if clicou_salvar:
+
+                            beneficiarios_para_salvar = []
+
+                            # -----------------------------------------
+                            # BENEFICIÁRIOS EXISTENTES
+                            # -----------------------------------------
+                            for tipo, beneficios in estado_atual.items():
+                                if not beneficios:
+                                    erros.append(
+                                        f"Selecione ao menos um benefício para **{tipo}**."
                                     )
+                                else:
+                                    beneficiarios_para_salvar.append({
+                                        "tipo_beneficiario": tipo,
+                                        "beneficios": beneficios
+                                    })
 
-                                if clicou_salvar:
+                            # -----------------------------------------
+                            # NOVO BENEFICIÁRIO (OUTROS)
+                            # -----------------------------------------
+                            if outros_marcado and novo_tipo:
+                                beneficiarios_para_salvar.append({
+                                    "tipo_beneficiario": novo_tipo,
+                                    "beneficios": novos_beneficios
+                                })
 
-                                    beneficiarios_para_salvar = []
+                            if erros:
+                                for erro in erros:
+                                    st.error(erro)
+                                time.sleep(3)
+                                st.rerun()
 
-                                    # -----------------------------------------
-                                    # BENEFICIÁRIOS EXISTENTES
-                                    # -----------------------------------------
-                                    for tipo, beneficios in estado_atual.items():
-                                        if not beneficios:
-                                            erros.append(
-                                                f"Selecione ao menos um benefício para **{tipo}**."
-                                            )
-                                        else:
-                                            beneficiarios_para_salvar.append({
-                                                "tipo_beneficiario": tipo,
-                                                "beneficios": beneficios
-                                            })
+                            # -----------------------------------------
+                            # SALVA NO BANCO
+                            # -----------------------------------------
+                            col_projetos.update_one(
+                                {
+                                    "codigo": projeto["codigo"],
+                                    "locais.localidades.nome_localidade": nome_localidade
+                                },
+                                {
+                                    "$set": {
+                                        "locais.localidades.$.beneficiarios":
+                                            beneficiarios_para_salvar
+                                    }
+                                }
+                            )
 
-                                    # -----------------------------------------
-                                    # NOVO BENEFICIÁRIO (OUTROS)
-                                    # -----------------------------------------
-                                    if outros_marcado and novo_tipo:
-                                        beneficiarios_para_salvar.append({
-                                            "tipo_beneficiario": novo_tipo,
-                                            "beneficios": novos_beneficios
-                                        })
-
-                                    if erros:
-                                        for erro in erros:
-                                            st.error(erro)
-                                        time.sleep(3)
-                                        st.rerun()
-
-                                    # -----------------------------------------
-                                    # SALVA NO BANCO
-                                    # -----------------------------------------
-                                    col_projetos.update_one(
-                                        {
-                                            "codigo": projeto["codigo"],
-                                            "locais.localidades.nome_localidade": nome_localidade
-                                        },
-                                        {
-                                            "$set": {
-                                                "locais.localidades.$.beneficiarios":
-                                                    beneficiarios_para_salvar
-                                            }
-                                        }
-                                    )
-
-                                    st.success(
-                                        f"Beneficiários da comunidade "
-                                        f"**{nome_localidade}** salvos com sucesso."
-                                    )
-                                    time.sleep(3)
-                                    st.rerun()
+                            st.success(
+                                f"Beneficiários da comunidade "
+                                f"**{nome_localidade}** salvos com sucesso."
+                            )
+                            time.sleep(3)
+                            st.rerun()
 
 
                     st.divider()
@@ -1237,6 +1238,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                     st.caption("Nenhuma pesquisa cadastrada.")
                     st.stop()
 
+                st.write("")
                 st.write("")
                 st.markdown("##### Pesquisas / Ferramentas de Monitoramento")
                 st.write("")
