@@ -698,21 +698,53 @@ STATUS_UI_TO_DB = {
 
 STATUS_DB_TO_UI = {v: k for k, v in STATUS_UI_TO_DB.items()}
 
+
+
+
 def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     """
-    Atualiza o status do relatório no MongoDB quando o segmented_control muda
+    Atualiza o status do relatório no MongoDB quando o segmented_control muda.
+
+    Regras de sincronização dos relatos:
+
+    A) Se o relatório voltar de 'em_analise' ou 'aprovado' para 'modo_edicao':
+       - relatos deste relatório com status 'em_analise' voltam para 'aberto'
+
+    B) Se o relatório sair de 'modo_edicao' para 'em_analise' ou 'aprovado':
+       - relatos deste relatório com status 'aberto' passam para 'em_analise'
     """
 
-    # Valor selecionado na interface (ex: "Em análise")
+    # --------------------------------------------------
+    # 1. STATUS SELECIONADO NA UI
+    # --------------------------------------------------
     status_ui = st.session_state.get(f"status_relatorio_{idx}")
+    status_novo = STATUS_UI_TO_DB.get(status_ui)
 
-    # Converte para o valor salvo no banco (ex: "em_analise")
-    status_db = STATUS_UI_TO_DB.get(status_ui)
-
-    if not status_db:
+    if not status_novo:
         return  # segurança extra
 
-    # Atualiza somente o relatório correspondente
+    # --------------------------------------------------
+    # 2. BUSCA STATUS ATUAL DO RELATÓRIO NO BANCO
+    # --------------------------------------------------
+    projeto = col_projetos.find_one(
+        {
+            "codigo": projeto_codigo,
+            "relatorios.numero": relatorio_numero
+        },
+        {
+            "relatorios.$": 1
+        }
+    )
+
+    if not projeto or "relatorios" not in projeto:
+        return
+
+    relatorio = projeto["relatorios"][0]
+    status_anterior = relatorio.get("status_relatorio")
+
+    # --------------------------------------------------
+    # 3. ATUALIZA STATUS DO RELATÓRIO
+    # --------------------------------------------------
     col_projetos.update_one(
         {
             "codigo": projeto_codigo,
@@ -720,10 +752,74 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
         },
         {
             "$set": {
-                "relatorios.$.status_relatorio": status_db
+                "relatorios.$.status_relatorio": status_novo
             }
         }
     )
+
+    # --------------------------------------------------
+    # 4. VERIFICA SE ALGUMA REGRA DE RELATOS SE APLICA
+    # --------------------------------------------------
+    aplica_regra_a = (
+        status_novo == "modo_edicao"
+        and status_anterior in ["em_analise", "aprovado"]
+    )
+
+    aplica_regra_b = (
+        status_anterior == "modo_edicao"
+        and status_novo in ["em_analise", "aprovado"]
+    )
+
+    if not (aplica_regra_a or aplica_regra_b):
+        return  # nada a fazer nos relatos
+
+    # --------------------------------------------------
+    # 5. RECARREGA O PROJETO COMPLETO
+    # --------------------------------------------------
+    projeto_atualizado = col_projetos.find_one(
+        {"codigo": projeto_codigo}
+    )
+
+    componentes = projeto_atualizado["plano_trabalho"]["componentes"]
+    houve_alteracao = False
+
+    # --------------------------------------------------
+    # 6. APLICA AS REGRAS NOS RELATOS
+    # --------------------------------------------------
+    for componente in componentes:
+        for entrega in componente["entregas"]:
+            for atividade in entrega["atividades"]:
+                for relato in atividade.get("relatos", []):
+
+                    # Apenas relatos do relatório atual
+                    if relato.get("relatorio_numero") != relatorio_numero:
+                        continue
+
+                    # Regra A: em_analise/aprovado → modo_edicao
+                    if aplica_regra_a and relato.get("status_relato") == "em_analise":
+                        relato["status_relato"] = "aberto"
+                        houve_alteracao = True
+
+                    # Regra B: modo_edicao → em_analise/aprovado
+                    if aplica_regra_b and relato.get("status_relato") == "aberto":
+                        relato["status_relato"] = "em_analise"
+                        houve_alteracao = True
+
+    # --------------------------------------------------
+    # 7. SALVA NO BANCO APENAS SE HOUVE ALTERAÇÃO
+    # --------------------------------------------------
+    if houve_alteracao:
+        col_projetos.update_one(
+            {"codigo": projeto_codigo},
+            {
+                "$set": {
+                    "plano_trabalho.componentes": componentes
+                }
+            }
+        )
+
+
+
 
 
 
@@ -1076,7 +1172,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                             for relato in relatos:
 
                                 with st.container(border=True):
-                                    # st.write('')
+                                    st.write(relato.get("status_relato"))
 
                                     # Relato
                                     st.write(f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}")
