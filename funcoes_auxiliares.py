@@ -569,7 +569,8 @@ def sidebar_projeto():
         st.session_state.get("tipo_usuario") == "beneficiario"
         and len(st.session_state.get("projetos", [])) > 1
     ):
-        if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+        if st.sidebar.button("Voltar", icon=":material/arrow_back:", type="tertiary"):
+        # if st.sidebar.button("Fechar projeto", icon=":material/close:", type="tertiary"):
             st.session_state.pagina_atual = "ben_selec_projeto"
             st.session_state.projeto_atual = None
             st.rerun()

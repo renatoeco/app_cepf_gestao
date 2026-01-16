@@ -426,10 +426,9 @@ def salvar_relato():
     # --------------------------------------------------
     # 11. FINALIZAÇÃO
     # --------------------------------------------------
-    st.success("Relato salvo com sucesso.", icon=":material/save:")
+    st.success("Relato salvo com sucesso.", icon=":material/check:")
     time.sleep(3)
     st.rerun()
-
 
 
 
@@ -469,28 +468,29 @@ def dialog_relatos():
         return
 
     # --------------------------------------------------
-    # 2. SELECTBOX DE ATIVIDADES
+    # 2. SELECTBOX COM OPÇÃO VAZIA
     # --------------------------------------------------
+    atividades_com_placeholder = (
+        [{"id": None, "atividade": ""}]
+        + atividades
+    )
+
     atividade_selecionada = st.selectbox(
         "Selecione a atividade",
-        atividades,
+        atividades_com_placeholder,
         format_func=lambda x: x["atividade"],
         key="atividade_select_dialog"
     )
 
-    # Salva no session_state para uso no salvar_relato
+    # Salva no session_state (mesmo vazia, para validação)
     st.session_state["atividade_selecionada"] = atividade_selecionada
     st.session_state["atividade_selecionada_drive"] = atividade_selecionada
-
-    st.divider()
 
     # ==================================================
     # 3. FORMULÁRIO DO RELATO
     # ==================================================
     @st.fragment
     def corpo_formulario():
-
-        # with st.expander("Novo relato", expanded=True):
 
         # -----------------------------
         # CAMPOS BÁSICOS
@@ -503,7 +503,6 @@ def dialog_relatos():
 
         st.text_input(
             "Quando?",
-            placeholder="DD/MM/AAAA",
             key="campo_quando"
         )
 
@@ -519,7 +518,7 @@ def dialog_relatos():
         # -----------------------------
         st.markdown("Anexos")
         st.file_uploader(
-            "Arquivos",
+            "Selecione todos os arquivos relevantes para esse relato: listas de presença, relatórios, publicações, etc.",
             type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
             accept_multiple_files=True,
             key="campo_anexos"
@@ -527,57 +526,78 @@ def dialog_relatos():
 
         st.divider()
 
+
         # -----------------------------
         # FOTOGRAFIAS
         # -----------------------------
-        st.subheader("Fotografias")
+        st.write("Fotografias")
 
         if "fotos_relato" not in st.session_state:
             st.session_state["fotos_relato"] = []
 
-        if st.button("Adicionar fotografia"):
+        # Botão para adicionar
+        if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
+            # Usamos um ID único para cada foto em vez de apenas o índice
+            import uuid
             st.session_state["fotos_relato"].append({
+                "id": str(uuid.uuid4()), 
                 "arquivo": None,
                 "descricao": "",
                 "fotografo": ""
             })
+            st.rerun(scope="fragment") # Atualiza APENAS o fragmento
 
+        # Iteramos sobre uma cópia da lista para evitar erros de índice ao deletar
         for i, foto in enumerate(st.session_state["fotos_relato"]):
-
+            # Criamos uma chave única baseada no ID gerado, não apenas no índice i
+            # Isso evita que o Streamlit confunda os campos após uma remoção
+            foto_id = foto["id"]
+            
             with st.container(border=True):
+                col_info, col_delete = st.columns([8, 2])
+                col_info.write(f"Fotografia {i+1}")
+                
 
-                # Upload do arquivo
+                with col_delete.container(horizontal=True, horizontal_alignment="right"):
+
+                    if st.button("", 
+                                        key=f"btn_del_{foto_id}", 
+                                        help="Remover foto", 
+                                        icon=":material/close:",
+                                        type="tertiary"):
+                        
+                        st.session_state["fotos_relato"].pop(i)
+                        st.rerun(scope="fragment") # O "pulo do gato": atualiza só o fragmento
+
                 arquivo_foto = st.file_uploader(
-                    f"Arquivo da foto {i+1}",
+                    "Selecione a foto",
                     type=["jpg", "jpeg", "png"],
-                    key=f"foto_arquivo_{i}"
+                    key=f"file_{foto_id}"
                 )
 
-                # Campos de texto
                 descricao = st.text_input(
-                    f"Descrição {i+1}",
-                    key=f"foto_descricao_{i}"
+                    "Descrição da foto",
+                    key=f"desc_{foto_id}"
                 )
 
                 fotografo = st.text_input(
-                    f"Fotógrafo(a) {i+1}",
-                    key=f"foto_autor_{i}"
+                    "Nome do(a) fotógrafo(a)",
+                    key=f"autor_{foto_id}"
                 )
 
-            # SINCRONIZA COM O session_state USADO NO salvar_relato
+            # Sincronização
             foto["arquivo"] = arquivo_foto
             foto["descricao"] = descricao
             foto["fotografo"] = fotografo
 
 
 
-        # --------------------------------------------------
-        # AÇÕES FINAIS: BOTÃO + SPINNER + FEEDBACK
-        # --------------------------------------------------
 
+
+        # --------------------------------------------------
+        # AÇÕES FINAIS: BOTÃO + VALIDAÇÃO + SPINNER
+        # --------------------------------------------------
         col_btn, col_status = st.columns([1, 4])
-
-        # Placeholder único para spinner e success
         status_placeholder = col_status.empty()
 
         with col_btn:
@@ -589,15 +609,205 @@ def dialog_relatos():
             )
 
         if salvar:
-            # Mostra spinner primeiro
+
+            erros = []
+
+            # Valida atividade
+            if not atividade_selecionada.get("id"):
+                erros.append("Selecione uma atividade.")
+
+            # Valida campos obrigatórios
+            if not st.session_state.get("campo_relato", "").strip():
+                erros.append("O campo Relato é obrigatório.")
+
+            if not st.session_state.get("campo_quando", "").strip():
+                erros.append("O campo Quando é obrigatório.")
+
+            if not st.session_state.get("campo_onde", "").strip():
+                erros.append("O campo Onde é obrigatório.")
+
+            if erros:
+                with status_placeholder:
+                    for e in erros:
+                        st.error(e)
+                return
+
+            # Se passou na validação, salva
             with status_placeholder:
                 with st.spinner("Salvando, aguarde..."):
                     salvar_relato()
 
             status_placeholder.success("Relato salvo com sucesso.")
 
-
     corpo_formulario()
+
+
+
+
+# # ==========================================================================================
+# # DIÁLOGO: RELATAR ATIVIDADE
+# # ==========================================================================================
+# @st.dialog("Relatar atividade", width="large")
+# def dialog_relatos():
+
+#     projeto = st.session_state.get("projeto_mongo")
+#     if not projeto:
+#         st.error("Projeto não encontrado.")
+#         return
+
+#     # --------------------------------------------------
+#     # 1. MONTA LISTA DE ATIVIDADES
+#     # --------------------------------------------------
+#     atividades = []
+
+#     for componente in projeto["plano_trabalho"]["componentes"]:
+#         for entrega in componente["entregas"]:
+#             for atividade in entrega["atividades"]:
+#                 atividades.append({
+#                     "id": atividade["id"],
+#                     "atividade": atividade["atividade"],
+#                     "componente": componente["componente"],
+#                     "entrega": entrega["entrega"],
+#                     "data_inicio": atividade.get("data_inicio"),
+#                     "data_fim": atividade.get("data_fim"),
+#                     "relatos": atividade.get("relatos", [])
+#                 })
+
+#     if not atividades:
+#         st.info("Nenhuma atividade cadastrada.")
+#         time.sleep(3)
+#         return
+
+#     # --------------------------------------------------
+#     # 2. SELECTBOX DE ATIVIDADES
+#     # --------------------------------------------------
+#     atividade_selecionada = st.selectbox(
+#         "Selecione a atividade",
+#         atividades,
+#         format_func=lambda x: x["atividade"],
+#         key="atividade_select_dialog"
+#     )
+
+#     # Salva no session_state para uso no salvar_relato
+#     st.session_state["atividade_selecionada"] = atividade_selecionada
+#     st.session_state["atividade_selecionada_drive"] = atividade_selecionada
+
+#     # st.divider()
+
+#     # ==================================================
+#     # 3. FORMULÁRIO DO RELATO
+#     # ==================================================
+#     @st.fragment
+#     def corpo_formulario():
+
+#         # with st.expander("Novo relato", expanded=True):
+
+#         # -----------------------------
+#         # CAMPOS BÁSICOS
+#         # -----------------------------
+#         st.text_area(
+#             "Relato",
+#             placeholder="Descreva o que foi feito",
+#             key="campo_relato"
+#         )
+
+#         st.text_input(
+#             "Quando?",
+#             key="campo_quando"
+#         )
+
+#         st.text_input(
+#             "Onde?",
+#             key="campo_onde"
+#         )
+
+#         st.divider()
+
+#         # -----------------------------
+#         # ANEXOS
+#         # -----------------------------
+#         st.markdown("Anexos")
+#         st.file_uploader(
+#             "Arquivos",
+#             type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
+#             accept_multiple_files=True,
+#             key="campo_anexos"
+#         )
+
+#         st.divider()
+
+#         # -----------------------------
+#         # FOTOGRAFIAS
+#         # -----------------------------
+#         st.subheader("Fotografias")
+
+#         if "fotos_relato" not in st.session_state:
+#             st.session_state["fotos_relato"] = []
+
+#         if st.button("Adicionar fotografia",
+#                      icon=":material/add_a_photo:"):
+#             st.session_state["fotos_relato"].append({
+#                 "arquivo": None,
+#                 "descricao": "",
+#                 "fotografo": ""
+#             })
+
+#         for i, foto in enumerate(st.session_state["fotos_relato"]):
+
+#             with st.container(border=True):
+
+#                 # Upload do arquivo
+#                 arquivo_foto = st.file_uploader(
+#                     f"Selecione a foto",
+#                     type=["jpg", "jpeg", "png"],
+#                     key=f"foto_arquivo_{i}"
+#                 )
+
+#                 # Campos de texto
+#                 descricao = st.text_input(
+#                     f"Descrição da foto",
+#                     key=f"foto_descricao_{i}"
+#                 )
+
+#                 fotografo = st.text_input(
+#                     f"Nome do(a) fotógrafo(a)",
+#                     key=f"foto_autor_{i}"
+#                 )
+
+#             # SINCRONIZA COM O session_state USADO NO salvar_relato
+#             foto["arquivo"] = arquivo_foto
+#             foto["descricao"] = descricao
+#             foto["fotografo"] = fotografo
+
+
+
+#         # --------------------------------------------------
+#         # AÇÕES FINAIS: BOTÃO + SPINNER + FEEDBACK
+#         # --------------------------------------------------
+
+#         col_btn, col_status = st.columns([1, 4])
+
+#         # Placeholder único para spinner e success
+#         status_placeholder = col_status.empty()
+
+#         with col_btn:
+#             salvar = st.button(
+#                 "Salvar relato",
+#                 width="stretch",
+#                 type="primary",
+#                 icon=":material/save:"
+#             )
+
+#         if salvar:
+#             # Mostra spinner primeiro
+#             with status_placeholder:
+#                 with st.spinner("Salvando, aguarde..."):
+#                     salvar_relato()
+
+#             status_placeholder.success("Relato salvo com sucesso.")
+
+
+#     corpo_formulario()
 
 
 
@@ -979,6 +1189,12 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 st.write("")
                 st.write("")
 
+                st.markdown(f"### Relatos de atividades do Relatório {relatorio_numero}")
+                st.write('')
+
+
+                # Botão que abre o diálogo de relatar atividade, só para beneficiários
+
                 with st.container(horizontal=True, horizontal_alignment="right"):
 
                     # Botão abre o diálogo
@@ -995,9 +1211,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
                 # AGRUPADOS POR ATIVIDADE
                 # --------------------------------------------------
-
-                st.markdown(f"### Relatos de atividades do Relatório {relatorio_numero}")
-                st.write('')
 
                 tem_relato = False
 
@@ -1020,7 +1233,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                             st.write('')
                             # Título da atividade
-                            st.markdown(f"#### Atividade: {atividade['atividade']}")
+                            st.markdown(f"#### {atividade['atividade']}")
 
                             # Lista de relatos
                             for relato in relatos:
