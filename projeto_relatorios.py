@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import streamlit_antd_components as sac
 import time
+import datetime
 
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
@@ -381,6 +382,7 @@ def salvar_relato():
     # --------------------------------------------------
     novo_relato = {
         "id_relato": id_relato,
+        "status_relato": "aberto",  # status inicial do relato
         "relatorio_numero": st.session_state.get("relatorio_numero"),
         "relato": texto_relato.strip(),
         "quando": quando.strip(),
@@ -642,172 +644,6 @@ def dialog_relatos():
     corpo_formulario()
 
 
-
-
-# # ==========================================================================================
-# # DIÁLOGO: RELATAR ATIVIDADE
-# # ==========================================================================================
-# @st.dialog("Relatar atividade", width="large")
-# def dialog_relatos():
-
-#     projeto = st.session_state.get("projeto_mongo")
-#     if not projeto:
-#         st.error("Projeto não encontrado.")
-#         return
-
-#     # --------------------------------------------------
-#     # 1. MONTA LISTA DE ATIVIDADES
-#     # --------------------------------------------------
-#     atividades = []
-
-#     for componente in projeto["plano_trabalho"]["componentes"]:
-#         for entrega in componente["entregas"]:
-#             for atividade in entrega["atividades"]:
-#                 atividades.append({
-#                     "id": atividade["id"],
-#                     "atividade": atividade["atividade"],
-#                     "componente": componente["componente"],
-#                     "entrega": entrega["entrega"],
-#                     "data_inicio": atividade.get("data_inicio"),
-#                     "data_fim": atividade.get("data_fim"),
-#                     "relatos": atividade.get("relatos", [])
-#                 })
-
-#     if not atividades:
-#         st.info("Nenhuma atividade cadastrada.")
-#         time.sleep(3)
-#         return
-
-#     # --------------------------------------------------
-#     # 2. SELECTBOX DE ATIVIDADES
-#     # --------------------------------------------------
-#     atividade_selecionada = st.selectbox(
-#         "Selecione a atividade",
-#         atividades,
-#         format_func=lambda x: x["atividade"],
-#         key="atividade_select_dialog"
-#     )
-
-#     # Salva no session_state para uso no salvar_relato
-#     st.session_state["atividade_selecionada"] = atividade_selecionada
-#     st.session_state["atividade_selecionada_drive"] = atividade_selecionada
-
-#     # st.divider()
-
-#     # ==================================================
-#     # 3. FORMULÁRIO DO RELATO
-#     # ==================================================
-#     @st.fragment
-#     def corpo_formulario():
-
-#         # with st.expander("Novo relato", expanded=True):
-
-#         # -----------------------------
-#         # CAMPOS BÁSICOS
-#         # -----------------------------
-#         st.text_area(
-#             "Relato",
-#             placeholder="Descreva o que foi feito",
-#             key="campo_relato"
-#         )
-
-#         st.text_input(
-#             "Quando?",
-#             key="campo_quando"
-#         )
-
-#         st.text_input(
-#             "Onde?",
-#             key="campo_onde"
-#         )
-
-#         st.divider()
-
-#         # -----------------------------
-#         # ANEXOS
-#         # -----------------------------
-#         st.markdown("Anexos")
-#         st.file_uploader(
-#             "Arquivos",
-#             type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
-#             accept_multiple_files=True,
-#             key="campo_anexos"
-#         )
-
-#         st.divider()
-
-#         # -----------------------------
-#         # FOTOGRAFIAS
-#         # -----------------------------
-#         st.subheader("Fotografias")
-
-#         if "fotos_relato" not in st.session_state:
-#             st.session_state["fotos_relato"] = []
-
-#         if st.button("Adicionar fotografia",
-#                      icon=":material/add_a_photo:"):
-#             st.session_state["fotos_relato"].append({
-#                 "arquivo": None,
-#                 "descricao": "",
-#                 "fotografo": ""
-#             })
-
-#         for i, foto in enumerate(st.session_state["fotos_relato"]):
-
-#             with st.container(border=True):
-
-#                 # Upload do arquivo
-#                 arquivo_foto = st.file_uploader(
-#                     f"Selecione a foto",
-#                     type=["jpg", "jpeg", "png"],
-#                     key=f"foto_arquivo_{i}"
-#                 )
-
-#                 # Campos de texto
-#                 descricao = st.text_input(
-#                     f"Descrição da foto",
-#                     key=f"foto_descricao_{i}"
-#                 )
-
-#                 fotografo = st.text_input(
-#                     f"Nome do(a) fotógrafo(a)",
-#                     key=f"foto_autor_{i}"
-#                 )
-
-#             # SINCRONIZA COM O session_state USADO NO salvar_relato
-#             foto["arquivo"] = arquivo_foto
-#             foto["descricao"] = descricao
-#             foto["fotografo"] = fotografo
-
-
-
-#         # --------------------------------------------------
-#         # AÇÕES FINAIS: BOTÃO + SPINNER + FEEDBACK
-#         # --------------------------------------------------
-
-#         col_btn, col_status = st.columns([1, 4])
-
-#         # Placeholder único para spinner e success
-#         status_placeholder = col_status.empty()
-
-#         with col_btn:
-#             salvar = st.button(
-#                 "Salvar relato",
-#                 width="stretch",
-#                 type="primary",
-#                 icon=":material/save:"
-#             )
-
-#         if salvar:
-#             # Mostra spinner primeiro
-#             with status_placeholder:
-#                 with st.spinner("Salvando, aguarde..."):
-#                     salvar_relato()
-
-#             status_placeholder.success("Relato salvo com sucesso.")
-
-
-#     corpo_formulario()
 
 
 
@@ -1220,6 +1056,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                             relatos = atividade.get("relatos", [])
 
+
                             # Filtra apenas relatos do relatório atual
                             relatos = [
                                 r for r in relatos
@@ -1315,12 +1152,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
             # ---------- BENEFÍCIOS ----------
-
-
-
-            # =====================================================
-            # STEP BENEFICIÁRIOS
-            # =====================================================
 
             if step == "Beneficiários":
 
@@ -2545,14 +2376,133 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-
             # ---------- ENVIAR ----------
+
+
             if step == "Enviar":
+
                 st.write('')
                 st.write('')
 
-                st.markdown('##### Enviar relatório')
+                # --------------------------------------------------
+                # CASO 1: RELATÓRIO JÁ ENVIADO (EM ANÁLISE)
+                # --------------------------------------------------
+                if status_atual_db == "em_analise":
 
+                    # Recupera a data de envio salva no banco
+                    data_envio = relatorio.get("data_envio")
+
+                    # Formata a data para exibição (DD/MM/YYYY)
+                    if data_envio:
+                        data_formatada = datetime.datetime.strptime(
+                            data_envio, "%Y-%m-%d"
+                        ).strftime("%d/%m/%Y")
+                    else:
+                        data_formatada = "—"
+
+                    st.markdown(
+                        f"##### Relatório enviado em {data_formatada}.")
+
+                    st.write("Aguardando análise.")
+                # --------------------------------------------------
+                # CASO 2: RELATÓRIO APROVADO
+                # --------------------------------------------------
+                elif status_atual_db == "aprovado":
+                    st.markdown("##### Relatório aprovado.")
+
+                # --------------------------------------------------
+                # CASO 3: RELATÓRIO EM MODO EDIÇÃO E USUÁRIO PODE EDITAR
+                # --------------------------------------------------
+                elif pode_editar_relatorio:
+
+                    st.markdown("### Enviar relatório")
+
+                    st.write(
+                        "Ao enviar o relatório, ele será encaminhado para análise "
+                        "e não poderá mais ser editado enquanto estiver em análise."
+                    )
+
+                    st.divider()
+
+                    enviar = st.button(
+                        "Enviar relatório",
+                        type="primary",
+                        icon=":material/send:"
+                    )
+
+                    if enviar:
+
+                        # Gera a data de envio no formato ISO (YYYY-MM-DD)
+                        data_envio = datetime.datetime.now().strftime("%Y-%m-%d")
+
+                        with st.spinner("Enviando relatório para análise..."):
+
+                            # --------------------------------------------------
+                            # 1. ATUALIZA STATUS E DATA DO RELATÓRIO
+                            # --------------------------------------------------
+                            col_projetos.update_one(
+                                {
+                                    "codigo": projeto_codigo,
+                                    "relatorios.numero": relatorio_numero
+                                },
+                                {
+                                    "$set": {
+                                        "relatorios.$.status_relatorio": "em_analise",
+                                        "relatorios.$.data_envio": data_envio
+                                    }
+                                }
+                            )
+
+                            # --------------------------------------------------
+                            # 2. ATUALIZA STATUS DOS RELATOS ABERTOS
+                            #    (somente os relatos deste relatório)
+                            # --------------------------------------------------
+                            projeto_atualizado = col_projetos.find_one(
+                                {"codigo": projeto_codigo}
+                            )
+
+                            componentes = projeto_atualizado["plano_trabalho"]["componentes"]
+
+                            houve_alteracao = False
+
+                            for componente in componentes:
+                                for entrega in componente["entregas"]:
+                                    for atividade in entrega["atividades"]:
+                                        for relato in atividade.get("relatos", []):
+
+                                            # Apenas relatos do relatório atual
+                                            # e que ainda estejam abertos
+                                            if (
+                                                relato.get("relatorio_numero") == relatorio_numero
+                                                and relato.get("status_relato") == "aberto"
+                                            ):
+                                                relato["status_relato"] = "em_analise"
+                                                houve_alteracao = True
+
+                            # Salva no Mongo apenas se houve mudança
+                            if houve_alteracao:
+                                col_projetos.update_one(
+                                    {"codigo": projeto_codigo},
+                                    {
+                                        "$set": {
+                                            "plano_trabalho.componentes": componentes
+                                        }
+                                    }
+                                )
+
+                        st.success("Relatório enviado para análise.")
+
+                        # Reseta para o rerun não se perder.
+                        st.session_state.step_relatorio = "Atividades"
+
+                        time.sleep(3)
+                        st.rerun()
+
+                # --------------------------------------------------
+                # CASO 4: USUÁRIO NÃO PODE EDITAR
+                # --------------------------------------------------
+                else:
+                    st.info("Este relatório não pode ser editado no momento.")
 
 
 
