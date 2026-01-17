@@ -1503,19 +1503,36 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                         status_relato_db = relato.get("status_relato")
                                         devolutiva = relato.get("devolutiva")
 
-                                        if status_relato_db in ["em_analise", "aberto"] and devolutiva:
+                                        mostrar_devolutiva = False
 
-                                            # garante que quebras de linha fiquem dentro do blockquote
+                                        # --------------------------------------------------
+                                        # REGRA 1: relatório em modo edição
+                                        # --------------------------------------------------
+                                        if status_atual_db == "modo_edicao":
+                                            mostrar_devolutiva = bool(devolutiva)
+
+                                        # --------------------------------------------------
+                                        # REGRA 2: relatório em análise
+                                        # --------------------------------------------------
+                                        elif status_atual_db == "em_analise":
+                                            # se for admin/equipe E relato está devolvido → não mostra
+                                            if (
+                                                tipo_usuario in ["admin", "equipe"]
+                                                and status_relato_db == "aberto"
+                                            ):
+                                                mostrar_devolutiva = False
+                                            else:
+                                                mostrar_devolutiva = bool(devolutiva)
+
+                                        if mostrar_devolutiva:
+
                                             texto = devolutiva.replace("\n", "\n> ")
 
-                                            st.markdown(
-                                                f"""
-                                        > **Devolutiva:**  
-                                        > {texto}
-                                                """
-                                            )
-
-
+                                            st.markdown(f"""
+                                                        > **Devolutiva:**  
+                                                        > {texto}
+                                                                """
+                                                            )
 
 
                                         # --------------------------------------------------
