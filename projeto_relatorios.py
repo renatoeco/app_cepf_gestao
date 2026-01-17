@@ -1165,7 +1165,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
             # ---------- ATIVIDADES ----------
 
-
             if step == "Atividades":
 
                 # Guarda para uso no diálogo e no salvar_relato
@@ -1178,30 +1177,36 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 st.markdown(f"### Relatos de atividades do Relatório {relatorio_numero}")
                 st.write('')
 
-
-                # Botão que abre o diálogo de relatar atividade, só para beneficiários
-
+                # --------------------------------------------------
+                # BOTÃO PARA CRIAR NOVO RELATO
+                # --------------------------------------------------
                 with st.container(horizontal=True, horizontal_alignment="right"):
 
-                    # Botão abre o diálogo
                     if pode_editar_relatorio:
-                        if st.button("Relatar atividade", type="primary", key=f"btn_relatar_{idx}", icon=":material/edit:"):
-                            # Limpamos os dados antigos para o modal vir vazio
-                            st.session_state["relato_em_edicao"] = None
-                            st.session_state["relato_edicao_inicializado"] = False
-                            st.session_state["campo_relato"] = ""
-                            st.session_state["campo_quando"] = ""
-                            st.session_state["campo_onde"] = ""
+                        if st.button(
+                            "Relatar atividade",
+                            type="primary",
+                            key=f"btn_relatar_{idx}",
+                            icon=":material/edit:"
+                        ):
+                            # Limpa qualquer resíduo antigo de formulário
+                            for chave in [
+                                "campo_relato",
+                                "campo_quando",
+                                "campo_onde",
+                                "campo_anexos",
+                                "fotos_relato",
+                                "atividade_select_dialog"
+                            ]:
+                                if chave in st.session_state:
+                                    del st.session_state[chave]
+
                             dialog_relatos()
-
-
-               
 
                 # --------------------------------------------------
                 # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
                 # AGRUPADOS POR ATIVIDADE
                 # --------------------------------------------------
-
                 tem_relato = False
 
                 for componente in projeto["plano_trabalho"]["componentes"]:
@@ -1209,7 +1214,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         for atividade in entrega["atividades"]:
 
                             relatos = atividade.get("relatos", [])
-
 
                             # Filtra apenas relatos do relatório atual
                             relatos = [
@@ -1223,31 +1227,34 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                             tem_relato = True
 
                             st.write('')
-                            # Título da atividade
                             st.markdown(f"#### {atividade['atividade']}")
 
-                            # Lista de relatos
                             for relato in relatos:
 
                                 with st.container(border=True):
-                                    st.write(relato.get("status_relato"))
 
-                                    # Relato
-                                    st.write(f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}")
+                                    # ???????????????????????
+                                    st.write(f":material/star: {relato.get("status_relato")}")
+
+                                    # Texto do relato
+                                    st.write(
+                                        f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}"
+                                    )
 
                                     col1, col2 = st.columns([2, 3])
-                                    
+
                                     # Quando
                                     col1.write(f"**Quando:** {relato.get('quando')}")
 
                                     # Onde
                                     col2.write(f"**Onde:** {relato.get('onde')}")
 
-                                    # Anexos
+                                    # -----------------------------
+                                    # ANEXOS
+                                    # -----------------------------
                                     if relato.get("anexos"):
                                         with col1:
-
-                                            c1, c2 = st.columns([1, 5])    
+                                            c1, c2 = st.columns([1, 5])
                                             c1.write("**Anexos:**")
 
                                             for a in relato["anexos"]:
@@ -1258,12 +1265,10 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                         unsafe_allow_html=True
                                                     )
 
-
-
-
-                                    # Fotografias
+                                    # -----------------------------
+                                    # FOTOGRAFIAS
+                                    # -----------------------------
                                     if relato.get("fotos"):
-
                                         with col2:
                                             c1, c2 = st.columns([1, 5])
                                             c1.write("**Fotografias:**")
@@ -1276,7 +1281,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                     descricao = f.get("descricao", "")
                                                     fotografo = f.get("fotografo", "")
 
-                                                    # Monta a linha com pipe
                                                     linha = f"[{nome}]({link})"
 
                                                     if descricao:
@@ -1287,25 +1291,150 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                                                     c2.markdown(linha, unsafe_allow_html=True)
 
-                                    # --------------------------------------------------
-                                    # BOTÃO EDITAR RELATO (APENAS SE PODE EDITAR)
-                                    # --------------------------------------------------
-                                    if pode_editar_relatorio:
-                                        if st.button("Editar relato", key=f"editar_relato_{relato['id_relato']}", icon=":material/edit:"):
-                                            # 1. Avisa que estamos editando e reseta a trava de inicialização
-                                            st.session_state["relato_em_edicao"] = relato
-                                            st.session_state["relato_edicao_inicializado"] = False
-                                            
-                                            # 2. Define a atividade pai
-                                            st.session_state["atividade_selecionada"] = atividade
-                                            
-                                            # 3. Abre o diálogo
-                                            dialog_relatos()
-
-
-
                 if not tem_relato:
                     st.caption("Nenhum relato cadastrado neste relatório.")
+
+
+            # if step == "Atividades":
+
+            #     # Guarda para uso no diálogo e no salvar_relato
+            #     st.session_state["projeto_mongo"] = projeto
+            #     st.session_state["relatorio_numero"] = relatorio_numero
+
+            #     st.write("")
+            #     st.write("")
+
+            #     st.markdown(f"### Relatos de atividades do Relatório {relatorio_numero}")
+            #     st.write('')
+
+
+            #     # Botão que abre o diálogo de relatar atividade, só para beneficiários
+
+            #     with st.container(horizontal=True, horizontal_alignment="right"):
+
+            #         # Botão abre o diálogo
+            #         if pode_editar_relatorio:
+            #             if st.button("Relatar atividade", type="primary", key=f"btn_relatar_{idx}", icon=":material/edit:"):
+            #                 # Limpamos os dados antigos para o modal vir vazio
+            #                 st.session_state["relato_em_edicao"] = None
+            #                 st.session_state["relato_edicao_inicializado"] = False
+            #                 st.session_state["campo_relato"] = ""
+            #                 st.session_state["campo_quando"] = ""
+            #                 st.session_state["campo_onde"] = ""
+            #                 dialog_relatos()
+
+
+               
+
+            #     # --------------------------------------------------
+            #     # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
+            #     # AGRUPADOS POR ATIVIDADE
+            #     # --------------------------------------------------
+
+            #     tem_relato = False
+
+            #     for componente in projeto["plano_trabalho"]["componentes"]:
+            #         for entrega in componente["entregas"]:
+            #             for atividade in entrega["atividades"]:
+
+            #                 relatos = atividade.get("relatos", [])
+
+
+            #                 # Filtra apenas relatos do relatório atual
+            #                 relatos = [
+            #                     r for r in relatos
+            #                     if r.get("relatorio_numero") == relatorio_numero
+            #                 ]
+
+            #                 if not relatos:
+            #                     continue
+
+            #                 tem_relato = True
+
+            #                 st.write('')
+            #                 # Título da atividade
+            #                 st.markdown(f"#### {atividade['atividade']}")
+
+            #                 # Lista de relatos
+            #                 for relato in relatos:
+
+            #                     with st.container(border=True):
+            #                         st.write(relato.get("status_relato"))
+
+            #                         # Relato
+            #                         st.write(f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}")
+
+            #                         col1, col2 = st.columns([2, 3])
+                                    
+            #                         # Quando
+            #                         col1.write(f"**Quando:** {relato.get('quando')}")
+
+            #                         # Onde
+            #                         col2.write(f"**Onde:** {relato.get('onde')}")
+
+            #                         # Anexos
+            #                         if relato.get("anexos"):
+            #                             with col1:
+
+            #                                 c1, c2 = st.columns([1, 5])    
+            #                                 c1.write("**Anexos:**")
+
+            #                                 for a in relato["anexos"]:
+            #                                     if a.get("id_arquivo"):
+            #                                         link = gerar_link_drive(a["id_arquivo"])
+            #                                         c2.markdown(
+            #                                             f"[{a['nome_arquivo']}]({link})",
+            #                                             unsafe_allow_html=True
+            #                                         )
+
+
+
+
+            #                         # Fotografias
+            #                         if relato.get("fotos"):
+
+            #                             with col2:
+            #                                 c1, c2 = st.columns([1, 5])
+            #                                 c1.write("**Fotografias:**")
+
+            #                                 for f in relato["fotos"]:
+            #                                     if f.get("id_arquivo"):
+            #                                         link = gerar_link_drive(f["id_arquivo"])
+
+            #                                         nome = f.get("nome_arquivo", "")
+            #                                         descricao = f.get("descricao", "")
+            #                                         fotografo = f.get("fotografo", "")
+
+            #                                         # Monta a linha com pipe
+            #                                         linha = f"[{nome}]({link})"
+
+            #                                         if descricao:
+            #                                             linha += f" | {descricao}"
+
+            #                                         if fotografo:
+            #                                             linha += f" | {fotografo}"
+
+            #                                         c2.markdown(linha, unsafe_allow_html=True)
+
+            #                         # --------------------------------------------------
+            #                         # BOTÃO EDITAR RELATO (APENAS SE PODE EDITAR)
+            #                         # --------------------------------------------------
+            #                         if pode_editar_relatorio:
+            #                             if st.button("Editar relato", key=f"editar_relato_{relato['id_relato']}", icon=":material/edit:"):
+            #                                 # 1. Avisa que estamos editando e reseta a trava de inicialização
+            #                                 st.session_state["relato_em_edicao"] = relato
+            #                                 st.session_state["relato_edicao_inicializado"] = False
+                                            
+            #                                 # 2. Define a atividade pai
+            #                                 st.session_state["atividade_selecionada"] = atividade
+                                            
+            #                                 # 3. Abre o diálogo
+            #                                 dialog_relatos()
+
+
+
+            #     if not tem_relato:
+            #         st.caption("Nenhum relato cadastrado neste relatório.")
 
 
 
