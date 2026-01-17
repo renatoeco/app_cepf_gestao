@@ -1237,24 +1237,152 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                 id_relato = relato["id_relato"]
                                 editando = st.session_state["relato_editando_id"] == id_relato
 
+                                # --------------------------------------------------
+                                # GARANTE QUE WIDGETS DE VISUALIZAÇÃO NÃO EXISTAM EM EDIÇÃO
+                                # --------------------------------------------------
+                                if editando:
+                                    # remove qualquer state de devolutiva para evitar conflito
+                                    st.session_state.pop(f"devolutiva_{id_relato}", None)
+                                    st.session_state.pop(f"status_relato_ui_{id_relato}", None)
+
+
                                 with st.container(border=True):
 
                                     # ==================================================
-                                    # MODO VISUALIZAÇÃO
+                                    # MODO VISUALIZAÇÃO DO RELATO
                                     # ==================================================
                                     if not editando:
 
-                                        st.write(relato.get("status_relato"))
+                                        # --------------------------------------------------
+                                        # Lógica de status visual (depende de devolutiva)
+                                        # --------------------------------------------------
+                                        status_relato_db = relato.get("status_relato", "em_analise")
+                                        tem_devolutiva = bool(relato.get("devolutiva"))
 
-                                        st.write(
-                                            f"**{id_relato.upper()}:** {relato.get('relato')}"
-                                        )
+                                        # Regras visuais:
+                                        # - aberto + devolutiva → Pendente (vermelho)
+                                        # - aberto sem devolutiva → Aberto (amarelo)
+                                        # - em_analise → Em análise (azul)
+                                        # - aceito → Aceito (verde)
+
+                                        if status_relato_db == "aberto" and tem_devolutiva:
+                                            badge = {
+                                                "label": "Pendente",
+                                                "bg": "#F8D7DA",
+                                                "color": "#721C24"
+                                            }
+                                        elif status_relato_db == "aberto":
+                                            badge = {
+                                                "label": "Aberto",
+                                                "bg": "#FFF3CD",
+                                                "color": "#856404"
+                                            }
+                                        elif status_relato_db == "aceito":
+                                            badge = {
+                                                "label": "Aceito",
+                                                "bg": "#D4EDDA",
+                                                "color": "#155724"
+                                            }
+                                        else:
+                                            badge = {
+                                                "label": "Em análise",
+                                                "bg": "#D1ECF1",
+                                                "color": "#0C5460"
+                                            }
+
+                                        # --------------------------------------------------
+                                        # BADGE VISUAL
+                                        # --------------------------------------------------
+                                        st.markdown(
+                                            f"""
+                                            <div style="margin-bottom:6px;">
+                                                <span style="
+                                                    background:{badge['bg']};
+                                                    color:{badge['color']};
+                                                    padding:4px 10px;
+                                                    border-radius:20px;
+                                                    font-size:12px;
+                                                    font-weight:600;
+                                                ">
+                                                    {badge['label']}
+                                                </span>
+                                            </div>
+                                            """,
+                                            unsafe_allow_html=True
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        # # --------------------------------------------------
+                                        # # STATUS DO RELATO (badge visual)
+                                        # # --------------------------------------------------
+                                        # status_relato_db = relato.get("status_relato", "em_analise")
+
+                                        # STATUS_RELATO_BADGE = {
+                                        #     "em_analise": {
+                                        #         "label": "Em análise",
+                                        #         "bg": "#FFF3CD",
+                                        #         "color": "#856404"
+                                        #     },
+                                        #     "aberto": {
+                                        #         "label": "Aberto",
+                                        #         "bg": "#F8D7DA",
+                                        #         "color": "#721C24"
+                                        #     },
+                                        #     "aceito": {
+                                        #         "label": "Aceito",
+                                        #         "bg": "#D4EDDA",
+                                        #         "color": "#155724"
+                                        #     }
+                                        # }
+
+                                        # info = STATUS_RELATO_BADGE.get(status_relato_db, STATUS_RELATO_BADGE["em_analise"])
+
+                                        # st.markdown(
+                                        #     f"""
+                                        #     <div style="margin-bottom:6px;">
+                                        #         <span style="
+                                        #             background:{info['bg']};
+                                        #             color:{info['color']};
+                                        #             padding:4px 10px;
+                                        #             border-radius:20px;
+                                        #             font-size:12px;
+                                        #             font-weight:600;
+                                        #         ">
+                                        #             {info['label']}
+                                        #         </span>
+                                        #     </div>
+                                        #     """,
+                                        #     unsafe_allow_html=True
+                                        # )
+
+
+
+
+                                        # --------------------------------------------------
+                                        # CONTEÚDO DO RELATO
+                                        # --------------------------------------------------
+                                        st.write(f"**{id_relato.upper()}:** {relato.get("relato")}")
 
                                         col1, col2 = st.columns([2, 3])
                                         col1.write(f"**Quando:** {relato.get('quando')}")
                                         col2.write(f"**Onde:** {relato.get('onde')}")
 
-                                        # Anexos
+                                        # --------------------------------------------------
+                                        # ANEXOS (links do Drive)
+                                        # --------------------------------------------------
                                         if relato.get("anexos"):
                                             with col1:
                                                 c1, c2 = st.columns([1, 5])
@@ -1267,7 +1395,9 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                             unsafe_allow_html=True
                                                         )
 
-                                        # Fotografias
+                                        # --------------------------------------------------
+                                        # FOTOGRAFIAS (links + metadados)
+                                        # --------------------------------------------------
                                         if relato.get("fotos"):
                                             with col2:
                                                 c1, c2 = st.columns([1, 5])
@@ -1282,9 +1412,321 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                             linha += f" | {f['fotografo']}"
                                                         c2.markdown(linha, unsafe_allow_html=True)
 
-                                        # Botão editar
-                                        with st.container(horizontal=True, horizontal_alignment="right"):
-                                            if pode_editar_relatorio:
+
+                                        # ==========================
+                                        # STATUS DO RELATO (ADMIN/EQUIPE)
+                                        # ==========================
+
+                                        STATUS_RELATO_LABEL = {
+                                            "em_analise": "Em análise",
+                                            "aberto": "Devolver",
+                                            "aceito": "Aceito"
+                                        }
+
+                                        STATUS_RELATO_LABEL_INV = {v: k for k, v in STATUS_RELATO_LABEL.items()}
+
+                                        usuario_admin = tipo_usuario == "admin"
+                                        usuario_equipe = tipo_usuario == "equipe"
+
+                                        if (usuario_admin or usuario_equipe) and status_atual_db == "em_analise":
+
+                                            status_relato_db = relato.get("status_relato", "em_analise")
+                                            status_relato_label = STATUS_RELATO_LABEL.get(status_relato_db, "Em análise")
+
+                                            status_key = f"status_relato_ui_{id_relato}"
+                                            devolutiva_key = f"devolutiva_{id_relato}"
+
+                                            if status_key not in st.session_state:
+                                                st.session_state[status_key] = status_relato_label
+
+                                            with st.container(horizontal=True, horizontal_alignment="right"):
+                                                novo_status_label = st.segmented_control(
+                                                    label="",
+                                                    options=["Em análise", "Devolver", "Aceito"],
+                                                    key=status_key
+                                                )
+
+                                            novo_status_db = STATUS_RELATO_LABEL_INV.get(novo_status_label)
+
+
+
+                                            # ==================================================
+                                            # CASO O AVALIADOR MARQUE O STATUS COMO "DEVOLVER"
+                                            # ==================================================
+                                            if novo_status_label == "Devolver":
+
+                                                # --------------------------------------------------
+                                                # Inicializa o session_state com a devolutiva salva no banco
+                                                # (necessário para pré-carregar o texto após recarregar a página)
+                                                # --------------------------------------------------
+                                                if devolutiva_key not in st.session_state:
+                                                    st.session_state[devolutiva_key] = relato.get("devolutiva", "")
+
+                                                # --------------------------------------------------
+                                                # Campo de texto para o avaliador escrever a devolutiva
+                                                # --------------------------------------------------
+                                                st.text_area(
+                                                    "Devolutiva:",
+                                                    key=devolutiva_key,
+                                                    placeholder="Explique o que precisa ser ajustado neste relato..."
+                                                )
+
+                                                # --------------------------------------------------
+                                                # Verifica se já existe algum texto na devolutiva
+                                                # (serve para mudar o rótulo do botão)
+                                                # --------------------------------------------------
+                                                tem_devolutiva = bool(st.session_state.get(devolutiva_key, "").strip())
+
+                                                # Define o texto do botão de acordo com a situação
+                                                label_botao = "Atualizar" if tem_devolutiva else "Salvar devolutiva"
+
+                                                # --------------------------------------------------
+                                                # Botão de salvar / atualizar devolutiva
+                                                # --------------------------------------------------
+                                                if st.button(
+                                                    label_botao,
+                                                    key=f"btn_salvar_devolutiva_{id_relato}",
+                                                    type="primary",
+                                                    icon=":material/save:"
+                                                ):
+                                                    # ----------------------------------------------
+                                                    # Atualiza o relato em memória
+                                                    # - status volta para "aberto"
+                                                    # - devolutiva é salva no objeto
+                                                    # ----------------------------------------------
+                                                    relato["status_relato"] = "aberto"
+                                                    relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
+
+                                                    # ----------------------------------------------
+                                                    # Persiste a alteração no MongoDB
+                                                    # (salva toda a estrutura de componentes)
+                                                    # ----------------------------------------------
+                                                    col_projetos.update_one(
+                                                        {"codigo": projeto["codigo"]},
+                                                        {
+                                                            "$set": {
+                                                                "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                            }
+                                                        }
+                                                    )
+
+                                                    # ----------------------------------------------
+                                                    # Limpa os estados da UI para evitar inconsistência
+                                                    # no próximo rerun
+                                                    # ----------------------------------------------
+                                                    st.session_state.pop(status_key, None)
+                                                    st.session_state.pop(devolutiva_key, None)
+
+                                                    # ----------------------------------------------
+                                                    # Força o rerun somente depois de salvar
+                                                    # (garante que o status e UI atualizem corretamente)
+                                                    # ----------------------------------------------
+                                                    st.rerun()
+
+
+                                            # # ======================================
+                                            # # CASO DEVOLVER → MOSTRA TEXTAREA
+                                            # # ======================================
+                                            # if novo_status_label == "Devolver":
+
+                                            #     # inicializa com valor do banco
+                                            #     if devolutiva_key not in st.session_state:
+                                            #         st.session_state[devolutiva_key] = relato.get("devolutiva", "")
+
+
+                                            #     st.text_area(
+                                            #         "Devolutiva para o beneficiário",
+                                            #         key=devolutiva_key,
+                                            #         placeholder="Explique o que precisa ser ajustado neste relato..."
+                                            #     )
+
+
+                                                # if st.button(
+                                                #     "Salvar devolutiva",
+                                                #     key=f"btn_salvar_devolutiva_{id_relato}",
+                                                #     type="primary",
+                                                #     icon=":material/save:"
+                                                # ):
+                                                #     # grava no objeto em memória
+                                                #     relato["status_relato"] = "aberto"
+                                                #     relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
+
+                                                #     # salva no Mongo
+                                                #     col_projetos.update_one(
+                                                #         {"codigo": projeto["codigo"]},
+                                                #         {
+                                                #             "$set": {
+                                                #                 "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                #             }
+                                                #         }
+                                                #     )
+
+                                                #     # limpa estado
+                                                #     st.session_state.pop(status_key, None)
+                                                #     st.session_state.pop(devolutiva_key, None)
+
+                                                #     st.rerun()
+
+                                            # ======================================
+                                            # OUTROS STATUS (Em análise / Aceito)
+                                            # ======================================
+                                            elif novo_status_db != status_relato_db:
+
+                                                relato["status_relato"] = novo_status_db
+
+                                                # se aceito, remove devolutiva antiga
+                                                if novo_status_db == "aceito":
+                                                    relato.pop("devolutiva", None)
+
+                                                col_projetos.update_one(
+                                                    {"codigo": projeto["codigo"]},
+                                                    {
+                                                        "$set": {
+                                                            "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                        }
+                                                    }
+                                                )
+
+                                                st.session_state.pop(status_key, None)
+                                                st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+                                        # # --------------------------------------------------
+                                        # # CONTROLE DE STATUS DO RELATO (ADMIN / EQUIPE)
+                                        # # --------------------------------------------------
+                                        # # Mapeamento entre valores salvos no banco e rótulos exibidos na UI
+                                        # STATUS_RELATO_LABEL = {
+                                        #     "em_analise": "Em análise",
+                                        #     "aberto": "Devolver",
+                                        #     "aceito": "Aceito"
+                                        # }
+
+
+                                        # # STATUS_RELATO_LABEL = {
+                                        # #     "aberto": "Aberto",
+                                        # #     "em_analise": "Em análise",
+                                        # #     "aceito": "Aceito"
+                                        # # }
+
+                                        # # Mapeamento inverso (UI → banco)
+                                        # STATUS_RELATO_LABEL_INV = {v: k for k, v in STATUS_RELATO_LABEL.items()}
+
+                                        # # Flags de permissão do usuário
+                                        # usuario_admin = tipo_usuario == "admin"
+                                        # usuario_equipe = tipo_usuario == "equipe"
+
+                                        # # --------------------------------------------------
+                                        # # STATUS ATUAL DO RELATO (apenas visualização)
+                                        # # --------------------------------------------------
+                                        # # status_atual_relato_db = relato.get("status_relato", "aberto")
+                                        # # st.write(status_atual_relato_db)
+
+                                        # # --------------------------------------------------
+                                        # # SEGMENTED CONTROL (somente admin/equipe e relatório em análise)
+                                        # # --------------------------------------------------
+                                        # if (
+                                        #     (usuario_admin or usuario_equipe)
+                                        #     and status_atual_db == "em_analise"
+                                        # ):
+
+                                        #     # Status atual do relato vindo do banco
+                                        #     status_relato_db = relato.get("status_relato", "aberto")
+
+                                        #     # Converte para rótulo da UI
+                                        #     status_relato_label = STATUS_RELATO_LABEL.get(status_relato_db, "Aberto")
+
+                                        #     # Chave única por relato (evita conflito entre containers)
+                                        #     status_key = f"status_relato_ui_{id_relato}"
+
+                                        #     # Inicializa o estado da UI apenas uma vez
+                                        #     if status_key not in st.session_state:
+                                        #         st.session_state[status_key] = status_relato_label
+
+                                        #     with st.container(horizontal=True, horizontal_alignment="right"):
+                                        #         # Widget de controle do status
+                                        #         novo_status_label = st.segmented_control(
+                                        #             label="",
+                                        #             options=["Em análise", "Devolver", "Aceito"],
+                                        #             # options=list(STATUS_RELATO_LABEL.values()),
+                                        #             key=status_key
+                                        #         )
+
+                                        #     # Converte o valor selecionado para o formato do banco
+                                        #     novo_status_db = STATUS_RELATO_LABEL_INV.get(novo_status_label)
+
+                                        #     # --------------------------------------------------
+                                        #     # ATUALIZAÇÃO NO BANCO (somente se mudou)
+                                        #     # --------------------------------------------------
+                                        #     if novo_status_db != status_relato_db:
+
+                                        #         # Atualiza o objeto em memória
+                                        #         relato["status_relato"] = novo_status_db
+
+                                        #         # Persiste no MongoDB
+                                        #         col_projetos.update_one(
+                                        #             {"codigo": projeto["codigo"]},
+                                        #             {
+                                        #                 "$set": {
+                                        #                     "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                        #                 }
+                                        #             }
+                                        #         )
+
+                                        #         # Remove o estado da UI para forçar sincronização no rerun
+                                        #         del st.session_state[status_key]
+
+                                        #         # Marca que é necessário rerun imediato
+                                        #         st.session_state["rerun_imediato"] = True
+
+                                        #     # --------------------------------------------------
+                                        #     # RERUN IMEDIATO (garante atualização visual no 1º clique)
+                                        #     # --------------------------------------------------
+                                        #     if st.session_state.get("rerun_imediato"):
+                                        #         st.session_state.pop("rerun_imediato")
+                                        #         st.rerun()
+
+
+
+                                        # ==================================================
+                                        # MOSTRA DEVOLUTIVA SE EXISTIR (em_analise ou aberto)
+                                        # ==================================================
+
+                                        status_relato_db = relato.get("status_relato")
+                                        devolutiva = relato.get("devolutiva")
+
+                                        if status_relato_db in ["em_analise", "aberto"] and devolutiva:
+
+                                            # garante que quebras de linha fiquem dentro do blockquote
+                                            texto = devolutiva.replace("\n", "\n> ")
+
+                                            st.markdown(
+                                                f"""
+                                        > **Devolutiva:**  
+                                        > {texto}
+                                                """
+                                            )
+
+
+
+
+                                        # --------------------------------------------------
+                                        # BOTÃO EDITAR (somente se o relato estiver aberto)
+                                        # --------------------------------------------------
+                                        if (
+                                            pode_editar_relatorio
+                                            and relato.get("status_relato") == "aberto"
+                                        ):
+                                            with st.container(horizontal=True, horizontal_alignment="right"):
                                                 if st.button(
                                                     "Editar",
                                                     key=f"btn_edit_{id_relato}",
@@ -1293,6 +1735,12 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                 ):
                                                     st.session_state["relato_editando_id"] = id_relato
                                                     st.rerun()
+
+
+
+
+
+
 
 
 
