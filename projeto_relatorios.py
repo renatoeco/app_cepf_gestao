@@ -758,12 +758,51 @@ def salvar_relato():
         if f.get("arquivo") is not None
     ]
 
+
+
     if fotos_validas:
-        pasta_fotos_id = obter_ou_criar_pasta(
-            servico,
-            "fotos",
-            pasta_relato_id
+
+        # --------------------------------------------------
+        # CRIA PASTA FOTOS (SE NÃO EXISTIR)
+        # --------------------------------------------------
+        # Verifica se já existe antes
+        consulta = (
+            f"name='fotos' and "
+            f"'{pasta_relato_id}' in parents and "
+            f"mimeType='application/vnd.google-apps.folder' and trashed=false"
         )
+
+        resultado = servico.files().list(
+            q=consulta,
+            fields="files(id)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+
+        arquivos = resultado.get("files", [])
+
+        if arquivos:
+            pasta_fotos_id = arquivos[0]["id"]
+        else:
+            # Cria pasta
+            pasta_fotos_id = obter_ou_criar_pasta(
+                servico,
+                "fotos",
+                pasta_relato_id
+            )
+
+            # DEFINE PERMISSÃO PÚBLICA (SÓ NA CRIAÇÃO)
+            garantir_permissao_publica_leitura(servico, pasta_fotos_id)
+
+
+
+
+    # if fotos_validas:
+    #     pasta_fotos_id = obter_ou_criar_pasta(
+    #         servico,
+    #         "fotos",
+    #         pasta_relato_id
+    #     )
 
         for foto in fotos_validas:
             arq = foto["arquivo"]
@@ -840,7 +879,26 @@ def salvar_relato():
     time.sleep(3)
     st.rerun()
 
+# Função auxiliar para o salvar_relato, que dá permissão de leitura pública para a pasta de fotos no ato da criação da pasta no drivce
+def garantir_permissao_publica_leitura(servico, pasta_id):
+    """
+    Define permissão:
+    Qualquer pessoa com o link → Leitor
+    (somente se ainda não existir)
+    """
 
+    try:
+        servico.permissions().create(
+            fileId=pasta_id,
+            body={
+                "type": "anyone",
+                "role": "reader"
+            },
+            supportsAllDrives=True
+        ).execute()
+    except Exception:
+        # Silencioso: se já existir ou falhar, não quebra o fluxo
+        pass
 
 
 
@@ -851,13 +909,300 @@ def salvar_relato():
 
 
 
+# import streamlit as st
+
+# @st.dialog("Relatar atividade", width="large")
+# def dialog_relatos():
+#     # 1. INICIALIZAÇÃO OBRIGATÓRIA (Não reseta o que já existe)
+#     if "fotos_relato" not in st.session_state:
+#         st.session_state["fotos_relato"] = []
+#     if "fotos_a_remover" not in st.session_state:
+#         st.session_state["fotos_a_remover"] = []
+    
+#     projeto = st.session_state.get("projeto_mongo")
+#     if not projeto:
+#         st.error("Projeto não encontrado.")
+#         return
+
+#     relato_em_edicao = st.session_state.get("relato_em_edicao")
+
+#     # ==================================================
+#     # 2. SELEÇÃO DE ATIVIDADE (Ajustado para capturar sempre)
+#     # ==================================================
+#     if not relato_em_edicao:
+#         atividades = []
+#         for comp in projeto.get("plano_trabalho", {}).get("componentes", []):
+#             for ent in comp.get("entregas", []):
+#                 for atv in ent.get("atividades", []):
+#                     atividades.append(atv)
+
+#         # FUNÇÃO DE SUPORTE: Localiza o index da atividade já selecionada
+#         def get_atv_index():
+#             sel = st.session_state.get("atividade_selecionada")
+#             if sel and sel in atividades:
+#                 return atividades.index(sel) + 1
+#             return 0
+
+#         # O SELECTBOX ATUALIZA A KEY "atividade_selecionada" DIRETAMENTE
+#         st.selectbox(
+#             "Selecione a atividade",
+#             options=[None] + atividades,
+#             format_func=lambda x: "— selecione —" if x is None else x["atividade"],
+#             index=get_atv_index(),
+#             key="atividade_selecionada", # Salvamos direto na chave que o código usa
+#         )
+
+#         # VALIDAÇÃO: Se a chave ainda for None, paramos aqui
+#         if st.session_state.get("atividade_selecionada") is None:
+#             st.warning("⚠️ Selecione uma atividade na lista acima.")
+#             return
+#     else:
+#         # MODO EDIÇÃO: Forçamos a atividade que veio do banco
+#         if "atividade_selecionada" not in st.session_state:
+#              st.session_state["atividade_selecionada"] = relato_em_edicao.get("atividade_ref")
+        
+#         atv_nome = st.session_state["atividade_selecionada"].get("atividade", "Atividade")
+#         st.info(f"Editando relato da atividade: **{atv_nome}**")
+
+#     st.divider()
+
+#     # ==================================================
+#     # 3. RESTANTE DO FORMULÁRIO (Só renderiza após a validação acima)
+#     # ==================================================
+#     # PRÉ-CARREGAMENTO DE CAMPOS NA EDIÇÃO
+#     if relato_em_edicao and not st.session_state.get("relato_edicao_inicializado"):
+#         st.session_state["campo_relato"] = relato_em_edicao.get("relato", "")
+#         st.session_state["campo_quando"] = relato_em_edicao.get("quando", "")
+#         st.session_state["campo_onde"] = relato_em_edicao.get("onde", "")
+#         st.session_state["relato_edicao_inicializado"] = True
+
+#     st.text_area("Relato", placeholder="Descreva o que foi feito", key="campo_relato")
+
+#     col_q, col_o = st.columns(2)
+#     with col_q:
+#         st.text_input("Quando?", key="campo_quando")
+#     with col_o:
+#         st.text_input("Onde?", key="campo_onde")
+
+#     st.divider()
+
+#     # ==================================================
+#     # 4. ANEXOS E NOVAS FOTOS
+#     # ==================================================
+#     st.markdown("### Anexos")
+#     st.file_uploader("Arquivos", accept_multiple_files=True, key="campo_anexos")
+
+#     st.subheader("Novas Fotografias")
+#     if st.button("Adicionar campo de foto", icon=":material/add_a_photo:"):
+#         st.session_state["fotos_relato"].append({"arquivo": None, "descricao": "", "fotografo": ""})
+
+#     for i, foto_item in enumerate(st.session_state["fotos_relato"]):
+#         with st.container(border=True):
+#             st.session_state["fotos_relato"][i]["arquivo"] = st.file_uploader(f"Foto {i+1}", type=["jpg","png"], key=f"f_arq_{i}")
+#             c1, c2 = st.columns([0.6, 0.4])
+#             st.session_state["fotos_relato"][i]["descricao"] = c1.text_input("Descrição", key=f"f_desc_{i}")
+#             st.session_state["fotos_relato"][i]["fotografo"] = c2.text_input("Fotógrafo(a)", key=f"f_autor_{i}")
+
+#     if st.button("Salvar relato", type="primary", use_container_width=True):
+#         salvar_relato()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @st.dialog("Relatar atividade", width="large")
+# def dialog_relatos():
+#     # 1. Validações Iniciais
+#     projeto = st.session_state.get("projeto_mongo")
+#     if not projeto:
+#         st.error("Projeto não encontrado.")
+#         return
+
+#     relato_em_edicao = st.session_state.get("relato_em_edicao")
+
+#     # ==================================================
+#     # 0. PRÉ-CARREGAMENTO (LOGICA DE EDIÇÃO)
+#     # ==================================================
+#     if relato_em_edicao and not st.session_state.get("relato_edicao_inicializado"):
+#         # Injetamos os valores do banco diretamente nas chaves dos widgets
+#         st.session_state["campo_relato"] = relato_em_edicao.get("relato", "")
+#         st.session_state["campo_quando"] = relato_em_edicao.get("quando", "")
+#         st.session_state["campo_onde"] = relato_em_edicao.get("onde", "")
+        
+#         # Inicializamos a lista de controle de remoção de fotos e novas fotos
+#         st.session_state["fotos_a_remover"] = []
+#         st.session_state["fotos_relato"] = []
+        
+#         # Travamos a inicialização para permitir que o usuário edite sem ser sobrescrito
+#         st.session_state["relato_edicao_inicializado"] = True
+
+#     # ==================================================
+#     # 1. SELEÇÃO DE ATIVIDADE
+#     # ==================================================
+#     if not relato_em_edicao:
+#         # MODO CRIAÇÃO → usuário escolhe a atividade
+#         atividades = []
+#         for componente in projeto["plano_trabalho"]["componentes"]:
+#             for entrega in componente["entregas"]:
+#                 for atividade in entrega["atividades"]:
+#                     atividades.append(atividade)
+
+#         if not atividades:
+#             st.info("Nenhuma atividade cadastrada.")
+#             return
+
+#         atividade_selecionada = st.selectbox(
+#             "Selecione a atividade",
+#             options=[None] + atividades,
+#             format_func=lambda x: "— selecione —" if x is None else x["atividade"],
+#             key="atividade_select_dialog"
+#         )
+
+#         if atividade_selecionada is None:
+#             st.info("Selecione uma atividade para continuar.")
+#             return
+
+#         st.session_state["atividade_selecionada"] = atividade_selecionada
+#     else:
+#         # MODO EDIÇÃO → Exibe apenas qual atividade está sendo editada
+#         atv_nome = st.session_state.get("atividade_selecionada", {}).get("atividade", "Atividade")
+#         st.info(f"Editando relato da atividade: **{atv_nome}**")
+
+#     st.divider()
+
+#     # ==================================================
+#     # 2. CAMPOS PRINCIPAIS
+#     # ==================================================
+#     st.text_area(
+#         "Relato",
+#         placeholder="Descreva o que foi feito",
+#         key="campo_relato" # Já preenchido pelo session_state no passo 0
+#     )
+
+#     col_q, col_o = st.columns(2)
+#     with col_q:
+#         st.text_input("Quando?", key="campo_quando")
+#     with col_o:
+#         st.text_input("Onde?", key="campo_onde")
+
+#     st.divider()
+
+#     # ==================================================
+#     # 3. ANEXOS (UPLOAD E EXISTENTES)
+#     # ==================================================
+#     st.markdown("### Anexos")
+    
+#     # Exibir anexos que já estão no Drive (apenas visualização)
+#     if relato_em_edicao and "anexos" in relato_em_edicao:
+#         anexos_existentes = relato_em_edicao.get("anexos", [])
+#         if anexos_existentes:
+#             with st.expander("Ver anexos já enviados", expanded=False):
+#                 for a in anexos_existentes:
+#                     link = gerar_link_drive(a.get("id_arquivo"))
+#                     st.markdown(f"📎 [{a.get('nome_arquivo','arquivo')}]({link})")
+
+#     st.file_uploader(
+#         "Adicionar novos anexos (PDF, Word, Excel, etc)",
+#         type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
+#         accept_multiple_files=True,
+#         key="campo_anexos"
+#     )
+
+#     st.divider()
+
+#     # ==================================================
+#     # 4. FOTOGRAFIAS EXISTENTES (COM OPÇÃO DE REMOVER REGISTRO)
+#     # ==================================================
+#     if relato_em_edicao and "fotos" in relato_em_edicao:
+#         fotos_existentes = relato_em_edicao.get("fotos", [])
+#         if fotos_existentes:
+#             st.subheader("Fotografias já enviadas")
+#             st.caption("Marque o checkbox para remover o registro da foto ao salvar.")
+
+#             # Inicializa lista de remoção se não existir por segurança
+#             if "fotos_a_remover" not in st.session_state:
+#                 st.session_state["fotos_a_remover"] = []
+
+#             for f in fotos_existentes:
+#                 id_arq = f.get("id_arquivo")
+#                 if not id_arq: continue
+                
+#                 with st.container(border=True):
+#                     c_info, c_del = st.columns([0.85, 0.15])
+                    
+#                     nome = f.get("nome_arquivo", "foto")
+#                     link = gerar_link_drive(id_arq)
+                    
+#                     c_info.markdown(f"🖼️ **[{nome}]({link})**")
+#                     if f.get("descricao"): c_info.caption(f.get("descricao"))
+                    
+#                     # Logica de marcação para remoção
+#                     remover = c_del.checkbox("🗑️", key=f"del_foto_{id_arq}", help="Remover registro")
+#                     if remover:
+#                         if id_arq not in st.session_state["fotos_a_remover"]:
+#                             st.session_state["fotos_a_remover"].append(id_arq)
+#                     else:
+#                         if id_arq in st.session_state["fotos_a_remover"]:
+#                             st.session_state["fotos_a_remover"].remove(id_arq)
+
+#     # ==================================================
+#     # 5. NOVAS FOTOGRAFIAS (UPLOAD)
+#     # ==================================================
+#     st.subheader("Adicionar novas fotos")
+
+#     if st.button("Adicionar campo de fotografia", icon=":material/add_a_photo:"):
+#         st.session_state["fotos_relato"].append({
+#             "arquivo": None, "descricao": "", "fotografo": ""
+#         })
+
+#     for i, foto in enumerate(st.session_state["fotos_relato"]):
+#         with st.container(border=True):
+#             foto["arquivo"] = st.file_uploader(f"Arquivo da foto {i+1}", type=["jpg", "jpeg", "png"], key=f"nova_foto_{i}")
+#             foto["descricao"] = st.text_input("Descrição", key=f"nova_desc_{i}")
+#             foto["fotografo"] = st.text_input("Fotógrafo(a)", key=f"nova_autor_{i}")
+
+#     st.divider()
+
+#     # ==================================================
+#     # 6. AÇÃO FINAL
+#     # ==================================================
+#     if st.button("Salvar relato", type="primary", icon=":material/save:", width="stretch"):
+#         # A função salvar_relato deve ler st.session_state["fotos_a_remover"]
+#         # para filtrar a lista original de fotos antes de fazer o update no Mongo.
+#         salvar_relato()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 @st.dialog("Relatar atividade", width="large")
 def dialog_relatos():
-    # 1. Validações Iniciais
+
     projeto = st.session_state.get("projeto_mongo")
     if not projeto:
         st.error("Projeto não encontrado.")
@@ -866,27 +1211,27 @@ def dialog_relatos():
     relato_em_edicao = st.session_state.get("relato_em_edicao")
 
     # ==================================================
-    # 0. PRÉ-CARREGAMENTO (LOGICA DE EDIÇÃO)
+    # 0. PRÉ-CARREGAMENTO (ANTES DE QUALQUER WIDGET)
     # ==================================================
     if relato_em_edicao and not st.session_state.get("relato_edicao_inicializado"):
-        # Injetamos os valores do banco diretamente nas chaves dos widgets
+
+        # Campos de texto
         st.session_state["campo_relato"] = relato_em_edicao.get("relato", "")
         st.session_state["campo_quando"] = relato_em_edicao.get("quando", "")
         st.session_state["campo_onde"] = relato_em_edicao.get("onde", "")
-        
-        # Inicializamos a lista de controle de remoção de fotos e novas fotos
-        st.session_state["fotos_a_remover"] = []
+
+        # Inicializa estrutura de novas fotos (upload)
         st.session_state["fotos_relato"] = []
-        
-        # Travamos a inicialização para permitir que o usuário edite sem ser sobrescrito
+
         st.session_state["relato_edicao_inicializado"] = True
 
     # ==================================================
     # 1. SELEÇÃO DE ATIVIDADE
     # ==================================================
     if not relato_em_edicao:
-        # MODO CRIAÇÃO → usuário escolhe a atividade
+        # MODO CRIAÇÃO
         atividades = []
+
         for componente in projeto["plano_trabalho"]["componentes"]:
             for entrega in componente["entregas"]:
                 for atividade in entrega["atividades"]:
@@ -894,6 +1239,7 @@ def dialog_relatos():
 
         if not atividades:
             st.info("Nenhuma atividade cadastrada.")
+            time.sleep(3)
             return
 
         atividade_selecionada = st.selectbox(
@@ -908,10 +1254,11 @@ def dialog_relatos():
             return
 
         st.session_state["atividade_selecionada"] = atividade_selecionada
+        st.session_state["atividade_selecionada_drive"] = atividade_selecionada
+
     else:
-        # MODO EDIÇÃO → Exibe apenas qual atividade está sendo editada
-        atv_nome = st.session_state.get("atividade_selecionada", {}).get("atividade", "Atividade")
-        st.info(f"Editando relato da atividade: **{atv_nome}**")
+        # MODO EDIÇÃO — atividade já definida
+        atividade_selecionada = st.session_state.get("atividade_selecionada")
 
     st.divider()
 
@@ -921,382 +1268,125 @@ def dialog_relatos():
     st.text_area(
         "Relato",
         placeholder="Descreva o que foi feito",
-        key="campo_relato" # Já preenchido pelo session_state no passo 0
+        key="campo_relato"
     )
 
-    col_q, col_o = st.columns(2)
-    with col_q:
-        st.text_input("Quando?", key="campo_quando")
-    with col_o:
-        st.text_input("Onde?", key="campo_onde")
+    st.text_input(
+        "Quando?",
+        key="campo_quando"
+    )
+
+    st.text_input(
+        "Onde?",
+        key="campo_onde"
+    )
 
     st.divider()
 
     # ==================================================
-    # 3. ANEXOS (UPLOAD E EXISTENTES)
+    # 3. ANEXOS (INPUT ORIGINAL)
     # ==================================================
-    st.markdown("### Anexos")
-    
-    # Exibir anexos que já estão no Drive (apenas visualização)
-    if relato_em_edicao and "anexos" in relato_em_edicao:
-        anexos_existentes = relato_em_edicao.get("anexos", [])
-        if anexos_existentes:
-            with st.expander("Ver anexos já enviados", expanded=False):
-                for a in anexos_existentes:
-                    link = gerar_link_drive(a.get("id_arquivo"))
-                    st.markdown(f"📎 [{a.get('nome_arquivo','arquivo')}]({link})")
+    st.markdown("Anexos")
 
     st.file_uploader(
-        "Adicionar novos anexos (PDF, Word, Excel, etc)",
+        "Arquivos",
         type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
         accept_multiple_files=True,
         key="campo_anexos"
     )
 
+    # Anexos já existentes (somente visualização)
+    if relato_em_edicao and "anexos" in relato_em_edicao:
+        anexos_existentes = relato_em_edicao.get("anexos", [])
+        if anexos_existentes:
+            st.markdown("**Anexos já enviados:**")
+            for a in anexos_existentes:
+                id_arquivo = a.get("id_arquivo")
+                if not id_arquivo:
+                    continue
+                link = gerar_link_drive(id_arquivo)
+                st.markdown(
+                    f"- [{a.get('nome_arquivo','arquivo')}]({link})",
+                    unsafe_allow_html=True
+                )
+
     st.divider()
 
     # ==================================================
-    # 4. FOTOGRAFIAS EXISTENTES (COM OPÇÃO DE REMOVER REGISTRO)
+    # 4. FOTOGRAFIAS (INPUT ORIGINAL)
     # ==================================================
-    if relato_em_edicao and "fotos" in relato_em_edicao:
-        fotos_existentes = relato_em_edicao.get("fotos", [])
-        if fotos_existentes:
-            st.subheader("Fotografias já enviadas")
-            st.caption("Marque o checkbox para remover o registro da foto ao salvar.")
+    st.subheader("Fotografias")
 
-            # Inicializa lista de remoção se não existir por segurança
-            if "fotos_a_remover" not in st.session_state:
-                st.session_state["fotos_a_remover"] = []
+    if "fotos_relato" not in st.session_state:
+        st.session_state["fotos_relato"] = []
 
-            for f in fotos_existentes:
-                id_arq = f.get("id_arquivo")
-                if not id_arq: continue
-                
-                with st.container(border=True):
-                    c_info, c_del = st.columns([0.85, 0.15])
-                    
-                    nome = f.get("nome_arquivo", "foto")
-                    link = gerar_link_drive(id_arq)
-                    
-                    c_info.markdown(f"🖼️ **[{nome}]({link})**")
-                    if f.get("descricao"): c_info.caption(f.get("descricao"))
-                    
-                    # Logica de marcação para remoção
-                    remover = c_del.checkbox("🗑️", key=f"del_foto_{id_arq}", help="Remover registro")
-                    if remover:
-                        if id_arq not in st.session_state["fotos_a_remover"]:
-                            st.session_state["fotos_a_remover"].append(id_arq)
-                    else:
-                        if id_arq in st.session_state["fotos_a_remover"]:
-                            st.session_state["fotos_a_remover"].remove(id_arq)
-
-    # ==================================================
-    # 5. NOVAS FOTOGRAFIAS (UPLOAD)
-    # ==================================================
-    st.subheader("Adicionar novas fotos")
-
-    if st.button("Adicionar campo de fotografia", icon=":material/add_a_photo:"):
+    if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
         st.session_state["fotos_relato"].append({
-            "arquivo": None, "descricao": "", "fotografo": ""
+            "arquivo": None,
+            "descricao": "",
+            "fotografo": ""
         })
 
     for i, foto in enumerate(st.session_state["fotos_relato"]):
         with st.container(border=True):
-            foto["arquivo"] = st.file_uploader(f"Arquivo da foto {i+1}", type=["jpg", "jpeg", "png"], key=f"nova_foto_{i}")
-            foto["descricao"] = st.text_input("Descrição", key=f"nova_desc_{i}")
-            foto["fotografo"] = st.text_input("Fotógrafo(a)", key=f"nova_autor_{i}")
+
+            foto["arquivo"] = st.file_uploader(
+                "Selecione a foto",
+                type=["jpg", "jpeg", "png"],
+                key=f"foto_arquivo_{i}"
+            )
+
+            foto["descricao"] = st.text_input(
+                "Descrição da foto",
+                key=f"foto_descricao_{i}"
+            )
+
+            foto["fotografo"] = st.text_input(
+                "Nome do(a) fotógrafo(a)",
+                key=f"foto_autor_{i}"
+            )
+
+    # Fotografias já existentes (somente visualização)
+    if relato_em_edicao and "fotos" in relato_em_edicao:
+
+        fotos_existentes = relato_em_edicao.get("fotos", [])
+
+        if fotos_existentes:
+            st.markdown("**Fotografias já enviadas:**")
+
+            for f in fotos_existentes:
+                id_arquivo = f.get("id_arquivo")
+                if not id_arquivo:
+                    continue
+
+                link = gerar_link_drive(id_arquivo)
+
+                nome = f.get("nome_arquivo", "")
+                descricao = f.get("descricao", "")
+                fotografo = f.get("fotografo", "")
+
+                linha = f"[{nome}]({link})"
+                if descricao:
+                    linha += f" | {descricao}"
+                if fotografo:
+                    linha += f" | {fotografo}"
+
+                st.markdown(f"- {linha}", unsafe_allow_html=True)
 
     st.divider()
 
     # ==================================================
-    # 6. AÇÃO FINAL
+    # 5. AÇÃO FINAL
     # ==================================================
-    if st.button("Salvar relato", type="primary", icon=":material/save:", width="stretch"):
-        # A função salvar_relato deve ler st.session_state["fotos_a_remover"]
-        # para filtrar a lista original de fotos antes de fazer o update no Mongo.
+    if st.button(
+        "Salvar relato",
+        type="primary",
+        icon=":material/save:",
+        width="stretch"
+    ):
         salvar_relato()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# @st.dialog("Relatar atividade", width="large")
-# def dialog_relatos():
-
-#     projeto = st.session_state.get("projeto_mongo")
-#     if not projeto:
-#         st.error("Projeto não encontrado.")
-#         return
-
-#     relato_em_edicao = st.session_state.get("relato_em_edicao")
-
-#     # ==================================================
-#     # 0. PRÉ-CARREGAMENTO (ANTES DE QUALQUER WIDGET)
-#     # ==================================================
-#     if relato_em_edicao and not st.session_state.get("relato_edicao_inicializado"):
-
-#         # Campos de texto
-#         st.session_state["campo_relato"] = relato_em_edicao.get("relato", "")
-#         st.session_state["campo_quando"] = relato_em_edicao.get("quando", "")
-#         st.session_state["campo_onde"] = relato_em_edicao.get("onde", "")
-
-#         # Inicializa estrutura de novas fotos (upload)
-#         st.session_state["fotos_relato"] = []
-
-#         st.session_state["relato_edicao_inicializado"] = True
-
-#     # ==================================================
-#     # 1. SELEÇÃO DE ATIVIDADE
-#     # ==================================================
-#     if not relato_em_edicao:
-#         # MODO CRIAÇÃO
-#         atividades = []
-
-#         for componente in projeto["plano_trabalho"]["componentes"]:
-#             for entrega in componente["entregas"]:
-#                 for atividade in entrega["atividades"]:
-#                     atividades.append(atividade)
-
-#         if not atividades:
-#             st.info("Nenhuma atividade cadastrada.")
-#             time.sleep(3)
-#             return
-
-#         atividade_selecionada = st.selectbox(
-#             "Selecione a atividade",
-#             options=[None] + atividades,
-#             format_func=lambda x: "— selecione —" if x is None else x["atividade"],
-#             key="atividade_select_dialog"
-#         )
-
-#         if atividade_selecionada is None:
-#             st.info("Selecione uma atividade para continuar.")
-#             return
-
-#         st.session_state["atividade_selecionada"] = atividade_selecionada
-#         st.session_state["atividade_selecionada_drive"] = atividade_selecionada
-
-#     else:
-#         # MODO EDIÇÃO — atividade já definida
-#         atividade_selecionada = st.session_state.get("atividade_selecionada")
-
-#     st.divider()
-
-#     # ==================================================
-#     # 2. CAMPOS PRINCIPAIS
-#     # ==================================================
-#     st.text_area(
-#         "Relato",
-#         placeholder="Descreva o que foi feito",
-#         key="campo_relato"
-#     )
-
-#     st.text_input(
-#         "Quando?",
-#         key="campo_quando"
-#     )
-
-#     st.text_input(
-#         "Onde?",
-#         key="campo_onde"
-#     )
-
-#     st.divider()
-
-#     # ==================================================
-#     # 3. ANEXOS (INPUT ORIGINAL)
-#     # ==================================================
-#     st.markdown("Anexos")
-
-#     st.file_uploader(
-#         "Arquivos",
-#         type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
-#         accept_multiple_files=True,
-#         key="campo_anexos"
-#     )
-
-#     # Anexos já existentes (somente visualização)
-#     if relato_em_edicao and "anexos" in relato_em_edicao:
-#         anexos_existentes = relato_em_edicao.get("anexos", [])
-#         if anexos_existentes:
-#             st.markdown("**Anexos já enviados:**")
-#             for a in anexos_existentes:
-#                 id_arquivo = a.get("id_arquivo")
-#                 if not id_arquivo:
-#                     continue
-#                 link = gerar_link_drive(id_arquivo)
-#                 st.markdown(
-#                     f"- [{a.get('nome_arquivo','arquivo')}]({link})",
-#                     unsafe_allow_html=True
-#                 )
-
-#     st.divider()
-
-#     # ==================================================
-#     # 4. FOTOGRAFIAS (INPUT ORIGINAL)
-#     # ==================================================
-#     st.subheader("Fotografias")
-
-#     if "fotos_relato" not in st.session_state:
-#         st.session_state["fotos_relato"] = []
-
-#     if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
-#         st.session_state["fotos_relato"].append({
-#             "arquivo": None,
-#             "descricao": "",
-#             "fotografo": ""
-#         })
-
-#     for i, foto in enumerate(st.session_state["fotos_relato"]):
-#         with st.container(border=True):
-
-#             foto["arquivo"] = st.file_uploader(
-#                 "Selecione a foto",
-#                 type=["jpg", "jpeg", "png"],
-#                 key=f"foto_arquivo_{i}"
-#             )
-
-#             foto["descricao"] = st.text_input(
-#                 "Descrição da foto",
-#                 key=f"foto_descricao_{i}"
-#             )
-
-#             foto["fotografo"] = st.text_input(
-#                 "Nome do(a) fotógrafo(a)",
-#                 key=f"foto_autor_{i}"
-#             )
-
-#     # Fotografias já existentes (somente visualização)
-#     if relato_em_edicao and "fotos" in relato_em_edicao:
-
-#         fotos_existentes = relato_em_edicao.get("fotos", [])
-
-#         if fotos_existentes:
-#             st.markdown("**Fotografias já enviadas:**")
-
-#             for f in fotos_existentes:
-#                 id_arquivo = f.get("id_arquivo")
-#                 if not id_arquivo:
-#                     continue
-
-#                 link = gerar_link_drive(id_arquivo)
-
-#                 nome = f.get("nome_arquivo", "")
-#                 descricao = f.get("descricao", "")
-#                 fotografo = f.get("fotografo", "")
-
-#                 linha = f"[{nome}]({link})"
-#                 if descricao:
-#                     linha += f" | {descricao}"
-#                 if fotografo:
-#                     linha += f" | {fotografo}"
-
-#                 st.markdown(f"- {linha}", unsafe_allow_html=True)
-
-#     st.divider()
-
-#     # ==================================================
-#     # 5. AÇÃO FINAL
-#     # ==================================================
-#     if st.button(
-#         "Salvar relato",
-#         type="primary",
-#         icon=":material/save:",
-#         width="stretch"
-#     ):
-#         salvar_relato()
-
-
-
-
-
-
-
-
-
-# @st.dialog("Relatar atividade", width="large")
-# def dialog_relatos():
-#     projeto = st.session_state.get("projeto_mongo")
-#     if not projeto:
-#         st.error("Projeto não encontrado.")
-#         return
-
-#     relato_em_edicao = st.session_state.get("relato_em_edicao")
-
-#     # ==================================================
-#     # 0. PRÉ-CARREGAMENTO (O SEGREDO DO PRÉ-PREENCHIMENTO)
-#     # ==================================================
-#     if relato_em_edicao and not st.session_state.get("relato_edicao_inicializado"):
-#         # Injetamos os valores do banco nas chaves dos widgets
-#         st.session_state["campo_relato"] = relato_em_edicao.get("relato", "")
-#         st.session_state["campo_quando"] = relato_em_edicao.get("quando", "")
-#         st.session_state["campo_onde"] = relato_em_edicao.get("onde", "")
-        
-#         # Inicializa lista de novas fotos
-#         st.session_state["fotos_relato"] = []
-#         # Marca como inicializado para não sobrescrever o que o usuário digitar depois
-#         st.session_state["relato_edicao_inicializado"] = True
-
-#     # ==================================================
-#     # 1. SELEÇÃO DE ATIVIDADE
-#     # ==================================================
-#     if not relato_em_edicao:
-#         atividades = []
-#         for componente in projeto["plano_trabalho"]["componentes"]:
-#             for entrega in componente["entregas"]:
-#                 for atividade in entrega["atividades"]:
-#                     atividades.append(atividade)
-
-#         if not atividades:
-#             st.info("Nenhuma atividade cadastrada.")
-#             return
-
-#         atividade_selecionada = st.selectbox(
-#             "Selecione a atividade",
-#             options=[None] + atividades,
-#             format_func=lambda x: "— selecione —" if x is None else x["atividade"],
-#             key="atividade_select_dialog"
-#         )
-
-#         if atividade_selecionada is None:
-#             st.info("Selecione uma atividade para continuar.")
-#             return
-
-#         st.session_state["atividade_selecionada"] = atividade_selecionada
-#     else:
-#         # Modo Edição: Mostra apenas o nome da atividade (não editável)
-#         st.markdown(f"**Atividade:** {st.session_state.get('atividade_selecionada', {}).get('atividade')}")
-
-#     st.divider()
-
-#     # ==================================================
-#     # 2. CAMPOS PRINCIPAIS (Os valores virão do session_state automaticamente)
-#     # ==================================================
-#     st.text_area(
-#         "Relato",
-#         placeholder="Descreva o que foi feito",
-#         key="campo_relato" # O Streamlit busca o valor em st.session_state["campo_relato"]
-#     )
-
-#     st.text_input("Quando?", key="campo_quando")
-#     st.text_input("Onde?", key="campo_onde")
-
-#     st.divider()
-    
-#     # ... (Restante da sua lógica de Anexos e Fotos igual ao original) ...
-
-#     if st.button("Salvar relato", type="primary", icon=":material/save:", width="stretch"):
-#         salvar_relato() # Certifique-se que essa função limpa o estado ao terminar
 
 
 

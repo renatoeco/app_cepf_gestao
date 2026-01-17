@@ -242,7 +242,7 @@ with st.container(border=False, horizontal=True, width="stretch"):
                 st.link_button(
                     "Ver foto",
                     urls["drive"],
-                    type="secondary",
+                    type="tertiary",
                     icon=":material/open_in_new:"
                 )
 
