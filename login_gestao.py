@@ -483,7 +483,7 @@ else:
             st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/payments:"),
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
             st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
-            st.Page("fotos.py", title="Fotos", icon=":material/image:"),
+            st.Page("projeto_fotos.py", title="Fotos", icon=":material/image:"),
         ],
 
 
