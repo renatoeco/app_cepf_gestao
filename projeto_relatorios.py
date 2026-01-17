@@ -1187,7 +1187,8 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                             "Relatar atividade",
                             type="primary",
                             key=f"btn_relatar_{idx}",
-                            icon=":material/edit:"
+                            icon=":material/edit:",
+                            width=250
                         ):
                             # Limpa qualquer resíduo antigo de formulário
                             for chave in [
@@ -1203,21 +1204,23 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                             dialog_relatos()
 
+
                 # --------------------------------------------------
                 # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
                 # AGRUPADOS POR ATIVIDADE
                 # --------------------------------------------------
+
+                if "relato_editando_id" not in st.session_state:
+                    st.session_state["relato_editando_id"] = None
+
                 tem_relato = False
 
                 for componente in projeto["plano_trabalho"]["componentes"]:
                     for entrega in componente["entregas"]:
                         for atividade in entrega["atividades"]:
 
-                            relatos = atividade.get("relatos", [])
-
-                            # Filtra apenas relatos do relatório atual
                             relatos = [
-                                r for r in relatos
+                                r for r in atividade.get("relatos", [])
                                 if r.get("relatorio_numero") == relatorio_numero
                             ]
 
@@ -1226,215 +1229,338 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                             tem_relato = True
 
-                            st.write('')
+                            st.write("")
                             st.markdown(f"#### {atividade['atividade']}")
 
                             for relato in relatos:
 
+                                id_relato = relato["id_relato"]
+                                editando = st.session_state["relato_editando_id"] == id_relato
+
                                 with st.container(border=True):
 
-                                    # ???????????????????????
-                                    st.write(f":material/star: {relato.get("status_relato")}")
+                                    # ==================================================
+                                    # MODO VISUALIZAÇÃO
+                                    # ==================================================
+                                    if not editando:
 
-                                    # Texto do relato
-                                    st.write(
-                                        f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}"
-                                    )
+                                        st.write(relato.get("status_relato"))
 
-                                    col1, col2 = st.columns([2, 3])
+                                        st.write(
+                                            f"**{id_relato.upper()}:** {relato.get('relato')}"
+                                        )
 
-                                    # Quando
-                                    col1.write(f"**Quando:** {relato.get('quando')}")
+                                        col1, col2 = st.columns([2, 3])
+                                        col1.write(f"**Quando:** {relato.get('quando')}")
+                                        col2.write(f"**Onde:** {relato.get('onde')}")
 
-                                    # Onde
-                                    col2.write(f"**Onde:** {relato.get('onde')}")
+                                        # Anexos
+                                        if relato.get("anexos"):
+                                            with col1:
+                                                c1, c2 = st.columns([1, 5])
+                                                c1.write("**Anexos:**")
+                                                for a in relato["anexos"]:
+                                                    if a.get("id_arquivo"):
+                                                        link = gerar_link_drive(a["id_arquivo"])
+                                                        c2.markdown(
+                                                            f"[{a['nome_arquivo']}]({link})",
+                                                            unsafe_allow_html=True
+                                                        )
 
-                                    # -----------------------------
-                                    # ANEXOS
-                                    # -----------------------------
-                                    if relato.get("anexos"):
-                                        with col1:
-                                            c1, c2 = st.columns([1, 5])
-                                            c1.write("**Anexos:**")
+                                        # Fotografias
+                                        if relato.get("fotos"):
+                                            with col2:
+                                                c1, c2 = st.columns([1, 5])
+                                                c1.write("**Fotografias:**")
+                                                for f in relato["fotos"]:
+                                                    if f.get("id_arquivo"):
+                                                        link = gerar_link_drive(f["id_arquivo"])
+                                                        linha = f"[{f['nome_arquivo']}]({link})"
+                                                        if f.get("descricao"):
+                                                            linha += f" | {f['descricao']}"
+                                                        if f.get("fotografo"):
+                                                            linha += f" | {f['fotografo']}"
+                                                        c2.markdown(linha, unsafe_allow_html=True)
 
-                                            for a in relato["anexos"]:
-                                                if a.get("id_arquivo"):
-                                                    link = gerar_link_drive(a["id_arquivo"])
-                                                    c2.markdown(
-                                                        f"[{a['nome_arquivo']}]({link})",
-                                                        unsafe_allow_html=True
-                                                    )
+                                        # Botão editar
+                                        with st.container(horizontal=True, horizontal_alignment="right"):
+                                            if pode_editar_relatorio:
+                                                if st.button(
+                                                    "Editar",
+                                                    key=f"btn_edit_{id_relato}",
+                                                    icon=":material/edit:",
+                                                    type="tertiary"
+                                                ):
+                                                    st.session_state["relato_editando_id"] = id_relato
+                                                    st.rerun()
 
-                                    # -----------------------------
-                                    # FOTOGRAFIAS
-                                    # -----------------------------
-                                    if relato.get("fotos"):
-                                        with col2:
-                                            c1, c2 = st.columns([1, 5])
-                                            c1.write("**Fotografias:**")
 
-                                            for f in relato["fotos"]:
-                                                if f.get("id_arquivo"):
-                                                    link = gerar_link_drive(f["id_arquivo"])
 
-                                                    nome = f.get("nome_arquivo", "")
-                                                    descricao = f.get("descricao", "")
-                                                    fotografo = f.get("fotografo", "")
+                                    # ==================================================
+                                    # MODO EDIÇÃO INLINE (VERSÃO FINAL CORRIGIDA)
+                                    # ==================================================
+                                    else:
+                                        st.markdown(f"**Editando {id_relato.upper()}**")
 
-                                                    linha = f"[{nome}]({link})"
+                                        # --------------------------------------------------
+                                        # CAMPOS DE TEXTO
+                                        # --------------------------------------------------
+                                        relato_texto = st.text_area(
+                                            "Relato",
+                                            value=relato.get("relato", ""),
+                                            key=f"edit_relato_{id_relato}"
+                                        )
 
-                                                    if descricao:
-                                                        linha += f" | {descricao}"
+                                        quando = st.text_input(
+                                            "Quando?",
+                                            value=relato.get("quando", ""),
+                                            key=f"edit_quando_{id_relato}"
+                                        )
 
-                                                    if fotografo:
-                                                        linha += f" | {fotografo}"
+                                        onde = st.text_input(
+                                            "Onde?",
+                                            value=relato.get("onde", ""),
+                                            key=f"edit_onde_{id_relato}"
+                                        )
 
-                                                    c2.markdown(linha, unsafe_allow_html=True)
+                                        st.divider()
+
+                                        # --------------------------------------------------
+                                        # ANEXOS EXISTENTES (REMOVER)
+                                        # --------------------------------------------------
+                                        anexos_remover = []
+                                        anexos_existentes = relato.get("anexos", [])
+
+                                        if anexos_existentes:
+                                            st.markdown("**Anexos existentes**")
+
+                                            for i, a in enumerate(anexos_existentes):
+                                                nome = a.get("nome_arquivo", "arquivo")
+
+                                                if st.checkbox(
+                                                    f"Remover: {nome}",
+                                                    key=f"rm_anexo_{id_relato}_{i}"
+                                                ):
+                                                    anexos_remover.append(a)
+
+                                        # --------------------------------------------------
+                                        # NOVOS ANEXOS
+                                        # --------------------------------------------------
+                                        novos_anexos = st.file_uploader(
+                                            "Adicionar novos anexos",
+                                            type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
+                                            accept_multiple_files=True,
+                                            key=f"novos_anexos_{id_relato}"
+                                        )
+
+                                        st.divider()
+
+                                        # --------------------------------------------------
+                                        # FOTOS EXISTENTES (REMOVER)
+                                        # --------------------------------------------------
+                                        fotos_remover = []
+                                        fotos_existentes = relato.get("fotos", [])
+
+                                        if fotos_existentes:
+                                            st.markdown("**Fotografias existentes**")
+
+                                            for i, f in enumerate(fotos_existentes):
+                                                nome = f.get("nome_arquivo", "foto")
+                                                descricao = f.get("descricao", "")
+                                                fotografo = f.get("fotografo", "")
+
+                                                label = nome
+                                                if descricao:
+                                                    label += f" | {descricao}"
+                                                if fotografo:
+                                                    label += f" | {fotografo}"
+
+                                                if st.checkbox(
+                                                    f"Remover: {label}",
+                                                    key=f"rm_foto_{id_relato}_{i}"
+                                                ):
+                                                    fotos_remover.append(f)
+
+                                        st.divider()
+
+                                        # --------------------------------------------------
+                                        # NOVAS FOTOS
+                                        # --------------------------------------------------
+                                        st.subheader("Adicionar novas fotografias")
+
+                                        fotos_novas_key = f"fotos_novas_{id_relato}"
+                                        if fotos_novas_key not in st.session_state:
+                                            st.session_state[fotos_novas_key] = []
+
+                                        if st.button(
+                                            "Adicionar fotografia",
+                                            key=f"btn_add_foto_{id_relato}",
+                                            icon=":material/add_a_photo:"
+                                        ):
+                                            st.session_state[fotos_novas_key].append({
+                                                "arquivo": None,
+                                                "descricao": "",
+                                                "fotografo": ""
+                                            })
+
+                                        for i, foto in enumerate(st.session_state[fotos_novas_key]):
+                                            with st.container(border=True):
+
+                                                foto["arquivo"] = st.file_uploader(
+                                                    "Arquivo da foto",
+                                                    type=["jpg", "jpeg", "png"],
+                                                    key=f"foto_edit_file_{id_relato}_{i}"
+                                                )
+
+                                                foto["descricao"] = st.text_input(
+                                                    "Descrição",
+                                                    key=f"foto_edit_desc_{id_relato}_{i}"
+                                                )
+
+                                                foto["fotografo"] = st.text_input(
+                                                    "Fotógrafo(a)",
+                                                    key=f"foto_edit_autor_{id_relato}_{i}"
+                                                )
+
+                                        st.divider()
+
+                                        # --------------------------------------------------
+                                        # AÇÕES
+                                        # --------------------------------------------------
+                                        col_save, col_cancel = st.columns([1, 1])
+
+                                        if col_save.button(
+                                            "Salvar alterações",
+                                            key=f"btn_save_{id_relato}",
+                                            type="primary",
+                                            icon=":material/save:"
+                                        ):
+
+                                            # ==================================================
+                                            # ATUALIZA TEXTO
+                                            # ==================================================
+                                            relato["relato"] = relato_texto
+                                            relato["quando"] = quando
+                                            relato["onde"] = onde
+
+                                            # ==================================================
+                                            # REMOVE ITENS MARCADOS
+                                            # ==================================================
+                                            if anexos_remover:
+                                                relato["anexos"] = [
+                                                    a for a in relato.get("anexos", [])
+                                                    if a not in anexos_remover
+                                                ]
+
+                                            if fotos_remover:
+                                                relato["fotos"] = [
+                                                    f for f in relato.get("fotos", [])
+                                                    if f not in fotos_remover
+                                                ]
+
+                                            # ==================================================
+                                            # GARANTE PASTAS DO DRIVE (ESCOPO LOCAL)
+                                            # ==================================================
+                                            servico = obter_servico_drive()
+
+                                            pasta_projeto_id = obter_pasta_projeto(
+                                                servico,
+                                                projeto["codigo"],
+                                                projeto["sigla"]
+                                            )
+
+                                            pasta_relatos_id = obter_ou_criar_pasta(
+                                                servico,
+                                                "Relatos_atividades",
+                                                pasta_projeto_id
+                                            )
+
+                                            pasta_relato_id = obter_ou_criar_pasta(
+                                                servico,
+                                                id_relato,
+                                                pasta_relatos_id
+                                            )
+
+                                            # ==================================================
+                                            # UPLOAD DE NOVOS ANEXOS
+                                            # ==================================================
+                                            if novos_anexos:
+                                                pasta_anexos_id = obter_ou_criar_pasta(
+                                                    servico,
+                                                    "anexos",
+                                                    pasta_relato_id
+                                                )
+
+                                                relato.setdefault("anexos", [])
+
+                                                for arq in novos_anexos:
+                                                    id_drive = enviar_arquivo_drive(servico, pasta_anexos_id, arq)
+                                                    if id_drive:
+                                                        relato["anexos"].append({
+                                                            "nome_arquivo": arq.name,
+                                                            "id_arquivo": id_drive
+                                                        })
+
+                                            # ==================================================
+                                            # UPLOAD DE NOVAS FOTOS
+                                            # ==================================================
+                                            fotos_validas = [
+                                                f for f in st.session_state[fotos_novas_key]
+                                                if f.get("arquivo") is not None
+                                            ]
+
+                                            if fotos_validas:
+                                                pasta_fotos_id = obter_ou_criar_pasta(
+                                                    servico,
+                                                    "fotos",
+                                                    pasta_relato_id
+                                                )
+
+                                                relato.setdefault("fotos", [])
+
+                                                for foto in fotos_validas:
+                                                    arq = foto["arquivo"]
+                                                    id_drive = enviar_arquivo_drive(servico, pasta_fotos_id, arq)
+                                                    if id_drive:
+                                                        relato["fotos"].append({
+                                                            "nome_arquivo": arq.name,
+                                                            "descricao": foto.get("descricao", ""),
+                                                            "fotografo": foto.get("fotografo", ""),
+                                                            "id_arquivo": id_drive
+                                                        })
+
+                                            # ==================================================
+                                            # SALVA NO MONGO
+                                            # ==================================================
+                                            col_projetos.update_one(
+                                                {"codigo": projeto["codigo"]},
+                                                {"$set": {
+                                                    "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                }}
+                                            )
+
+                                            # Limpa estado
+                                            st.session_state["relato_editando_id"] = None
+                                            st.session_state.pop(fotos_novas_key, None)
+
+                                            time.sleep(3)
+                                            st.rerun()
+
+                                        if col_cancel.button(
+                                            "Cancelar",
+                                            key=f"btn_cancel_{id_relato}"
+                                        ):
+                                            st.session_state["relato_editando_id"] = None
+                                            st.session_state.pop(fotos_novas_key, None)
+                                            st.rerun()
+
 
                 if not tem_relato:
                     st.caption("Nenhum relato cadastrado neste relatório.")
 
 
-            # if step == "Atividades":
-
-            #     # Guarda para uso no diálogo e no salvar_relato
-            #     st.session_state["projeto_mongo"] = projeto
-            #     st.session_state["relatorio_numero"] = relatorio_numero
-
-            #     st.write("")
-            #     st.write("")
-
-            #     st.markdown(f"### Relatos de atividades do Relatório {relatorio_numero}")
-            #     st.write('')
 
 
-            #     # Botão que abre o diálogo de relatar atividade, só para beneficiários
-
-            #     with st.container(horizontal=True, horizontal_alignment="right"):
-
-            #         # Botão abre o diálogo
-            #         if pode_editar_relatorio:
-            #             if st.button("Relatar atividade", type="primary", key=f"btn_relatar_{idx}", icon=":material/edit:"):
-            #                 # Limpamos os dados antigos para o modal vir vazio
-            #                 st.session_state["relato_em_edicao"] = None
-            #                 st.session_state["relato_edicao_inicializado"] = False
-            #                 st.session_state["campo_relato"] = ""
-            #                 st.session_state["campo_quando"] = ""
-            #                 st.session_state["campo_onde"] = ""
-            #                 dialog_relatos()
-
-
-               
-
-            #     # --------------------------------------------------
-            #     # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
-            #     # AGRUPADOS POR ATIVIDADE
-            #     # --------------------------------------------------
-
-            #     tem_relato = False
-
-            #     for componente in projeto["plano_trabalho"]["componentes"]:
-            #         for entrega in componente["entregas"]:
-            #             for atividade in entrega["atividades"]:
-
-            #                 relatos = atividade.get("relatos", [])
-
-
-            #                 # Filtra apenas relatos do relatório atual
-            #                 relatos = [
-            #                     r for r in relatos
-            #                     if r.get("relatorio_numero") == relatorio_numero
-            #                 ]
-
-            #                 if not relatos:
-            #                     continue
-
-            #                 tem_relato = True
-
-            #                 st.write('')
-            #                 # Título da atividade
-            #                 st.markdown(f"#### {atividade['atividade']}")
-
-            #                 # Lista de relatos
-            #                 for relato in relatos:
-
-            #                     with st.container(border=True):
-            #                         st.write(relato.get("status_relato"))
-
-            #                         # Relato
-            #                         st.write(f"**{(relato.get('id_relato')).upper()}:** {relato.get('relato')}")
-
-            #                         col1, col2 = st.columns([2, 3])
-                                    
-            #                         # Quando
-            #                         col1.write(f"**Quando:** {relato.get('quando')}")
-
-            #                         # Onde
-            #                         col2.write(f"**Onde:** {relato.get('onde')}")
-
-            #                         # Anexos
-            #                         if relato.get("anexos"):
-            #                             with col1:
-
-            #                                 c1, c2 = st.columns([1, 5])    
-            #                                 c1.write("**Anexos:**")
-
-            #                                 for a in relato["anexos"]:
-            #                                     if a.get("id_arquivo"):
-            #                                         link = gerar_link_drive(a["id_arquivo"])
-            #                                         c2.markdown(
-            #                                             f"[{a['nome_arquivo']}]({link})",
-            #                                             unsafe_allow_html=True
-            #                                         )
-
-
-
-
-            #                         # Fotografias
-            #                         if relato.get("fotos"):
-
-            #                             with col2:
-            #                                 c1, c2 = st.columns([1, 5])
-            #                                 c1.write("**Fotografias:**")
-
-            #                                 for f in relato["fotos"]:
-            #                                     if f.get("id_arquivo"):
-            #                                         link = gerar_link_drive(f["id_arquivo"])
-
-            #                                         nome = f.get("nome_arquivo", "")
-            #                                         descricao = f.get("descricao", "")
-            #                                         fotografo = f.get("fotografo", "")
-
-            #                                         # Monta a linha com pipe
-            #                                         linha = f"[{nome}]({link})"
-
-            #                                         if descricao:
-            #                                             linha += f" | {descricao}"
-
-            #                                         if fotografo:
-            #                                             linha += f" | {fotografo}"
-
-            #                                         c2.markdown(linha, unsafe_allow_html=True)
-
-            #                         # --------------------------------------------------
-            #                         # BOTÃO EDITAR RELATO (APENAS SE PODE EDITAR)
-            #                         # --------------------------------------------------
-            #                         if pode_editar_relatorio:
-            #                             if st.button("Editar relato", key=f"editar_relato_{relato['id_relato']}", icon=":material/edit:"):
-            #                                 # 1. Avisa que estamos editando e reseta a trava de inicialização
-            #                                 st.session_state["relato_em_edicao"] = relato
-            #                                 st.session_state["relato_edicao_inicializado"] = False
-                                            
-            #                                 # 2. Define a atividade pai
-            #                                 st.session_state["atividade_selecionada"] = atividade
-                                            
-            #                                 # 3. Abre o diálogo
-            #                                 dialog_relatos()
-
-
-
-            #     if not tem_relato:
-            #         st.caption("Nenhum relato cadastrado neste relatório.")
 
 
 
