@@ -1317,60 +1317,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-
-
-
-
-
-
-
-
-                                        # # --------------------------------------------------
-                                        # # STATUS DO RELATO (badge visual)
-                                        # # --------------------------------------------------
-                                        # status_relato_db = relato.get("status_relato", "em_analise")
-
-                                        # STATUS_RELATO_BADGE = {
-                                        #     "em_analise": {
-                                        #         "label": "Em análise",
-                                        #         "bg": "#FFF3CD",
-                                        #         "color": "#856404"
-                                        #     },
-                                        #     "aberto": {
-                                        #         "label": "Aberto",
-                                        #         "bg": "#F8D7DA",
-                                        #         "color": "#721C24"
-                                        #     },
-                                        #     "aceito": {
-                                        #         "label": "Aceito",
-                                        #         "bg": "#D4EDDA",
-                                        #         "color": "#155724"
-                                        #     }
-                                        # }
-
-                                        # info = STATUS_RELATO_BADGE.get(status_relato_db, STATUS_RELATO_BADGE["em_analise"])
-
-                                        # st.markdown(
-                                        #     f"""
-                                        #     <div style="margin-bottom:6px;">
-                                        #         <span style="
-                                        #             background:{info['bg']};
-                                        #             color:{info['color']};
-                                        #             padding:4px 10px;
-                                        #             border-radius:20px;
-                                        #             font-size:12px;
-                                        #             font-weight:600;
-                                        #         ">
-                                        #             {info['label']}
-                                        #         </span>
-                                        #     </div>
-                                        #     """,
-                                        #     unsafe_allow_html=True
-                                        # )
-
-
-
-
                                         # --------------------------------------------------
                                         # CONTEÚDO DO RELATO
                                         # --------------------------------------------------
@@ -1524,48 +1470,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                     st.rerun()
 
 
-                                            # # ======================================
-                                            # # CASO DEVOLVER → MOSTRA TEXTAREA
-                                            # # ======================================
-                                            # if novo_status_label == "Devolver":
-
-                                            #     # inicializa com valor do banco
-                                            #     if devolutiva_key not in st.session_state:
-                                            #         st.session_state[devolutiva_key] = relato.get("devolutiva", "")
-
-
-                                            #     st.text_area(
-                                            #         "Devolutiva para o beneficiário",
-                                            #         key=devolutiva_key,
-                                            #         placeholder="Explique o que precisa ser ajustado neste relato..."
-                                            #     )
-
-
-                                                # if st.button(
-                                                #     "Salvar devolutiva",
-                                                #     key=f"btn_salvar_devolutiva_{id_relato}",
-                                                #     type="primary",
-                                                #     icon=":material/save:"
-                                                # ):
-                                                #     # grava no objeto em memória
-                                                #     relato["status_relato"] = "aberto"
-                                                #     relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
-
-                                                #     # salva no Mongo
-                                                #     col_projetos.update_one(
-                                                #         {"codigo": projeto["codigo"]},
-                                                #         {
-                                                #             "$set": {
-                                                #                 "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
-                                                #             }
-                                                #         }
-                                                #     )
-
-                                                #     # limpa estado
-                                                #     st.session_state.pop(status_key, None)
-                                                #     st.session_state.pop(devolutiva_key, None)
-
-                                                #     st.rerun()
 
                                             # ======================================
                                             # OUTROS STATUS (Em análise / Aceito)
@@ -1589,111 +1493,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                                                 st.session_state.pop(status_key, None)
                                                 st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-                                        # # --------------------------------------------------
-                                        # # CONTROLE DE STATUS DO RELATO (ADMIN / EQUIPE)
-                                        # # --------------------------------------------------
-                                        # # Mapeamento entre valores salvos no banco e rótulos exibidos na UI
-                                        # STATUS_RELATO_LABEL = {
-                                        #     "em_analise": "Em análise",
-                                        #     "aberto": "Devolver",
-                                        #     "aceito": "Aceito"
-                                        # }
-
-
-                                        # # STATUS_RELATO_LABEL = {
-                                        # #     "aberto": "Aberto",
-                                        # #     "em_analise": "Em análise",
-                                        # #     "aceito": "Aceito"
-                                        # # }
-
-                                        # # Mapeamento inverso (UI → banco)
-                                        # STATUS_RELATO_LABEL_INV = {v: k for k, v in STATUS_RELATO_LABEL.items()}
-
-                                        # # Flags de permissão do usuário
-                                        # usuario_admin = tipo_usuario == "admin"
-                                        # usuario_equipe = tipo_usuario == "equipe"
-
-                                        # # --------------------------------------------------
-                                        # # STATUS ATUAL DO RELATO (apenas visualização)
-                                        # # --------------------------------------------------
-                                        # # status_atual_relato_db = relato.get("status_relato", "aberto")
-                                        # # st.write(status_atual_relato_db)
-
-                                        # # --------------------------------------------------
-                                        # # SEGMENTED CONTROL (somente admin/equipe e relatório em análise)
-                                        # # --------------------------------------------------
-                                        # if (
-                                        #     (usuario_admin or usuario_equipe)
-                                        #     and status_atual_db == "em_analise"
-                                        # ):
-
-                                        #     # Status atual do relato vindo do banco
-                                        #     status_relato_db = relato.get("status_relato", "aberto")
-
-                                        #     # Converte para rótulo da UI
-                                        #     status_relato_label = STATUS_RELATO_LABEL.get(status_relato_db, "Aberto")
-
-                                        #     # Chave única por relato (evita conflito entre containers)
-                                        #     status_key = f"status_relato_ui_{id_relato}"
-
-                                        #     # Inicializa o estado da UI apenas uma vez
-                                        #     if status_key not in st.session_state:
-                                        #         st.session_state[status_key] = status_relato_label
-
-                                        #     with st.container(horizontal=True, horizontal_alignment="right"):
-                                        #         # Widget de controle do status
-                                        #         novo_status_label = st.segmented_control(
-                                        #             label="",
-                                        #             options=["Em análise", "Devolver", "Aceito"],
-                                        #             # options=list(STATUS_RELATO_LABEL.values()),
-                                        #             key=status_key
-                                        #         )
-
-                                        #     # Converte o valor selecionado para o formato do banco
-                                        #     novo_status_db = STATUS_RELATO_LABEL_INV.get(novo_status_label)
-
-                                        #     # --------------------------------------------------
-                                        #     # ATUALIZAÇÃO NO BANCO (somente se mudou)
-                                        #     # --------------------------------------------------
-                                        #     if novo_status_db != status_relato_db:
-
-                                        #         # Atualiza o objeto em memória
-                                        #         relato["status_relato"] = novo_status_db
-
-                                        #         # Persiste no MongoDB
-                                        #         col_projetos.update_one(
-                                        #             {"codigo": projeto["codigo"]},
-                                        #             {
-                                        #                 "$set": {
-                                        #                     "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
-                                        #                 }
-                                        #             }
-                                        #         )
-
-                                        #         # Remove o estado da UI para forçar sincronização no rerun
-                                        #         del st.session_state[status_key]
-
-                                        #         # Marca que é necessário rerun imediato
-                                        #         st.session_state["rerun_imediato"] = True
-
-                                        #     # --------------------------------------------------
-                                        #     # RERUN IMEDIATO (garante atualização visual no 1º clique)
-                                        #     # --------------------------------------------------
-                                        #     if st.session_state.get("rerun_imediato"):
-                                        #         st.session_state.pop("rerun_imediato")
-                                        #         st.rerun()
 
 
 
@@ -1875,132 +1674,136 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                         # --------------------------------------------------
                                         # AÇÕES
                                         # --------------------------------------------------
-                                        col_save, col_cancel = st.columns([1, 1])
+                                        # col_save, col_cancel = st.columns([1, 1])
 
-                                        if col_save.button(
-                                            "Salvar alterações",
-                                            key=f"btn_save_{id_relato}",
-                                            type="primary",
-                                            icon=":material/save:"
-                                        ):
+                                        with st.container(horizontal=True, horizontal_alignment="left"):
 
-                                            # ==================================================
-                                            # ATUALIZA TEXTO
-                                            # ==================================================
-                                            relato["relato"] = relato_texto
-                                            relato["quando"] = quando
-                                            relato["onde"] = onde
+                                            if st.button(
+                                                "Salvar alterações",
+                                                key=f"btn_save_{id_relato}",
+                                                type="primary",
+                                                icon=":material/save:"
+                                            ):
 
-                                            # ==================================================
-                                            # REMOVE ITENS MARCADOS
-                                            # ==================================================
-                                            if anexos_remover:
-                                                relato["anexos"] = [
-                                                    a for a in relato.get("anexos", [])
-                                                    if a not in anexos_remover
-                                                ]
+                                                # ==================================================
+                                                # ATUALIZA TEXTO
+                                                # ==================================================
+                                                relato["relato"] = relato_texto
+                                                relato["quando"] = quando
+                                                relato["onde"] = onde
 
-                                            if fotos_remover:
-                                                relato["fotos"] = [
-                                                    f for f in relato.get("fotos", [])
-                                                    if f not in fotos_remover
-                                                ]
+                                                # ==================================================
+                                                # REMOVE ITENS MARCADOS
+                                                # ==================================================
+                                                if anexos_remover:
+                                                    relato["anexos"] = [
+                                                        a for a in relato.get("anexos", [])
+                                                        if a not in anexos_remover
+                                                    ]
 
-                                            # ==================================================
-                                            # GARANTE PASTAS DO DRIVE (ESCOPO LOCAL)
-                                            # ==================================================
-                                            servico = obter_servico_drive()
+                                                if fotos_remover:
+                                                    relato["fotos"] = [
+                                                        f for f in relato.get("fotos", [])
+                                                        if f not in fotos_remover
+                                                    ]
 
-                                            pasta_projeto_id = obter_pasta_projeto(
-                                                servico,
-                                                projeto["codigo"],
-                                                projeto["sigla"]
-                                            )
+                                                # ==================================================
+                                                # GARANTE PASTAS DO DRIVE (ESCOPO LOCAL)
+                                                # ==================================================
+                                                servico = obter_servico_drive()
 
-                                            pasta_relatos_id = obter_ou_criar_pasta(
-                                                servico,
-                                                "Relatos_atividades",
-                                                pasta_projeto_id
-                                            )
-
-                                            pasta_relato_id = obter_ou_criar_pasta(
-                                                servico,
-                                                id_relato,
-                                                pasta_relatos_id
-                                            )
-
-                                            # ==================================================
-                                            # UPLOAD DE NOVOS ANEXOS
-                                            # ==================================================
-                                            if novos_anexos:
-                                                pasta_anexos_id = obter_ou_criar_pasta(
+                                                pasta_projeto_id = obter_pasta_projeto(
                                                     servico,
-                                                    "anexos",
-                                                    pasta_relato_id
+                                                    projeto["codigo"],
+                                                    projeto["sigla"]
                                                 )
 
-                                                relato.setdefault("anexos", [])
-
-                                                for arq in novos_anexos:
-                                                    id_drive = enviar_arquivo_drive(servico, pasta_anexos_id, arq)
-                                                    if id_drive:
-                                                        relato["anexos"].append({
-                                                            "nome_arquivo": arq.name,
-                                                            "id_arquivo": id_drive
-                                                        })
-
-                                            # ==================================================
-                                            # UPLOAD DE NOVAS FOTOS
-                                            # ==================================================
-                                            fotos_validas = [
-                                                f for f in st.session_state[fotos_novas_key]
-                                                if f.get("arquivo") is not None
-                                            ]
-
-                                            if fotos_validas:
-                                                pasta_fotos_id = obter_ou_criar_pasta(
+                                                pasta_relatos_id = obter_ou_criar_pasta(
                                                     servico,
-                                                    "fotos",
-                                                    pasta_relato_id
+                                                    "Relatos_atividades",
+                                                    pasta_projeto_id
                                                 )
 
-                                                relato.setdefault("fotos", [])
+                                                pasta_relato_id = obter_ou_criar_pasta(
+                                                    servico,
+                                                    id_relato,
+                                                    pasta_relatos_id
+                                                )
 
-                                                for foto in fotos_validas:
-                                                    arq = foto["arquivo"]
-                                                    id_drive = enviar_arquivo_drive(servico, pasta_fotos_id, arq)
-                                                    if id_drive:
-                                                        relato["fotos"].append({
-                                                            "nome_arquivo": arq.name,
-                                                            "descricao": foto.get("descricao", ""),
-                                                            "fotografo": foto.get("fotografo", ""),
-                                                            "id_arquivo": id_drive
-                                                        })
+                                                # ==================================================
+                                                # UPLOAD DE NOVOS ANEXOS
+                                                # ==================================================
+                                                if novos_anexos:
+                                                    pasta_anexos_id = obter_ou_criar_pasta(
+                                                        servico,
+                                                        "anexos",
+                                                        pasta_relato_id
+                                                    )
 
-                                            # ==================================================
-                                            # SALVA NO MONGO
-                                            # ==================================================
-                                            col_projetos.update_one(
-                                                {"codigo": projeto["codigo"]},
-                                                {"$set": {
-                                                    "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
-                                                }}
-                                            )
+                                                    relato.setdefault("anexos", [])
 
-                                            # Limpa estado
-                                            st.session_state["relato_editando_id"] = None
-                                            st.session_state.pop(fotos_novas_key, None)
+                                                    for arq in novos_anexos:
+                                                        id_drive = enviar_arquivo_drive(servico, pasta_anexos_id, arq)
+                                                        if id_drive:
+                                                            relato["anexos"].append({
+                                                                "nome_arquivo": arq.name,
+                                                                "id_arquivo": id_drive
+                                                            })
 
-                                            time.sleep(3)
-                                            st.rerun()
+                                                # ==================================================
+                                                # UPLOAD DE NOVAS FOTOS
+                                                # ==================================================
+                                                fotos_validas = [
+                                                    f for f in st.session_state[fotos_novas_key]
+                                                    if f.get("arquivo") is not None
+                                                ]
 
-                                        if col_cancel.button(
-                                            "Cancelar",
-                                            key=f"btn_cancel_{id_relato}"
-                                        ):
-                                            st.session_state["relato_editando_id"] = None
-                                            st.session_state.pop(fotos_novas_key, None)
-                                            st.rerun()
+                                                if fotos_validas:
+                                                    pasta_fotos_id = obter_ou_criar_pasta(
+                                                        servico,
+                                                        "fotos",
+                                                        pasta_relato_id
+                                                    )
+
+                                                    relato.setdefault("fotos", [])
+
+                                                    for foto in fotos_validas:
+                                                        arq = foto["arquivo"]
+                                                        id_drive = enviar_arquivo_drive(servico, pasta_fotos_id, arq)
+                                                        if id_drive:
+                                                            relato["fotos"].append({
+                                                                "nome_arquivo": arq.name,
+                                                                "descricao": foto.get("descricao", ""),
+                                                                "fotografo": foto.get("fotografo", ""),
+                                                                "id_arquivo": id_drive
+                                                            })
+
+                                                # ==================================================
+                                                # SALVA NO MONGO
+                                                # ==================================================
+                                                col_projetos.update_one(
+                                                    {"codigo": projeto["codigo"]},
+                                                    {"$set": {
+                                                        "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                    }}
+                                                )
+
+                                                # Limpa estado
+                                                st.session_state["relato_editando_id"] = None
+                                                st.session_state.pop(fotos_novas_key, None)
+
+                                                # Mensagem de sucesso
+                                                st.success("Relato atualizado com sucesso!", icon=":material/check:")
+                                                time.sleep(3)
+                                                st.rerun()
+
+                                            if st.button(
+                                                "Cancelar",
+                                                key=f"btn_cancel_{id_relato}"
+                                            ):
+                                                st.session_state["relato_editando_id"] = None
+                                                st.session_state.pop(fotos_novas_key, None)
+                                                st.rerun()
 
 
                 if not tem_relato:
@@ -2774,11 +2577,26 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         respondida_ui = st.checkbox(
                             "Respondida",
                             value=respondida_db,
-                            disabled=(
-                                status_atual_db in ["em_analise", "aprovado"]
-                                or not pode_editar
+                            disabled = (
+                                # Visitante nunca pode
+                                tipo_usuario == "visitante"
+
+                                # Beneficiário só pode no modo edição
                                 or (
-                                    usuario_beneficiario and verificada_db
+                                    tipo_usuario == "beneficiario"
+                                    and status_atual_db != "modo_edicao"
+                                )
+
+                                # Beneficiário não pode se já verificada
+                                or (
+                                    tipo_usuario == "beneficiario"
+                                    and verificada_db
+                                )
+
+                                # Admin/equipe não podem no modo edição
+                                or (
+                                    tipo_usuario in ["admin", "equipe"]
+                                    and status_atual_db == "modo_edicao"
                                 )
                             ),
                             key=f"resp_{relatorio_numero}_{pesquisa['id']}"
@@ -2789,9 +2607,15 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                         verificada_ui = st.checkbox(
                             "Verificada",
                             value=verificada_db,
-                            disabled=(
-                                status_atual_db in ["em_analise", "aprovado"]
-                                or not pode_verificar
+                            disabled = (
+                                # Visitante nunca pode
+                                tipo_usuario == "visitante"
+
+                                # Beneficiário nunca pode verificar
+                                or tipo_usuario == "beneficiario"
+
+                                # Relatório em modo edição trava todos
+                                or status_atual_db == "modo_edicao"
                             ),
                             key=f"verif_{relatorio_numero}_{pesquisa['id']}"
                         )
