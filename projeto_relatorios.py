@@ -1429,45 +1429,50 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                 # --------------------------------------------------
                                                 # Botão de salvar / atualizar devolutiva
                                                 # --------------------------------------------------
-                                                if st.button(
-                                                    label_botao,
-                                                    key=f"btn_salvar_devolutiva_{id_relato}",
-                                                    type="primary",
-                                                    icon=":material/save:"
-                                                ):
-                                                    # ----------------------------------------------
-                                                    # Atualiza o relato em memória
-                                                    # - status volta para "aberto"
-                                                    # - devolutiva é salva no objeto
-                                                    # ----------------------------------------------
-                                                    relato["status_relato"] = "aberto"
-                                                    relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
 
-                                                    # ----------------------------------------------
-                                                    # Persiste a alteração no MongoDB
-                                                    # (salva toda a estrutura de componentes)
-                                                    # ----------------------------------------------
-                                                    col_projetos.update_one(
-                                                        {"codigo": projeto["codigo"]},
-                                                        {
-                                                            "$set": {
-                                                                "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                with st.container(horizontal=True):
+
+                                                    if st.button(
+                                                        label_botao,
+                                                        key=f"btn_salvar_devolutiva_{id_relato}",
+                                                        type="primary",
+                                                        icon=":material/save:"
+                                                    ):
+                                                        # ----------------------------------------------
+                                                        # Atualiza o relato em memória
+                                                        # - status volta para "aberto"
+                                                        # - devolutiva é salva no objeto
+                                                        # ----------------------------------------------
+                                                        relato["status_relato"] = "aberto"
+                                                        relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
+
+                                                        # ----------------------------------------------
+                                                        # Persiste a alteração no MongoDB
+                                                        # (salva toda a estrutura de componentes)
+                                                        # ----------------------------------------------
+                                                        col_projetos.update_one(
+                                                            {"codigo": projeto["codigo"]},
+                                                            {
+                                                                "$set": {
+                                                                    "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                                }
                                                             }
-                                                        }
-                                                    )
+                                                        )
 
-                                                    # ----------------------------------------------
-                                                    # Limpa os estados da UI para evitar inconsistência
-                                                    # no próximo rerun
-                                                    # ----------------------------------------------
-                                                    st.session_state.pop(status_key, None)
-                                                    st.session_state.pop(devolutiva_key, None)
+                                                        # ----------------------------------------------
+                                                        # Limpa os estados da UI para evitar inconsistência
+                                                        # no próximo rerun
+                                                        # ----------------------------------------------
+                                                        st.session_state.pop(status_key, None)
+                                                        st.session_state.pop(devolutiva_key, None)
 
-                                                    # ----------------------------------------------
-                                                    # Força o rerun somente depois de salvar
-                                                    # (garante que o status e UI atualizem corretamente)
-                                                    # ----------------------------------------------
-                                                    st.rerun()
+                                                        # ----------------------------------------------
+                                                        # Força o rerun somente depois de salvar
+                                                        # (garante que o status e UI atualizem corretamente)
+                                                        # ----------------------------------------------
+                                                        st.success("Devolutiva salva.", icon=":material/check:")
+                                                        time.sleep(2)
+                                                        st.rerun()
 
 
 
@@ -1528,11 +1533,23 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
                                             texto = devolutiva.replace("\n", "\n> ")
 
-                                            st.markdown(f"""
-                                                        > **Devolutiva:**  
-                                                        > {texto}
-                                                                """
-                                                            )
+                                            st.markdown(
+                                                f"""
+                                            <blockquote style="
+                                                color: #000000;
+                                                opacity: 0.9;
+                                                border-left: 4px solid #F8D7DA;
+                                                padding-left: 12px;
+                                                margin-left: 0;
+                                            ">
+                                            <strong>Ajuste necessário:</strong><br>
+                                            {texto.replace('\n', '<br>')}
+                                            </blockquote>
+                                            """,
+                                                unsafe_allow_html=True
+                                            )
+
+
 
 
                                         # --------------------------------------------------
@@ -1821,6 +1838,8 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                 st.session_state["relato_editando_id"] = None
                                                 st.session_state.pop(fotos_novas_key, None)
                                                 st.rerun()
+
+                                st.write('')
 
 
                 if not tem_relato:

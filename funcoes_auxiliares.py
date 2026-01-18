@@ -553,7 +553,8 @@ def sidebar_projeto():
     # Botão de voltar para a home_interna só para admin, equipe e visitante
     if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
 
-        if st.sidebar.button("Voltar para home", icon=":material/arrow_back:", type="tertiary"):
+        # if st.sidebar.button("Voltar para Home", icon=":material/arrow_back:", type="tertiary"):
+        if st.sidebar.button("Sair do projeto", icon=":material/arrow_back:", type="tertiary"):
             
             if st.session_state.tipo_usuario == 'admin':
                 st.session_state.pagina_atual = 'home_admin'
