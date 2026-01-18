@@ -472,51 +472,6 @@ if not editar_cadastro:
 
 
 
-
-    # # ---------- CONTRATOS ----------
-
-    # contratos = df_projeto["contratos"].values[0] if "contratos" in df_projeto.columns else None
-
-    # with cols[2]:
-
-    #     if contratos:
-
-    #         with st.popover("**Contrato**", type="tertiary"):
-    #             if not contratos:
-    #                 st.markdown(
-    #                     "<span style='color:#c46a00; font-style:italic;'>Nenhum contrato cadastrado</span>",
-    #                     unsafe_allow_html=True
-    #                 )
-    #             else:
-    #                 for c in contratos:
-    #                     st.markdown(
-    #                         f"[**{c['descricao_contrato']}**]({c['url_contrato']})"
-    #                     )
-
-    #     else:
-    #         st.markdown("<span style='color:#c46a00; font-style:italic;'>Nenhum contrato cadastrado</span>"),
-
-
-
-    # # Contrato
-    # valor_contrato = (
-    #     df_projeto["contrato"].values[0]
-    #     if "contrato" in df_projeto.columns
-    #     else None
-    # )
-
-    # if pd.isna(valor_contrato) or str(valor_contrato).strip() == "":
-    #     cols[2].markdown(
-    #         "**Contrato:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
-    #         unsafe_allow_html=True
-    #     )
-    # else:
-    #     cols[2].write(f"**Contrato:** {valor_contrato}")
-
-
-
-    # cols[2].write("**Contrato:** em breve")
-
     st.write(f"**Responsável:** {df_projeto['responsavel'].values[0]}")
 
     # Padrinho
@@ -533,9 +488,11 @@ if not editar_cadastro:
 
     direcoes = df_projeto['direcoes_estrategicas'].values[0]
     if direcoes:
-        st.write("**Direções estratégicas:**")
-        for d in direcoes:
-            st.write(f"- {d}")
+
+        with st.popover("**Direções estratégicas**", type="tertiary"):
+
+            for d in direcoes:
+                st.write(f"- {d}")
 
     publicos = df_projeto['publicos'].values[0]
     if publicos:
@@ -1272,15 +1229,34 @@ else:
 
 
 if not anotacoes_visiveis:
-# if not anotacoes:
     st.caption("Não há anotações.")
 else:
     df_anotacoes = pd.DataFrame(anotacoes_visiveis)
-    # df_anotacoes = pd.DataFrame(anotacoes)
     df_anotacoes = df_anotacoes[["data", "texto", "autor", "tipo"]]
-    # df_anotacoes = df_anotacoes[["data", "texto", "autor"]]
+
+    # Renomeia colunas para exibição
+    df_anotacoes = df_anotacoes.rename(columns={
+        "data": "Data",
+        "texto": "Anotação",
+        "autor": "Autor(a)",
+        "tipo": "Tipo"
+    })
+
     with st.container():
         ui.table(data=df_anotacoes, key="tabela_anotacoes_fixa")
+
+
+
+# if not anotacoes_visiveis:
+# # if not anotacoes:
+#     st.caption("Não há anotações.")
+# else:
+#     df_anotacoes = pd.DataFrame(anotacoes_visiveis)
+#     # df_anotacoes = pd.DataFrame(anotacoes)
+#     df_anotacoes = df_anotacoes[["data", "texto", "autor", "tipo"]]
+#     # df_anotacoes = df_anotacoes[["data", "texto", "autor"]]
+#     with st.container():
+#         ui.table(data=df_anotacoes, key="tabela_anotacoes_fixa")
 
 
 

@@ -557,12 +557,14 @@ def dialog_relatos():
             key="campo_relato"
         )
 
-        st.text_input(
+        col1, col2 = st.columns(2)
+
+        col1.text_input(
             "Quando?",
             key="campo_quando"
         )
 
-        st.text_input(
+        col2.text_input(
             "Onde?",
             key="campo_onde"
         )
@@ -1619,7 +1621,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                 nome = a.get("nome_arquivo", "arquivo")
 
                                                 if st.checkbox(
-                                                    f"Remover: {nome}",
+                                                    f"**Remover:** {nome}",
                                                     key=f"rm_anexo_{id_relato}_{i}"
                                                 ):
                                                     anexos_remover.append(a)
@@ -1627,6 +1629,7 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                         # --------------------------------------------------
                                         # NOVOS ANEXOS
                                         # --------------------------------------------------
+                                        st.write('')
                                         novos_anexos = st.file_uploader(
                                             "Adicionar novos anexos",
                                             type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
@@ -1657,17 +1660,17 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                                     label += f" | {fotografo}"
 
                                                 if st.checkbox(
-                                                    f"Remover: {label}",
+                                                    f"**Remover:** {label}",
                                                     key=f"rm_foto_{id_relato}_{i}"
                                                 ):
                                                     fotos_remover.append(f)
 
-                                        st.divider()
 
                                         # --------------------------------------------------
                                         # NOVAS FOTOS
                                         # --------------------------------------------------
-                                        st.subheader("Adicionar novas fotografias")
+                                        st.write('')
+                                        st.write("**Adicionar novas fotografias**")
 
                                         fotos_novas_key = f"fotos_novas_{id_relato}"
                                         if fotos_novas_key not in st.session_state:

@@ -233,16 +233,16 @@ with st.container(border=False, horizontal=True, width="stretch"):
 
             st.divider()
 
-            st.write(f"**Arquivo:** {foto.get('nome_arquivo', '')}")
             st.write(f"**Descrição:** {foto.get('descricao', '')}")
             st.write(f"**Fotógrafo:** {foto.get('fotografo', '')}")
+            st.write(f"**Arquivo:** {foto.get('nome_arquivo', '')}")
 
 
             if file_id:
                 st.link_button(
                     "Ver foto",
                     urls["drive"],
-                    type="tertiary",
+                    type="primary",
                     icon=":material/open_in_new:"
                 )
 
