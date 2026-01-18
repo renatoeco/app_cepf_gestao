@@ -178,6 +178,14 @@ def obter_pasta_relatos_atividades(servico, pasta_projeto_id):
     return pasta_id
 
 
+def obter_pasta_relatos_financeiros(servico, pasta_projeto_id):
+    return obter_ou_criar_pasta(
+        servico,
+        "Relatos_financeiros",
+        pasta_projeto_id
+    )
+
+
 
 ###########################################################################################################
 # UPLOAD E LINK DE ARQUIVOS
