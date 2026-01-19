@@ -645,6 +645,9 @@ def sidebar_projeto():
 
 
 
+    st.sidebar.write(f"*{st.session_state['tipo_usuario']}*")
+
+
 
 
 
