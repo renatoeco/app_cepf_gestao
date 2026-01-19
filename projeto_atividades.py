@@ -1,14 +1,20 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto  # Função personalizada para conectar ao MongoDB
 import pandas as pd
 import streamlit_shadcn_ui as ui
 import datetime
 import time
 import bson
-import os
-import tempfile
-import json
-import io
+
+from funcoes_auxiliares import (
+    conectar_mongo_cepf_gestao, 
+    gerar_link_drive,
+    sidebar_projeto
+)
+
+# import os
+# import tempfile
+# import json
+# import io
 
 
 # # Google Drive API
@@ -48,21 +54,6 @@ col_indicadores = db["indicadores"]
 # ###########################################################################################################
 
 
-# # Escopo mínimo necessário para Drive
-# ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
-
-# @st.cache_resource
-# def obter_servico_drive():
-#     """
-#     Retorna o cliente autenticado do Google Drive,
-#     usando as credenciais armazenadas em st.secrets.
-#     """
-#     credenciais = Credentials.from_service_account_info(
-#         st.secrets["gcp_service_account"],
-#         scopes=ESCOPO_DRIVE
-#     )
-#     return build("drive", "v3", credentials=credenciais)
-
 
 
 
@@ -73,513 +64,202 @@ col_indicadores = db["indicadores"]
 
 
 
-
-# # Função para selecionar ou criar a pasta do projeto no Drive
-# def obter_ou_criar_pasta_projeto(servico, codigo, sigla):
-#     nome_pasta = f"{codigo} - {sigla}"
-
-#     id_drive = st.secrets["drive"]["drive_id"]      # Shared Drive
-#     id_pasta_raiz = st.secrets["drive"]["pasta_raiz"]  # Pasta interna
-
-#     consulta = (
-#         f"name='{nome_pasta}' and "
-#         f"'{id_pasta_raiz}' in parents and "
-#         f"mimeType='application/vnd.google-apps.folder' and trashed=false"
-#     )
-
-#     resultado = servico.files().list(
-#         q=consulta,
-#         fields="files(id)",
-#         corpora="drive",
-#         driveId=id_drive,
-#         includeItemsFromAllDrives=True,
-#         supportsAllDrives=True
-#     ).execute()
-
-#     arquivos = resultado.get("files", [])
-#     if arquivos:
-#         return arquivos[0]["id"]
-
-#     metadados = {
-#         "name": nome_pasta,
-#         "parents": [id_pasta_raiz],
-#         "mimeType": "application/vnd.google-apps.folder"
-#     }
-
-#     pasta = servico.files().create(
-#         body=metadados,
-#         fields="id",
-#         supportsAllDrives=True
-#     ).execute()
-
-#     return pasta["id"]
-
-
-
-
-# # Criar ou obter subpastas ("anexos", "fotos")
-# def obter_ou_criar_subpasta(servico, id_pasta_pai, nome_subpasta):
-#     id_drive = st.secrets["drive"]["drive_id"]
-
-#     consulta = (
-#         f"'{id_pasta_pai}' in parents and "
-#         f"name='{nome_subpasta}' and "
-#         f"mimeType='application/vnd.google-apps.folder' and trashed=false"
-#     )
-
-#     resultado = servico.files().list(
-#         q=consulta,
-#         fields="files(id)",
-#         corpora="drive",
-#         driveId=id_drive,
-#         includeItemsFromAllDrives=True,
-#         supportsAllDrives=True
-#     ).execute()
-
-#     arquivos = resultado.get("files", [])
-#     if arquivos:
-#         return arquivos[0]["id"]
-
-#     metadados = {
-#         "name": nome_subpasta,
-#         "parents": [id_pasta_pai],
-#         "mimeType": "application/vnd.google-apps.folder"
-#     }
-
-#     pasta = servico.files().create(
-#         body=metadados,
-#         fields="id",
-#         supportsAllDrives=True
-#     ).execute()
-
-#     return pasta["id"]
-
-
-
-
-
-# # Upload de um arquivo individual
-# def enviar_arquivo_drive(servico, id_pasta, arquivo):
-#     metadados = {
-#         "name": arquivo.name,
-#         "parents": [id_pasta]
-#     }
-
-#     media = MediaIoBaseUpload(
-#         io.BytesIO(arquivo.read()),
-#         mimetype=arquivo.type,
-#         resumable=False
-#     )
-
-#     arq = servico.files().create(
-#         body=metadados,
-#         media_body=media,
-#         fields="id",
-#         supportsAllDrives=True
-#     ).execute()
-
-#     return arq["id"]
-
-
-
-
-# # Gerar link de acesso ao arquivo
-# def gerar_link_drive(id_arquivo):
-#     """
-#     Retorna a URL padrão de visualização do arquivo no Drive.
-#     """
-#     return f"https://drive.google.com/file/d/{id_arquivo}/view"
-
-
-
-
-
-# # Função para salvar o relato
-# def salvar_relato():
-
-#     # -------------------------------------------
-#     # 0. CAMPOS DO FORMULÁRIO
-#     # -------------------------------------------
-#     texto_relato = st.session_state.get("campo_relato", "")
-#     quando = st.session_state.get("campo_quando", "")
-#     onde = st.session_state.get("campo_onde", "")
-#     anexos = st.session_state.get("campo_anexos", [])
-#     fotos = st.session_state.get("fotos_relato", [])
-
-#     erros = []
-#     if not texto_relato.strip():
-#         erros.append("O campo **Relato** é obrigatório.")
-#     if not quando.strip():
-#         erros.append("O campo **Quando** é obrigatório.")
-
-#     if erros:
-#         for e in erros:
-#             st.error(e)
-#         return
-
-#     # -------------------------------------------
-#     # 1. CONEXÃO COM DRIVE
-#     # -------------------------------------------
-#     servico = obter_servico_drive()
-
-#     projeto = df_projeto.iloc[0]
-#     codigo = projeto["codigo"]
-#     sigla = projeto["sigla"]
-
-#     id_pasta_projeto = obter_ou_criar_pasta_projeto(servico, codigo, sigla)
-
-#     # -------------------------------------------
-#     # 2. ACTIVIDADE SELECIONADA
-#     # -------------------------------------------
-#     atividade = st.session_state.get("atividade_selecionada_drive")
-
-#     if not atividade:
-#         st.error("Erro interno: nenhuma atividade selecionada.")
-#         return
-
-#     id_atividade = atividade["id"]
-
-#     # -------------------------------------------
-#     # 3. LOCALIZAR ATIVIDADE NO MONGO
-#     # -------------------------------------------
-#     projeto_mongo = col_projetos.find_one({"codigo": codigo})
-#     componentes = projeto_mongo["plano_trabalho"]["componentes"]
-
-#     atividade_mongo = None
-
-#     for comp in componentes:
-#         for ent in comp["entregas"]:
-#             # Pode vir "atividades" ou "atividade"
-#             lista_ativ = ent.get("atividades") or ent.get("atividade") or []
-#             for ativ in lista_ativ:
-#                 if ativ["id"] == id_atividade:
-#                     atividade_mongo = ativ
-
-#     if atividade_mongo is None:
-#         st.error("Erro interno: atividade não encontrada no banco de dados.")
-#         return
-
-#     # -------------------------------------------
-#     # 4. GERAR ID DO RELATO
-#     # -------------------------------------------
-#     relatos_existentes = atividade_mongo.get("relatos", [])
-#     numero = len(relatos_existentes) + 1
-#     id_relato = f"relato_{numero:03d}"
-
-#     # -------------------------------------------
-#     # 5. CRIAR PASTAS DO RELATO NO DRIVE
-#     # -------------------------------------------
-#     id_pasta_relato = obter_ou_criar_subpasta(servico, id_pasta_projeto, id_relato)
-#     id_pasta_anexos = obter_ou_criar_subpasta(servico, id_pasta_relato, "anexos")
-#     id_pasta_fotos  = obter_ou_criar_subpasta(servico, id_pasta_relato, "fotos")
-
-#     # -------------------------------------------
-#     # 6. SALVAR ANEXOS (somente ID do arquivo)
-#     # -------------------------------------------
-#     lista_anexos = []
-#     if anexos:
-#         for arquivo in anexos:
-#             id_arq = enviar_arquivo_drive(servico, id_pasta_anexos, arquivo)
-#             lista_anexos.append({
-#                 "nome_arquivo": arquivo.name,
-#                 "id_arquivo": id_arq
-#             })
-
-#     # -------------------------------------------
-#     # 7. SALVAR FOTOS (somente ID do arquivo)
-#     # -------------------------------------------
-#     lista_fotos = []
-#     for foto in fotos:
-#         arq = foto.get("arquivo")
-#         if not arq:
-#             continue
-
-#         id_arq = enviar_arquivo_drive(servico, id_pasta_fotos, arq)
-
-#         lista_fotos.append({
-#             "nome_arquivo": arq.name,
-#             "descricao": foto.get("descricao", ""),
-#             "fotografo": foto.get("fotografo", ""),
-#             "id_arquivo": id_arq
-#         })
-
-#     # -------------------------------------------
-#     # 8. OBJETO FINAL DO RELATO
-#     # -------------------------------------------
-#     novo_relato = {
-#         "id_relato": id_relato,
-#         "relato": texto_relato.strip(),
-#         "quando": quando.strip(),
-#         "onde": onde.strip(),
-#         "autor": st.session_state.get("nome", "Usuário"),
-#         "anexos": lista_anexos,
-#         "fotos": lista_fotos
-#     }
-
-#     # -------------------------------------------
-#     # 9. SALVAR NO MONGO
-#     # -------------------------------------------
-#     atividade_mongo.setdefault("relatos", []).append(novo_relato)
-
-#     col_projetos.update_one(
-#         {"codigo": codigo},
-#         {"$set": {"plano_trabalho.componentes": componentes}}
-#     )
-
-#     # -------------------------------------------
-#     # 10. LIMPAR ESTADOS
-#     # -------------------------------------------
-#     st.session_state["fotos_relato"] = []
-#     st.session_state["atividade_selecionada"] = None
-#     st.session_state["atividade_selecionada_drive"] = None
-#     st.session_state["atividade_selecionada_tabela_key"] = None
-#     st.session_state["abrir_dialogo_atividade"] = False
-
-#     # -------------------------------------------
-#     # 11. FINALIZAR
-#     # -------------------------------------------
-#     st.success("Relato salvo com sucesso!")
-#     time.sleep(3)
-#     st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # Envia só a thumbnail / miniatura para o drive
-# def upload_thumbnail_to_drive(local_path, nome_base, tipo):
-#     """
-#     Recebe um UploadedFile (Streamlit), cria thumbnail de 280px de largura 
-#     com altura proporcional, salva temporariamente e envia ao Google Drive.
-#     Retorna o link da miniatura enviada.
-#     """
-#     try:
-
-#         drive = get_drive_service()
-
-#         # 1. Salva o arquivo enviado (UploadedFile) em um arquivo temporário
-#         ext = os.path.splitext(local_path.name)[1].lower()
-#         temp_input_path = os.path.join(tempfile.gettempdir(), f"orig_{nome_base}{ext}")
-
-#         with open(temp_input_path, "wb") as f:
-#             f.write(local_path.getbuffer())
-
-#         # 2. Pega a pasta correta no Drive
-#         tipo_key = TIPO_PASTA_MAP.get(tipo)
-#         parent_folder_id = st.secrets["pastas"].get(tipo_key)
-
-#         if not parent_folder_id:
-#             st.error(f"Pasta do tipo {tipo} não configurada no secrets.")
-#             return None
-
-#         # 3. Cria subpasta com timestamp
-#         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#         folder_name = f"{timestamp}_{nome_base}"
-
-#         subfolder = drive.CreateFile({
-#             'title': folder_name,
-#             'mimeType': 'application/vnd.google-apps.folder',
-#             'parents': [{'id': parent_folder_id}]
-#         })
-#         subfolder.Upload()
-#         subfolder_id = subfolder['id']
-
-#         # 4. Geração da miniatura (thumb)
-#         thumb_name = f"miniatura_{nome_base}.png"
-#         thumb_path = os.path.join(tempfile.gettempdir(), thumb_name)
-
-#         # Se for imagem
-#         if ext in ['.png', '.jpg', '.jpeg', '.webp']:
-#             img = Image.open(temp_input_path)
-#             w, h = img.size
-#             new_height = int((280 / w) * h)
-#             img = img.resize((280, new_height), Image.Resampling.LANCZOS)
-#             img.save(thumb_path, "PNG")
-
-#         # Se for PDF
-#         elif ext == '.pdf':
-#             pages = convert_from_path(temp_input_path, dpi=150, first_page=1, last_page=1)
-#             if pages:
-#                 img = pages[0]
-#                 w, h = img.size
-#                 new_height = int((280 / w) * h)
-#                 img = img.resize((280, new_height), Image.Resampling.LANCZOS)
-#                 img.save(thumb_path, "PNG")
-#         else:
-#             st.error("Formato não suportado para miniatura.")
-#             return None
-
-#         # 5. Upload da thumbnail para o Drive
-#         thumb_file = drive.CreateFile({
-#             'title': thumb_name,
-#             'parents': [{'id': subfolder_id}]
-#         })
-#         thumb_file.SetContentFile(thumb_path)
-#         thumb_file.Upload()
-
-#         thumb_link = f"https://drive.google.com/file/d/{thumb_file['id']}/view"
-
-#         # 6. Limpeza de arquivos temporários
-#         if os.path.exists(thumb_path):
-#             os.remove(thumb_path)
-#         if os.path.exists(temp_input_path):
-#             os.remove(temp_input_path)
-
-#         return thumb_link
-
-#     except Exception as e:
-#         st.error(f"Erro ao enviar miniatura: {e}")
-#         return None
-
-
-
-
-
-
-
-
-
 # ==========================================================================================
 # DIÁLOGO: VER RELATOS 
 # ==========================================================================================
+
 
 @st.dialog("Relatos de atividade", width="large")
 def dialog_relatos():
 
     atividade = st.session_state.get("atividade_selecionada")
 
-    # Se por algum motivo vier vazio/None
     if not isinstance(atividade, dict):
-        st.warning("Nenhuma atividade selecionada. Feche o diálogo e selecione uma atividade na tabela.")
+        st.warning("Nenhuma atividade selecionada.")
         return
 
-    # Tenta pegar primeiro "atividade", depois "Atividade", depois usa texto padrão
     nome_atividade = (
         atividade.get("atividade")
         or atividade.get("Atividade")
         or "Atividade sem nome"
     )
 
-    st.markdown(f"### {nome_atividade}")
+    st.markdown(f"## {nome_atividade}")
     st.write("")
 
+    # ============================================================
+    # BUSCAR RELATOS DA ATIVIDADE NO DOCUMENTO DO PROJETO
+    # ============================================================
+    projeto = df_projeto.iloc[0].to_dict()
+    relatos_encontrados = []
+
+    for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+        for entrega in componente.get("entregas", []):
+            for atv in entrega.get("atividades", []):
+                if atv.get("id") == atividade.get("id"):
+                    relatos_encontrados = atv.get("relatos", [])
+                    break
+
+    if not relatos_encontrados:
+        st.info("Esta atividade ainda não possui relatos.")
+        return
+
+    # ============================================================
+    # RENDERIZAÇÃO DOS RELATOS
+    # ============================================================
+
+    for relato in relatos_encontrados:
+
+        with st.container(border=True):
+
+            id_relato = relato.get("id_relato", "relato").upper()
+            numero_relatorio = relato.get("relatorio_numero")
+
+            # Cabeçalho
+            st.markdown(
+                f"#### {id_relato} "
+                f"<span style='font-size: 0.9em; color: gray;'>(R{numero_relatorio})</span>",
+                unsafe_allow_html=True
+            )
+
+            # Texto do relato
+            st.write(relato.get("relato", ""))
+
+            col1, col2 = st.columns([2, 3])
+            col1.write(f"**Quando:** {relato.get('quando', '-')}")
+            col2.write(f"**Onde:** {relato.get('onde', '-')}")
+
+            # --------------------------------------------------
+            # ANEXOS
+            # --------------------------------------------------
+            if relato.get("anexos"):
+                with col1:
+                    c1, c2 = st.columns([1, 5])
+                    c1.write("**Anexos:**")
+                    for a in relato["anexos"]:
+                        if a.get("id_arquivo"):
+                            link = gerar_link_drive(a["id_arquivo"])
+                            c2.markdown(
+                                f"[{a['nome_arquivo']}]({link})",
+                                unsafe_allow_html=True
+                            )
+
+            # --------------------------------------------------
+            # FOTOGRAFIAS
+            # --------------------------------------------------
+            if relato.get("fotos"):
+                with col2:
+                    c1, c2 = st.columns([1, 5])
+                    c1.write("**Fotografias:**")
+                    for f in relato["fotos"]:
+                        if f.get("id_arquivo"):
+                            link = gerar_link_drive(f["id_arquivo"])
+                            linha = f"[{f['nome_arquivo']}]({link})"
+                            if f.get("descricao"):
+                                linha += f" | {f['descricao']}"
+                            if f.get("fotografo"):
+                                linha += f" | {f['fotografo']}"
+                            c2.markdown(linha, unsafe_allow_html=True)
+
+        # st.write('') # espaço entre os contaners
 
 
-    # # ==========================================================
-    # # Fragment para evitar rerun completo
-    # # ==========================================================
-    # @st.fragment
-    # def corpo_dialogo():
 
-    #     # ----------------------------------------------------------
-    #     # FORMULÁRIO: EXPANDER "Novo relato"
-    #     # ----------------------------------------------------------
-    #     with st.expander("Novo relato", expanded=True):
 
-    #         # CAMPO: texto principal
-    #         texto_relato = st.text_area(
-    #             "Relato",
-    #             placeholder="Descreva o que foi feito",
-    #             key="campo_relato"
-    #         )
 
-    #         # CAMPO: Quando ocorreu
-    #         quando = st.text_input(
-    #             "Quando?",
-    #             placeholder="DD/MM/YYYY",
-    #             key="campo_quando"
-    #         )
 
-    #         # CAMPO: Onde ocorreu
-    #         onde = st.text_input(
-    #             "Onde?",
-    #             key="campo_onde"
-    #         )
 
-    #         st.divider()
 
-    #         # ------------------------------------------------------
-    #         # ANEXOS
-    #         # ------------------------------------------------------
-    #         st.markdown("### Anexos")
-    #         anexos = st.file_uploader(
-    #             "Inclua aqui listas de presença, materiais de comunicação, planilhas, relatórios, mapas etc.",
-    #             type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
-    #             accept_multiple_files=True,
-    #             key="campo_anexos"
-    #         )
 
-    #         st.divider()
 
-    #         # ------------------------------------------------------
-    #         # FOTOGRAFIAS — LISTA DINÂMICA
-    #         # ------------------------------------------------------
-    #         st.subheader("Fotografias")
 
-    #         if "fotos_relato" not in st.session_state:
-    #             st.session_state["fotos_relato"] = []
 
-    #         # Adicionar nova foto (não faz rerun geral)
-    #         if st.button("➕ Adicionar fotografia", key="btn_adicionar_foto"):
-    #             st.session_state["fotos_relato"].append({
-    #                 "arquivo": None,
-    #                 "descricao": "",
-    #                 "fotografo": ""
-    #             })
+    # for relato in relatos_encontrados:
 
-    #         # Campos de cada foto
-    #         for i, foto in enumerate(st.session_state["fotos_relato"]):
+    #     id_relato = relato.get("id_relato", "relato").upper()
+    #     numero_relatorio = relato.get("relatorio_numero")
 
-    #             st.markdown(f"**Foto {i+1}**")
+    #     # Cabeçalho
+    #     st.markdown(
+    #         f"#### {id_relato} "
+    #         f"<span style='font-size: 0.9em; color: gray;'>(R{numero_relatorio})</span>",
+    #         unsafe_allow_html=True
+    #     )
 
-    #             # Arquivo da foto
-    #             arquivo_foto = st.file_uploader(
-    #                 f"Arquivo da foto {i+1}",
-    #                 type=["jpg", "jpeg", "png"],
-    #                 key=f"foto_arquivo_{i}"
-    #             )
+    #     # Texto do relato
+    #     st.write(relato.get("relato", ""))
 
-    #             desc_foto = st.text_input(
-    #                 f"Descrição {i+1}",
-    #                 key=f"foto_descricao_{i}"
-    #             )
+    #     col1, col2 = st.columns([2, 3])
+    #     col1.write(f"**Quando:** {relato.get('quando', '-')}")
+    #     col2.write(f"**Onde:** {relato.get('onde', '-')}")
 
-    #             autor_foto = st.text_input(
-    #                 f"Fotógrafo(a) {i+1}",
-    #                 key=f"foto_autor_{i}"
-    #             )
+    #     # --------------------------------------------------
+    #     # ANEXOS
+    #     # --------------------------------------------------
+    #     if relato.get("anexos"):
+    #         with col1:
+    #             c1, c2 = st.columns([1, 5])
+    #             c1.write("**Anexos:**")
+    #             for a in relato["anexos"]:
+    #                 if a.get("id_arquivo"):
+    #                     link = gerar_link_drive(a["id_arquivo"])
+    #                     c2.markdown(
+    #                         f"[{a['nome_arquivo']}]({link})",
+    #                         unsafe_allow_html=True
+    #                     )
 
-    #             # Atualizar sessão
-    #             foto["arquivo"] = arquivo_foto
-    #             foto["descricao"] = desc_foto
-    #             foto["fotografo"] = autor_foto
+    #     # --------------------------------------------------
+    #     # FOTOS
+    #     # --------------------------------------------------
+    #     if relato.get("fotos"):
+    #         with col2:
+    #             c1, c2 = st.columns([1, 5])
+    #             c1.write("**Fotografias:**")
+    #             for f in relato["fotos"]:
+    #                 if f.get("id_arquivo"):
+    #                     link = gerar_link_drive(f["id_arquivo"])
+    #                     linha = f"[{f['nome_arquivo']}]({link})"
+    #                     if f.get("descricao"):
+    #                         linha += f" | {f['descricao']}"
+    #                     if f.get("fotografo"):
+    #                         linha += f" | {f['fotografo']}"
+    #                     c2.markdown(linha, unsafe_allow_html=True)
 
-    #             # Botão para remover foto
-    #             if st.button(f"Remover foto {i+1}", key=f"foto_remover_{i}"):
-    #                 st.session_state["fotos_relato"].pop(i)
-    #                 st.rerun()
+    #     st.divider()
 
-    #             st.divider()
 
-    #         # ------------------------------------------------------
-    #         # BOTÃO SALVAR
-    #         # ------------------------------------------------------
-    #         if st.button("💾 Salvar relato", type="primary", key="btn_salvar_relato"):
-    #             salvar_relato()  # chama a função da PARTE 3
 
-    # # Renderiza o fragment do corpo
-    # corpo_dialogo()
 
+
+
+
+
+
+
+
+
+
+
+
+# @st.dialog("Relatos de atividade", width="large")
+# def dialog_relatos():
+
+#     atividade = st.session_state.get("atividade_selecionada")
+
+#     # Se por algum motivo vier vazio/None
+#     if not isinstance(atividade, dict):
+#         st.warning("Nenhuma atividade selecionada. Feche o diálogo e selecione uma atividade na tabela.")
+#         return
+
+#     # Tenta pegar primeiro "atividade", depois "Atividade", depois usa texto padrão
+#     nome_atividade = (
+#         atividade.get("atividade")
+#         or atividade.get("Atividade")
+#         or "Atividade sem nome"
+#     )
+
+#     st.markdown(f"### {nome_atividade}")
+#     st.write("")
 
 
 
@@ -753,11 +433,6 @@ with plano_trabalho:
                         "data_fim": "Data de fim",
                     })
 
-                    # # Garante colunas
-                    # if "Data de início" not in df.columns:
-                    #     df["Data de início"] = ""
-                    # if "Data de fim" not in df.columns:
-                    #     df["Data de fim"] = ""
 
                     # Ordem das colunas
                     colunas = ["Atividade", "Data de início", "Data de fim"]
@@ -811,11 +486,6 @@ with plano_trabalho:
                             # Usada pelo diálogo para exibir o nome
                             st.session_state["atividade_selecionada"] = atividade_escolhida
 
-                            # # Usada pelo salvar_relato
-                            # st.session_state["atividade_selecionada_drive"] = atividade_escolhida
-
-                            # # Para controle (se quiser usar no futuro)
-                            # st.session_state["atividade_selecionada_tabela_key"] = chave_tabela
 
                             # Dispara abertura do diálogo
                             st.session_state["abrir_dialogo_atividade"] = True
@@ -1521,228 +1191,6 @@ with impactos:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# with impactos:
-
-#     @st.dialog("Editar impactos", width="medium")
-#     def editar_impactos():
-
-#         tab_cadastrar, tab_editar = st.tabs(["Cadastrar impacto", "Editar impactos"])
-
-#         # ========================================================
-#         # CADASTRAR IMPACTO
-#         # ========================================================
-#         with tab_cadastrar:
-
-#             tipo = st.radio(
-#                 "Tipo de impacto",
-#                 ["Longo prazo", "Curto prazo"],
-#                 horizontal=True
-#             )
-
-#             texto_impacto = st.text_area(
-#                 "Descrição do impacto",
-#                 height=150
-#             )
-
-#             if st.button(
-#                 "Salvar impacto",
-#                 type="primary",
-#                 icon=":material/save:"
-#             ):
-
-#                 if not texto_impacto.strip():
-#                     st.warning("O impacto não pode estar vazio.")
-#                     return
-
-#                 chave = (
-#                     "impactos_longo_prazo"
-#                     if tipo == "Longo prazo"
-#                     else "impactos_curto_prazo"
-#                 )
-
-#                 impacto = {
-#                     "id": str(bson.ObjectId()),
-#                     "texto": texto_impacto.strip()
-#                 }
-
-#                 resultado = col_projetos.update_one(
-#                     {"codigo": st.session_state.projeto_atual},
-#                     {"$push": {chave: impacto}}
-#                 )
-
-#                 if resultado.modified_count == 1:
-#                     st.success("Impacto salvo com sucesso!")
-#                     time.sleep(2)
-#                     st.rerun()
-#                 else:
-#                     st.error("Erro ao salvar impacto.")
-
-#         # ========================================================
-#         # EDITAR IMPACTO
-#         # ========================================================
-#         with tab_editar:
-
-#             tipo = st.radio(
-#                 "Tipo de impacto",
-#                 ["Longo prazo", "Curto prazo"],
-#                 horizontal=True,
-#                 key="tipo_editar_impacto"
-#             )
-
-#             chave = (
-#                 "impactos_longo_prazo"
-#                 if tipo == "Longo prazo"
-#                 else "impactos_curto_prazo"
-#             )
-
-#             impactos = (
-#                 df_projeto[chave].values[0]
-#                 if chave in df_projeto.columns
-#                 else []
-#             )
-
-#             if not impactos:
-#                 st.write("Não há impactos cadastrados.")
-#                 return
-
-#             mapa_impactos = {
-#                 f"{i['texto'][:80]}": i
-#                 for i in impactos
-#             }
-
-#             impacto_label = st.selectbox(
-#                 "Selecione o impacto",
-#                 list(mapa_impactos.keys())
-#             )
-
-#             impacto_selecionado = mapa_impactos[impacto_label]
-
-#             novo_texto = st.text_area(
-#                 "Editar impacto",
-#                 value=impacto_selecionado["texto"],
-#                 height=150
-#             )
-
-#             if st.button(
-#                 "Salvar alterações",
-#                 type="primary",
-#                 icon=":material/save:"
-#             ):
-
-#                 if not novo_texto.strip():
-#                     st.warning("O impacto não pode estar vazio.")
-#                     return
-
-#                 resultado = col_projetos.update_one(
-#                     {
-#                         "codigo": st.session_state.projeto_atual,
-#                         f"{chave}.id": impacto_selecionado["id"],
-#                     },
-#                     {
-#                         "$set": {
-#                             f"{chave}.$.texto": novo_texto.strip()
-#                         }
-#                     }
-#                 )
-
-#                 if resultado.modified_count == 1:
-#                     st.success("Impacto atualizado com sucesso!")
-#                     time.sleep(2)
-#                     st.rerun()
-#                 else:
-#                     st.error("Erro ao atualizar impacto.")
-
-#     # st.write('')
-
-#     # Toggle do modo de edição
-
-#     if st.session_state.tipo_usuario in ["admin", "equipe"]:
-
-#         with st.container(horizontal=True, horizontal_alignment="right"):
-#             modo_edicao = st.toggle("Modo de edição", key="editar_impactos")
-
-
-
-#     # LISTAGEM DOS IMPACTOS DE LONGO PRAZO E CURTO PRAZO
-
-#     col_lp, col_cp = st.columns(2, gap="large")
-
-#     with col_lp:
-#         st.subheader("Impactos de longo prazo")
-#         st.write('*Entre 3 a 5 anos após o final do projeto*')
-
-#         # Botões de edição só para admin e equipe. Por isso o try.
-#         try:
-#             if modo_edicao:
-
-#                 with st.container(horizontal=True):
-#                     if st.button("Editar impactos", icon=":material/edit:", type="secondary"):
-#                         editar_impactos()
-#         except:
-#             pass
-
-
-#         st.write('')
-
-#         impactos_lp = (
-#             df_projeto["impactos_longo_prazo"].values[0]
-#             if "impactos_longo_prazo" in df_projeto.columns
-#             else []
-#         )
-
-#         if not impactos_lp:
-#             st.write("Não há impactos de longo prazo cadastrados")
-#         else:
-#             for i, impacto in enumerate(impactos_lp, start=1):
-#                 st.write(f"**{i}**. {impacto['texto']}")
-
-
-
-
-#     with col_cp:
-#         st.subheader("Impactos de curto prazo")
-#         st.write("*Durante o projeto ou até o final da subvenção*")
-
-#         # Botões de edição só para admin e equipe. Por isso o try.
-#         try:
-#             if modo_edicao:
-#                 with st.container(horizontal=True):
-#                     if st.button("Editar impactos", icon=":material/edit:", type="secondary", key="editar_impactos_cp"):
-#                         editar_impactos()
-#         except:
-#             pass
-
-
-#         st.write('')
-
-#         impactos_cp = (
-#             df_projeto["impactos_curto_prazo"].values[0]
-#             if "impactos_curto_prazo" in df_projeto.columns
-#             else []
-#         )
-
-#         if not impactos_cp:
-#             st.write("Não há impactos de curto prazo cadastrados")
-#         else:
-#             for i, impacto in enumerate(impactos_cp, start=1):
-#                 st.write(f"**{i}**. {impacto['texto']}")
 
 
 
