@@ -471,6 +471,10 @@ def ajustar_altura_data_editor(df, linhas_adicionais=1):
 
 # Envia mensagem para a área de notificação
 def notificar(mensagem: str):
+
+    if "notificacoes" not in st.session_state:
+        st.session_state.notificacoes = []
+        
     st.session_state.notificacoes.append(mensagem)
 
 
