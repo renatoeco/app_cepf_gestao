@@ -5,7 +5,12 @@ from datetime import timedelta
 
 import streamlit_shadcn_ui as ui
 
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, ajustar_altura_data_editor, sidebar_projeto  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import (
+    conectar_mongo_cepf_gestao, 
+    ajustar_altura_data_editor, 
+    sidebar_projeto,
+    gerar_link_drive,
+)
 
 
 ###########################################################################################################
@@ -146,56 +151,6 @@ def atualizar_datas_relatorios(col_projetos, codigo_projeto):
 
 
 
-
-
-
-
-
-
-
-# def atualizar_datas_relatorios(col_projetos, codigo_projeto):
-#     projeto = col_projetos.find_one({"codigo": codigo_projeto})
-
-#     parcelas = projeto.get("financeiro", {}).get("parcelas", [])
-#     relatorios = projeto.get("relatorios", [])
-
-#     if not parcelas or not relatorios:
-#         return
-
-#     # Mapear parcelas por número
-#     mapa_parcelas = {
-#         p["numero"]: p for p in parcelas if p.get("numero") is not None
-#     }
-
-#     novos_relatorios = []
-
-#     for r in relatorios:
-#         numero = r.get("numero")
-
-#         if numero in mapa_parcelas:
-#             data_parcela = pd.to_datetime(
-#                 mapa_parcelas[numero]["data_prevista"]
-#             )
-#             data_relatorio = (data_parcela + timedelta(days=15)).date().isoformat()
-#         else:
-#             data_relatorio = None
-
-#         novos_relatorios.append(
-#             {
-#                 "numero": numero,
-#                 "entregas": r.get("entregas", []),
-#                 "data_prevista": data_relatorio,
-#                 "status_relatorio": "modo_edicao"
-#             }
-#         )
-
-#     col_projetos.update_one(
-#         {"codigo": codigo_projeto},
-#         {"$set": {"relatorios": novos_relatorios}}
-#     )
-
-
-
 # ==========================================================================================
 # DIÁLOGO: VER RELATOS FINANCEIROS
 # ==========================================================================================
@@ -204,12 +159,10 @@ def dialog_relatos_fin():
 
     despesa = st.session_state.get("despesa_selecionada")
 
-    # Se por algum motivo vier vazio/None
     if not isinstance(despesa, dict):
-        st.warning("Nenhuma despesa selecionada. Feche o diálogo e selecione uma despesa na tabela.")
+        st.warning("Nenhuma despesa selecionada.")
         return
 
-    # Tenta pegar primeiro "despesa", depois "Despesa", depois usa texto padrão
     nome_despesa = (
         despesa.get("despesa")
         or despesa.get("Despesa")
@@ -219,20 +172,58 @@ def dialog_relatos_fin():
     st.markdown(f"### {nome_despesa}")
     st.write("")
 
+    # ==========================================================
+    # BUSCA DOS LANÇAMENTOS DA DESPESA
+    # ==========================================================
+    lancamentos = []
 
+    for d in projeto.get("financeiro", {}).get("orcamento", []):
+        if d.get("nome_despesa") == nome_despesa:
+            lancamentos = d.get("lancamentos", [])
+            break
+
+    if not lancamentos:
+        st.caption("Esta despesa ainda não possui lançamentos.")
+        return
 
     # ==========================================================
-    # Usamos fragment para evitar rerun completo
+    # RENDERIZAÇÃO DOS LANÇAMENTOS
     # ==========================================================
-    @st.fragment
-    def corpo_dialogo_relatos_fin():
-        st.write('corpo')
-        
+    for lanc in lancamentos:
 
-    # Renderiza o fragment do corpo
-    corpo_dialogo_relatos_fin()
+        with st.container(border=True):
 
+            id_despesa = lanc.get("id_despesa", "").upper()
+            num_relatorio = lanc.get("relatorio_numero")
 
+            st.markdown(f"**{id_despesa}** (R{num_relatorio})")
+            st.write(lanc.get("descricao_despesa", ""))
+
+            col1, col2 = st.columns([1, 2])
+
+            c1, c2 = col1.columns([1, 3])
+
+            c1.write("**Data:**")
+            c2.write(lanc.get("data_despesa", "-"))
+
+            c1.write("**Fornecedor:**")
+            c2.write(lanc.get("fornecedor", "-"))
+
+            c1.write("**CPF/CNPJ:**")
+            c2.write(lanc.get("cpf_cnpj", "-"))
+
+            valor = lanc.get("valor_despesa", 0)
+            valor_br = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            c1.write("**Valor (R$):**")
+            c2.write(valor_br)
+
+            anexos = lanc.get("anexos", [])
+            if anexos:
+                col2.markdown("**Anexos:**")
+                for a in anexos:
+                    link = gerar_link_drive(a["id_arquivo"])
+                    col2.markdown(f"[{a['nome_arquivo']}]({link})")
 
 
 

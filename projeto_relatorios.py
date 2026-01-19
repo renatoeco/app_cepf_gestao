@@ -2062,7 +2062,6 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                 # --------------------------------------------------
                 # AGRUPA SOMENTE DESPESAS COM LANÇAMENTOS
                 # --------------------------------------------------
-                from collections import defaultdict
 
                 grupo = defaultdict(lambda: defaultdict(list))
 
