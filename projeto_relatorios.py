@@ -18,7 +18,8 @@ from funcoes_auxiliares import (
     obter_pasta_projeto,
     obter_pasta_relatos_financeiros,
     enviar_arquivo_drive,
-    gerar_link_drive
+    gerar_link_drive,
+    enviar_email
 )
 
 
@@ -94,6 +95,8 @@ col_beneficios = db["beneficios"]
 
 col_publicos = db["publicos"]
 
+col_pessoas = db["pessoas"]
+
 lista_publicos = list(col_publicos.find({}, {"_id": 0, "publico": 1}))
 
 # SEMPRE insere a opção Outros
@@ -129,6 +132,149 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+
+def notificar_padrinhos_relatorio(
+    col_pessoas,
+    numero_relatorio,
+    projeto,
+    logo_url
+):
+    padrinhos = buscar_padrinhos_do_projeto(col_pessoas, projeto["codigo"])
+
+    if not padrinhos:
+        return False
+
+    for padrinho in padrinhos:
+        html = montar_email_relatorio(
+            nome=padrinho["nome_completo"],
+            numero_relatorio=numero_relatorio,
+            codigo=projeto["codigo"],
+            sigla=projeto["sigla"],
+            logo_url=logo_url
+        )
+
+        enviar_email(
+            corpo_html=html,
+            destinatarios=[padrinho["e_mail"]],
+            assunto=f"CEPF - Relatório {numero_relatorio} recebido - Projeto {projeto['codigo']} - {projeto['sigla']}"
+        )
+
+    return True
+
+
+def montar_email_relatorio(
+    nome: str,
+    numero_relatorio: int,
+    codigo: str,
+    sigla: str,
+    logo_url: str
+):
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-top: 6px solid #b30000;
+            padding: 30px;
+        }}
+        .logo {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .content {{
+            color: #333;
+            font-size: 15px;
+            line-height: 1.6;
+        }}
+        .footer {{
+            margin-top: 40px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }}
+        .highlight {{
+            color: #b30000;
+            font-weight: bold;
+        }}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="logo">
+            <img src="{logo_url}" height="70" alt="CEPF">
+        </div>
+
+        <div class="content">
+            <br>
+            <p>Olá <strong>{nome}</strong>,</p>
+
+            <p>
+                O relatório <span class="highlight">{numero_relatorio}</span> do projeto
+                <span class="highlight">{codigo} - {sigla}</span> está disponível para análise.
+            </p>
+
+            <p>
+                Por favor, acesse o sistema para realizar a avaliação.
+            </p>
+
+            <p>Atenciosamente,<br>
+            <strong>Sistema de Gestão de Projetos</strong></p>
+        </div>
+
+        <div class="footer">
+            Este é um e-mail automático. Não responda.
+        </div>
+    </div>
+
+</body>
+</html>
+"""
+
+
+
+
+
+def buscar_padrinhos_do_projeto(col_pessoas, codigo_projeto: str):
+    """
+    Retorna lista de pessoas (dict) que são padrinhos do projeto.
+    Regra:
+      - tipo_usuario != beneficiario
+      - tipo_usuario != visitante
+      - projetos contém o código do projeto
+    """
+
+    padrinhos = list(
+        col_pessoas.find(
+            {
+                "tipo_usuario": {"$nin": ["beneficiario", "visitante"]},
+                "projetos": codigo_projeto,
+                "status": "ativo"
+            },
+            {
+                "nome_completo": 1,
+                "e_mail": 1
+            }
+        )
+    )
+
+    return padrinhos
+
+
+
 
 def gerar_id_despesa(projeto):
     """
@@ -3861,6 +4007,21 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
                                         }
                                     }
                                 )
+
+
+                        # --------------------------------------------------
+                        # ENVIA E-MAIL PARA PADRINHOS
+                        # --------------------------------------------------
+                        
+                        logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+                        
+                        notificar_padrinhos_relatorio(
+                            col_pessoas=col_pessoas,
+                            numero_relatorio=relatorio_numero,
+                            projeto=projeto_atualizado,
+                            logo_url=logo_cepf
+                        )
+
 
                         st.success("Relatório enviado para análise.")
 

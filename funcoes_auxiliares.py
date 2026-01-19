@@ -9,6 +9,65 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
+# Envio de e-mail
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+
+
+
+
+###########################################################################################################
+# FUNÇÃO PARA ENVIAR E-MAIL
+###########################################################################################################
+
+
+def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
+    """
+    Envia e-mail em HTML usando configurações do st.secrets
+    
+    Parâmetros:
+        corpo_html (str): Conteúdo do e-mail em HTML
+        destinatarios (list[str]): Lista de e-mails de destino
+        assunto (str): Assunto do e-mail
+    """
+
+    # Lendo segredos
+    smtp_server = st.secrets["senhas"]["smtp_server"]
+    port = st.secrets["senhas"]["port"]
+    endereco_email = st.secrets["senhas"]["endereco_email"]
+    senha_email = st.secrets["senhas"]["senha_email"]
+
+    # Criando mensagem
+    msg = MIMEMultipart()
+    msg["From"] = endereco_email
+    msg["To"] = ", ".join(destinatarios)
+    msg["Subject"] = assunto
+
+    msg.attach(MIMEText(corpo_html, "html"))
+
+    # Enviando
+    try:
+        with smtplib.SMTP(smtp_server, port) as server:
+            server.starttls()
+            server.login(endereco_email, senha_email)
+            server.send_message(msg)
+
+        return True
+
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return False
+
+
+
+
+
+
+
+
+
 
 
 
