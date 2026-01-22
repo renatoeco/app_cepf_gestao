@@ -136,7 +136,7 @@ projeto = df_projeto.iloc[0].to_dict()
 # INTERFACE
 ###########################################################################################################
 
-st.logo("images/cepf_logo.png", size="large")
+st.logo("images/ieb_logo.svg", size="large")
 
 col_titulo, col_identificacao = st.columns([3, 2])
 

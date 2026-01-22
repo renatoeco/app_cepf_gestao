@@ -50,7 +50,7 @@ if "form_projeto" not in st.session_state:
 # INTERFACE
 ###########################################################################################################
 
-st.logo("images/cepf_logo.png", size="large")
+st.logo("images/ieb_logo.svg", size="large")
 st.header("Novo projeto")
 
 st.write(

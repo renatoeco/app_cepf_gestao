@@ -126,7 +126,7 @@ def df_index1(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página
 st.header("Nova Organização")

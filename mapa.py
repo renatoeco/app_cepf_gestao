@@ -45,7 +45,7 @@ def notificar_mapa(mensagem: str):
 # INTERFACE
 ###########################################################################################################
 
-st.logo("images/cepf_logo.png", size="large")
+st.logo("images/ieb_logo.svg", size="large")
 st.header("Mapa de projetos")
 
 st.write('')

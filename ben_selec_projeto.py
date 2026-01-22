@@ -37,7 +37,7 @@ df_projetos = col_projetos.find()
 
 # Exibe o logo
 container_logo = st.container(horizontal=True, horizontal_alignment="center")
-container_logo.image("images/cepf_logo.png", width=300)
+container_logo.image("images/ieb_logo.svg", width=300)
 
 st.write('')
 st.write('')

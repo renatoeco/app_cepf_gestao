@@ -2,3 +2,6 @@
 # Default: 200
 [server]
 maxUploadSize = 25
+
+[theme]
+primaryColor = "#2F5AA1"

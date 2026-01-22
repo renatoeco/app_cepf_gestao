@@ -421,7 +421,7 @@ df_projeto = df_projeto.merge(
 ###########################################################################################################
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 
 # Código e Sigla do projeto

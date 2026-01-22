@@ -82,7 +82,7 @@ df_organizacoes["quantidade_projetos"] = (
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página
 st.header("Organizações")

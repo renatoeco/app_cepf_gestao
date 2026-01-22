@@ -285,7 +285,7 @@ def confirmar_exclusao_pergunta(pergunta_atual, perguntas, edital_selecionado):
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 st.header('Cadastros auxiliares')
 

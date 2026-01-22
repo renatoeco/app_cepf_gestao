@@ -172,7 +172,7 @@ df_projetos["data_fim_contrato_dtime"] = pd.to_datetime(
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página
 st.header("Projetos")

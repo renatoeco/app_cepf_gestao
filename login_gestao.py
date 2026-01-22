@@ -300,7 +300,7 @@ def login():
     st.markdown(
         """
         <h2 style='text-align: center; color: slategray;'>
-            Plataforma de Gestão de Projetos do CEPF Brasil
+            Plataforma de Gestão de Projetos do IEB
         </h2>
         """,
         unsafe_allow_html=True
@@ -310,93 +310,75 @@ def login():
     for _ in range(7):
         st.write('')
 
+    esq, centro, dir = st.columns([2, 1, 2])
 
-    with st.container(horizontal=True, gap="large"):
+    with centro.form("login_form", border=False):
+        # Campo de e-mail
+        email_input = st.text_input("E-mail", width="stretch")
 
-        # Coluna da esquerda
-        with st.container():
+        # Campo de senha
+        password = st.text_input("Senha", type="password", width="stretch")
 
-            cols = st.columns([1, 3])
+        if st.form_submit_button("Entrar", type="primary"):
+            # Busca apenas pelo e-mail
+            usuario_encontrado = col_pessoas.find_one({
+                "e_mail": {"$regex": f"^{email_input.strip()}$", "$options": "i"}
+            })
 
-            cols[1].image("images/cepf_logo.png", width=400)
-            cols[1].write('')
-            cols[1].write('')
+            # Salva o email para possível recuperação de senha
+            st.session_state["email_para_recuperar"] = email_input.strip()
 
-            st.write('')
-            st.write('')
-            st.write('')
-            st.write('')
+            if usuario_encontrado:
+                senha_hash = usuario_encontrado.get("senha")
 
-        # Coluna da direita
-        with st.container():
- 
-            with st.form("login_form", border=False):
-                # Campo de e-mail
-                email_input = st.text_input("E-mail", width=300)
+                # Forma segura: só aceita hashes válidos (bytes)
+                if isinstance(senha_hash, bytes) and bcrypt.checkpw(password.encode("utf-8"), senha_hash):
+                    if usuario_encontrado.get("status", "").lower() != "ativo":
+                        with st.container(width="stretch"):
+                            st.error("Usuário inativo. Entre em contato com o a equipe do CEPF.")
 
-                # Campo de senha
-                password = st.text_input("Senha", type="password", width=300)
+                        st.stop()
 
-                if st.form_submit_button("Entrar", type="primary"):
-                    # Busca apenas pelo e-mail
-                    usuario_encontrado = col_pessoas.find_one({
-                        "e_mail": {"$regex": f"^{email_input.strip()}$", "$options": "i"}
-                    })
-
-                    # Salva o email para possível recuperação de senha
-                    st.session_state["email_para_recuperar"] = email_input.strip()
-
-                    if usuario_encontrado:
-                        senha_hash = usuario_encontrado.get("senha")
-
-                        # Forma segura: só aceita hashes válidos (bytes)
-                        if isinstance(senha_hash, bytes) and bcrypt.checkpw(password.encode("utf-8"), senha_hash):
-                            if usuario_encontrado.get("status", "").lower() != "ativo":
-                                with st.container(width=300):
-                                    st.error("Usuário inativo. Entre em contato com o a equipe do CEPF.")
-    
-                                st.stop()
-
-                            # tipo_usuario = usuario_encontrado.get("tipo_usuario", [])
-                            tipo_usuario = usuario_encontrado.get("tipo_usuario", "")
+                    # tipo_usuario = usuario_encontrado.get("tipo_usuario", [])
+                    tipo_usuario = usuario_encontrado.get("tipo_usuario", "")
 
 
-                            # Autentica
-                            st.session_state["logged_in"] = True
-                            st.session_state["tipo_usuario"] = tipo_usuario
-                            st.session_state["nome"] = usuario_encontrado.get("nome_completo")
-                            # st.session_state["cpf"] = usuario_encontrado.get("CPF")
-                            st.session_state["id_usuario"] = usuario_encontrado.get("_id")
-                            st.session_state["projetos"] = usuario_encontrado.get("projetos", [])
-                            st.rerun()
-                        else:
-                            # Senha inválida ou não hashada corretamente
-                            st.error("E-mail ou senha inválidos!", width=300)
-                    else:
-                        st.error("E-mail ou senha inválidos!", width=300)
+                    # Autentica
+                    st.session_state["logged_in"] = True
+                    st.session_state["tipo_usuario"] = tipo_usuario
+                    st.session_state["nome"] = usuario_encontrado.get("nome_completo")
+                    # st.session_state["cpf"] = usuario_encontrado.get("CPF")
+                    st.session_state["id_usuario"] = usuario_encontrado.get("_id")
+                    st.session_state["projetos"] = usuario_encontrado.get("projetos", [])
+                    st.rerun()
+                else:
+                    # Senha inválida ou não hashada corretamente
+                    st.error("E-mail ou senha inválidos!", width=300)
+            else:
+                st.error("E-mail ou senha inválidos!", width=300)
 
-            st.write('')
-            st.write('')
+    st.write('')
+    st.write('')
 
-            with st.container(horizontal=True, horizontal_alignment="left", gap="large"):
+    with centro.container(horizontal=True, horizontal_alignment="left", gap="large"):
 
-                # Botão para recuperar senha
-                st.button(
-                    "Esqueci a senha", 
-                    key="forgot_password", 
-                    type="tertiary", 
-                    on_click=recuperar_senha_dialog
-                )
+        # Botão para recuperar senha
+        st.button(
+            "Esqueci a senha", 
+            key="forgot_password", 
+            type="tertiary", 
+            on_click=recuperar_senha_dialog
+        )
 
-                
+        
 
-                # Botão de primeiro acesso
-                st.button(
-                    "Primeiro acesso", 
-                    key="primeiro_acesso", 
-                    type="tertiary", 
-                    on_click=primeiro_acesso_dialog
-                )
+        # Botão de primeiro acesso
+        st.button(
+            "Primeiro acesso", 
+            key="primeiro_acesso", 
+            type="tertiary", 
+            on_click=primeiro_acesso_dialog
+        )
 
 
 

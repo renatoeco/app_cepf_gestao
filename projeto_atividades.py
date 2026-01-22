@@ -318,7 +318,7 @@ if "_id" in df_indicadores.columns:
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 
 

@@ -70,7 +70,7 @@ if "_id" in df_doadores.columns:
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página
 st.header("Gerenciar Ciclos de Investimento")

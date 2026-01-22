@@ -237,7 +237,7 @@ def dialog_relatos_fin():
 
 
 # Logo do sidebar
-st.logo("images/cepf_logo.png", size='large')
+st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página e identificação
 col_titulo, col_identificacao = st.columns([3, 2])
