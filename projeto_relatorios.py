@@ -4,7 +4,7 @@ import streamlit_antd_components as sac
 import time
 import datetime
 from collections import defaultdict
-
+import streamlit_antd_components as sac
 
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
@@ -1289,6 +1289,9 @@ with col_identificacao:
     )
 
 
+st.write('')
+st.write('')
+
 
 
 
@@ -1296,7 +1299,7 @@ with col_identificacao:
 
 
 ###########################################################################################################
-# UMA ABA PRA CADA RELATÓRIO
+# CONFIGURAÇÃO DOS STEPS DO RELATÓRIO
 ###########################################################################################################
 
 steps_relatorio = [
@@ -1308,317 +1311,312 @@ steps_relatorio = [
     "Enviar"
 ]
 
+###########################################################################################################
+# VERIFICA SE EXISTEM RELATÓRIOS
+###########################################################################################################
 
 if not relatorios:
     st.warning("Este projeto ainda não possui relatórios cadastrados.")
     st.stop()
 
+###########################################################################################################
+# ABAS DOS RELATÓRIOS (sac.tabs)
+###########################################################################################################
 
-# Cria uma aba para cada relatório
-abas = [f"Relatório {r.get('numero')}" for r in relatorios]
-tabs = st.tabs(abas)
+labels_relatorios = [f"Relatório {r.get('numero')}" for r in relatorios]
 
+aba_selecionada = sac.tabs(
+    items=[sac.TabsItem(label=l) for l in labels_relatorios],
+    align="left",
+    variant="outline",
+    size="xl"
+)
 
-for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
-    with tab:
+idx = labels_relatorios.index(aba_selecionada)
+relatorio = relatorios[idx]
 
-        relatorio_numero = relatorio["numero"]
-        projeto_codigo = projeto["codigo"]
+###########################################################################################################
+# DADOS DO RELATÓRIO
+###########################################################################################################
 
-        # -------------------------------
-        # STATUS ATUAL DO RELATÓRIO
-        # -------------------------------
-        status_atual_db = relatorio.get("status_relatorio", "modo_edicao")
-        status_atual_ui = STATUS_DB_TO_UI.get(status_atual_db, "Modo edição")
+relatorio_numero = relatorio["numero"]
+projeto_codigo = projeto["codigo"]
 
-        aguardando = False
+###########################################################################################################
+# STATUS ATUAL DO RELATÓRIO
+###########################################################################################################
 
+status_atual_db = relatorio.get("status_relatorio", "modo_edicao")
+status_atual_ui = STATUS_DB_TO_UI.get(status_atual_db, "Modo edição")
 
-        # -------------------------------
-        # Controle central de permissão de edição
-        # -------------------------------
-        pode_editar_relatorio = (
-            status_atual_db == "modo_edicao"
-            and tipo_usuario == "beneficiario"
+aguardando = False
+
+###########################################################################################################
+# CONTROLE CENTRAL DE PERMISSÃO DE EDIÇÃO
+###########################################################################################################
+
+pode_editar_relatorio = (
+    status_atual_db == "modo_edicao"
+    and tipo_usuario == "beneficiario"
+)
+
+###########################################################################################################
+# CONTROLE DE ESTADO – NOVA COMUNIDADE
+###########################################################################################################
+
+if f"mostrar_nova_comunidade_{idx}" not in st.session_state:
+    st.session_state[f"mostrar_nova_comunidade_{idx}"] = False
+
+###########################################################################################################
+# REGRA DE BLOQUEIO (a partir do 2º relatório)
+###########################################################################################################
+
+if idx > 0:
+    status_anterior = relatorios[idx - 1].get("status_relatorio")
+
+    if status_anterior != "aprovado":
+        aguardando = True
+
+        col_projetos.update_one(
+            {
+                "codigo": projeto_codigo,
+                "relatorios.numero": relatorio_numero,
+                "relatorios.status_relatorio": {"$ne": "aguardando"}
+            },
+            {
+                "$set": {
+                    "relatorios.$.status_relatorio": "aguardando"
+                }
+            }
         )
 
-        # -------------------------------------------
-        # CONTROLE DE ESTADO – NOVA COMUNIDADE NO STEP "Beneficiários"
-        # -------------------------------------------
-        if f"mostrar_nova_comunidade_{idx}" not in st.session_state:
-            st.session_state[f"mostrar_nova_comunidade_{idx}"] = False
+        status_atual_ui = "Modo edição"
 
+###########################################################################################################
+# MENSAGEM DE STATUS DO RELATÓRIO PARA BENEFICIÁRIO E VISITANTE
+###########################################################################################################
 
-        # -------------------------------
-        # REGRA DE BLOQUEIO (a partir do 2º relatório)
-        # -------------------------------
-        # A partir do segundo relatório (idx > 0),
-        # este relatório só pode ser liberado se o anterior estiver APROVADO.
-        if idx > 0:
+if tipo_usuario in ["beneficiario", "visitante"]:
 
-            # Recupera o status do relatório imediatamente anterior
-            status_anterior = relatorios[idx - 1].get("status_relatorio")
+    if status_atual_db == "em_analise":
+        st.write("")
+        st.warning("Relatório em análise. Aguarde o retorno.", icon=":material/manage_search:")
 
-            # Se o relatório anterior NÃO estiver aprovado,
-            # este relatório deve ficar bloqueado
-            if status_anterior != "aprovado":
+    elif status_atual_db == "aprovado":
+        st.write("")
+        st.success("Relatório aprovado", icon=":material/check:")
 
-                # Flag usada pela UI para:
-                # - desabilitar o segmented_control
-                # - impedir edição do conteúdo
-                aguardando = True
+###########################################################################################################
+# SINCRONIZA STATUS DO RELATÓRIO COM A UI
+###########################################################################################################
 
-                # Força o status "aguardando" no banco de dados
-                # Apenas se ainda não estiver como "aguardando"
-                # (evita update desnecessário e loop de escrita)
-                col_projetos.update_one(
-                    {
-                        "codigo": projeto_codigo,                   # projeto atual
-                        "relatorios.numero": relatorio_numero,       # relatório atual
-                        "relatorios.status_relatorio": {"$ne": "aguardando"}
-                    },
-                    {
-                        "$set": {
-                            "relatorios.$.status_relatorio": "aguardando"
-                        }
-                    }
-                )
+status_key = f"status_relatorio_{idx}"
+status_atual_ui = STATUS_DB_TO_UI.get(status_atual_db, "Modo edição")
 
-                # Na interface:
-                # - o segmented_control fica travado
-                # - mas precisa exibir um valor válido
-                # - "Modo edição" é apenas visual (não altera o banco)
-                status_atual_ui = "Modo edição"
+if st.session_state.get(status_key) != status_atual_ui:
+    st.session_state[status_key] = status_atual_ui
 
+###########################################################################################################
+# SEGMENTED CONTROL (somente equipe interna)
+###########################################################################################################
 
+if tipo_usuario in ["equipe", "admin"]:
+    with st.container(horizontal=True, horizontal_alignment="center"):
+        st.segmented_control(
+            label="",
+            options=["Modo edição", "Em análise", "Aprovado"],
+            key=f"status_relatorio_{idx}",
+            disabled=aguardando,
+            on_change=atualizar_status_relatorio if not aguardando else None,
+            args=(idx, relatorio_numero, projeto_codigo) if not aguardando else None
+        )
 
+###########################################################################################################
+# MENSAGEM DE AGUARDO
+###########################################################################################################
 
+if aguardando:
+    st.write("")
+    st.info(
+        "Aguardando a aprovação do relatório anterior.",
+        icon=":material/nest_clock_farsight_analog:"
+    )
+    st.stop()
 
+st.write("")
+st.write("")
 
-        ###########################################################################################################
-        # MENSAGEM DE STATUS DO RELATÓRIO PARA BENEFICIÁRIO E VISITANTE
-        ###########################################################################################################
+###########################################################################################################
+# STEPS DO RELATÓRIO (sac.tabs)
+###########################################################################################################
 
-        if tipo_usuario in ["beneficiario", "visitante"]:
+labels_steps = steps_relatorio
 
-            if status_atual_db == "em_analise":
-                st.write('')
-                st.warning("Relatório em análise. Aguarde o retorno.", icon=":material/manage_search:")
+step_selecionado = sac.tabs(
+    items=[sac.TabsItem(label=s) for s in labels_steps],
+    align="start",
+    use_container_width=True
+)
 
-            elif status_atual_db == "aprovado":
-                st.write('')
-                st.success("Relatório aprovado", icon=":material/check:")
-
-
-
-
-        # -------------------------------
-        # SINCRONIZA STATUS DO RELATÓRIO COM A UI
-        # -------------------------------
-
-        status_key = f"status_relatorio_{idx}"
-
-        # Converte SEMPRE o status do banco para o rótulo da interface
-        status_atual_ui = STATUS_DB_TO_UI.get(status_atual_db, "Modo edição")
-
-        # Se o valor salvo no session_state estiver diferente do banco,
-        # atualiza para manter o segmented_control sincronizado
-        if st.session_state.get(status_key) != status_atual_ui:
-            st.session_state[status_key] = status_atual_ui
-
-
-
-        # -------------------------------
-        # SEGMENTED CONTROL somente para equipe interna
-        # -------------------------------
-
-        if tipo_usuario in ["equipe", "admin"]:
-            with st.container(horizontal=True, horizontal_alignment="center"):
-                st.segmented_control(
-                    label="",
-                    options=["Modo edição", "Em análise", "Aprovado"],
-                    key=f"status_relatorio_{idx}",
-                    disabled=aguardando,
-                    on_change=atualizar_status_relatorio if not aguardando else None,
-                    args=(idx, relatorio_numero, projeto_codigo) if not aguardando else None
-                )
-
-        if aguardando:
-            st.write('')
-            st.info(
-                # ":material/hourglass_top: Aguardando a aprovação do relatório anterior."
-                "Aguardando a aprovação do relatório anterior.",
-                icon=":material/nest_clock_farsight_analog:"
-
-            )
-
-
-        st.write('')
-        st.write('')
-
-
-        if not aguardando:
-
-
-            # STEPS funcionam como abas --------------------------
-            step_key = f"steps_relatorio_{idx}"
-
-
-            step = sac.steps(
-                items=[sac.StepsItem(title=s) for s in steps_relatorio],
-                index=steps_relatorio.index(st.session_state.step_relatorio),
-                key=f"steps_relatorio_{idx}"
-            )
+###########################################################################################################
+# CONTEÚDO DOS STEPS
+###########################################################################################################
 
 
 
 
-            # ---------- ATIVIDADES ----------
 
-            if step == "Atividades":
 
-                # Guarda para uso no diálogo e no salvar_relato
-                st.session_state["projeto_mongo"] = projeto
-                st.session_state["relatorio_numero"] = relatorio_numero
+
+
+
+
+# ---------- ATIVIDADES ----------
+
+if step_selecionado == "Atividades":
+
+    # Guarda para uso no diálogo e no salvar_relato
+    st.session_state["projeto_mongo"] = projeto
+    st.session_state["relatorio_numero"] = relatorio_numero
+
+    st.write("")
+    st.write("")
+
+    st.markdown("### Relatos de atividades")
+    st.write('')
+
+    # --------------------------------------------------
+    # BOTÃO PARA CRIAR NOVO RELATO
+    # --------------------------------------------------
+    with st.container(horizontal=True, horizontal_alignment="right"):
+
+        if pode_editar_relatorio:
+            if st.button(
+                "Relatar atividade",
+                type="primary",
+                key=f"btn_relatar_{idx}",
+                icon=":material/add:",
+                width=260
+            ):
+                # Limpa qualquer resíduo antigo de formulário
+                for chave in [
+                    "campo_relato",
+                    "campo_quando",
+                    "campo_onde",
+                    "campo_anexos",
+                    "fotos_relato",
+                    "atividade_select_dialog"
+                ]:
+                    if chave in st.session_state:
+                        del st.session_state[chave]
+
+                dialog_relatos()
+
+
+    # --------------------------------------------------
+    # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
+    # AGRUPADOS POR ATIVIDADE
+    # --------------------------------------------------
+
+    if "relato_editando_id" not in st.session_state:
+        st.session_state["relato_editando_id"] = None
+
+    tem_relato = False
+
+    for componente in projeto["plano_trabalho"]["componentes"]:
+        for entrega in componente["entregas"]:
+            for atividade in entrega["atividades"]:
+
+                relatos = [
+                    r for r in atividade.get("relatos", [])
+                    if r.get("relatorio_numero") == relatorio_numero
+                ]
+
+                if not relatos:
+                    continue
+
+                tem_relato = True
 
                 st.write("")
-                st.write("")
+                st.markdown(f"#### {atividade['atividade']}")
 
-                st.markdown("### Relatos de atividades")
-                st.write('')
+                for relato in relatos:
 
-                # --------------------------------------------------
-                # BOTÃO PARA CRIAR NOVO RELATO
-                # --------------------------------------------------
-                with st.container(horizontal=True, horizontal_alignment="right"):
+                    id_relato = relato["id_relato"]
+                    editando = st.session_state["relato_editando_id"] == id_relato
 
-                    if pode_editar_relatorio:
-                        if st.button(
-                            "Relatar atividade",
-                            type="primary",
-                            key=f"btn_relatar_{idx}",
-                            icon=":material/add:",
-                            width=260
-                        ):
-                            # Limpa qualquer resíduo antigo de formulário
-                            for chave in [
-                                "campo_relato",
-                                "campo_quando",
-                                "campo_onde",
-                                "campo_anexos",
-                                "fotos_relato",
-                                "atividade_select_dialog"
-                            ]:
-                                if chave in st.session_state:
-                                    del st.session_state[chave]
-
-                            dialog_relatos()
+                    # --------------------------------------------------
+                    # GARANTE QUE WIDGETS DE VISUALIZAÇÃO NÃO EXISTAM EM EDIÇÃO
+                    # --------------------------------------------------
+                    if editando:
+                        # remove qualquer state de devolutiva para evitar conflito
+                        st.session_state.pop(f"devolutiva_{id_relato}", None)
+                        st.session_state.pop(f"status_relato_ui_{id_relato}", None)
 
 
-                # --------------------------------------------------
-                # LISTAGEM DE TODOS OS RELATOS DO RELATÓRIO
-                # AGRUPADOS POR ATIVIDADE
-                # --------------------------------------------------
+                    with st.container(border=True):
 
-                if "relato_editando_id" not in st.session_state:
-                    st.session_state["relato_editando_id"] = None
+                        # ==================================================
+                        # MODO VISUALIZAÇÃO DO RELATO
+                        # ==================================================
+                        if not editando:
 
-                tem_relato = False
+                            # --------------------------------------------------
+                            # Lógica de status visual (depende de devolutiva)
+                            # --------------------------------------------------
+                            status_relato_db = relato.get("status_relato", "em_analise")
+                            tem_devolutiva = bool(relato.get("devolutiva"))
 
-                for componente in projeto["plano_trabalho"]["componentes"]:
-                    for entrega in componente["entregas"]:
-                        for atividade in entrega["atividades"]:
+                            # Regras visuais:
+                            # - aberto + devolutiva → Pendente (vermelho)
+                            # - aberto sem devolutiva → Aberto (amarelo)
+                            # - em_analise → Em análise (azul)
+                            # - aceito → Aceito (verde)
 
-                            relatos = [
-                                r for r in atividade.get("relatos", [])
-                                if r.get("relatorio_numero") == relatorio_numero
-                            ]
+                            if status_relato_db == "aberto" and tem_devolutiva:
+                                badge = {
+                                    "label": "Pendente",
+                                    "bg": "#F8D7DA",
+                                    "color": "#721C24"
+                                }
+                            elif status_relato_db == "aberto":
+                                badge = {
+                                    "label": "Aberto",
+                                    "bg": "#FFF3CD",
+                                    "color": "#856404"
+                                }
+                            elif status_relato_db == "aceito":
+                                badge = {
+                                    "label": "Aceito",
+                                    "bg": "#D4EDDA",
+                                    "color": "#155724"
+                                }
+                            else:
+                                badge = {
+                                    "label": "Em análise",
+                                    "bg": "#D1ECF1",
+                                    "color": "#0C5460"
+                                }
 
-                            if not relatos:
-                                continue
-
-                            tem_relato = True
-
-                            st.write("")
-                            st.markdown(f"#### {atividade['atividade']}")
-
-                            for relato in relatos:
-
-                                id_relato = relato["id_relato"]
-                                editando = st.session_state["relato_editando_id"] == id_relato
-
-                                # --------------------------------------------------
-                                # GARANTE QUE WIDGETS DE VISUALIZAÇÃO NÃO EXISTAM EM EDIÇÃO
-                                # --------------------------------------------------
-                                if editando:
-                                    # remove qualquer state de devolutiva para evitar conflito
-                                    st.session_state.pop(f"devolutiva_{id_relato}", None)
-                                    st.session_state.pop(f"status_relato_ui_{id_relato}", None)
-
-
-                                with st.container(border=True):
-
-                                    # ==================================================
-                                    # MODO VISUALIZAÇÃO DO RELATO
-                                    # ==================================================
-                                    if not editando:
-
-                                        # --------------------------------------------------
-                                        # Lógica de status visual (depende de devolutiva)
-                                        # --------------------------------------------------
-                                        status_relato_db = relato.get("status_relato", "em_analise")
-                                        tem_devolutiva = bool(relato.get("devolutiva"))
-
-                                        # Regras visuais:
-                                        # - aberto + devolutiva → Pendente (vermelho)
-                                        # - aberto sem devolutiva → Aberto (amarelo)
-                                        # - em_analise → Em análise (azul)
-                                        # - aceito → Aceito (verde)
-
-                                        if status_relato_db == "aberto" and tem_devolutiva:
-                                            badge = {
-                                                "label": "Pendente",
-                                                "bg": "#F8D7DA",
-                                                "color": "#721C24"
-                                            }
-                                        elif status_relato_db == "aberto":
-                                            badge = {
-                                                "label": "Aberto",
-                                                "bg": "#FFF3CD",
-                                                "color": "#856404"
-                                            }
-                                        elif status_relato_db == "aceito":
-                                            badge = {
-                                                "label": "Aceito",
-                                                "bg": "#D4EDDA",
-                                                "color": "#155724"
-                                            }
-                                        else:
-                                            badge = {
-                                                "label": "Em análise",
-                                                "bg": "#D1ECF1",
-                                                "color": "#0C5460"
-                                            }
-
-                                        # --------------------------------------------------
-                                        # BADGE VISUAL
-                                        # --------------------------------------------------
-                                        st.markdown(
-                                            f"""
-                                            <div style="margin-bottom:6px;">
-                                                <span style="
-                                                    background:{badge['bg']};
-                                                    color:{badge['color']};
-                                                    padding:4px 10px;
-                                                    border-radius:20px;
-                                                    font-size:12px;
-                                                    font-weight:600;
-                                                ">
-                                                    {badge['label']}
-                                                </span>
-                                            </div>
-                                            """,
-                                            unsafe_allow_html=True
+                            # --------------------------------------------------
+                            # BADGE VISUAL
+                            # --------------------------------------------------
+                            st.markdown(
+                                f"""
+                                <div style="margin-bottom:6px;">
+                                    <span style="
+                                        background:{badge['bg']};
+                                        color:{badge['color']};
+                                        padding:4px 10px;
+                                        border-radius:20px;
+                                        font-size:12px;
+                                        font-weight:600;
+                                    ">
+                                        {badge['label']}
+                                    </span>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
 )
 
 
@@ -1627,1019 +1625,530 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-                                        # --------------------------------------------------
-                                        # CONTEÚDO DO RELATO
-                                        # --------------------------------------------------
-                                        st.write(f"**{id_relato.upper()}:** {relato.get("relato")}")
+                            # --------------------------------------------------
+                            # CONTEÚDO DO RELATO
+                            # --------------------------------------------------
+                            st.write(f"**{id_relato.upper()}:** {relato.get("relato")}")
 
-                                        col1, col2 = st.columns([2, 3])
-                                        col1.write(f"**Quando:** {relato.get('quando')}")
-                                        col2.write(f"**Onde:** {relato.get('onde')}")
+                            col1, col2 = st.columns([2, 3])
+                            col1.write(f"**Quando:** {relato.get('quando')}")
+                            col2.write(f"**Onde:** {relato.get('onde')}")
 
-                                        # --------------------------------------------------
-                                        # ANEXOS (links do Drive)
-                                        # --------------------------------------------------
-                                        if relato.get("anexos"):
-                                            with col1:
-                                                c1, c2 = st.columns([1, 5])
-                                                c1.write("**Anexos:**")
-                                                for a in relato["anexos"]:
-                                                    if a.get("id_arquivo"):
-                                                        link = gerar_link_drive(a["id_arquivo"])
-                                                        c2.markdown(
-                                                            f"[{a['nome_arquivo']}]({link})",
-                                                            unsafe_allow_html=True
-                                                        )
-
-                                        # --------------------------------------------------
-                                        # FOTOGRAFIAS (links + metadados)
-                                        # --------------------------------------------------
-                                        if relato.get("fotos"):
-                                            with col2:
-                                                c1, c2 = st.columns([1, 5])
-                                                c1.write("**Fotografias:**")
-                                                for f in relato["fotos"]:
-                                                    if f.get("id_arquivo"):
-                                                        link = gerar_link_drive(f["id_arquivo"])
-                                                        linha = f"[{f['nome_arquivo']}]({link})"
-                                                        if f.get("descricao"):
-                                                            linha += f" | {f['descricao']}"
-                                                        if f.get("fotografo"):
-                                                            linha += f" | {f['fotografo']}"
-                                                        c2.markdown(linha, unsafe_allow_html=True)
-
-
-                                        # ==========================
-                                        # STATUS DO RELATO (ADMIN/EQUIPE)
-                                        # ==========================
-
-                                        STATUS_RELATO_LABEL = {
-                                            "em_analise": "Em análise",
-                                            "aberto": "Devolver",
-                                            "aceito": "Aceito"
-                                        }
-
-                                        STATUS_RELATO_LABEL_INV = {v: k for k, v in STATUS_RELATO_LABEL.items()}
-
-                                        usuario_admin = tipo_usuario == "admin"
-                                        usuario_equipe = tipo_usuario == "equipe"
-
-                                        if (usuario_admin or usuario_equipe) and status_atual_db == "em_analise":
-
-                                            status_relato_db = relato.get("status_relato", "em_analise")
-                                            status_relato_label = STATUS_RELATO_LABEL.get(status_relato_db, "Em análise")
-
-                                            status_key = f"status_relato_ui_{id_relato}"
-                                            devolutiva_key = f"devolutiva_{id_relato}"
-
-                                            if status_key not in st.session_state:
-                                                st.session_state[status_key] = status_relato_label
-
-                                            with st.container(horizontal=True, horizontal_alignment="right"):
-                                                novo_status_label = st.segmented_control(
-                                                    label="",
-                                                    options=["Em análise", "Devolver", "Aceito"],
-                                                    key=status_key
-                                                )
-
-                                            novo_status_db = STATUS_RELATO_LABEL_INV.get(novo_status_label)
-
-
-
-                                            # ==================================================
-                                            # CASO O AVALIADOR MARQUE O STATUS COMO "DEVOLVER"
-                                            # ==================================================
-                                            if novo_status_label == "Devolver":
-
-                                                # --------------------------------------------------
-                                                # Inicializa o session_state com a devolutiva salva no banco
-                                                # (necessário para pré-carregar o texto após recarregar a página)
-                                                # --------------------------------------------------
-                                                if devolutiva_key not in st.session_state:
-                                                    st.session_state[devolutiva_key] = relato.get("devolutiva", "")
-
-                                                # --------------------------------------------------
-                                                # Campo de texto para o avaliador escrever a devolutiva
-                                                # --------------------------------------------------
-                                                st.text_area(
-                                                    "Devolutiva:",
-                                                    key=devolutiva_key,
-                                                    placeholder="Explique o que precisa ser ajustado neste relato..."
-                                                )
-
-                                                # --------------------------------------------------
-                                                # Verifica se já existe algum texto na devolutiva
-                                                # (serve para mudar o rótulo do botão)
-                                                # --------------------------------------------------
-                                                tem_devolutiva = bool(st.session_state.get(devolutiva_key, "").strip())
-
-                                                # Define o texto do botão de acordo com a situação
-                                                label_botao = "Atualizar" if tem_devolutiva else "Salvar devolutiva"
-
-                                                # --------------------------------------------------
-                                                # Botão de salvar / atualizar devolutiva
-                                                # --------------------------------------------------
-
-                                                with st.container(horizontal=True):
-
-                                                    if st.button(
-                                                        label_botao,
-                                                        key=f"btn_salvar_devolutiva_{id_relato}",
-                                                        type="primary",
-                                                        icon=":material/save:"
-                                                    ):
-                                                        # ----------------------------------------------
-                                                        # Atualiza o relato em memória
-                                                        # - status volta para "aberto"
-                                                        # - devolutiva é salva no objeto
-                                                        # ----------------------------------------------
-                                                        relato["status_relato"] = "aberto"
-                                                        relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
-
-                                                        # ----------------------------------------------
-                                                        # Persiste a alteração no MongoDB
-                                                        # (salva toda a estrutura de componentes)
-                                                        # ----------------------------------------------
-                                                        col_projetos.update_one(
-                                                            {"codigo": projeto["codigo"]},
-                                                            {
-                                                                "$set": {
-                                                                    "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
-                                                                }
-                                                            }
-                                                        )
-
-                                                        # ----------------------------------------------
-                                                        # Limpa os estados da UI para evitar inconsistência
-                                                        # no próximo rerun
-                                                        # ----------------------------------------------
-                                                        st.session_state.pop(status_key, None)
-                                                        st.session_state.pop(devolutiva_key, None)
-
-                                                        # ----------------------------------------------
-                                                        # Força o rerun somente depois de salvar
-                                                        # (garante que o status e UI atualizem corretamente)
-                                                        # ----------------------------------------------
-                                                        st.success("Devolutiva salva.", icon=":material/check:")
-                                                        time.sleep(2)
-                                                        st.rerun()
-
-
-
-                                            # ======================================
-                                            # OUTROS STATUS (Em análise / Aceito)
-                                            # ======================================
-                                            elif novo_status_db != status_relato_db:
-
-                                                relato["status_relato"] = novo_status_db
-
-                                                # se aceito, remove devolutiva antiga
-                                                if novo_status_db == "aceito":
-                                                    relato.pop("devolutiva", None)
-
-                                                col_projetos.update_one(
-                                                    {"codigo": projeto["codigo"]},
-                                                    {
-                                                        "$set": {
-                                                            "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
-                                                        }
-                                                    }
-                                                )
-
-                                                st.session_state.pop(status_key, None)
-                                                st.rerun()
-
-
-
-                                        # ==================================================
-                                        # MOSTRA DEVOLUTIVA SE EXISTIR (em_analise ou aberto)
-                                        # ==================================================
-
-                                        status_relato_db = relato.get("status_relato")
-                                        devolutiva = relato.get("devolutiva")
-
-                                        mostrar_devolutiva = False
-
-                                        # --------------------------------------------------
-                                        # REGRA 1: relatório em modo edição
-                                        # --------------------------------------------------
-                                        if status_atual_db == "modo_edicao":
-                                            mostrar_devolutiva = bool(devolutiva)
-
-                                        # --------------------------------------------------
-                                        # REGRA 2: relatório em análise
-                                        # --------------------------------------------------
-                                        elif status_atual_db == "em_analise":
-                                            # se for admin/equipe E relato está devolvido → não mostra
-                                            if (
-                                                tipo_usuario in ["admin", "equipe"]
-                                                and status_relato_db == "aberto"
-                                            ):
-                                                mostrar_devolutiva = False
-                                            else:
-                                                mostrar_devolutiva = bool(devolutiva)
-
-                                        if mostrar_devolutiva:
-
-                                            texto = devolutiva.replace("\n", "\n> ")
-
-                                            st.markdown(
-                                                f"""
-                                            <blockquote style="
-                                                color: #000000;
-                                                opacity: 0.9;
-                                                border-left: 4px solid #F8D7DA;
-                                                padding-left: 12px;
-                                                margin-left: 0;
-                                            ">
-                                            <strong>Ajuste necessário:</strong><br>
-                                            {texto.replace('\n', '<br>')}
-                                            </blockquote>
-                                            """,
+                            # --------------------------------------------------
+                            # ANEXOS (links do Drive)
+                            # --------------------------------------------------
+                            if relato.get("anexos"):
+                                with col1:
+                                    c1, c2 = st.columns([1, 5])
+                                    c1.write("**Anexos:**")
+                                    for a in relato["anexos"]:
+                                        if a.get("id_arquivo"):
+                                            link = gerar_link_drive(a["id_arquivo"])
+                                            c2.markdown(
+                                                f"[{a['nome_arquivo']}]({link})",
                                                 unsafe_allow_html=True
                                             )
 
-
-                                        # --------------------------------------------------
-                                        # BOTÃO EDITAR (somente se o relato estiver aberto)
-                                        # --------------------------------------------------
-                                        if (
-                                            pode_editar_relatorio
-                                            and relato.get("status_relato") == "aberto"
-                                        ):
-                                            with st.container(horizontal=True, horizontal_alignment="right"):
-                                                if st.button(
-                                                    "Editar",
-                                                    key=f"btn_edit_{id_relato}",
-                                                    icon=":material/edit:",
-                                                    type="tertiary"
-                                                ):
-                                                    st.session_state["relato_editando_id"] = id_relato
-                                                    st.rerun()
-
+                            # --------------------------------------------------
+                            # FOTOGRAFIAS (links + metadados)
+                            # --------------------------------------------------
+                            if relato.get("fotos"):
+                                with col2:
+                                    c1, c2 = st.columns([1, 5])
+                                    c1.write("**Fotografias:**")
+                                    for f in relato["fotos"]:
+                                        if f.get("id_arquivo"):
+                                            link = gerar_link_drive(f["id_arquivo"])
+                                            linha = f"[{f['nome_arquivo']}]({link})"
+                                            if f.get("descricao"):
+                                                linha += f" | {f['descricao']}"
+                                            if f.get("fotografo"):
+                                                linha += f" | {f['fotografo']}"
+                                            c2.markdown(linha, unsafe_allow_html=True)
 
 
-                                    # ==================================================
-                                    # MODO EDIÇÃO INLINE (VERSÃO FINAL CORRIGIDA)
-                                    # ==================================================
-                                    else:
-                                        st.markdown(f"**Editando {id_relato.upper()}**")
+                            # ==========================
+                            # STATUS DO RELATO (ADMIN/EQUIPE)
+                            # ==========================
 
-                                        # --------------------------------------------------
-                                        # CAMPOS DE TEXTO
-                                        # --------------------------------------------------
-                                        relato_texto = st.text_area(
-                                            "Relato:",
-                                            value=relato.get("relato", ""),
-                                            key=f"edit_relato_{id_relato}"
-                                        )
+                            STATUS_RELATO_LABEL = {
+                                "em_analise": "Em análise",
+                                "aberto": "Devolver",
+                                "aceito": "Aceito"
+                            }
 
-                                        col1, col2 = st.columns(2)
+                            STATUS_RELATO_LABEL_INV = {v: k for k, v in STATUS_RELATO_LABEL.items()}
 
-                                        quando = col1.text_input(
-                                            "Quando?",
-                                            value=relato.get("quando", ""),
-                                            key=f"edit_quando_{id_relato}"
-                                        )
+                            usuario_admin = tipo_usuario == "admin"
+                            usuario_equipe = tipo_usuario == "equipe"
 
-                                        onde = col2.text_input(
-                                            "Onde?",
-                                            value=relato.get("onde", ""),
-                                            key=f"edit_onde_{id_relato}"
-                                        )
+                            if (usuario_admin or usuario_equipe) and status_atual_db == "em_analise":
 
-                                        st.divider()
+                                status_relato_db = relato.get("status_relato", "em_analise")
+                                status_relato_label = STATUS_RELATO_LABEL.get(status_relato_db, "Em análise")
 
-                                        # --------------------------------------------------
-                                        # ANEXOS EXISTENTES (REMOVER)
-                                        # --------------------------------------------------
-                                        anexos_remover = []
-                                        anexos_existentes = relato.get("anexos", [])
+                                status_key = f"status_relato_ui_{id_relato}"
+                                devolutiva_key = f"devolutiva_{id_relato}"
 
-                                        if anexos_existentes:
-                                            st.markdown("**Anexos:**")
+                                if status_key not in st.session_state:
+                                    st.session_state[status_key] = status_relato_label
 
-                                            for i, a in enumerate(anexos_existentes):
-                                                nome = a.get("nome_arquivo", "arquivo")
+                                with st.container(horizontal=True, horizontal_alignment="right"):
+                                    novo_status_label = st.segmented_control(
+                                        label="",
+                                        options=["Em análise", "Devolver", "Aceito"],
+                                        key=status_key
+                                    )
 
-                                                if st.checkbox(
-                                                    f"**Remover:** {nome}",
-                                                    key=f"rm_anexo_{id_relato}_{i}"
-                                                ):
-                                                    anexos_remover.append(a)
-
-                                        # --------------------------------------------------
-                                        # NOVOS ANEXOS
-                                        # --------------------------------------------------
-                                        st.write('')
-                                        novos_anexos = st.file_uploader(
-                                            "Adicionar novos anexos",
-                                            type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
-                                            accept_multiple_files=True,
-                                            key=f"novos_anexos_{id_relato}"
-                                        )
-
-                                        st.divider()
-
-                                        # --------------------------------------------------
-                                        # FOTOS EXISTENTES (REMOVER)
-                                        # --------------------------------------------------
-                                        fotos_remover = []
-                                        fotos_existentes = relato.get("fotos", [])
-
-                                        if fotos_existentes:
-                                            st.markdown("**Fotografias:**")
-
-                                            for i, f in enumerate(fotos_existentes):
-                                                nome = f.get("nome_arquivo", "foto")
-                                                descricao = f.get("descricao", "")
-                                                fotografo = f.get("fotografo", "")
-
-                                                label = nome
-                                                if descricao:
-                                                    label += f" | {descricao}"
-                                                if fotografo:
-                                                    label += f" | {fotografo}"
-
-                                                if st.checkbox(
-                                                    f"**Remover:** {label}",
-                                                    key=f"rm_foto_{id_relato}_{i}"
-                                                ):
-                                                    fotos_remover.append(f)
+                                novo_status_db = STATUS_RELATO_LABEL_INV.get(novo_status_label)
 
 
-                                        # --------------------------------------------------
-                                        # NOVAS FOTOS
-                                        # --------------------------------------------------
-                                        st.write('')
-                                        st.write("**Adicionar novas fotografias**")
 
-                                        fotos_novas_key = f"fotos_novas_{id_relato}"
-                                        if fotos_novas_key not in st.session_state:
-                                            st.session_state[fotos_novas_key] = []
+                                # ==================================================
+                                # CASO O AVALIADOR MARQUE O STATUS COMO "DEVOLVER"
+                                # ==================================================
+                                if novo_status_label == "Devolver":
+
+                                    # --------------------------------------------------
+                                    # Inicializa o session_state com a devolutiva salva no banco
+                                    # (necessário para pré-carregar o texto após recarregar a página)
+                                    # --------------------------------------------------
+                                    if devolutiva_key not in st.session_state:
+                                        st.session_state[devolutiva_key] = relato.get("devolutiva", "")
+
+                                    # --------------------------------------------------
+                                    # Campo de texto para o avaliador escrever a devolutiva
+                                    # --------------------------------------------------
+                                    st.text_area(
+                                        "Devolutiva:",
+                                        key=devolutiva_key,
+                                        placeholder="Explique o que precisa ser ajustado neste relato..."
+                                    )
+
+                                    # --------------------------------------------------
+                                    # Verifica se já existe algum texto na devolutiva
+                                    # (serve para mudar o rótulo do botão)
+                                    # --------------------------------------------------
+                                    tem_devolutiva = bool(st.session_state.get(devolutiva_key, "").strip())
+
+                                    # Define o texto do botão de acordo com a situação
+                                    label_botao = "Atualizar" if tem_devolutiva else "Salvar devolutiva"
+
+                                    # --------------------------------------------------
+                                    # Botão de salvar / atualizar devolutiva
+                                    # --------------------------------------------------
+
+                                    with st.container(horizontal=True):
 
                                         if st.button(
-                                            "Adicionar fotografia",
-                                            key=f"btn_add_foto_{id_relato}",
-                                            icon=":material/add_a_photo:"
+                                            label_botao,
+                                            key=f"btn_salvar_devolutiva_{id_relato}",
+                                            type="primary",
+                                            icon=":material/save:"
                                         ):
-                                            st.session_state[fotos_novas_key].append({
-                                                "arquivo": None,
-                                                "descricao": "",
-                                                "fotografo": ""
-                                            })
+                                            # ----------------------------------------------
+                                            # Atualiza o relato em memória
+                                            # - status volta para "aberto"
+                                            # - devolutiva é salva no objeto
+                                            # ----------------------------------------------
+                                            relato["status_relato"] = "aberto"
+                                            relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
 
-                                        for i, foto in enumerate(st.session_state[fotos_novas_key]):
-                                            with st.container(border=True):
+                                            # ----------------------------------------------
+                                            # Persiste a alteração no MongoDB
+                                            # (salva toda a estrutura de componentes)
+                                            # ----------------------------------------------
+                                            col_projetos.update_one(
+                                                {"codigo": projeto["codigo"]},
+                                                {
+                                                    "$set": {
+                                                        "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                                    }
+                                                }
+                                            )
 
-                                                foto["arquivo"] = st.file_uploader(
-                                                    "Arquivo da foto",
-                                                    type=["jpg", "jpeg", "png"],
-                                                    key=f"foto_edit_file_{id_relato}_{i}"
-                                                )
+                                            # ----------------------------------------------
+                                            # Limpa os estados da UI para evitar inconsistência
+                                            # no próximo rerun
+                                            # ----------------------------------------------
+                                            st.session_state.pop(status_key, None)
+                                            st.session_state.pop(devolutiva_key, None)
 
-                                                foto["descricao"] = st.text_input(
-                                                    "Descrição",
-                                                    key=f"foto_edit_desc_{id_relato}_{i}"
-                                                )
-
-                                                foto["fotografo"] = st.text_input(
-                                                    "Fotógrafo(a)",
-                                                    key=f"foto_edit_autor_{id_relato}_{i}"
-                                                )
-
-                                        st.divider()
-
-                                        # --------------------------------------------------
-                                        # AÇÕES
-                                        # --------------------------------------------------
-                                        # col_save, col_cancel = st.columns([1, 1])
-
-                                        with st.container(horizontal=True, horizontal_alignment="left"):
-
-                                            if st.button(
-                                                "Salvar alterações",
-                                                key=f"btn_save_{id_relato}",
-                                                type="primary",
-                                                icon=":material/save:"
-                                            ):
-
-                                                with st.spinner("Salvando alterações. Aguarde..."):
-
-                                                    # ==================================================
-                                                    # ATUALIZA TEXTO
-                                                    # ==================================================
-                                                    relato["relato"] = relato_texto
-                                                    relato["quando"] = quando
-                                                    relato["onde"] = onde
-
-                                                    # ==================================================
-                                                    # REMOVE ITENS MARCADOS
-                                                    # ==================================================
-                                                    if anexos_remover:
-                                                        relato["anexos"] = [
-                                                            a for a in relato.get("anexos", [])
-                                                            if a not in anexos_remover
-                                                        ]
-
-                                                    if fotos_remover:
-                                                        relato["fotos"] = [
-                                                            f for f in relato.get("fotos", [])
-                                                            if f not in fotos_remover
-                                                        ]
-
-                                                    # ==================================================
-                                                    # GARANTE PASTAS DO DRIVE (ESCOPO LOCAL)
-                                                    # ==================================================
-                                                    servico = obter_servico_drive()
-
-                                                    pasta_projeto_id = obter_pasta_projeto(
-                                                        servico,
-                                                        projeto["codigo"],
-                                                        projeto["sigla"]
-                                                    )
-
-                                                    pasta_relatos_id = obter_ou_criar_pasta(
-                                                        servico,
-                                                        "Relatos_atividades",
-                                                        pasta_projeto_id
-                                                    )
-
-                                                    pasta_relato_id = obter_ou_criar_pasta(
-                                                        servico,
-                                                        id_relato,
-                                                        pasta_relatos_id
-                                                    )
-
-                                                    # ==================================================
-                                                    # UPLOAD DE NOVOS ANEXOS
-                                                    # ==================================================
-                                                    if novos_anexos:
-                                                        pasta_anexos_id = obter_ou_criar_pasta(
-                                                            servico,
-                                                            "anexos",
-                                                            pasta_relato_id
-                                                        )
-
-                                                        relato.setdefault("anexos", [])
-
-                                                        for arq in novos_anexos:
-                                                            id_drive = enviar_arquivo_drive(servico, pasta_anexos_id, arq)
-                                                            if id_drive:
-                                                                relato["anexos"].append({
-                                                                    "nome_arquivo": arq.name,
-                                                                    "id_arquivo": id_drive
-                                                                })
-
-                                                    # ==================================================
-                                                    # UPLOAD DE NOVAS FOTOS
-                                                    # ==================================================
-                                                    fotos_validas = [
-                                                        f for f in st.session_state[fotos_novas_key]
-                                                        if f.get("arquivo") is not None
-                                                    ]
-
-                                                    if fotos_validas:
-                                                        pasta_fotos_id = obter_ou_criar_pasta(
-                                                            servico,
-                                                            "fotos",
-                                                            pasta_relato_id
-                                                        )
-
-                                                        relato.setdefault("fotos", [])
-
-                                                        for foto in fotos_validas:
-                                                            arq = foto["arquivo"]
-                                                            id_drive = enviar_arquivo_drive(servico, pasta_fotos_id, arq)
-                                                            if id_drive:
-                                                                relato["fotos"].append({
-                                                                    "nome_arquivo": arq.name,
-                                                                    "descricao": foto.get("descricao", ""),
-                                                                    "fotografo": foto.get("fotografo", ""),
-                                                                    "id_arquivo": id_drive
-                                                                })
-
-                                                    # ==================================================
-                                                    # SALVA NO MONGO
-                                                    # ==================================================
-                                                    col_projetos.update_one(
-                                                        {"codigo": projeto["codigo"]},
-                                                        {"$set": {
-                                                            "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
-                                                        }}
-                                                    )
-
-                                                    # Limpa estado
-                                                    st.session_state["relato_editando_id"] = None
-                                                    st.session_state.pop(fotos_novas_key, None)
-
-                                                    # Mensagem de sucesso
-                                                    st.success("Relato atualizado com sucesso!", icon=":material/check:")
-                                                    time.sleep(3)
-                                                    st.rerun()
-
-                                            if st.button(
-                                                "Cancelar",
-                                                key=f"btn_cancel_{id_relato}"
-                                            ):
-                                                st.session_state["relato_editando_id"] = None
-                                                st.session_state.pop(fotos_novas_key, None)
-                                                st.rerun()
-
-                                st.write('')
-
-
-                if not tem_relato:
-                    st.caption("Nenhum relato cadastrado neste relatório.")
+                                            # ----------------------------------------------
+                                            # Força o rerun somente depois de salvar
+                                            # (garante que o status e UI atualizem corretamente)
+                                            # ----------------------------------------------
+                                            st.success("Devolutiva salva.", icon=":material/check:")
+                                            time.sleep(2)
+                                            st.rerun()
 
 
 
+                                # ======================================
+                                # OUTROS STATUS (Em análise / Aceito)
+                                # ======================================
+                                elif novo_status_db != status_relato_db:
+
+                                    relato["status_relato"] = novo_status_db
+
+                                    # se aceito, remove devolutiva antiga
+                                    if novo_status_db == "aceito":
+                                        relato.pop("devolutiva", None)
+
+                                    col_projetos.update_one(
+                                        {"codigo": projeto["codigo"]},
+                                        {
+                                            "$set": {
+                                                "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                            }
+                                        }
+                                    )
+
+                                    st.session_state.pop(status_key, None)
+                                    st.rerun()
 
 
 
-            # ---------- DESPESAS ----------
+                            # ==================================================
+                            # MOSTRA DEVOLUTIVA SE EXISTIR (em_analise ou aberto)
+                            # ==================================================
 
-            # ==================================================
-            # STEP FINANCEIRO
-            # ==================================================
-            if step == "Despesas":
+                            status_relato_db = relato.get("status_relato")
+                            devolutiva = relato.get("devolutiva")
 
-                # --------------------------------------------------
-                # TÍTULO
-                # --------------------------------------------------
-                st.write('')
-                st.write('')
-
-                st.markdown("### Registros de despesas")
-                st.write("")
-
-                # --------------------------------------------------
-                # PERMISSÕES
-                # --------------------------------------------------
-                usuario_admin = tipo_usuario == "admin"
-                usuario_equipe = tipo_usuario == "equipe"
-                usuario_beneficiario = tipo_usuario == "beneficiario"
-                usuario_visitante = tipo_usuario == "visitante"
-
-                # Beneficiário só pode registrar em modo edição
-                pode_registrar = (
-                    usuario_beneficiario and status_atual_db == "modo_edicao"
-                )
-
-                # --------------------------------------------------
-                # BOTÃO GLOBAL: REGISTRAR DESPESA
-                # --------------------------------------------------
-                with st.container(horizontal=True, horizontal_alignment="right"):
-                    if pode_registrar:
-                        if st.button(
-                            "+ Registrar despesa",
-                            type="primary",
-                            icon=":material/add:",
-                            width=260
-                        ):
-                            dialog_lanc_financ(
-                                relatorio_numero=relatorio_numero,
-                                projeto=projeto,
-                                col_projetos=col_projetos
-                            )
-
-                st.write("")
-
-                # --------------------------------------------------
-                # AGRUPA SOMENTE DESPESAS COM LANÇAMENTOS
-                # --------------------------------------------------
-
-                grupo = defaultdict(lambda: defaultdict(list))
-
-                for despesa in projeto.get("financeiro", {}).get("orcamento", []):
-                    for lanc in despesa.get("lancamentos", []):
-                        # Filtra apenas lançamentos do relatório atual
-                        if lanc.get("relatorio_numero") == relatorio_numero:
-                            grupo[despesa["categoria"]][despesa["nome_despesa"]].append(lanc)
-
-                # --------------------------------------------------
-                # SE NÃO HÁ LANÇAMENTOS
-                # --------------------------------------------------
-                if not grupo:
-                    st.caption("Nenhuma despesa registrada neste relatório.")
-                    st.stop()
-
-                # --------------------------------------------------
-                # RENDERIZAÇÃO
-                # --------------------------------------------------
-                for categoria, despesas in grupo.items():
-
-                    # Categoria
-                    st.markdown(f"##### {categoria}")
-
-                    for nome_despesa, lancamentos in despesas.items():
-
-                        # Nome da despesa
-                        st.markdown(f"###### {nome_despesa}")
-
-                        # --------------------------------------------------
-                        # LISTA DE LANÇAMENTOS
-                        # --------------------------------------------------
-                        for lanc in lancamentos:
-
-                            id_despesa = lanc["id_despesa"]
+                            mostrar_devolutiva = False
 
                             # --------------------------------------------------
-                            # CONTROLE DE ESTADO DE EDIÇÃO INLINE
+                            # REGRA 1: relatório em modo edição
                             # --------------------------------------------------
-                            if "despesa_editando_id" not in st.session_state:
-                                st.session_state["despesa_editando_id"] = None
+                            if status_atual_db == "modo_edicao":
+                                mostrar_devolutiva = bool(devolutiva)
 
-                            editando = st.session_state["despesa_editando_id"] == id_despesa
-
-                            with st.container(border=True):
-
-                                # ==============================================
-                                # BADGE DE STATUS (mesmo padrão dos relatos)
-                                # ==============================================
-                                status_despesa_db = lanc.get("status_despesa", "em_analise")
-                                tem_devolutiva = bool(lanc.get("devolutiva"))
-
-                                if status_despesa_db == "aberto" and tem_devolutiva:
-                                    badge = {
-                                        "label": "Pendente",
-                                        "bg": "#F8D7DA",
-                                        "color": "#721C24"
-                                    }
-                                elif status_despesa_db == "aberto":
-                                    badge = {
-                                        "label": "Aberto",
-                                        "bg": "#FFF3CD",
-                                        "color": "#856404"
-                                    }
-                                elif status_despesa_db == "aceito":
-                                    badge = {
-                                        "label": "Aceito",
-                                        "bg": "#D4EDDA",
-                                        "color": "#155724"
-                                    }
+                            # --------------------------------------------------
+                            # REGRA 2: relatório em análise
+                            # --------------------------------------------------
+                            elif status_atual_db == "em_analise":
+                                # se for admin/equipe E relato está devolvido → não mostra
+                                if (
+                                    tipo_usuario in ["admin", "equipe"]
+                                    and status_relato_db == "aberto"
+                                ):
+                                    mostrar_devolutiva = False
                                 else:
-                                    badge = {
-                                        "label": "Em análise",
-                                        "bg": "#D1ECF1",
-                                        "color": "#0C5460"
-                                    }
+                                    mostrar_devolutiva = bool(devolutiva)
+
+                            if mostrar_devolutiva:
+
+                                texto = devolutiva.replace("\n", "\n> ")
 
                                 st.markdown(
                                     f"""
-                                    <div style="margin-bottom:6px;">
-                                        <span style="
-                                            background:{badge['bg']};
-                                            color:{badge['color']};
-                                            padding:4px 10px;
-                                            border-radius:20px;
-                                            font-size:12px;
-                                            font-weight:600;
-                                        ">
-                                            {badge['label']}
-                                        </span>
-                                    </div>
-                                    """,
+                                <blockquote style="
+                                    color: #000000;
+                                    opacity: 0.9;
+                                    border-left: 4px solid #F8D7DA;
+                                    padding-left: 12px;
+                                    margin-left: 0;
+                                ">
+                                <strong>Ajuste necessário:</strong><br>
+                                {texto.replace('\n', '<br>')}
+                                </blockquote>
+                                """,
                                     unsafe_allow_html=True
                                 )
 
 
-
-
-                                # ==================================================
-                                # VISUALIZAÇÃO DO LANÇAMENTO (somente se não estiver editando)
-                                # ==================================================
-                                if not editando:
-
-                                    # id do registro
-                                    st.write(f"**{id_despesa.upper()}:** {lanc.get('descricao_despesa')}")
-
-                                    # Duas colunas, anexos ficam na col2
-                                    col1, col2 = st.columns([1, 2])
-
-                                    # Sub colunas da col1
-                                    c1, c2 = col1.columns([1, 3])
-
-                                    c1.write("**Data:**")
-                                    c2.write(lanc.get("data_despesa"))
-
-                                    c1.write("**Fornecedor:**")
-                                    c2.write(lanc.get("fornecedor"))
-
-                                    c1.write("**CPF/CNPJ:**")
-                                    c2.write(lanc.get("cpf_cnpj"))
-
-                                    # Valor formatado no padrão brasileiro
-                                    valor = lanc.get("valor_despesa", 0)
-                                    valor_br = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-                                    c1.write("**Valor (R$):**")
-                                    c2.write(valor_br)
-
-                                    # Anexos
-                                    anexos = lanc.get("anexos", [])
-
-                                    if anexos:
-                                        col2.markdown("**Anexos:**")
-                                        for a in anexos:
-                                            link = gerar_link_drive(a["id_arquivo"])
-                                            col2.markdown(f"[{a['nome_arquivo']}]({link})")
-
-
-
-
-
-
-
-
-
-                                # --------------------------------------------------
-                                # FLAGS DE PERMISSÃO
-                                # --------------------------------------------------
-
-                                pode_editar_despesa = (
-                                    usuario_beneficiario
-                                    and status_atual_db == "modo_edicao"
-                                    and status_despesa_db == "aberto"
-                                )
-
-                                pode_avaliar_despesa = (
-                                    (usuario_admin or usuario_equipe)
-                                    and status_atual_db == "em_analise"
-                                )
-
-                                # # --------------------------------------------------
-                                # # CONTROLE DE ESTADO DE EDIÇÃO INLINE
-                                # # --------------------------------------------------
-                                # if "despesa_editando_id" not in st.session_state:
-                                #     st.session_state["despesa_editando_id"] = None
-
-                                # editando = st.session_state["despesa_editando_id"] == id_despesa
-
-
-                                # ==================================================
-                                # SEGMENTED CONTROL (ADMIN / EQUIPE)
-                                # ==================================================
-                                if pode_avaliar_despesa:
-
-                                    STATUS_LABEL = {
-                                        "em_analise": "Em análise",
-                                        "aberto": "Devolver",
-                                        "aceito": "Aceito"
-                                    }
-                                    STATUS_LABEL_INV = {v: k for k, v in STATUS_LABEL.items()}
-
-                                    status_ui = STATUS_LABEL.get(status_despesa_db, "Em análise")
-                                    status_key = f"status_despesa_ui_{id_despesa}"
-
-                                    if status_key not in st.session_state:
-                                        st.session_state[status_key] = status_ui
-
-                                    with st.container(horizontal=True, horizontal_alignment="right"):
-                                        novo_status_ui = st.segmented_control(
-                                            label="",
-                                            options=list(STATUS_LABEL.values()),
-                                            key=status_key
-                                        )
-
-                                    novo_status_db = STATUS_LABEL_INV[novo_status_ui]
-
-                                    # --------------------------------------------------
-                                    # MUDOU STATUS
-                                    # --------------------------------------------------
-                                    if novo_status_db != status_despesa_db:
-
-                                        # Atualiza status no objeto em memória
-                                        lanc["status_despesa"] = novo_status_db
-
-                                        # Se devolveu, força abertura da devolutiva
-                                        if novo_status_db == "aberto":
-                                            st.session_state[f"mostrar_devolutiva_{id_despesa}"] = True
-
-                                        # Persiste no Mongo
-                                        col_projetos.update_one(
-                                            {"codigo": projeto["codigo"]},
-                                            {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                        )
-
-                                        del st.session_state[status_key]
+                            # --------------------------------------------------
+                            # BOTÃO EDITAR (somente se o relato estiver aberto)
+                            # --------------------------------------------------
+                            if (
+                                pode_editar_relatorio
+                                and relato.get("status_relato") == "aberto"
+                            ):
+                                with st.container(horizontal=True, horizontal_alignment="right"):
+                                    if st.button(
+                                        "Editar",
+                                        key=f"btn_edit_{id_relato}",
+                                        icon=":material/edit:",
+                                        type="tertiary"
+                                    ):
+                                        st.session_state["relato_editando_id"] = id_relato
                                         st.rerun()
 
 
-                                # ==================================================
-                                # DEVOLUTIVA (ADMIN / EQUIPE)
-                                # ==================================================
-                                if (
-                                    pode_avaliar_despesa
-                                    and lanc.get("status_despesa") == "aberto"
+
+                        # ==================================================
+                        # MODO EDIÇÃO INLINE (VERSÃO FINAL CORRIGIDA)
+                        # ==================================================
+                        else:
+                            st.markdown(f"**Editando {id_relato.upper()}**")
+
+                            # --------------------------------------------------
+                            # CAMPOS DE TEXTO
+                            # --------------------------------------------------
+                            relato_texto = st.text_area(
+                                "Relato:",
+                                value=relato.get("relato", ""),
+                                key=f"edit_relato_{id_relato}"
+                            )
+
+                            col1, col2 = st.columns(2)
+
+                            quando = col1.text_input(
+                                "Quando?",
+                                value=relato.get("quando", ""),
+                                key=f"edit_quando_{id_relato}"
+                            )
+
+                            onde = col2.text_input(
+                                "Onde?",
+                                value=relato.get("onde", ""),
+                                key=f"edit_onde_{id_relato}"
+                            )
+
+                            st.divider()
+
+                            # --------------------------------------------------
+                            # ANEXOS EXISTENTES (REMOVER)
+                            # --------------------------------------------------
+                            anexos_remover = []
+                            anexos_existentes = relato.get("anexos", [])
+
+                            if anexos_existentes:
+                                st.markdown("**Anexos:**")
+
+                                for i, a in enumerate(anexos_existentes):
+                                    nome = a.get("nome_arquivo", "arquivo")
+
+                                    if st.checkbox(
+                                        f"**Remover:** {nome}",
+                                        key=f"rm_anexo_{id_relato}_{i}"
+                                    ):
+                                        anexos_remover.append(a)
+
+                            # --------------------------------------------------
+                            # NOVOS ANEXOS
+                            # --------------------------------------------------
+                            st.write('')
+                            novos_anexos = st.file_uploader(
+                                "Adicionar novos anexos",
+                                type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
+                                accept_multiple_files=True,
+                                key=f"novos_anexos_{id_relato}"
+                            )
+
+                            st.divider()
+
+                            # --------------------------------------------------
+                            # FOTOS EXISTENTES (REMOVER)
+                            # --------------------------------------------------
+                            fotos_remover = []
+                            fotos_existentes = relato.get("fotos", [])
+
+                            if fotos_existentes:
+                                st.markdown("**Fotografias:**")
+
+                                for i, f in enumerate(fotos_existentes):
+                                    nome = f.get("nome_arquivo", "foto")
+                                    descricao = f.get("descricao", "")
+                                    fotografo = f.get("fotografo", "")
+
+                                    label = nome
+                                    if descricao:
+                                        label += f" | {descricao}"
+                                    if fotografo:
+                                        label += f" | {fotografo}"
+
+                                    if st.checkbox(
+                                        f"**Remover:** {label}",
+                                        key=f"rm_foto_{id_relato}_{i}"
+                                    ):
+                                        fotos_remover.append(f)
+
+
+                            # --------------------------------------------------
+                            # NOVAS FOTOS
+                            # --------------------------------------------------
+                            st.write('')
+                            st.write("**Adicionar novas fotografias**")
+
+                            fotos_novas_key = f"fotos_novas_{id_relato}"
+                            if fotos_novas_key not in st.session_state:
+                                st.session_state[fotos_novas_key] = []
+
+                            if st.button(
+                                "Adicionar fotografia",
+                                key=f"btn_add_foto_{id_relato}",
+                                icon=":material/add_a_photo:"
+                            ):
+                                st.session_state[fotos_novas_key].append({
+                                    "arquivo": None,
+                                    "descricao": "",
+                                    "fotografo": ""
+                                })
+
+                            for i, foto in enumerate(st.session_state[fotos_novas_key]):
+                                with st.container(border=True):
+
+                                    foto["arquivo"] = st.file_uploader(
+                                        "Arquivo da foto",
+                                        type=["jpg", "jpeg", "png"],
+                                        key=f"foto_edit_file_{id_relato}_{i}"
+                                    )
+
+                                    foto["descricao"] = st.text_input(
+                                        "Descrição",
+                                        key=f"foto_edit_desc_{id_relato}_{i}"
+                                    )
+
+                                    foto["fotografo"] = st.text_input(
+                                        "Fotógrafo(a)",
+                                        key=f"foto_edit_autor_{id_relato}_{i}"
+                                    )
+
+                            st.divider()
+
+                            # --------------------------------------------------
+                            # AÇÕES
+                            # --------------------------------------------------
+                            # col_save, col_cancel = st.columns([1, 1])
+
+                            with st.container(horizontal=True, horizontal_alignment="left"):
+
+                                if st.button(
+                                    "Salvar alterações",
+                                    key=f"btn_save_{id_relato}",
+                                    type="primary",
+                                    icon=":material/save:"
                                 ):
 
-                                    key_dev = f"devolutiva_despesa_{id_despesa}"
+                                    with st.spinner("Salvando alterações. Aguarde..."):
 
-                                    # Pré-carrega texto salvo
-                                    if key_dev not in st.session_state:
-                                        st.session_state[key_dev] = lanc.get("devolutiva", "")
+                                        # ==================================================
+                                        # ATUALIZA TEXTO
+                                        # ==================================================
+                                        relato["relato"] = relato_texto
+                                        relato["quando"] = quando
+                                        relato["onde"] = onde
 
-                                    st.text_area(
-                                        "**Devolutiva:**",
-                                        key=key_dev,
-                                    )
+                                        # ==================================================
+                                        # REMOVE ITENS MARCADOS
+                                        # ==================================================
+                                        if anexos_remover:
+                                            relato["anexos"] = [
+                                                a for a in relato.get("anexos", [])
+                                                if a not in anexos_remover
+                                            ]
 
-                                    label_btn = "Atualizar devolutiva" if lanc.get("devolutiva") else "Salvar devolutiva"
+                                        if fotos_remover:
+                                            relato["fotos"] = [
+                                                f for f in relato.get("fotos", [])
+                                                if f not in fotos_remover
+                                            ]
 
-                                    with st.container(horizontal=True):
+                                        # ==================================================
+                                        # GARANTE PASTAS DO DRIVE (ESCOPO LOCAL)
+                                        # ==================================================
+                                        servico = obter_servico_drive()
 
-                                        if st.button(
-                                            label_btn,
-                                            key=f"btn_save_dev_{id_despesa}",
-                                            type="secondary",
-                                            icon=":material/save:"
-                                        ):
-                                            with st.spinner("Salvando devolutiva..."):
-                                                lanc["devolutiva"] = st.session_state[key_dev]
-
-                                                col_projetos.update_one(
-                                                    {"codigo": projeto["codigo"]},
-                                                    {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                                )
-
-                                            st.success("Devolutiva salva!", icon=":material/check:")
-                                            time.sleep(2)
-                                            st.rerun()
-
-
-                                # ==================================================
-                                # MOSTRA DEVOLUTIVA (blockquote)
-                                # ==================================================
-                                mostrar_devolutiva = False
-
-                                if status_atual_db == "modo_edicao":
-                                    mostrar_devolutiva = bool(lanc.get("devolutiva"))
-
-                                elif status_atual_db == "em_analise":
-                                    if not (usuario_admin or usuario_equipe and status_despesa_db == "aberto"):
-                                        mostrar_devolutiva = bool(lanc.get("devolutiva"))
-
-                                if mostrar_devolutiva:
-                                    texto = lanc["devolutiva"].replace("\n", "<br>")
-
-                                    st.markdown(
-
-                                        f"""
-                                    <blockquote style="
-                                        color: #000000;
-                                        opacity: 0.9;
-                                        border-left: 4px solid #F8D7DA;
-                                        padding-left: 12px;
-                                        margin-left: 0;
-                                    ">
-                                    <strong>Ajuste necessário:</strong><br>
-                                    {texto.replace('\n', '<br>')}
-                                    </blockquote>
-                                    """,
-                                        unsafe_allow_html=True
+                                        pasta_projeto_id = obter_pasta_projeto(
+                                            servico,
+                                            projeto["codigo"],
+                                            projeto["sigla"]
                                         )
 
+                                        pasta_relatos_id = obter_ou_criar_pasta(
+                                            servico,
+                                            "Relatos_atividades",
+                                            pasta_projeto_id
+                                        )
+
+                                        pasta_relato_id = obter_ou_criar_pasta(
+                                            servico,
+                                            id_relato,
+                                            pasta_relatos_id
+                                        )
+
+                                        # ==================================================
+                                        # UPLOAD DE NOVOS ANEXOS
+                                        # ==================================================
+                                        if novos_anexos:
+                                            pasta_anexos_id = obter_ou_criar_pasta(
+                                                servico,
+                                                "anexos",
+                                                pasta_relato_id
+                                            )
+
+                                            relato.setdefault("anexos", [])
+
+                                            for arq in novos_anexos:
+                                                id_drive = enviar_arquivo_drive(servico, pasta_anexos_id, arq)
+                                                if id_drive:
+                                                    relato["anexos"].append({
+                                                        "nome_arquivo": arq.name,
+                                                        "id_arquivo": id_drive
+                                                    })
+
+                                        # ==================================================
+                                        # UPLOAD DE NOVAS FOTOS
+                                        # ==================================================
+                                        fotos_validas = [
+                                            f for f in st.session_state[fotos_novas_key]
+                                            if f.get("arquivo") is not None
+                                        ]
+
+                                        if fotos_validas:
+                                            pasta_fotos_id = obter_ou_criar_pasta(
+                                                servico,
+                                                "fotos",
+                                                pasta_relato_id
+                                            )
+
+                                            relato.setdefault("fotos", [])
+
+                                            for foto in fotos_validas:
+                                                arq = foto["arquivo"]
+                                                id_drive = enviar_arquivo_drive(servico, pasta_fotos_id, arq)
+                                                if id_drive:
+                                                    relato["fotos"].append({
+                                                        "nome_arquivo": arq.name,
+                                                        "descricao": foto.get("descricao", ""),
+                                                        "fotografo": foto.get("fotografo", ""),
+                                                        "id_arquivo": id_drive
+                                                    })
+
+                                        # ==================================================
+                                        # SALVA NO MONGO
+                                        # ==================================================
+                                        col_projetos.update_one(
+                                            {"codigo": projeto["codigo"]},
+                                            {"$set": {
+                                                "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
+                                            }}
+                                        )
+
+                                        # Limpa estado
+                                        st.session_state["relato_editando_id"] = None
+                                        st.session_state.pop(fotos_novas_key, None)
+
+                                        # Mensagem de sucesso
+                                        st.success("Relato atualizado com sucesso!", icon=":material/check:")
+                                        time.sleep(3)
+                                        st.rerun()
+
+                                if st.button(
+                                    "Cancelar",
+                                    key=f"btn_cancel_{id_relato}"
+                                ):
+                                    st.session_state["relato_editando_id"] = None
+                                    st.session_state.pop(fotos_novas_key, None)
+                                    st.rerun()
+
+                    st.write('')
 
 
-
-                                # ==================================================
-                                # EDIÇÃO INLINE (BENEFICIÁRIO)
-                                # ==================================================
-                                if pode_editar_despesa:
-
-                                    with st.container(horizontal=True, horizontal_alignment="right"):
-                                        if st.button(
-                                            "Editar",
-                                            key=f"btn_edit_despesa_{id_despesa}",
-                                            icon=":material/edit:",
-                                            type="tertiary"
-                                        ):
-                                            st.session_state["despesa_editando_id"] = id_despesa
-                                            st.rerun()
-
-                                # ==================================================
-                                # FORMULÁRIO DE EDIÇÃO
-                                # ==================================================
-                                if editando:
-
-                                    # --------------------------------------------------
-                                    # CAMPOS PRINCIPAIS
-                                    # --------------------------------------------------
-                                    col1, col2 = st.columns(2)
-
-                                    data = col1.date_input(
-                                        "Data da despesa",
-                                        value=pd.to_datetime(lanc["data_despesa"], dayfirst=True).date(),
-                                        format="DD/MM/YYYY"
-                                    )
-
-                                    valor = col2.number_input(
-                                        "Valor (R$)",
-                                        value=float(lanc.get("valor_despesa", 0)),
-                                        format="%.2f"
-                                    )
-
-                                    descricao = st.text_area("Descrição", value=lanc.get("descricao_despesa", ""))
-
-                                    col1, col2 = st.columns([2, 1])
-
-                                    fornecedor = col1.text_input("Fornecedor", value=lanc.get("fornecedor", ""))
-                                    cpf_cnpj = col2.text_input("CPF/CNPJ", value=lanc.get("cpf_cnpj", ""))
-
-                                    st.divider()
-
-                                    # --------------------------------------------------
-                                    # ANEXOS EXISTENTES (REMOVER)
-                                    # --------------------------------------------------
-                                    anexos_remover = []
-                                    anexos_existentes = lanc.get("anexos", [])
-
-                                    if anexos_existentes:
-                                        st.markdown("**Anexos:**")
-
-                                        for i, a in enumerate(anexos_existentes):
-                                            nome = a.get("nome_arquivo", "arquivo")
-
-                                            if st.checkbox(
-                                                f"**Remover:** {nome}",
-                                                key=f"rm_anexo_despesa_{id_despesa}_{i}"
-                                            ):
-                                                anexos_remover.append(a)
-
-                                    st.divider()
-
-                                    # --------------------------------------------------
-                                    # NOVOS ANEXOS
-                                    # --------------------------------------------------
-                                    novos_anexos = st.file_uploader(
-                                        "Adicionar anexos",
-                                        accept_multiple_files=True,
-                                        key=f"novos_anexos_{id_despesa}"
-                                    )
-
-                                    st.divider()
-
-                                    # --------------------------------------------------
-                                    # AÇÕES
-                                    # --------------------------------------------------
-                                    with st.container(horizontal=True):
-
-                                        if st.button("Salvar alterações", type="primary", icon=":material/save:"):
-
-                                            with st.spinner("Salvando alterações..."):
-
-                                                # Atualiza campos simples
-                                                lanc.update({
-                                                    "data_despesa": data.strftime("%d/%m/%Y"),
-                                                    "descricao_despesa": descricao,
-                                                    "fornecedor": fornecedor,
-                                                    "cpf_cnpj": cpf_cnpj,
-                                                    "valor_despesa": valor
-                                                })
-
-                                                # Remove anexos marcados (apenas do banco)
-                                                if anexos_remover:
-                                                    lanc["anexos"] = [
-                                                        a for a in lanc.get("anexos", [])
-                                                        if a not in anexos_remover
-                                                    ]
-
-                                                # Upload de novos anexos
-                                                if novos_anexos:
-                                                    servico = obter_servico_drive()
-                                                    pasta_proj = obter_pasta_projeto(
-                                                        servico,
-                                                        projeto["codigo"],
-                                                        projeto["sigla"]
-                                                    )
-                                                    pasta_fin = obter_pasta_relatos_financeiros(servico, pasta_proj)
-                                                    pasta_lanc = obter_ou_criar_pasta(servico, id_despesa, pasta_fin)
-
-                                                    lanc.setdefault("anexos", [])
-
-                                                    for arq in novos_anexos:
-                                                        id_drive = enviar_arquivo_drive(servico, pasta_lanc, arq)
-                                                        lanc["anexos"].append({
-                                                            "nome_arquivo": arq.name,
-                                                            "id_arquivo": id_drive
-                                                        })
-
-                                                # Persistência no Mongo
-                                                col_projetos.update_one(
-                                                    {"codigo": projeto["codigo"]},
-                                                    {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                                )
-
-                                            # Limpa estado e recarrega
-                                            st.session_state["despesa_editando_id"] = None
-                                            st.success("Despesa atualizada com sucesso!")
-                                            time.sleep(2)
-                                            st.rerun()
-
-                                        if st.button("Cancelar"):
-                                            st.session_state["despesa_editando_id"] = None
-                                            st.rerun()
+    if not tem_relato:
+        st.caption("Nenhum relato cadastrado neste relatório.")
 
 
 
@@ -2648,1394 +2157,1887 @@ for idx, (tab, relatorio) in enumerate(zip(tabs, relatorios)):
 
 
 
-            # ---------- BENEFÍCIOS ----------
-
-            if step == "Beneficiários":
 
 
-                # =====================================================
-                # CARREGA TIPOS DE BENEFÍCIO DO BANCO
-                # =====================================================
+# ---------- DESPESAS ----------
 
-                dados_beneficios = list(
-                    col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
+# ==================================================
+# STEP FINANCEIRO
+# ==================================================
+if step_selecionado == "Despesas":
+
+    # --------------------------------------------------
+    # TÍTULO
+    # --------------------------------------------------
+    st.write('')
+    st.write('')
+
+    st.markdown("### Registros de despesas")
+    st.write("")
+
+    # --------------------------------------------------
+    # PERMISSÕES
+    # --------------------------------------------------
+    usuario_admin = tipo_usuario == "admin"
+    usuario_equipe = tipo_usuario == "equipe"
+    usuario_beneficiario = tipo_usuario == "beneficiario"
+    usuario_visitante = tipo_usuario == "visitante"
+
+    # Beneficiário só pode registrar em modo edição
+    pode_registrar = (
+        usuario_beneficiario and status_atual_db == "modo_edicao"
+    )
+
+    # --------------------------------------------------
+    # BOTÃO GLOBAL: REGISTRAR DESPESA
+    # --------------------------------------------------
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if pode_registrar:
+            if st.button(
+                "+ Registrar despesa",
+                type="primary",
+                icon=":material/add:",
+                width=260
+            ):
+                dialog_lanc_financ(
+                    relatorio_numero=relatorio_numero,
+                    projeto=projeto,
+                    col_projetos=col_projetos
                 )
 
-                OPCOES_BENEFICIOS = [
-                    d["beneficio"]
-                    for d in dados_beneficios
-                    if d.get("beneficio")
-                ]
+    st.write("")
+
+    # --------------------------------------------------
+    # AGRUPA SOMENTE DESPESAS COM LANÇAMENTOS
+    # --------------------------------------------------
+
+    grupo = defaultdict(lambda: defaultdict(list))
+
+    for despesa in projeto.get("financeiro", {}).get("orcamento", []):
+        for lanc in despesa.get("lancamentos", []):
+            # Filtra apenas lançamentos do relatório atual
+            if lanc.get("relatorio_numero") == relatorio_numero:
+                grupo[despesa["categoria"]][despesa["nome_despesa"]].append(lanc)
+
+    # --------------------------------------------------
+    # SE NÃO HÁ LANÇAMENTOS
+    # --------------------------------------------------
+    if not grupo:
+        st.caption("Nenhuma despesa registrada neste relatório.")
+        st.stop()
+
+    # --------------------------------------------------
+    # RENDERIZAÇÃO
+    # --------------------------------------------------
+    for categoria, despesas in grupo.items():
+
+        # Categoria
+        st.markdown(f"##### {categoria}")
+
+        for nome_despesa, lancamentos in despesas.items():
+
+            # Nome da despesa
+            st.markdown(f"###### {nome_despesa}")
+
+            # --------------------------------------------------
+            # LISTA DE LANÇAMENTOS
+            # --------------------------------------------------
+            for lanc in lancamentos:
+
+                id_despesa = lanc["id_despesa"]
+
+                # --------------------------------------------------
+                # CONTROLE DE ESTADO DE EDIÇÃO INLINE
+                # --------------------------------------------------
+                if "despesa_editando_id" not in st.session_state:
+                    st.session_state["despesa_editando_id"] = None
+
+                editando = st.session_state["despesa_editando_id"] == id_despesa
+
+                with st.container(border=True):
+
+                    # ==============================================
+                    # BADGE DE STATUS (mesmo padrão dos relatos)
+                    # ==============================================
+                    status_despesa_db = lanc.get("status_despesa", "em_analise")
+                    tem_devolutiva = bool(lanc.get("devolutiva"))
+
+                    if status_despesa_db == "aberto" and tem_devolutiva:
+                        badge = {
+                            "label": "Pendente",
+                            "bg": "#F8D7DA",
+                            "color": "#721C24"
+                        }
+                    elif status_despesa_db == "aberto":
+                        badge = {
+                            "label": "Aberto",
+                            "bg": "#FFF3CD",
+                            "color": "#856404"
+                        }
+                    elif status_despesa_db == "aceito":
+                        badge = {
+                            "label": "Aceito",
+                            "bg": "#D4EDDA",
+                            "color": "#155724"
+                        }
+                    else:
+                        badge = {
+                            "label": "Em análise",
+                            "bg": "#D1ECF1",
+                            "color": "#0C5460"
+                        }
+
+                    st.markdown(
+                        f"""
+                        <div style="margin-bottom:6px;">
+                            <span style="
+                                background:{badge['bg']};
+                                color:{badge['color']};
+                                padding:4px 10px;
+                                border-radius:20px;
+                                font-size:12px;
+                                font-weight:600;
+                            ">
+                                {badge['label']}
+                            </span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
 
-                # ============================================
-                # CONTROLE DE USUÁRIO / STATUS DO RELATÓRIO
-                # ============================================
 
-                usuario_admin = tipo_usuario == "admin"
-                usuario_equipe = tipo_usuario == "equipe"
-                usuario_beneficiario = tipo_usuario == "beneficiario"
-                usuario_visitante = tipo_usuario == "visitante"
 
-                # Se o relatório NÃO estiver em modo_edicao,
-                # força modo VISUALIZAÇÃO dos beneficiários
-                if status_atual_db != "modo_edicao":
-                    modo_edicao_benef = False
-                    modo_visualizacao_benef = True
+                    # ==================================================
+                    # VISUALIZAÇÃO DO LANÇAMENTO (somente se não estiver editando)
+                    # ==================================================
+                    if not editando:
+
+                        # id do registro
+                        st.write(f"**{id_despesa.upper()}:** {lanc.get('descricao_despesa')}")
+
+                        # Duas colunas, anexos ficam na col2
+                        col1, col2 = st.columns([1, 2])
+
+                        # Sub colunas da col1
+                        c1, c2 = col1.columns([1, 3])
+
+                        c1.write("**Data:**")
+                        c2.write(lanc.get("data_despesa"))
+
+                        c1.write("**Fornecedor:**")
+                        c2.write(lanc.get("fornecedor"))
+
+                        c1.write("**CPF/CNPJ:**")
+                        c2.write(lanc.get("cpf_cnpj"))
+
+                        # Valor formatado no padrão brasileiro
+                        valor = lanc.get("valor_despesa", 0)
+                        valor_br = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                        c1.write("**Valor (R$):**")
+                        c2.write(valor_br)
+
+                        # Anexos
+                        anexos = lanc.get("anexos", [])
+
+                        if anexos:
+                            col2.markdown("**Anexos:**")
+                            for a in anexos:
+                                link = gerar_link_drive(a["id_arquivo"])
+                                col2.markdown(f"[{a['nome_arquivo']}]({link})")
+
+
+
+
+
+
+
+
+
+                    # --------------------------------------------------
+                    # FLAGS DE PERMISSÃO
+                    # --------------------------------------------------
+
+                    pode_editar_despesa = (
+                        usuario_beneficiario
+                        and status_atual_db == "modo_edicao"
+                        and status_despesa_db == "aberto"
+                    )
+
+                    pode_avaliar_despesa = (
+                        (usuario_admin or usuario_equipe)
+                        and status_atual_db == "em_analise"
+                    )
+
+                    # # --------------------------------------------------
+                    # # CONTROLE DE ESTADO DE EDIÇÃO INLINE
+                    # # --------------------------------------------------
+                    # if "despesa_editando_id" not in st.session_state:
+                    #     st.session_state["despesa_editando_id"] = None
+
+                    # editando = st.session_state["despesa_editando_id"] == id_despesa
+
+
+                    # ==================================================
+                    # SEGMENTED CONTROL (ADMIN / EQUIPE)
+                    # ==================================================
+                    if pode_avaliar_despesa:
+
+                        STATUS_LABEL = {
+                            "em_analise": "Em análise",
+                            "aberto": "Devolver",
+                            "aceito": "Aceito"
+                        }
+                        STATUS_LABEL_INV = {v: k for k, v in STATUS_LABEL.items()}
+
+                        status_ui = STATUS_LABEL.get(status_despesa_db, "Em análise")
+                        status_key = f"status_despesa_ui_{id_despesa}"
+
+                        if status_key not in st.session_state:
+                            st.session_state[status_key] = status_ui
+
+                        with st.container(horizontal=True, horizontal_alignment="right"):
+                            novo_status_ui = st.segmented_control(
+                                label="",
+                                options=list(STATUS_LABEL.values()),
+                                key=status_key
+                            )
+
+                        novo_status_db = STATUS_LABEL_INV[novo_status_ui]
+
+                        # --------------------------------------------------
+                        # MUDOU STATUS
+                        # --------------------------------------------------
+                        if novo_status_db != status_despesa_db:
+
+                            # Atualiza status no objeto em memória
+                            lanc["status_despesa"] = novo_status_db
+
+                            # Se devolveu, força abertura da devolutiva
+                            if novo_status_db == "aberto":
+                                st.session_state[f"mostrar_devolutiva_{id_despesa}"] = True
+
+                            # Persiste no Mongo
+                            col_projetos.update_one(
+                                {"codigo": projeto["codigo"]},
+                                {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
+                            )
+
+                            del st.session_state[status_key]
+                            st.rerun()
+
+
+                    # ==================================================
+                    # DEVOLUTIVA (ADMIN / EQUIPE)
+                    # ==================================================
+                    if (
+                        pode_avaliar_despesa
+                        and lanc.get("status_despesa") == "aberto"
+                    ):
+
+                        key_dev = f"devolutiva_despesa_{id_despesa}"
+
+                        # Pré-carrega texto salvo
+                        if key_dev not in st.session_state:
+                            st.session_state[key_dev] = lanc.get("devolutiva", "")
+
+                        st.text_area(
+                            "**Devolutiva:**",
+                            key=key_dev,
+                        )
+
+                        label_btn = "Atualizar devolutiva" if lanc.get("devolutiva") else "Salvar devolutiva"
+
+                        with st.container(horizontal=True):
+
+                            if st.button(
+                                label_btn,
+                                key=f"btn_save_dev_{id_despesa}",
+                                type="secondary",
+                                icon=":material/save:"
+                            ):
+                                with st.spinner("Salvando devolutiva..."):
+                                    lanc["devolutiva"] = st.session_state[key_dev]
+
+                                    col_projetos.update_one(
+                                        {"codigo": projeto["codigo"]},
+                                        {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
+                                    )
+
+                                st.success("Devolutiva salva!", icon=":material/check:")
+                                time.sleep(2)
+                                st.rerun()
+
+
+                    # ==================================================
+                    # MOSTRA DEVOLUTIVA (blockquote)
+                    # ==================================================
+                    mostrar_devolutiva = False
+
+                    if status_atual_db == "modo_edicao":
+                        mostrar_devolutiva = bool(lanc.get("devolutiva"))
+
+                    elif status_atual_db == "em_analise":
+                        if not (usuario_admin or usuario_equipe and status_despesa_db == "aberto"):
+                            mostrar_devolutiva = bool(lanc.get("devolutiva"))
+
+                    if mostrar_devolutiva:
+                        texto = lanc["devolutiva"].replace("\n", "<br>")
+
+                        st.markdown(
+
+                            f"""
+                        <blockquote style="
+                            color: #000000;
+                            opacity: 0.9;
+                            border-left: 4px solid #F8D7DA;
+                            padding-left: 12px;
+                            margin-left: 0;
+                        ">
+                        <strong>Ajuste necessário:</strong><br>
+                        {texto.replace('\n', '<br>')}
+                        </blockquote>
+                        """,
+                            unsafe_allow_html=True
+                            )
+
+
+
+
+                    # ==================================================
+                    # EDIÇÃO INLINE (BENEFICIÁRIO)
+                    # ==================================================
+                    if pode_editar_despesa:
+
+                        with st.container(horizontal=True, horizontal_alignment="right"):
+                            if st.button(
+                                "Editar",
+                                key=f"btn_edit_despesa_{id_despesa}",
+                                icon=":material/edit:",
+                                type="tertiary"
+                            ):
+                                st.session_state["despesa_editando_id"] = id_despesa
+                                st.rerun()
+
+                    # ==================================================
+                    # FORMULÁRIO DE EDIÇÃO
+                    # ==================================================
+                    if editando:
+
+                        # --------------------------------------------------
+                        # CAMPOS PRINCIPAIS
+                        # --------------------------------------------------
+                        col1, col2 = st.columns(2)
+
+                        data = col1.date_input(
+                            "Data da despesa",
+                            value=pd.to_datetime(lanc["data_despesa"], dayfirst=True).date(),
+                            format="DD/MM/YYYY"
+                        )
+
+                        valor = col2.number_input(
+                            "Valor (R$)",
+                            value=float(lanc.get("valor_despesa", 0)),
+                            format="%.2f"
+                        )
+
+                        descricao = st.text_area("Descrição", value=lanc.get("descricao_despesa", ""))
+
+                        col1, col2 = st.columns([2, 1])
+
+                        fornecedor = col1.text_input("Fornecedor", value=lanc.get("fornecedor", ""))
+                        cpf_cnpj = col2.text_input("CPF/CNPJ", value=lanc.get("cpf_cnpj", ""))
+
+                        st.divider()
+
+                        # --------------------------------------------------
+                        # ANEXOS EXISTENTES (REMOVER)
+                        # --------------------------------------------------
+                        anexos_remover = []
+                        anexos_existentes = lanc.get("anexos", [])
+
+                        if anexos_existentes:
+                            st.markdown("**Anexos:**")
+
+                            for i, a in enumerate(anexos_existentes):
+                                nome = a.get("nome_arquivo", "arquivo")
+
+                                if st.checkbox(
+                                    f"**Remover:** {nome}",
+                                    key=f"rm_anexo_despesa_{id_despesa}_{i}"
+                                ):
+                                    anexos_remover.append(a)
+
+                        st.divider()
+
+                        # --------------------------------------------------
+                        # NOVOS ANEXOS
+                        # --------------------------------------------------
+                        novos_anexos = st.file_uploader(
+                            "Adicionar anexos",
+                            accept_multiple_files=True,
+                            key=f"novos_anexos_{id_despesa}"
+                        )
+
+                        st.divider()
+
+                        # --------------------------------------------------
+                        # AÇÕES
+                        # --------------------------------------------------
+                        with st.container(horizontal=True):
+
+                            if st.button("Salvar alterações", type="primary", icon=":material/save:"):
+
+                                with st.spinner("Salvando alterações..."):
+
+                                    # Atualiza campos simples
+                                    lanc.update({
+                                        "data_despesa": data.strftime("%d/%m/%Y"),
+                                        "descricao_despesa": descricao,
+                                        "fornecedor": fornecedor,
+                                        "cpf_cnpj": cpf_cnpj,
+                                        "valor_despesa": valor
+                                    })
+
+                                    # Remove anexos marcados (apenas do banco)
+                                    if anexos_remover:
+                                        lanc["anexos"] = [
+                                            a for a in lanc.get("anexos", [])
+                                            if a not in anexos_remover
+                                        ]
+
+                                    # Upload de novos anexos
+                                    if novos_anexos:
+                                        servico = obter_servico_drive()
+                                        pasta_proj = obter_pasta_projeto(
+                                            servico,
+                                            projeto["codigo"],
+                                            projeto["sigla"]
+                                        )
+                                        pasta_fin = obter_pasta_relatos_financeiros(servico, pasta_proj)
+                                        pasta_lanc = obter_ou_criar_pasta(servico, id_despesa, pasta_fin)
+
+                                        lanc.setdefault("anexos", [])
+
+                                        for arq in novos_anexos:
+                                            id_drive = enviar_arquivo_drive(servico, pasta_lanc, arq)
+                                            lanc["anexos"].append({
+                                                "nome_arquivo": arq.name,
+                                                "id_arquivo": id_drive
+                                            })
+
+                                    # Persistência no Mongo
+                                    col_projetos.update_one(
+                                        {"codigo": projeto["codigo"]},
+                                        {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
+                                    )
+
+                                # Limpa estado e recarrega
+                                st.session_state["despesa_editando_id"] = None
+                                st.success("Despesa atualizada com sucesso!")
+                                time.sleep(2)
+                                st.rerun()
+
+                            if st.button("Cancelar"):
+                                st.session_state["despesa_editando_id"] = None
+                                st.rerun()
+
+
+
+
+
+
+
+
+# ---------- BENEFÍCIOS ----------
+
+if step_selecionado == "Beneficiários":
+
+
+    # =====================================================
+    # CARREGA TIPOS DE BENEFÍCIO DO BANCO
+    # =====================================================
+
+    dados_beneficios = list(
+        col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
+    )
+
+    OPCOES_BENEFICIOS = [
+        d["beneficio"]
+        for d in dados_beneficios
+        if d.get("beneficio")
+    ]
+
+
+    # ============================================
+    # CONTROLE DE USUÁRIO / STATUS DO RELATÓRIO
+    # ============================================
+
+    usuario_admin = tipo_usuario == "admin"
+    usuario_equipe = tipo_usuario == "equipe"
+    usuario_beneficiario = tipo_usuario == "beneficiario"
+    usuario_visitante = tipo_usuario == "visitante"
+
+    # Se o relatório NÃO estiver em modo_edicao,
+    # força modo VISUALIZAÇÃO dos beneficiários
+    if status_atual_db != "modo_edicao":
+        modo_edicao_benef = False
+        modo_visualizacao_benef = True
+    else:
+        modo_edicao_benef = usuario_beneficiario
+        modo_visualizacao_benef = not usuario_beneficiario
+
+
+
+
+
+    # PARTE 1 - QUANTITATIVO DE BENEFICIÁRIOS ---------------------------------------------------------------------------------------------------------------------------
+    st.write('')
+    st.write('')
+
+
+
+
+    # ======================================================
+    # INICIALIZAÇÃO DO ESTADO DA MATRIZ DE BENEFICIÁRIOS
+    # ======================================================
+
+    if "beneficiarios_quant" not in st.session_state:
+        st.session_state.beneficiarios_quant = (
+            relatorio.get("beneficiarios_quant") or {
+                "mulheres": {
+                    "jovens": 0,
+                    "adultas": 0,
+                    "idosas": 0
+                },
+                "homens": {
+                    "jovens": 0,
+                    "adultos": 0,
+                    "idosos": 0
+                },
+                "nao_binarios": {
+                    "jovens": 0,
+                    "adultos": 0,
+                    "idosos": 0
+                }
+            }
+        )
+
+
+    # ======================================================
+    # TÍTULO DO BLOCO
+    # ======================================================
+
+    st.markdown("##### Número de beneficiários por gênero e faixa etária")
+
+    st.write("")
+
+
+    # ======================================================
+    # MODO EDIÇÃO
+    # ======================================================
+
+    if pode_editar_relatorio:
+
+
+        # Coluna à esquerda para diminuir a largura dos inputs de beneficiários
+        content, vazio_d = st.columns([7, 6])
+
+        # -------------------------------
+        # LINHA: JOVENS
+        # -------------------------------
+        col_m, col_h, col_nb = content.columns(3)
+
+        with col_m:
+            st.session_state.beneficiarios_quant["mulheres"]["jovens"] = st.number_input(
+                "Mulheres – Jovens (até 24 anos)",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["mulheres"]["jovens"],
+                key="bq_mulheres_jovens"
+            )
+
+        with col_h:
+            st.session_state.beneficiarios_quant["homens"]["jovens"] = st.number_input(
+                "Homens – Jovens (até 24 anos)",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["homens"]["jovens"],
+                key="bq_homens_jovens"
+            )
+
+        with col_nb:
+            st.session_state.beneficiarios_quant["nao_binarios"]["jovens"] = st.number_input(
+                "Não-binários – Jovens (até 24 anos)",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["nao_binarios"]["jovens"],
+                key="bq_nb_jovens"
+            )
+
+        # -------------------------------
+        # LINHA: ADULTOS
+        # -------------------------------
+        col_m, col_h, col_nb = content.columns(3)
+
+        with col_m:
+            st.session_state.beneficiarios_quant["mulheres"]["adultas"] = st.number_input(
+                "Mulheres – Adultas",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["mulheres"]["adultas"],
+                key="bq_mulheres_adultas"
+            )
+
+        with col_h:
+            st.session_state.beneficiarios_quant["homens"]["adultos"] = st.number_input(
+                "Homens – Adultos",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["homens"]["adultos"],
+                key="bq_homens_adultos"
+            )
+
+        with col_nb:
+            st.session_state.beneficiarios_quant["nao_binarios"]["adultos"] = st.number_input(
+                "Não-binários – Adultos",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["nao_binarios"]["adultos"],
+                key="bq_nb_adultos"
+            )
+
+        # -------------------------------
+        # LINHA: IDOSOS
+        # -------------------------------
+        col_m, col_h, col_nb = content.columns(3)
+
+        with col_m:
+            st.session_state.beneficiarios_quant["mulheres"]["idosas"] = st.number_input(
+                "Mulheres – Idosas (60+ anos)",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["mulheres"]["idosas"],
+                key="bq_mulheres_idosas"
+            )
+
+        with col_h:
+            st.session_state.beneficiarios_quant["homens"]["idosos"] = st.number_input(
+                "Homens – Idosos (60+ anos)",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["homens"]["idosos"],
+                key="bq_homens_idosos"
+            )
+
+        with col_nb:
+            st.session_state.beneficiarios_quant["nao_binarios"]["idosos"] = st.number_input(
+                "Não-binários – Idosos (60+ anos)",
+                min_value=0,
+                step=1,
+                value=st.session_state.beneficiarios_quant["nao_binarios"]["idosos"],
+                key="bq_nb_idosos"
+            )
+
+
+
+
+        # ======================================================
+        # BOTÃO DE SALVAR EXCLUSIVO DA MATRIZ
+        # ======================================================
+        # Este botão salva SOMENTE a matriz de quantitativos
+
+        if pode_editar_relatorio:
+
+            st.write("")
+
+            salvar_matriz = st.button(
+                "Atualizar beneficiários",
+                type="primary",
+                key=f"salvar_beneficiarios_quant_{relatorio_numero}",
+                icon=":material/save:"
+            )
+
+            if salvar_matriz:
+
+                # Atualiza apenas a chave 'beneficiarios_quant' no relatório correto
+                col_projetos.update_one(
+                    {
+                        "codigo": projeto["codigo"],
+                        "relatorios.numero": relatorio_numero
+                    },
+                    {
+                        "$set": {
+                            "relatorios.$.beneficiarios_quant":
+                                st.session_state.beneficiarios_quant
+                        }
+                    }
+                )
+
+                st.success("Quantitativo de beneficiários salvo com sucesso.")
+                time.sleep(3)
+                st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+    # ======================================================
+    # MODO VISUALIZAÇÃO
+    # ======================================================
+
+    else:
+
+        dados = st.session_state.beneficiarios_quant
+
+        # -------------------------------
+        # Totais por gênero
+        # -------------------------------
+        total_mulheres = sum(dados["mulheres"].values())
+        total_homens = sum(dados["homens"].values())
+        total_nb = sum(dados["nao_binarios"].values())
+
+        # -------------------------------
+        # Totais por faixa etária
+        # -------------------------------
+        total_jovens = (
+            dados["mulheres"]["jovens"]
+            + dados["homens"]["jovens"]
+            + dados["nao_binarios"]["jovens"]
+        )
+
+        total_adultos = (
+            dados["mulheres"]["adultas"]
+            + dados["homens"]["adultos"]
+            + dados["nao_binarios"]["adultos"]
+        )
+
+        total_idosos = (
+            dados["mulheres"]["idosas"]
+            + dados["homens"]["idosos"]
+            + dados["nao_binarios"]["idosos"]
+        )
+
+        total_geral = total_mulheres + total_homens + total_nb
+
+        st.write("")
+
+        # -------------------------------
+        # LAYOUT EM 4 COLUNAS
+        # -------------------------------
+        col_m, col_h, col_nb, col_totais = st.columns(4)
+
+        # -------- MULHERES --------
+        with col_m:
+            l, v = st.columns(2)
+            l.write("Mulheres jovens"); v.write(str(dados["mulheres"]["jovens"]))
+
+            l, v = st.columns(2)
+            l.write("Mulheres adultas"); v.write(str(dados["mulheres"]["adultas"]))
+
+            l, v = st.columns(2)
+            l.write("Mulheres idosas"); v.write(str(dados["mulheres"]["idosas"]))
+
+            l, v = st.columns(2)
+            l.markdown("**Total de mulheres**"); v.markdown(f"**{total_mulheres}**")
+
+        # -------- HOMENS --------
+        with col_h:
+            l, v = st.columns(2)
+            l.write("Homens jovens"); v.write(str(dados["homens"]["jovens"]))
+
+            l, v = st.columns(2)
+            l.write("Homens adultos"); v.write(str(dados["homens"]["adultos"]))
+
+            l, v = st.columns(2)
+            l.write("Homens idosos"); v.write(str(dados["homens"]["idosos"]))
+
+            l, v = st.columns(2)
+            l.markdown("**Total de homens**"); v.markdown(f"**{total_homens}**")
+
+        # -------- NÃO-BINÁRIOS --------
+        with col_nb:
+            l, v = st.columns(2)
+            l.write("Não-binários jovens"); v.write(str(dados["nao_binarios"]["jovens"]))
+
+            l, v = st.columns(2)
+            l.write("Não-binários adultos"); v.write(str(dados["nao_binarios"]["adultos"]))
+
+            l, v = st.columns(2)
+            l.write("Não-binários idosos"); v.write(str(dados["nao_binarios"]["idosos"]))
+
+            l, v = st.columns(2)
+            l.markdown("**Total de não-binários**"); v.markdown(f"**{total_nb}**")
+
+        # -------- TOTAIS GERAIS (NEGRITO) --------
+        with col_totais:
+            l, v = st.columns(2)
+            l.markdown("**Total de jovens**"); v.markdown(f"**{total_jovens}**")
+
+            l, v = st.columns(2)
+            l.markdown("**Total de adultos**"); v.markdown(f"**{total_adultos}**")
+
+            l, v = st.columns(2)
+            l.markdown("**Total de idosos**"); v.markdown(f"**{total_idosos}**")
+
+            l, v = st.columns(2)
+            l.markdown("**Total geral**"); v.markdown(f"**{total_geral}**")
+
+
+
+
+
+
+
+
+    st.divider()
+
+    # ============================================================================================================
+    # PARTE 2 - TIPOS DE BENEFICIÁRIOS E BENEFICIOS 
+    # ============================================================================================================
+
+    st.write('')
+    st.markdown("##### Tipos de Beneficiários e Benefícios")
+
+    if usuario_beneficiario:
+
+        st.write("")
+        st.write(
+            "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto para cada comunidade."
+        )
+
+    st.write("")
+    st.write("")
+
+
+    projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
+    localidades = projeto.get("locais", {}).get("localidades", [])
+
+    if not localidades:
+        st.info(
+            "Nenhuma comunidade cadastrada no projeto. "
+            "Adicione comunidades na página **Locais**."
+        )
+        st.stop()
+
+    # =====================================================
+    # LOOP DAS COMUNIDADES
+    # =====================================================
+    for localidade in localidades:
+
+        nome_localidade = localidade.get("nome_localidade")
+        beneficiarios_bd = localidade.get("beneficiarios", []) or []
+
+        # -------------------------------------------------
+        # ESTADO ORIGINAL DO BANCO
+        # -------------------------------------------------
+        estado_original = {
+            b["tipo_beneficiario"]: sorted(b.get("beneficios") or [])
+            for b in beneficiarios_bd
+            if b.get("tipo_beneficiario")
+        }
+
+        # -------------------------------------------------
+        # PÚBLICOS PARA RENDERIZAÇÃO
+        # -------------------------------------------------
+        publicos_renderizacao = list(opcoes_publicos[:-1])
+
+        for tipo in estado_original.keys():
+            if tipo not in publicos_renderizacao:
+                publicos_renderizacao.append(tipo)
+
+        publicos_renderizacao = sorted(publicos_renderizacao)
+
+        estado_atual = {}
+        houve_alteracao = False
+
+        col1, col2 = st.columns([1, 3])
+
+        # -------- COLUNA 1 --------
+
+        with col1:
+            st.markdown(f"**{nome_localidade}**")
+
+            municipio = localidade.get("municipio")
+
+            if municipio:
+                st.write(municipio)
+
+
+
+
+        # -------- COLUNA 2 --------
+        with col2:
+
+            st.write("**Tipos de Beneficiários e Benefícios:**")
+
+            # # =====================================================
+            # # MODO VISUALIZAÇÃO COM LISTA EM TÓPICOS - Para demostração de segunda opção !!!!!!!!!!!!!!!!!!!!!!!!!
+            # # =====================================================
+            # if modo_visualizacao_benef:
+
+            #     if not beneficiarios_bd:
+            #         st.write("Nenhum beneficiário cadastrado.")
+            #     else:
+            #         for b in beneficiarios_bd:
+
+            #             tipo = b.get("tipo_beneficiario")
+            #             beneficios = b.get("beneficios") or []
+
+            #             with st.container():
+            #                 st.write("")
+
+            #                 # Título: tipo de beneficiário
+            #                 st.markdown(f"**{tipo}**")
+
+            #                 # Lista de benefícios
+            #                 if beneficios:
+            #                     for beneficio in beneficios:
+            #                         st.markdown(f"- {beneficio}")
+            #                 else:
+            #                     st.markdown("_Nenhum benefício informado._")
+
+
+            # st.write('///////////////////////////')
+
+
+            # =====================================================
+            # MODO VISUALIZAÇÃO COM LISTA EM PILLS
+            # =====================================================
+            if modo_visualizacao_benef:
+
+                if not beneficiarios_bd:
+                    st.write("Nenhum beneficiário cadastrado.")
                 else:
-                    modo_edicao_benef = usuario_beneficiario
-                    modo_visualizacao_benef = not usuario_beneficiario
+                    for b in beneficiarios_bd:
+
+                        tipo = b.get("tipo_beneficiario")
+                        beneficios = b.get("beneficios") or []
+
+                        with st.container():
+                            st.write(' ')
+                            if beneficios:
+                                st.pills(
+                                    label=tipo,
+                                    options=beneficios,
+                                    width="content",
+                                    key=f"pill_{projeto['codigo']}_{nome_localidade}_{tipo}"
+                                )
+                            else:
+                                st.pills(
+                                    label=tipo,
+                                    options=["Nenhum benefício informado"],
+                                    width="content",
+                                    key=f"pill_{projeto['codigo']}_{nome_localidade}_{tipo}"
+                                )
+
+
+            # =====================================================
+            # MODO EDIÇÃO
+            # =====================================================
+            if modo_edicao_benef:
+
+                # =============================================
+                # BENEFICIÁRIOS EXISTENTES
+                # =============================================
+                for publico in publicos_renderizacao:
+
+                    with st.container(horizontal=True):
+
+                        chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
+
+                        marcado_inicial = publico in estado_original
+
+                        marcado = st.checkbox(
+                            publico,
+                            value=marcado_inicial,
+                            key=chk_key,
+                            width=300
+                        )
+
+                        if marcado:
+
+                            beneficios_iniciais = estado_original.get(publico, [])
+
+                            beneficios = st.multiselect(
+                                f"Benefícios para {publico.lower()}",
+                                options=OPCOES_BENEFICIOS,
+                                default=beneficios_iniciais,
+                                key=f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
+                            )
+
+                            estado_atual[publico] = sorted(beneficios)
+
+                            if (
+                                publico not in estado_original
+                                or sorted(beneficios) != estado_original.get(publico, [])
+                            ):
+                                houve_alteracao = True
+
+                        else:
+                            if publico in estado_original:
+                                houve_alteracao = True
+
+                # =============================================
+                # CHECKBOX OUTROS
+                # =============================================
+                with st.container(horizontal=True):
+
+                    chk_outros_key = f"chk_outros_{projeto['codigo']}_{nome_localidade}"
+
+                    outros_marcado = st.checkbox(
+                        "Outros",
+                        value=False,
+                        key=chk_outros_key,
+                        width=300
+                    )
+
+                # =============================================
+                # FORMULÁRIO OUTROS
+                # =============================================
+                if outros_marcado:
+
+                    with st.container(horizontal=True):
+
+                        st.text_input(
+                            "Tipo de beneficiário",
+                            key=f"novo_tipo_{projeto['codigo']}_{nome_localidade}"
+                        )
+
+                        st.multiselect(
+                            "Benefícios",
+                            options=OPCOES_BENEFICIOS,
+                            key=f"novo_beneficios_{projeto['codigo']}_{nome_localidade}"
+                        )
+
+                    novo_tipo = st.session_state.get(
+                        f"novo_tipo_{projeto['codigo']}_{nome_localidade}", ""
+                    ).strip()
+
+                    novos_beneficios = st.session_state.get(
+                        f"novo_beneficios_{projeto['codigo']}_{nome_localidade}", []
+                    )
+
+                    if novo_tipo and novos_beneficios:
+                        houve_alteracao = True
+
+        # =================================================
+        # BOTÃO SALVAR
+        # =================================================
+        if houve_alteracao:
+
+            st.write("")
+
+            erros = []
+
+            # with st.container(horizontal=True, horizontal_alignment="right"):
+            clicou_salvar = st.button(
+                f"Atualizar {nome_localidade}",
+                type="primary",
+                key=f"salvar_{projeto['codigo']}_{nome_localidade}",
+                icon=":material/save:"
+            )
+
+            if clicou_salvar:
+
+                beneficiarios_para_salvar = []
+
+                # -----------------------------------------
+                # BENEFICIÁRIOS EXISTENTES
+                # -----------------------------------------
+                for tipo, beneficios in estado_atual.items():
+                    if not beneficios:
+                        erros.append(
+                            f"Selecione ao menos um benefício para **{tipo}**."
+                        )
+                    else:
+                        beneficiarios_para_salvar.append({
+                            "tipo_beneficiario": tipo,
+                            "beneficios": beneficios
+                        })
+
+                # -----------------------------------------
+                # NOVO BENEFICIÁRIO (OUTROS)
+                # -----------------------------------------
+                if outros_marcado and novo_tipo:
+                    beneficiarios_para_salvar.append({
+                        "tipo_beneficiario": novo_tipo,
+                        "beneficios": novos_beneficios
+                    })
+
+                if erros:
+                    for erro in erros:
+                        st.error(erro)
+                    time.sleep(3)
+                    st.rerun()
+
+                # -----------------------------------------
+                # SALVA NO BANCO
+                # -----------------------------------------
+                col_projetos.update_one(
+                    {
+                        "codigo": projeto["codigo"],
+                        "locais.localidades.nome_localidade": nome_localidade
+                    },
+                    {
+                        "$set": {
+                            "locais.localidades.$.beneficiarios":
+                                beneficiarios_para_salvar
+                        }
+                    }
+                )
+
+                st.success(
+                    f"Beneficiários da comunidade "
+                    f"**{nome_localidade}** salvos com sucesso."
+                )
+                time.sleep(3)
+                st.rerun()
+
+
+        st.divider()
 
 
 
 
 
-                # PARTE 1 - QUANTITATIVO DE BENEFICIÁRIOS ---------------------------------------------------------------------------------------------------------------------------
-                st.write('')
-                st.write('')
+# ---------- PESQUISAS ----------
+if step_selecionado == "Pesquisas":
+
+    # ============================
+    # CONTROLE DE USUÁRIO
+    # ============================
+
+    usuario_admin = tipo_usuario == "admin"
+    usuario_equipe = tipo_usuario == "equipe"
+    usuario_beneficiario = tipo_usuario == "beneficiario"
+    
+
+    pode_editar = usuario_admin or usuario_equipe or usuario_beneficiario
+    pode_verificar = usuario_admin or usuario_equipe
+
+    # ============================
+    # BUSCA DADOS
+    # ============================
+
+    pesquisas = edital.get("pesquisas_relatorio", []) if edital else []
+
+    if not pesquisas:
+        st.caption("Nenhuma pesquisa cadastrada.")
+        st.stop()
+
+    st.write("")
+    st.write("")
+    st.markdown("##### Pesquisas / Ferramentas de Monitoramento")
+    st.write("")
+
+    pesquisas_projeto = projeto.get("pesquisas", [])
+    status_map = {p["id_pesquisa"]: p for p in pesquisas_projeto}
+
+    # ============================
+    # RENDERIZAÇÃO DAS LINHAS
+    # ============================
+
+    for pesquisa in pesquisas:
+
+        status = status_map.get(pesquisa["id"], {})
+
+        # Valores atuais do banco
+        respondida_db = status.get("respondida", False)
+        verificada_db = status.get("verificada", False)
+        url_anexo_db = status.get("url_anexo")
+
+        # Chaves únicas
+        upload_key = f"upload_{relatorio_numero}_{pesquisa['id']}"
+        upload_salvo_key = f"upload_salvo_{relatorio_numero}_{pesquisa['id']}"
+
+        col1, col2, col3, col4, col5 = st.columns([4, 3, 1, 1, 1])
+
+        # -------- PESQUISA --------
+        with col1:
+            st.markdown(f"**{pesquisa['nome_pesquisa']}**")
+
+
+        # -------- ANEXO --------
+        arquivo = None
+
+        with col2:
+            # Caso a pesquisa exija upload
+            if pesquisa.get("upload_arquivo"):
+
+                # -----------------------------
+                # BENEFICIÁRIO → pode anexar
+                # -----------------------------
+                if (
+                    tipo_usuario == "beneficiario"
+                    and not verificada_db
+                    and status_atual_db == "modo_edicao"
+                ):
+                    arquivo = st.file_uploader(
+                        "Anexo",
+                        key=f"upload_{relatorio_numero}_{pesquisa['id']}"
+                    )
+
+                # -----------------------------
+                # NÃO BENEFICIÁRIO
+                # Mostra aviso SOMENTE se não houver anexo salvo
+                # -----------------------------
+                elif tipo_usuario != "beneficiario" and not url_anexo_db:
+                    st.write(":material/attach_file: Demanda anexo")
+
+            # -----------------------------
+            # Link do anexo (se existir)
+            # -----------------------------
+            if url_anexo_db:
+                st.markdown(f":material/attach_file: [Ver anexo]({url_anexo_db})")
+
+
+
+        # -------- RESPONDIDA --------
+        with col3:
+            respondida_ui = st.checkbox(
+                "Respondida",
+                value=respondida_db,
+                disabled = (
+                    # Visitante nunca pode
+                    tipo_usuario == "visitante"
+
+                    # Beneficiário só pode no modo edição
+                    or (
+                        tipo_usuario == "beneficiario"
+                        and status_atual_db != "modo_edicao"
+                    )
+
+                    # Beneficiário não pode se já verificada
+                    or (
+                        tipo_usuario == "beneficiario"
+                        and verificada_db
+                    )
+
+                    # Admin/equipe não podem no modo edição
+                    or (
+                        tipo_usuario in ["admin", "equipe"]
+                        and status_atual_db == "modo_edicao"
+                    )
+                ),
+                key=f"resp_{relatorio_numero}_{pesquisa['id']}"
+            )
+
+        # -------- VERIFICADA --------
+        with col4:
+            verificada_ui = st.checkbox(
+                "Verificada",
+                value=verificada_db,
+                disabled = (
+                    # Visitante nunca pode
+                    tipo_usuario == "visitante"
+
+                    # Beneficiário nunca pode verificar
+                    or tipo_usuario == "beneficiario"
+
+                    # Relatório em modo edição trava todos
+                    or status_atual_db == "modo_edicao"
+                ),
+                key=f"verif_{relatorio_numero}_{pesquisa['id']}"
+            )
+
+        # -------- DETECTA ALTERAÇÃO --------
+        linha_modificada = (
+            respondida_ui != respondida_db
+            or verificada_ui != verificada_db
+            or (
+                arquivo is not None
+                and not st.session_state.get(upload_salvo_key, False)
+            )
+        )
+
+        # -------- BOTÃO SALVAR --------
+        with col5:
+            if linha_modificada and pode_editar:
+
+                if st.button(
+                    "Salvar",
+                    type="primary",
+                    key=f"salvar_{relatorio_numero}_{pesquisa['id']}",
+                    icon=":material/save:",
+                ):
+
+
+                    with st.spinner("Salvando..."):
+
+                        # Conecta ao Drive SOMENTE aqui
+                        servico = obter_servico_drive()
+
+                        # Pasta do projeto
+                        pasta_projeto = obter_pasta_projeto(
+                            servico,
+                            projeto["codigo"],
+                            projeto["sigla"]
+                        )
+
+                        # Pasta Pesquisas (direto no projeto)
+                        pasta_pesquisas = obter_pasta_pesquisas(
+                            servico,
+                            pasta_projeto,
+                            projeto["codigo"]
+                        )
+
+                        url_anexo_final = url_anexo_db  # valor já salvo no banco (se existir)
+
+                        # ------------------------------
+                        # UPLOAD (somente se houver novo arquivo)
+                        # ------------------------------
+                        if (
+                            arquivo is not None
+                            and not st.session_state.get(upload_salvo_key, False)
+                        ):
+                            id_drive = enviar_arquivo_drive(
+                                servico,
+                                pasta_pesquisas,
+                                arquivo
+                            )
+
+                            url_anexo_final = gerar_link_drive(id_drive)
+
+                            # Marca upload como concluído
+                            st.session_state[upload_salvo_key] = True
+
+                        # ------------------------------
+                        # MONTA O OBJETO DA PESQUISA
+                        # ------------------------------
+                        pesquisa_obj = {
+                            "id_pesquisa": pesquisa["id"],
+                            "respondida": respondida_ui,
+                            "verificada": verificada_ui
+                        }
+
+                        if url_anexo_final:
+                            pesquisa_obj["url_anexo"] = url_anexo_final
+
+                        # ------------------------------
+                        # VERIFICA SE JÁ EXISTE NO PROJETO
+                        # ------------------------------
+                        existe = col_projetos.count_documents(
+                            {
+                                "codigo": codigo_projeto_atual,
+                                "pesquisas.id_pesquisa": pesquisa["id"]
+                            }
+                        ) > 0
+
+                        if existe:
+                            col_projetos.update_one(
+                                {
+                                    "codigo": codigo_projeto_atual,
+                                    "pesquisas.id_pesquisa": pesquisa["id"]
+                                },
+                                {
+                                    "$set": {
+                                        "pesquisas.$": pesquisa_obj
+                                    }
+                                }
+                            )
+                        else:
+                            col_projetos.update_one(
+                                {"codigo": codigo_projeto_atual},
+                                {
+                                    "$push": {
+                                        "pesquisas": pesquisa_obj
+                                    }
+                                }
+                            )
+
+
+
+                    # Limpa estados temporários
+                    st.session_state.pop(upload_key, None)
+                    st.session_state.pop(upload_salvo_key, None)
+
+                    st.success(":material/check: Salvo!")
+                    time.sleep(3)
+                    st.rerun()
+
+        st.divider()
 
 
 
 
-                # ======================================================
-                # INICIALIZAÇÃO DO ESTADO DA MATRIZ DE BENEFICIÁRIOS
-                # ======================================================
+# ---------- FORMULÁRIO ----------
+if step_selecionado == "Formulário":
 
-                if "beneficiarios_quant" not in st.session_state:
-                    st.session_state.beneficiarios_quant = (
-                        relatorio.get("beneficiarios_quant") or {
-                            "mulheres": {
-                                "jovens": 0,
-                                "adultas": 0,
-                                "idosas": 0
-                            },
-                            "homens": {
-                                "jovens": 0,
-                                "adultos": 0,
-                                "idosos": 0
-                            },
-                            "nao_binarios": {
-                                "jovens": 0,
-                                "adultos": 0,
-                                "idosos": 0
+    ###########################################################################
+    # 1. BUSCA O EDITAL CORRESPONDENTE AO PROJETO
+    ###########################################################################
+
+    edital = col_editais.find_one(
+        {"codigo_edital": projeto["edital"]}
+    )
+
+    if not edital:
+        st.error("Edital não encontrado para este projeto.")
+        st.stop()
+
+    perguntas = edital.get("perguntas_relatorio", [])
+
+    if not perguntas:
+        st.write('')
+        st.error("O edital não possui perguntas cadastradas.")
+        st.stop()
+
+    # Ordena as perguntas pela ordem definida no edital
+    perguntas = sorted(perguntas, key=lambda x: x.get("ordem", 0))
+
+
+    ###########################################################################
+    # 2. CONTROLE DE ESTADO POR RELATÓRIO (EVITA VAZAMENTO ENTRE ABAS)
+    ###########################################################################
+
+    # Identificador único do relatório atual
+    relatorio_numero = relatorio["numero"]
+    chave_relatorio_ativo = f"form_relatorio_{relatorio_numero}"
+
+    # Se mudou de relatório, recarrega respostas do banco
+    if st.session_state.get("form_relatorio_ativo") != chave_relatorio_ativo:
+        st.session_state.form_relatorio_ativo = chave_relatorio_ativo
+
+
+        # -------------------------------------------
+        # CARREGA RESPOSTAS DO RELATÓRIO (DICT DE OBJETOS)
+        # -------------------------------------------
+
+        # Identificador único do relatório
+        relatorio_numero = relatorio["numero"]
+
+        # Evita vazamento entre abas
+        if st.session_state.get("form_relatorio_ativo") != relatorio_numero:
+            st.session_state.form_relatorio_ativo = relatorio_numero
+
+            # Dicionário
+            st.session_state.respostas_formulario = (
+                relatorio.get("respostas_formulario", {}).copy()
+            )
+
+
+
+    ###########################################################################
+    # 3. RENDERIZAÇÃO DO FORMULÁRIO
+    ###########################################################################
+
+    st.write("")
+    st.write("")
+
+
+    for pergunta in perguntas:
+        tipo = pergunta.get("tipo")
+        texto = pergunta.get("pergunta")
+        opcoes = pergunta.get("opcoes", [])
+        ordem = pergunta.get("ordem")
+
+        # Chave única da pergunta dentro do relatório
+        chave = f"pergunta_{ordem}"
+
+
+        # ---------------------------------------------------------------------
+        # TÍTULO (não salva resposta)
+        # ---------------------------------------------------------------------
+        if tipo == "titulo":
+            st.subheader(texto)
+            st.write("")
+
+            continue
+
+
+
+        # ---------------------------------------------------------------------
+        # SUBTÍTULO (não salva resposta)
+        # ---------------------------------------------------------------------
+        elif tipo == "subtitulo":
+            st.markdown(f"##### {texto}")
+            st.write("")
+
+            continue
+
+
+
+        # # ---------------------------------------------------------------------
+        # # DIVISÓRIA (não usa texto)
+        # # ---------------------------------------------------------------------
+        # elif tipo == "divisoria":
+        #     st.divider()
+
+        #     respostas_formulario.append({
+        #         "tipo": "divisoria",
+        #         "ordem": ordem
+        #     })
+        #     continue
+
+
+        # ---------------------------------------------------------------------
+        # PARÁGRAFO → apenas texto informativo
+        # ---------------------------------------------------------------------
+        elif tipo == "paragrafo":
+            st.write(texto)
+            st.write("")
+
+            continue
+
+
+        # ---------------------------------------------------------------------
+        # TEXTO CURTO
+        # ---------------------------------------------------------------------
+        elif tipo == "texto_curto":
+        
+        
+            resposta_atual = (
+                st.session_state.respostas_formulario
+                .get(chave, {})
+                .get("resposta", "")
+            )
+
+            if pode_editar_relatorio:
+                resposta = st.text_input(
+                    label=texto,
+                    value=resposta_atual,
+                    key=f"input_{chave}"
+                )
+
+                st.session_state.respostas_formulario[chave] = {
+                    "tipo": tipo,
+                    "ordem": ordem,
+                    "pergunta": texto,
+                    "resposta": resposta
+                }
+            else:
+                renderizar_visualizacao(texto, resposta_atual)
+
+
+
+
+
+        # ---------------------------------------------------------------------
+        # TEXTO LONGO
+        # ---------------------------------------------------------------------
+        elif tipo == "texto_longo":
+        
+        
+            resposta_atual = (
+                st.session_state.respostas_formulario
+                .get(chave, {})
+                .get("resposta", "")
+            )
+
+            if pode_editar_relatorio:
+                resposta = st.text_area(
+                    label=texto,
+                    value=resposta_atual,
+                    height=150,
+                    key=f"input_{chave}"
+                )
+
+                st.session_state.respostas_formulario[chave] = {
+                    "tipo": tipo,
+                    "ordem": ordem,
+                    "pergunta": texto,
+                    "resposta": resposta
+                }
+            else:
+                renderizar_visualizacao(texto, resposta_atual)
+
+
+
+        # ---------------------------------------------------------------------
+        # NÚMERO
+        # ---------------------------------------------------------------------
+        elif tipo == "numero":
+        
+        
+            resposta_atual = (
+                st.session_state.respostas_formulario
+                .get(chave, {})
+                .get("resposta", 0)
+            )
+
+            if pode_editar_relatorio:
+                resposta = st.number_input(
+                    label=texto,
+                    value=float(resposta_atual),
+                    step=1.0,
+                    format="%g",
+                    key=f"input_{chave}"
+                )
+
+                st.session_state.respostas_formulario[chave] = {
+                    "tipo": tipo,
+                    "ordem": ordem,
+                    "pergunta": texto,
+                    "resposta": resposta
+                }
+            else:
+                renderizar_visualizacao(
+                    texto,
+                    formatar_numero_br_dinamico(resposta_atual)
+                )
+
+
+
+
+        # ---------------------------------------------------------------------
+        # ESCOLHA ÚNICA
+        # ---------------------------------------------------------------------
+        elif tipo == "escolha_unica":
+        
+        
+            resposta_atual = (
+                st.session_state.respostas_formulario
+                .get(chave, {})
+                .get("resposta", opcoes[0] if opcoes else "")
+            )
+
+            if pode_editar_relatorio:
+                resposta = st.radio(
+                    label=texto,
+                    options=opcoes,
+                    index=opcoes.index(resposta_atual) if resposta_atual in opcoes else 0,
+                    key=f"input_{chave}"
+                )
+
+                st.session_state.respostas_formulario[chave] = {
+                    "tipo": tipo,
+                    "ordem": ordem,
+                    "pergunta": texto,
+                    "resposta": resposta
+                }
+            else:
+                renderizar_visualizacao(texto, resposta_atual)
+
+
+
+
+        # ---------------------------------------------------------------------
+        # MÚLTIPLA ESCOLHA
+        # ---------------------------------------------------------------------
+
+        elif tipo == "multipla_escolha":
+        
+        
+            resposta_atual = (
+                st.session_state.respostas_formulario
+                .get(chave, {})
+                .get("resposta", [])
+            )
+
+            if pode_editar_relatorio:
+                resposta = st.multiselect(
+                    label=texto,
+                    options=opcoes,
+                    default=resposta_atual,
+                    key=f"input_{chave}"
+                )
+
+                st.session_state.respostas_formulario[chave] = {
+                    "tipo": tipo,
+                    "ordem": ordem,
+                    "pergunta": texto,
+                    "resposta": resposta
+                }
+            else:
+                renderizar_visualizacao(
+                    texto,
+                    ", ".join(resposta_atual)
+                )
+
+
+
+
+
+
+        # ---------------------------------------------------------------------
+        # TIPO NÃO SUPORTADO
+        # ---------------------------------------------------------------------
+        else:
+            st.warning(f"Tipo de pergunta não suportado: {tipo}")
+
+        st.write("")  # Espaçamento entre perguntas
+
+
+
+
+
+
+    ###########################################################################
+    # 4. BOTÃO PARA SALVAR RESPOSTAS NO RELATÓRIO CORRETO (MONGODB)
+    ###########################################################################
+    if pode_editar_relatorio:
+        if st.button("Salvar formulário", type="primary", icon=":material/save:"):
+
+            col_projetos.update_one(
+                {
+                    "codigo": projeto["codigo"],
+                    "relatorios.numero": relatorio_numero
+                },
+                {
+                    "$set": {
+                        "relatorios.$.respostas_formulario":
+                            st.session_state.respostas_formulario
+                    }
+                }
+            )
+
+            st.success("Respostas salvas com sucesso!")
+            time.sleep(3)
+            st.rerun()
+
+
+
+
+# ---------- ENVIAR ----------
+
+
+if step_selecionado == "Enviar":
+
+    st.write('')
+    st.write('')
+
+    # --------------------------------------------------
+    # CASO 1: RELATÓRIO JÁ ENVIADO (EM ANÁLISE)
+    # --------------------------------------------------
+    if status_atual_db == "em_analise":
+
+        # Recupera a data de envio salva no banco
+        data_envio = relatorio.get("data_envio")
+
+        # Formata a data para exibição (DD/MM/YYYY)
+        if data_envio:
+            data_formatada = datetime.datetime.strptime(
+                data_envio, "%Y-%m-%d"
+            ).strftime("%d/%m/%Y")
+        else:
+            data_formatada = "—"
+
+        st.markdown(
+            f"##### Relatório enviado em {data_formatada}.")
+
+        st.write("Aguardando análise.")
+    # --------------------------------------------------
+    # CASO 2: RELATÓRIO APROVADO
+    # --------------------------------------------------
+    elif status_atual_db == "aprovado":
+        st.markdown("##### Relatório aprovado.")
+
+    # --------------------------------------------------
+    # CASO 3: RELATÓRIO EM MODO EDIÇÃO E USUÁRIO PODE EDITAR
+    # --------------------------------------------------
+    elif pode_editar_relatorio:
+
+        st.markdown("### Enviar relatório")
+
+        st.write(
+            "Ao enviar o relatório, ele será encaminhado para análise "
+            "e não poderá mais ser editado enquanto estiver em análise."
+        )
+
+        st.divider()
+
+        enviar = st.button(
+            "Enviar relatório",
+            type="primary",
+            icon=":material/send:"
+        )
+
+        if enviar:
+
+            # Gera a data de envio no formato ISO (YYYY-MM-DD)
+            data_envio = datetime.datetime.now().strftime("%Y-%m-%d")
+
+            with st.spinner("Enviando relatório para análise..."):
+
+                # --------------------------------------------------
+                # 1. ATUALIZA STATUS E DATA DO RELATÓRIO
+                # --------------------------------------------------
+                col_projetos.update_one(
+                    {
+                        "codigo": projeto_codigo,
+                        "relatorios.numero": relatorio_numero
+                    },
+                    {
+                        "$set": {
+                            "relatorios.$.status_relatorio": "em_analise",
+                            "relatorios.$.data_envio": data_envio
+                        }
+                    }
+                )
+
+                # --------------------------------------------------
+                # 2. ATUALIZA STATUS DOS RELATOS ABERTOS
+                #    (somente os relatos deste relatório)
+                # --------------------------------------------------
+                projeto_atualizado = col_projetos.find_one(
+                    {"codigo": projeto_codigo}
+                )
+
+                componentes = projeto_atualizado["plano_trabalho"]["componentes"]
+
+                houve_alteracao = False
+
+                for componente in componentes:
+                    for entrega in componente["entregas"]:
+                        for atividade in entrega["atividades"]:
+                            for relato in atividade.get("relatos", []):
+
+                                # Apenas relatos do relatório atual
+                                # e que ainda estejam abertos
+                                if (
+                                    relato.get("relatorio_numero") == relatorio_numero
+                                    and relato.get("status_relato") == "aberto"
+                                ):
+                                    relato["status_relato"] = "em_analise"
+                                    houve_alteracao = True
+
+                # Salva no Mongo apenas se houve mudança
+                if houve_alteracao:
+                    col_projetos.update_one(
+                        {"codigo": projeto_codigo},
+                        {
+                            "$set": {
+                                "plano_trabalho.componentes": componentes
                             }
                         }
                     )
 
 
-                # ======================================================
-                # TÍTULO DO BLOCO
-                # ======================================================
-
-                st.markdown("##### Número de beneficiários por gênero e faixa etária")
-
-                st.write("")
-
-
-                # ======================================================
-                # MODO EDIÇÃO
-                # ======================================================
-
-                if pode_editar_relatorio:
-
-
-                    # Coluna à esquerda para diminuir a largura dos inputs de beneficiários
-                    content, vazio_d = st.columns([7, 6])
-
-                    # -------------------------------
-                    # LINHA: JOVENS
-                    # -------------------------------
-                    col_m, col_h, col_nb = content.columns(3)
-
-                    with col_m:
-                        st.session_state.beneficiarios_quant["mulheres"]["jovens"] = st.number_input(
-                            "Mulheres – Jovens (até 24 anos)",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["mulheres"]["jovens"],
-                            key="bq_mulheres_jovens"
-                        )
-
-                    with col_h:
-                        st.session_state.beneficiarios_quant["homens"]["jovens"] = st.number_input(
-                            "Homens – Jovens (até 24 anos)",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["homens"]["jovens"],
-                            key="bq_homens_jovens"
-                        )
-
-                    with col_nb:
-                        st.session_state.beneficiarios_quant["nao_binarios"]["jovens"] = st.number_input(
-                            "Não-binários – Jovens (até 24 anos)",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["nao_binarios"]["jovens"],
-                            key="bq_nb_jovens"
-                        )
-
-                    # -------------------------------
-                    # LINHA: ADULTOS
-                    # -------------------------------
-                    col_m, col_h, col_nb = content.columns(3)
-
-                    with col_m:
-                        st.session_state.beneficiarios_quant["mulheres"]["adultas"] = st.number_input(
-                            "Mulheres – Adultas",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["mulheres"]["adultas"],
-                            key="bq_mulheres_adultas"
-                        )
-
-                    with col_h:
-                        st.session_state.beneficiarios_quant["homens"]["adultos"] = st.number_input(
-                            "Homens – Adultos",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["homens"]["adultos"],
-                            key="bq_homens_adultos"
-                        )
-
-                    with col_nb:
-                        st.session_state.beneficiarios_quant["nao_binarios"]["adultos"] = st.number_input(
-                            "Não-binários – Adultos",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["nao_binarios"]["adultos"],
-                            key="bq_nb_adultos"
-                        )
-
-                    # -------------------------------
-                    # LINHA: IDOSOS
-                    # -------------------------------
-                    col_m, col_h, col_nb = content.columns(3)
-
-                    with col_m:
-                        st.session_state.beneficiarios_quant["mulheres"]["idosas"] = st.number_input(
-                            "Mulheres – Idosas (60+ anos)",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["mulheres"]["idosas"],
-                            key="bq_mulheres_idosas"
-                        )
-
-                    with col_h:
-                        st.session_state.beneficiarios_quant["homens"]["idosos"] = st.number_input(
-                            "Homens – Idosos (60+ anos)",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["homens"]["idosos"],
-                            key="bq_homens_idosos"
-                        )
-
-                    with col_nb:
-                        st.session_state.beneficiarios_quant["nao_binarios"]["idosos"] = st.number_input(
-                            "Não-binários – Idosos (60+ anos)",
-                            min_value=0,
-                            step=1,
-                            value=st.session_state.beneficiarios_quant["nao_binarios"]["idosos"],
-                            key="bq_nb_idosos"
-                        )
-
-
-
-
-                    # ======================================================
-                    # BOTÃO DE SALVAR EXCLUSIVO DA MATRIZ
-                    # ======================================================
-                    # Este botão salva SOMENTE a matriz de quantitativos
-
-                    if pode_editar_relatorio:
-
-                        st.write("")
-
-                        salvar_matriz = st.button(
-                            "Atualizar beneficiários",
-                            type="primary",
-                            key=f"salvar_beneficiarios_quant_{relatorio_numero}",
-                            icon=":material/save:"
-                        )
-
-                        if salvar_matriz:
-
-                            # Atualiza apenas a chave 'beneficiarios_quant' no relatório correto
-                            col_projetos.update_one(
-                                {
-                                    "codigo": projeto["codigo"],
-                                    "relatorios.numero": relatorio_numero
-                                },
-                                {
-                                    "$set": {
-                                        "relatorios.$.beneficiarios_quant":
-                                            st.session_state.beneficiarios_quant
-                                    }
-                                }
-                            )
-
-                            st.success("Quantitativo de beneficiários salvo com sucesso.")
-                            time.sleep(3)
-                            st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-                # ======================================================
-                # MODO VISUALIZAÇÃO
-                # ======================================================
-
-                else:
-
-                    dados = st.session_state.beneficiarios_quant
-
-                    # -------------------------------
-                    # Totais por gênero
-                    # -------------------------------
-                    total_mulheres = sum(dados["mulheres"].values())
-                    total_homens = sum(dados["homens"].values())
-                    total_nb = sum(dados["nao_binarios"].values())
-
-                    # -------------------------------
-                    # Totais por faixa etária
-                    # -------------------------------
-                    total_jovens = (
-                        dados["mulheres"]["jovens"]
-                        + dados["homens"]["jovens"]
-                        + dados["nao_binarios"]["jovens"]
-                    )
-
-                    total_adultos = (
-                        dados["mulheres"]["adultas"]
-                        + dados["homens"]["adultos"]
-                        + dados["nao_binarios"]["adultos"]
-                    )
-
-                    total_idosos = (
-                        dados["mulheres"]["idosas"]
-                        + dados["homens"]["idosos"]
-                        + dados["nao_binarios"]["idosos"]
-                    )
-
-                    total_geral = total_mulheres + total_homens + total_nb
-
-                    st.write("")
-
-                    # -------------------------------
-                    # LAYOUT EM 4 COLUNAS
-                    # -------------------------------
-                    col_m, col_h, col_nb, col_totais = st.columns(4)
-
-                    # -------- MULHERES --------
-                    with col_m:
-                        l, v = st.columns(2)
-                        l.write("Mulheres jovens"); v.write(str(dados["mulheres"]["jovens"]))
-
-                        l, v = st.columns(2)
-                        l.write("Mulheres adultas"); v.write(str(dados["mulheres"]["adultas"]))
-
-                        l, v = st.columns(2)
-                        l.write("Mulheres idosas"); v.write(str(dados["mulheres"]["idosas"]))
-
-                        l, v = st.columns(2)
-                        l.markdown("**Total de mulheres**"); v.markdown(f"**{total_mulheres}**")
-
-                    # -------- HOMENS --------
-                    with col_h:
-                        l, v = st.columns(2)
-                        l.write("Homens jovens"); v.write(str(dados["homens"]["jovens"]))
-
-                        l, v = st.columns(2)
-                        l.write("Homens adultos"); v.write(str(dados["homens"]["adultos"]))
-
-                        l, v = st.columns(2)
-                        l.write("Homens idosos"); v.write(str(dados["homens"]["idosos"]))
-
-                        l, v = st.columns(2)
-                        l.markdown("**Total de homens**"); v.markdown(f"**{total_homens}**")
-
-                    # -------- NÃO-BINÁRIOS --------
-                    with col_nb:
-                        l, v = st.columns(2)
-                        l.write("Não-binários jovens"); v.write(str(dados["nao_binarios"]["jovens"]))
-
-                        l, v = st.columns(2)
-                        l.write("Não-binários adultos"); v.write(str(dados["nao_binarios"]["adultos"]))
-
-                        l, v = st.columns(2)
-                        l.write("Não-binários idosos"); v.write(str(dados["nao_binarios"]["idosos"]))
-
-                        l, v = st.columns(2)
-                        l.markdown("**Total de não-binários**"); v.markdown(f"**{total_nb}**")
-
-                    # -------- TOTAIS GERAIS (NEGRITO) --------
-                    with col_totais:
-                        l, v = st.columns(2)
-                        l.markdown("**Total de jovens**"); v.markdown(f"**{total_jovens}**")
-
-                        l, v = st.columns(2)
-                        l.markdown("**Total de adultos**"); v.markdown(f"**{total_adultos}**")
-
-                        l, v = st.columns(2)
-                        l.markdown("**Total de idosos**"); v.markdown(f"**{total_idosos}**")
-
-                        l, v = st.columns(2)
-                        l.markdown("**Total geral**"); v.markdown(f"**{total_geral}**")
-
-
-
-
-
-
-
-
-                st.divider()
-
-                # ============================================================================================================
-                # PARTE 2 - TIPOS DE BENEFICIÁRIOS E BENEFICIOS 
-                # ============================================================================================================
-
-                st.write('')
-                st.markdown("##### Tipos de Beneficiários e Benefícios")
-
-                if usuario_beneficiario:
-
-                    st.write("")
-                    st.write(
-                        "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto para cada comunidade."
-                    )
-
-                st.write("")
-                st.write("")
-
-
-                projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
-                localidades = projeto.get("locais", {}).get("localidades", [])
-
-                if not localidades:
-                    st.info(
-                        "Nenhuma comunidade cadastrada no projeto. "
-                        "Adicione comunidades na página **Locais**."
-                    )
-                    st.stop()
-
-                # =====================================================
-                # LOOP DAS COMUNIDADES
-                # =====================================================
-                for localidade in localidades:
-
-                    nome_localidade = localidade.get("nome_localidade")
-                    beneficiarios_bd = localidade.get("beneficiarios", []) or []
-
-                    # -------------------------------------------------
-                    # ESTADO ORIGINAL DO BANCO
-                    # -------------------------------------------------
-                    estado_original = {
-                        b["tipo_beneficiario"]: sorted(b.get("beneficios") or [])
-                        for b in beneficiarios_bd
-                        if b.get("tipo_beneficiario")
-                    }
-
-                    # -------------------------------------------------
-                    # PÚBLICOS PARA RENDERIZAÇÃO
-                    # -------------------------------------------------
-                    publicos_renderizacao = list(opcoes_publicos[:-1])
-
-                    for tipo in estado_original.keys():
-                        if tipo not in publicos_renderizacao:
-                            publicos_renderizacao.append(tipo)
-
-                    publicos_renderizacao = sorted(publicos_renderizacao)
-
-                    estado_atual = {}
-                    houve_alteracao = False
-
-                    col1, col2 = st.columns([1, 3])
-
-                    # -------- COLUNA 1 --------
-
-                    with col1:
-                        st.markdown(f"**{nome_localidade}**")
-
-                        municipio = localidade.get("municipio")
-
-                        if municipio:
-                            st.write(municipio)
-
-
-
-
-                    # -------- COLUNA 2 --------
-                    with col2:
-
-                        st.write("**Tipos de Beneficiários e Benefícios:**")
-
-                        # # =====================================================
-                        # # MODO VISUALIZAÇÃO COM LISTA EM TÓPICOS - Para demostração de segunda opção !!!!!!!!!!!!!!!!!!!!!!!!!
-                        # # =====================================================
-                        # if modo_visualizacao_benef:
-
-                        #     if not beneficiarios_bd:
-                        #         st.write("Nenhum beneficiário cadastrado.")
-                        #     else:
-                        #         for b in beneficiarios_bd:
-
-                        #             tipo = b.get("tipo_beneficiario")
-                        #             beneficios = b.get("beneficios") or []
-
-                        #             with st.container():
-                        #                 st.write("")
-
-                        #                 # Título: tipo de beneficiário
-                        #                 st.markdown(f"**{tipo}**")
-
-                        #                 # Lista de benefícios
-                        #                 if beneficios:
-                        #                     for beneficio in beneficios:
-                        #                         st.markdown(f"- {beneficio}")
-                        #                 else:
-                        #                     st.markdown("_Nenhum benefício informado._")
-
-
-                        # st.write('///////////////////////////')
-
-
-                        # =====================================================
-                        # MODO VISUALIZAÇÃO COM LISTA EM PILLS
-                        # =====================================================
-                        if modo_visualizacao_benef:
-
-                            if not beneficiarios_bd:
-                                st.write("Nenhum beneficiário cadastrado.")
-                            else:
-                                for b in beneficiarios_bd:
-
-                                    tipo = b.get("tipo_beneficiario")
-                                    beneficios = b.get("beneficios") or []
-
-                                    with st.container():
-                                        st.write(' ')
-                                        if beneficios:
-                                            st.pills(
-                                                label=tipo,
-                                                options=beneficios,
-                                                width="content",
-                                                key=f"pill_{projeto['codigo']}_{nome_localidade}_{tipo}"
-                                            )
-                                        else:
-                                            st.pills(
-                                                label=tipo,
-                                                options=["Nenhum benefício informado"],
-                                                width="content",
-                                                key=f"pill_{projeto['codigo']}_{nome_localidade}_{tipo}"
-                                            )
-
-
-                        # =====================================================
-                        # MODO EDIÇÃO
-                        # =====================================================
-                        if modo_edicao_benef:
-
-                            # =============================================
-                            # BENEFICIÁRIOS EXISTENTES
-                            # =============================================
-                            for publico in publicos_renderizacao:
-
-                                with st.container(horizontal=True):
-
-                                    chk_key = f"chk_{projeto['codigo']}_{nome_localidade}_{publico}"
-
-                                    marcado_inicial = publico in estado_original
-
-                                    marcado = st.checkbox(
-                                        publico,
-                                        value=marcado_inicial,
-                                        key=chk_key,
-                                        width=300
-                                    )
-
-                                    if marcado:
-
-                                        beneficios_iniciais = estado_original.get(publico, [])
-
-                                        beneficios = st.multiselect(
-                                            f"Benefícios para {publico.lower()}",
-                                            options=OPCOES_BENEFICIOS,
-                                            default=beneficios_iniciais,
-                                            key=f"ms_{projeto['codigo']}_{nome_localidade}_{publico}"
-                                        )
-
-                                        estado_atual[publico] = sorted(beneficios)
-
-                                        if (
-                                            publico not in estado_original
-                                            or sorted(beneficios) != estado_original.get(publico, [])
-                                        ):
-                                            houve_alteracao = True
-
-                                    else:
-                                        if publico in estado_original:
-                                            houve_alteracao = True
-
-                            # =============================================
-                            # CHECKBOX OUTROS
-                            # =============================================
-                            with st.container(horizontal=True):
-
-                                chk_outros_key = f"chk_outros_{projeto['codigo']}_{nome_localidade}"
-
-                                outros_marcado = st.checkbox(
-                                    "Outros",
-                                    value=False,
-                                    key=chk_outros_key,
-                                    width=300
-                                )
-
-                            # =============================================
-                            # FORMULÁRIO OUTROS
-                            # =============================================
-                            if outros_marcado:
-
-                                with st.container(horizontal=True):
-
-                                    st.text_input(
-                                        "Tipo de beneficiário",
-                                        key=f"novo_tipo_{projeto['codigo']}_{nome_localidade}"
-                                    )
-
-                                    st.multiselect(
-                                        "Benefícios",
-                                        options=OPCOES_BENEFICIOS,
-                                        key=f"novo_beneficios_{projeto['codigo']}_{nome_localidade}"
-                                    )
-
-                                novo_tipo = st.session_state.get(
-                                    f"novo_tipo_{projeto['codigo']}_{nome_localidade}", ""
-                                ).strip()
-
-                                novos_beneficios = st.session_state.get(
-                                    f"novo_beneficios_{projeto['codigo']}_{nome_localidade}", []
-                                )
-
-                                if novo_tipo and novos_beneficios:
-                                    houve_alteracao = True
-
-                    # =================================================
-                    # BOTÃO SALVAR
-                    # =================================================
-                    if houve_alteracao:
-
-                        st.write("")
-
-                        erros = []
-
-                        # with st.container(horizontal=True, horizontal_alignment="right"):
-                        clicou_salvar = st.button(
-                            f"Atualizar {nome_localidade}",
-                            type="primary",
-                            key=f"salvar_{projeto['codigo']}_{nome_localidade}",
-                            icon=":material/save:"
-                        )
-
-                        if clicou_salvar:
-
-                            beneficiarios_para_salvar = []
-
-                            # -----------------------------------------
-                            # BENEFICIÁRIOS EXISTENTES
-                            # -----------------------------------------
-                            for tipo, beneficios in estado_atual.items():
-                                if not beneficios:
-                                    erros.append(
-                                        f"Selecione ao menos um benefício para **{tipo}**."
-                                    )
-                                else:
-                                    beneficiarios_para_salvar.append({
-                                        "tipo_beneficiario": tipo,
-                                        "beneficios": beneficios
-                                    })
-
-                            # -----------------------------------------
-                            # NOVO BENEFICIÁRIO (OUTROS)
-                            # -----------------------------------------
-                            if outros_marcado and novo_tipo:
-                                beneficiarios_para_salvar.append({
-                                    "tipo_beneficiario": novo_tipo,
-                                    "beneficios": novos_beneficios
-                                })
-
-                            if erros:
-                                for erro in erros:
-                                    st.error(erro)
-                                time.sleep(3)
-                                st.rerun()
-
-                            # -----------------------------------------
-                            # SALVA NO BANCO
-                            # -----------------------------------------
-                            col_projetos.update_one(
-                                {
-                                    "codigo": projeto["codigo"],
-                                    "locais.localidades.nome_localidade": nome_localidade
-                                },
-                                {
-                                    "$set": {
-                                        "locais.localidades.$.beneficiarios":
-                                            beneficiarios_para_salvar
-                                    }
-                                }
-                            )
-
-                            st.success(
-                                f"Beneficiários da comunidade "
-                                f"**{nome_localidade}** salvos com sucesso."
-                            )
-                            time.sleep(3)
-                            st.rerun()
-
-
-                    st.divider()
-
-
-
-
-
-            # ---------- PESQUISAS ----------
-            if step == "Pesquisas":
-
-                # ============================
-                # CONTROLE DE USUÁRIO
-                # ============================
-
-                usuario_admin = tipo_usuario == "admin"
-                usuario_equipe = tipo_usuario == "equipe"
-                usuario_beneficiario = tipo_usuario == "beneficiario"
-                
-
-                pode_editar = usuario_admin or usuario_equipe or usuario_beneficiario
-                pode_verificar = usuario_admin or usuario_equipe
-
-                # ============================
-                # BUSCA DADOS
-                # ============================
-
-                pesquisas = edital.get("pesquisas_relatorio", []) if edital else []
-
-                if not pesquisas:
-                    st.caption("Nenhuma pesquisa cadastrada.")
-                    st.stop()
-
-                st.write("")
-                st.write("")
-                st.markdown("##### Pesquisas / Ferramentas de Monitoramento")
-                st.write("")
-
-                pesquisas_projeto = projeto.get("pesquisas", [])
-                status_map = {p["id_pesquisa"]: p for p in pesquisas_projeto}
-
-                # ============================
-                # RENDERIZAÇÃO DAS LINHAS
-                # ============================
-
-                for pesquisa in pesquisas:
-
-                    status = status_map.get(pesquisa["id"], {})
-
-                    # Valores atuais do banco
-                    respondida_db = status.get("respondida", False)
-                    verificada_db = status.get("verificada", False)
-                    url_anexo_db = status.get("url_anexo")
-
-                    # Chaves únicas
-                    upload_key = f"upload_{relatorio_numero}_{pesquisa['id']}"
-                    upload_salvo_key = f"upload_salvo_{relatorio_numero}_{pesquisa['id']}"
-
-                    col1, col2, col3, col4, col5 = st.columns([4, 3, 1, 1, 1])
-
-                    # -------- PESQUISA --------
-                    with col1:
-                        st.markdown(f"**{pesquisa['nome_pesquisa']}**")
-
-
-                    # -------- ANEXO --------
-                    arquivo = None
-
-                    with col2:
-                        # Caso a pesquisa exija upload
-                        if pesquisa.get("upload_arquivo"):
-
-                            # -----------------------------
-                            # BENEFICIÁRIO → pode anexar
-                            # -----------------------------
-                            if (
-                                tipo_usuario == "beneficiario"
-                                and not verificada_db
-                                and status_atual_db == "modo_edicao"
-                            ):
-                                arquivo = st.file_uploader(
-                                    "Anexo",
-                                    key=f"upload_{relatorio_numero}_{pesquisa['id']}"
-                                )
-
-                            # -----------------------------
-                            # NÃO BENEFICIÁRIO
-                            # Mostra aviso SOMENTE se não houver anexo salvo
-                            # -----------------------------
-                            elif tipo_usuario != "beneficiario" and not url_anexo_db:
-                                st.write(":material/attach_file: Demanda anexo")
-
-                        # -----------------------------
-                        # Link do anexo (se existir)
-                        # -----------------------------
-                        if url_anexo_db:
-                            st.markdown(f":material/attach_file: [Ver anexo]({url_anexo_db})")
-
-
-
-                    # -------- RESPONDIDA --------
-                    with col3:
-                        respondida_ui = st.checkbox(
-                            "Respondida",
-                            value=respondida_db,
-                            disabled = (
-                                # Visitante nunca pode
-                                tipo_usuario == "visitante"
-
-                                # Beneficiário só pode no modo edição
-                                or (
-                                    tipo_usuario == "beneficiario"
-                                    and status_atual_db != "modo_edicao"
-                                )
-
-                                # Beneficiário não pode se já verificada
-                                or (
-                                    tipo_usuario == "beneficiario"
-                                    and verificada_db
-                                )
-
-                                # Admin/equipe não podem no modo edição
-                                or (
-                                    tipo_usuario in ["admin", "equipe"]
-                                    and status_atual_db == "modo_edicao"
-                                )
-                            ),
-                            key=f"resp_{relatorio_numero}_{pesquisa['id']}"
-                        )
-
-                    # -------- VERIFICADA --------
-                    with col4:
-                        verificada_ui = st.checkbox(
-                            "Verificada",
-                            value=verificada_db,
-                            disabled = (
-                                # Visitante nunca pode
-                                tipo_usuario == "visitante"
-
-                                # Beneficiário nunca pode verificar
-                                or tipo_usuario == "beneficiario"
-
-                                # Relatório em modo edição trava todos
-                                or status_atual_db == "modo_edicao"
-                            ),
-                            key=f"verif_{relatorio_numero}_{pesquisa['id']}"
-                        )
-
-                    # -------- DETECTA ALTERAÇÃO --------
-                    linha_modificada = (
-                        respondida_ui != respondida_db
-                        or verificada_ui != verificada_db
-                        or (
-                            arquivo is not None
-                            and not st.session_state.get(upload_salvo_key, False)
-                        )
-                    )
-
-                    # -------- BOTÃO SALVAR --------
-                    with col5:
-                        if linha_modificada and pode_editar:
-
-                            if st.button(
-                                "Salvar",
-                                type="primary",
-                                key=f"salvar_{relatorio_numero}_{pesquisa['id']}",
-                                icon=":material/save:",
-                            ):
-
-
-                                with st.spinner("Salvando..."):
-
-                                    # Conecta ao Drive SOMENTE aqui
-                                    servico = obter_servico_drive()
-
-                                    # Pasta do projeto
-                                    pasta_projeto = obter_pasta_projeto(
-                                        servico,
-                                        projeto["codigo"],
-                                        projeto["sigla"]
-                                    )
-
-                                    # Pasta Pesquisas (direto no projeto)
-                                    pasta_pesquisas = obter_pasta_pesquisas(
-                                        servico,
-                                        pasta_projeto,
-                                        projeto["codigo"]
-                                    )
-
-                                    url_anexo_final = url_anexo_db  # valor já salvo no banco (se existir)
-
-                                    # ------------------------------
-                                    # UPLOAD (somente se houver novo arquivo)
-                                    # ------------------------------
-                                    if (
-                                        arquivo is not None
-                                        and not st.session_state.get(upload_salvo_key, False)
-                                    ):
-                                        id_drive = enviar_arquivo_drive(
-                                            servico,
-                                            pasta_pesquisas,
-                                            arquivo
-                                        )
-
-                                        url_anexo_final = gerar_link_drive(id_drive)
-
-                                        # Marca upload como concluído
-                                        st.session_state[upload_salvo_key] = True
-
-                                    # ------------------------------
-                                    # MONTA O OBJETO DA PESQUISA
-                                    # ------------------------------
-                                    pesquisa_obj = {
-                                        "id_pesquisa": pesquisa["id"],
-                                        "respondida": respondida_ui,
-                                        "verificada": verificada_ui
-                                    }
-
-                                    if url_anexo_final:
-                                        pesquisa_obj["url_anexo"] = url_anexo_final
-
-                                    # ------------------------------
-                                    # VERIFICA SE JÁ EXISTE NO PROJETO
-                                    # ------------------------------
-                                    existe = col_projetos.count_documents(
-                                        {
-                                            "codigo": codigo_projeto_atual,
-                                            "pesquisas.id_pesquisa": pesquisa["id"]
-                                        }
-                                    ) > 0
-
-                                    if existe:
-                                        col_projetos.update_one(
-                                            {
-                                                "codigo": codigo_projeto_atual,
-                                                "pesquisas.id_pesquisa": pesquisa["id"]
-                                            },
-                                            {
-                                                "$set": {
-                                                    "pesquisas.$": pesquisa_obj
-                                                }
-                                            }
-                                        )
-                                    else:
-                                        col_projetos.update_one(
-                                            {"codigo": codigo_projeto_atual},
-                                            {
-                                                "$push": {
-                                                    "pesquisas": pesquisa_obj
-                                                }
-                                            }
-                                        )
-
-
-
-                                # Limpa estados temporários
-                                st.session_state.pop(upload_key, None)
-                                st.session_state.pop(upload_salvo_key, None)
-
-                                st.success(":material/check: Salvo!")
-                                time.sleep(3)
-                                st.rerun()
-
-                    st.divider()
-
-
-
-
-            # ---------- FORMULÁRIO ----------
-            if step == "Formulário":
-
-                ###########################################################################
-                # 1. BUSCA O EDITAL CORRESPONDENTE AO PROJETO
-                ###########################################################################
-
-                edital = col_editais.find_one(
-                    {"codigo_edital": projeto["edital"]}
-                )
-
-                if not edital:
-                    st.error("Edital não encontrado para este projeto.")
-                    st.stop()
-
-                perguntas = edital.get("perguntas_relatorio", [])
-
-                if not perguntas:
-                    st.write('')
-                    st.error("O edital não possui perguntas cadastradas.")
-                    st.stop()
-
-                # Ordena as perguntas pela ordem definida no edital
-                perguntas = sorted(perguntas, key=lambda x: x.get("ordem", 0))
-
-
-                ###########################################################################
-                # 2. CONTROLE DE ESTADO POR RELATÓRIO (EVITA VAZAMENTO ENTRE ABAS)
-                ###########################################################################
-
-                # Identificador único do relatório atual
-                relatorio_numero = relatorio["numero"]
-                chave_relatorio_ativo = f"form_relatorio_{relatorio_numero}"
-
-                # Se mudou de relatório, recarrega respostas do banco
-                if st.session_state.get("form_relatorio_ativo") != chave_relatorio_ativo:
-                    st.session_state.form_relatorio_ativo = chave_relatorio_ativo
-
-
-                    # -------------------------------------------
-                    # CARREGA RESPOSTAS DO RELATÓRIO (DICT DE OBJETOS)
-                    # -------------------------------------------
-
-                    # Identificador único do relatório
-                    relatorio_numero = relatorio["numero"]
-
-                    # Evita vazamento entre abas
-                    if st.session_state.get("form_relatorio_ativo") != relatorio_numero:
-                        st.session_state.form_relatorio_ativo = relatorio_numero
-
-                        # Dicionário
-                        st.session_state.respostas_formulario = (
-                            relatorio.get("respostas_formulario", {}).copy()
-                        )
-
-
-
-                ###########################################################################
-                # 3. RENDERIZAÇÃO DO FORMULÁRIO
-                ###########################################################################
-
-                st.write("")
-                st.write("")
-
-
-                for pergunta in perguntas:
-                    tipo = pergunta.get("tipo")
-                    texto = pergunta.get("pergunta")
-                    opcoes = pergunta.get("opcoes", [])
-                    ordem = pergunta.get("ordem")
-
-                    # Chave única da pergunta dentro do relatório
-                    chave = f"pergunta_{ordem}"
-
-
-                    # ---------------------------------------------------------------------
-                    # TÍTULO (não salva resposta)
-                    # ---------------------------------------------------------------------
-                    if tipo == "titulo":
-                        st.subheader(texto)
-                        st.write("")
-
-                        continue
-
-
-
-                    # ---------------------------------------------------------------------
-                    # SUBTÍTULO (não salva resposta)
-                    # ---------------------------------------------------------------------
-                    elif tipo == "subtitulo":
-                        st.markdown(f"##### {texto}")
-                        st.write("")
-
-                        continue
-
-
-
-                    # # ---------------------------------------------------------------------
-                    # # DIVISÓRIA (não usa texto)
-                    # # ---------------------------------------------------------------------
-                    # elif tipo == "divisoria":
-                    #     st.divider()
-
-                    #     respostas_formulario.append({
-                    #         "tipo": "divisoria",
-                    #         "ordem": ordem
-                    #     })
-                    #     continue
-
-
-                    # ---------------------------------------------------------------------
-                    # PARÁGRAFO → apenas texto informativo
-                    # ---------------------------------------------------------------------
-                    elif tipo == "paragrafo":
-                        st.write(texto)
-                        st.write("")
-
-                        continue
-
-
-                    # ---------------------------------------------------------------------
-                    # TEXTO CURTO
-                    # ---------------------------------------------------------------------
-                    elif tipo == "texto_curto":
-                    
-                    
-                        resposta_atual = (
-                            st.session_state.respostas_formulario
-                            .get(chave, {})
-                            .get("resposta", "")
-                        )
-
-                        if pode_editar_relatorio:
-                            resposta = st.text_input(
-                                label=texto,
-                                value=resposta_atual,
-                                key=f"input_{chave}"
-                            )
-
-                            st.session_state.respostas_formulario[chave] = {
-                                "tipo": tipo,
-                                "ordem": ordem,
-                                "pergunta": texto,
-                                "resposta": resposta
-                            }
-                        else:
-                            renderizar_visualizacao(texto, resposta_atual)
-
-
-
-
-
-                    # ---------------------------------------------------------------------
-                    # TEXTO LONGO
-                    # ---------------------------------------------------------------------
-                    elif tipo == "texto_longo":
-                    
-                    
-                        resposta_atual = (
-                            st.session_state.respostas_formulario
-                            .get(chave, {})
-                            .get("resposta", "")
-                        )
-
-                        if pode_editar_relatorio:
-                            resposta = st.text_area(
-                                label=texto,
-                                value=resposta_atual,
-                                height=150,
-                                key=f"input_{chave}"
-                            )
-
-                            st.session_state.respostas_formulario[chave] = {
-                                "tipo": tipo,
-                                "ordem": ordem,
-                                "pergunta": texto,
-                                "resposta": resposta
-                            }
-                        else:
-                            renderizar_visualizacao(texto, resposta_atual)
-
-
-
-                    # ---------------------------------------------------------------------
-                    # NÚMERO
-                    # ---------------------------------------------------------------------
-                    elif tipo == "numero":
-                    
-                    
-                        resposta_atual = (
-                            st.session_state.respostas_formulario
-                            .get(chave, {})
-                            .get("resposta", 0)
-                        )
-
-                        if pode_editar_relatorio:
-                            resposta = st.number_input(
-                                label=texto,
-                                value=float(resposta_atual),
-                                step=1.0,
-                                format="%g",
-                                key=f"input_{chave}"
-                            )
-
-                            st.session_state.respostas_formulario[chave] = {
-                                "tipo": tipo,
-                                "ordem": ordem,
-                                "pergunta": texto,
-                                "resposta": resposta
-                            }
-                        else:
-                            renderizar_visualizacao(
-                                texto,
-                                formatar_numero_br_dinamico(resposta_atual)
-                            )
-
-
-
-
-                    # ---------------------------------------------------------------------
-                    # ESCOLHA ÚNICA
-                    # ---------------------------------------------------------------------
-                    elif tipo == "escolha_unica":
-                    
-                    
-                        resposta_atual = (
-                            st.session_state.respostas_formulario
-                            .get(chave, {})
-                            .get("resposta", opcoes[0] if opcoes else "")
-                        )
-
-                        if pode_editar_relatorio:
-                            resposta = st.radio(
-                                label=texto,
-                                options=opcoes,
-                                index=opcoes.index(resposta_atual) if resposta_atual in opcoes else 0,
-                                key=f"input_{chave}"
-                            )
-
-                            st.session_state.respostas_formulario[chave] = {
-                                "tipo": tipo,
-                                "ordem": ordem,
-                                "pergunta": texto,
-                                "resposta": resposta
-                            }
-                        else:
-                            renderizar_visualizacao(texto, resposta_atual)
-
-
-
-
-                    # ---------------------------------------------------------------------
-                    # MÚLTIPLA ESCOLHA
-                    # ---------------------------------------------------------------------
-
-                    elif tipo == "multipla_escolha":
-                    
-                    
-                        resposta_atual = (
-                            st.session_state.respostas_formulario
-                            .get(chave, {})
-                            .get("resposta", [])
-                        )
-
-                        if pode_editar_relatorio:
-                            resposta = st.multiselect(
-                                label=texto,
-                                options=opcoes,
-                                default=resposta_atual,
-                                key=f"input_{chave}"
-                            )
-
-                            st.session_state.respostas_formulario[chave] = {
-                                "tipo": tipo,
-                                "ordem": ordem,
-                                "pergunta": texto,
-                                "resposta": resposta
-                            }
-                        else:
-                            renderizar_visualizacao(
-                                texto,
-                                ", ".join(resposta_atual)
-                            )
-
-
-
-
-
-
-                    # ---------------------------------------------------------------------
-                    # TIPO NÃO SUPORTADO
-                    # ---------------------------------------------------------------------
-                    else:
-                        st.warning(f"Tipo de pergunta não suportado: {tipo}")
-
-                    st.write("")  # Espaçamento entre perguntas
-
-
-
-
-
-
-                ###########################################################################
-                # 4. BOTÃO PARA SALVAR RESPOSTAS NO RELATÓRIO CORRETO (MONGODB)
-                ###########################################################################
-                if pode_editar_relatorio:
-                    if st.button("Salvar formulário", type="primary", icon=":material/save:"):
-
-                        col_projetos.update_one(
-                            {
-                                "codigo": projeto["codigo"],
-                                "relatorios.numero": relatorio_numero
-                            },
-                            {
-                                "$set": {
-                                    "relatorios.$.respostas_formulario":
-                                        st.session_state.respostas_formulario
-                                }
-                            }
-                        )
-
-                        st.success("Respostas salvas com sucesso!")
-                        time.sleep(3)
-                        st.rerun()
-
-
-
-
-            # ---------- ENVIAR ----------
-
-
-            if step == "Enviar":
-
-                st.write('')
-                st.write('')
-
-                # --------------------------------------------------
-                # CASO 1: RELATÓRIO JÁ ENVIADO (EM ANÁLISE)
-                # --------------------------------------------------
-                if status_atual_db == "em_analise":
-
-                    # Recupera a data de envio salva no banco
-                    data_envio = relatorio.get("data_envio")
-
-                    # Formata a data para exibição (DD/MM/YYYY)
-                    if data_envio:
-                        data_formatada = datetime.datetime.strptime(
-                            data_envio, "%Y-%m-%d"
-                        ).strftime("%d/%m/%Y")
-                    else:
-                        data_formatada = "—"
-
-                    st.markdown(
-                        f"##### Relatório enviado em {data_formatada}.")
-
-                    st.write("Aguardando análise.")
-                # --------------------------------------------------
-                # CASO 2: RELATÓRIO APROVADO
-                # --------------------------------------------------
-                elif status_atual_db == "aprovado":
-                    st.markdown("##### Relatório aprovado.")
-
-                # --------------------------------------------------
-                # CASO 3: RELATÓRIO EM MODO EDIÇÃO E USUÁRIO PODE EDITAR
-                # --------------------------------------------------
-                elif pode_editar_relatorio:
-
-                    st.markdown("### Enviar relatório")
-
-                    st.write(
-                        "Ao enviar o relatório, ele será encaminhado para análise "
-                        "e não poderá mais ser editado enquanto estiver em análise."
-                    )
-
-                    st.divider()
-
-                    enviar = st.button(
-                        "Enviar relatório",
-                        type="primary",
-                        icon=":material/send:"
-                    )
-
-                    if enviar:
-
-                        # Gera a data de envio no formato ISO (YYYY-MM-DD)
-                        data_envio = datetime.datetime.now().strftime("%Y-%m-%d")
-
-                        with st.spinner("Enviando relatório para análise..."):
-
-                            # --------------------------------------------------
-                            # 1. ATUALIZA STATUS E DATA DO RELATÓRIO
-                            # --------------------------------------------------
-                            col_projetos.update_one(
-                                {
-                                    "codigo": projeto_codigo,
-                                    "relatorios.numero": relatorio_numero
-                                },
-                                {
-                                    "$set": {
-                                        "relatorios.$.status_relatorio": "em_analise",
-                                        "relatorios.$.data_envio": data_envio
-                                    }
-                                }
-                            )
-
-                            # --------------------------------------------------
-                            # 2. ATUALIZA STATUS DOS RELATOS ABERTOS
-                            #    (somente os relatos deste relatório)
-                            # --------------------------------------------------
-                            projeto_atualizado = col_projetos.find_one(
-                                {"codigo": projeto_codigo}
-                            )
-
-                            componentes = projeto_atualizado["plano_trabalho"]["componentes"]
-
-                            houve_alteracao = False
-
-                            for componente in componentes:
-                                for entrega in componente["entregas"]:
-                                    for atividade in entrega["atividades"]:
-                                        for relato in atividade.get("relatos", []):
-
-                                            # Apenas relatos do relatório atual
-                                            # e que ainda estejam abertos
-                                            if (
-                                                relato.get("relatorio_numero") == relatorio_numero
-                                                and relato.get("status_relato") == "aberto"
-                                            ):
-                                                relato["status_relato"] = "em_analise"
-                                                houve_alteracao = True
-
-                            # Salva no Mongo apenas se houve mudança
-                            if houve_alteracao:
-                                col_projetos.update_one(
-                                    {"codigo": projeto_codigo},
-                                    {
-                                        "$set": {
-                                            "plano_trabalho.componentes": componentes
-                                        }
-                                    }
-                                )
-
-
-                        # --------------------------------------------------
-                        # ENVIA E-MAIL PARA PADRINHOS
-                        # --------------------------------------------------
-                        
-                        logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
-                        
-                        notificar_padrinhos_relatorio(
-                            col_pessoas=col_pessoas,
-                            numero_relatorio=relatorio_numero,
-                            projeto=projeto_atualizado,
-                            logo_url=logo_cepf
-                        )
-
-
-                        st.success("Relatório enviado para análise.")
-
-                        # Reseta para o rerun não se perder.
-                        st.session_state.step_relatorio = "Atividades"
-
-                        time.sleep(3)
-                        st.rerun()
-
-                # --------------------------------------------------
-                # CASO 4: USUÁRIO NÃO PODE EDITAR
-                # --------------------------------------------------
-                else:
-                    st.info("Este relatório não pode ser editado no momento.")
+            # --------------------------------------------------
+            # ENVIA E-MAIL PARA PADRINHOS
+            # --------------------------------------------------
+            
+            logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+            
+            notificar_padrinhos_relatorio(
+                col_pessoas=col_pessoas,
+                numero_relatorio=relatorio_numero,
+                projeto=projeto_atualizado,
+                logo_url=logo_cepf
+            )
+
+
+            st.success("Relatório enviado para análise.")
+
+            # Reseta para o rerun não se perder.
+            st.session_state.step_relatorio = "Atividades"
+
+            time.sleep(3)
+            st.rerun()
+
+    # --------------------------------------------------
+    # CASO 4: USUÁRIO NÃO PODE EDITAR
+    # --------------------------------------------------
+    else:
+        st.info("Este relatório não pode ser editado no momento.")
 
 
 
