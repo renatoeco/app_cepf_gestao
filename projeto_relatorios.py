@@ -1242,6 +1242,12 @@ def formatar_numero_br_dinamico(valor):
 
 
 
+def data_hoje_br():
+    return datetime.datetime.now().strftime("%d/%m/%Y")
+
+
+
+
 ###########################################################################################################
 # TRATAMENTO DOS DADOS E CONTROLES DE SESSÃO
 ###########################################################################################################
@@ -1302,14 +1308,25 @@ st.write('')
 # CONFIGURAÇÃO DOS STEPS DO RELATÓRIO
 ###########################################################################################################
 
-steps_relatorio = [
-    "Atividades",
-    "Despesas",
-    "Beneficiários",
-    "Pesquisas",
-    "Formulário",
-    "Enviar"
-]
+if tipo_usuario in ["admin", "equipe"]:
+    steps_relatorio = [
+        "Atividades",
+        "Despesas",
+        "Beneficiários",
+        "Pesquisas",
+        "Formulário",
+        "Avaliação"
+    ]
+else:
+    steps_relatorio = [
+        "Atividades",
+        "Despesas",
+        "Beneficiários",
+        "Pesquisas",
+        "Formulário",
+        "Enviar"
+    ]
+
 
 ###########################################################################################################
 # VERIFICA SE EXISTEM RELATÓRIOS
@@ -1455,7 +1472,8 @@ labels_steps = steps_relatorio
 step_selecionado = sac.tabs(
     items=[sac.TabsItem(label=s) for s in labels_steps],
     align="start",
-    use_container_width=True
+    use_container_width=True,
+    size="md"
 )
 
 ###########################################################################################################
@@ -1617,12 +1635,7 @@ if step_selecionado == "Atividades":
                                 </div>
                                 """,
                                 unsafe_allow_html=True
-)
-
-
-
-
-
+                                )
 
 
                             # --------------------------------------------------
@@ -1667,6 +1680,13 @@ if step_selecionado == "Atividades":
                                             c2.markdown(linha, unsafe_allow_html=True)
 
 
+
+
+
+
+
+
+
                             # ==========================
                             # STATUS DO RELATO (ADMIN/EQUIPE)
                             # ==========================
@@ -1693,6 +1713,9 @@ if step_selecionado == "Atividades":
                                 if status_key not in st.session_state:
                                     st.session_state[status_key] = status_relato_label
 
+                                # --------------------------------------------------
+                                # CONTROLE DE STATUS
+                                # --------------------------------------------------
                                 with st.container(horizontal=True, horizontal_alignment="right"):
                                     novo_status_label = st.segmented_control(
                                         label="",
@@ -1702,41 +1725,47 @@ if step_selecionado == "Atividades":
 
                                 novo_status_db = STATUS_RELATO_LABEL_INV.get(novo_status_label)
 
+                                # --------------------------------------------------
+                                # TEXTO DE AUDITORIA (status_aprovacao)
+                                # --------------------------------------------------
+                                status_aprovacao = relato.get("status_aprovacao")
+                                if status_aprovacao:
 
+                                    st.markdown(
+                                        f"""
+                                        <div style="
+                                            text-align: right;
+                                            color: #6c757d;
+                                            font-size: 0.85rem;
+                                            margin-top: 4px;
+                                        ">
+                                            {status_aprovacao}
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True
+                                    )
+                                    st.write('')
+
+
+                                    # with st.container(horizontal=True, horizontal_alignment="right"):
+                                    #     st.caption(status_aprovacao)
 
                                 # ==================================================
-                                # CASO O AVALIADOR MARQUE O STATUS COMO "DEVOLVER"
+                                # CASO DEVOLVER
                                 # ==================================================
                                 if novo_status_label == "Devolver":
 
-                                    # --------------------------------------------------
-                                    # Inicializa o session_state com a devolutiva salva no banco
-                                    # (necessário para pré-carregar o texto após recarregar a página)
-                                    # --------------------------------------------------
                                     if devolutiva_key not in st.session_state:
                                         st.session_state[devolutiva_key] = relato.get("devolutiva", "")
 
-                                    # --------------------------------------------------
-                                    # Campo de texto para o avaliador escrever a devolutiva
-                                    # --------------------------------------------------
                                     st.text_area(
                                         "Devolutiva:",
                                         key=devolutiva_key,
                                         placeholder="Explique o que precisa ser ajustado neste relato..."
                                     )
 
-                                    # --------------------------------------------------
-                                    # Verifica se já existe algum texto na devolutiva
-                                    # (serve para mudar o rótulo do botão)
-                                    # --------------------------------------------------
                                     tem_devolutiva = bool(st.session_state.get(devolutiva_key, "").strip())
-
-                                    # Define o texto do botão de acordo com a situação
                                     label_botao = "Atualizar" if tem_devolutiva else "Salvar devolutiva"
-
-                                    # --------------------------------------------------
-                                    # Botão de salvar / atualizar devolutiva
-                                    # --------------------------------------------------
 
                                     with st.container(horizontal=True):
 
@@ -1746,18 +1775,14 @@ if step_selecionado == "Atividades":
                                             type="primary",
                                             icon=":material/save:"
                                         ):
-                                            # ----------------------------------------------
-                                            # Atualiza o relato em memória
-                                            # - status volta para "aberto"
-                                            # - devolutiva é salva no objeto
-                                            # ----------------------------------------------
+
+                                            nome = st.session_state.get("nome", "Usuário")
+                                            data = data_hoje_br()
+
                                             relato["status_relato"] = "aberto"
                                             relato["devolutiva"] = st.session_state.get(devolutiva_key, "")
+                                            relato["status_aprovacao"] = f"Devolvido por {nome} em {data}"
 
-                                            # ----------------------------------------------
-                                            # Persiste a alteração no MongoDB
-                                            # (salva toda a estrutura de componentes)
-                                            # ----------------------------------------------
                                             col_projetos.update_one(
                                                 {"codigo": projeto["codigo"]},
                                                 {
@@ -1767,33 +1792,29 @@ if step_selecionado == "Atividades":
                                                 }
                                             )
 
-                                            # ----------------------------------------------
-                                            # Limpa os estados da UI para evitar inconsistência
-                                            # no próximo rerun
-                                            # ----------------------------------------------
                                             st.session_state.pop(status_key, None)
                                             st.session_state.pop(devolutiva_key, None)
 
-                                            # ----------------------------------------------
-                                            # Força o rerun somente depois de salvar
-                                            # (garante que o status e UI atualizem corretamente)
-                                            # ----------------------------------------------
                                             st.success("Devolutiva salva.", icon=":material/check:")
-                                            time.sleep(2)
+                                            time.sleep(3)
                                             st.rerun()
 
-
-
-                                # ======================================
-                                # OUTROS STATUS (Em análise / Aceito)
-                                # ======================================
+                                # ==================================================
+                                # CASO EM ANÁLISE OU ACEITO
+                                # ==================================================
                                 elif novo_status_db != status_relato_db:
+
+                                    nome = st.session_state.get("nome", "Usuário")
+                                    data = data_hoje_br()
 
                                     relato["status_relato"] = novo_status_db
 
-                                    # se aceito, remove devolutiva antiga
                                     if novo_status_db == "aceito":
                                         relato.pop("devolutiva", None)
+                                        relato["status_aprovacao"] = f"Verificado por {nome} em {data}"
+
+                                    elif novo_status_db == "em_analise":
+                                        relato.pop("status_aprovacao", None)
 
                                     col_projetos.update_one(
                                         {"codigo": projeto["codigo"]},
@@ -1806,6 +1827,10 @@ if step_selecionado == "Atividades":
 
                                     st.session_state.pop(status_key, None)
                                     st.rerun()
+
+
+
+
 
 
 
@@ -2160,37 +2185,23 @@ if step_selecionado == "Atividades":
 
 
 # ---------- DESPESAS ----------
-
-# ==================================================
-# STEP FINANCEIRO
-# ==================================================
 if step_selecionado == "Despesas":
 
-    # --------------------------------------------------
-    # TÍTULO
-    # --------------------------------------------------
-    st.write('')
-    st.write('')
+    st.write("")
+    st.write("")
 
     st.markdown("### Registros de despesas")
     st.write("")
 
-    # --------------------------------------------------
-    # PERMISSÕES
-    # --------------------------------------------------
     usuario_admin = tipo_usuario == "admin"
     usuario_equipe = tipo_usuario == "equipe"
     usuario_beneficiario = tipo_usuario == "beneficiario"
     usuario_visitante = tipo_usuario == "visitante"
 
-    # Beneficiário só pode registrar em modo edição
     pode_registrar = (
         usuario_beneficiario and status_atual_db == "modo_edicao"
     )
 
-    # --------------------------------------------------
-    # BOTÃO GLOBAL: REGISTRAR DESPESA
-    # --------------------------------------------------
     with st.container(horizontal=True, horizontal_alignment="right"):
         if pode_registrar:
             if st.button(
@@ -2207,48 +2218,30 @@ if step_selecionado == "Despesas":
 
     st.write("")
 
-    # --------------------------------------------------
-    # AGRUPA SOMENTE DESPESAS COM LANÇAMENTOS
-    # --------------------------------------------------
-
+    from collections import defaultdict
     grupo = defaultdict(lambda: defaultdict(list))
 
     for despesa in projeto.get("financeiro", {}).get("orcamento", []):
         for lanc in despesa.get("lancamentos", []):
-            # Filtra apenas lançamentos do relatório atual
             if lanc.get("relatorio_numero") == relatorio_numero:
                 grupo[despesa["categoria"]][despesa["nome_despesa"]].append(lanc)
 
-    # --------------------------------------------------
-    # SE NÃO HÁ LANÇAMENTOS
-    # --------------------------------------------------
     if not grupo:
         st.caption("Nenhuma despesa registrada neste relatório.")
         st.stop()
 
-    # --------------------------------------------------
-    # RENDERIZAÇÃO
-    # --------------------------------------------------
     for categoria, despesas in grupo.items():
 
-        # Categoria
         st.markdown(f"##### {categoria}")
 
         for nome_despesa, lancamentos in despesas.items():
 
-            # Nome da despesa
             st.markdown(f"###### {nome_despesa}")
 
-            # --------------------------------------------------
-            # LISTA DE LANÇAMENTOS
-            # --------------------------------------------------
             for lanc in lancamentos:
 
                 id_despesa = lanc["id_despesa"]
 
-                # --------------------------------------------------
-                # CONTROLE DE ESTADO DE EDIÇÃO INLINE
-                # --------------------------------------------------
                 if "despesa_editando_id" not in st.session_state:
                     st.session_state["despesa_editando_id"] = None
 
@@ -2256,36 +2249,17 @@ if step_selecionado == "Despesas":
 
                 with st.container(border=True):
 
-                    # ==============================================
-                    # BADGE DE STATUS (mesmo padrão dos relatos)
-                    # ==============================================
                     status_despesa_db = lanc.get("status_despesa", "em_analise")
                     tem_devolutiva = bool(lanc.get("devolutiva"))
 
                     if status_despesa_db == "aberto" and tem_devolutiva:
-                        badge = {
-                            "label": "Pendente",
-                            "bg": "#F8D7DA",
-                            "color": "#721C24"
-                        }
+                        badge = {"label": "Pendente", "bg": "#F8D7DA", "color": "#721C24"}
                     elif status_despesa_db == "aberto":
-                        badge = {
-                            "label": "Aberto",
-                            "bg": "#FFF3CD",
-                            "color": "#856404"
-                        }
+                        badge = {"label": "Aberto", "bg": "#FFF3CD", "color": "#856404"}
                     elif status_despesa_db == "aceito":
-                        badge = {
-                            "label": "Aceito",
-                            "bg": "#D4EDDA",
-                            "color": "#155724"
-                        }
+                        badge = {"label": "Aceito", "bg": "#D4EDDA", "color": "#155724"}
                     else:
-                        badge = {
-                            "label": "Em análise",
-                            "bg": "#D1ECF1",
-                            "color": "#0C5460"
-                        }
+                        badge = {"label": "Em análise", "bg": "#D1ECF1", "color": "#0C5460"}
 
                     st.markdown(
                         f"""
@@ -2305,21 +2279,10 @@ if step_selecionado == "Despesas":
                         unsafe_allow_html=True
                     )
 
-
-
-
-                    # ==================================================
-                    # VISUALIZAÇÃO DO LANÇAMENTO (somente se não estiver editando)
-                    # ==================================================
                     if not editando:
-
-                        # id do registro
                         st.write(f"**{id_despesa.upper()}:** {lanc.get('descricao_despesa')}")
 
-                        # Duas colunas, anexos ficam na col2
                         col1, col2 = st.columns([1, 2])
-
-                        # Sub colunas da col1
                         c1, c2 = col1.columns([1, 3])
 
                         c1.write("**Data:**")
@@ -2331,33 +2294,17 @@ if step_selecionado == "Despesas":
                         c1.write("**CPF/CNPJ:**")
                         c2.write(lanc.get("cpf_cnpj"))
 
-                        # Valor formatado no padrão brasileiro
                         valor = lanc.get("valor_despesa", 0)
                         valor_br = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
                         c1.write("**Valor (R$):**")
                         c2.write(valor_br)
 
-                        # Anexos
                         anexos = lanc.get("anexos", [])
-
                         if anexos:
                             col2.markdown("**Anexos:**")
                             for a in anexos:
                                 link = gerar_link_drive(a["id_arquivo"])
                                 col2.markdown(f"[{a['nome_arquivo']}]({link})")
-
-
-
-
-
-
-
-
-
-                    # --------------------------------------------------
-                    # FLAGS DE PERMISSÃO
-                    # --------------------------------------------------
 
                     pode_editar_despesa = (
                         usuario_beneficiario
@@ -2370,18 +2317,6 @@ if step_selecionado == "Despesas":
                         and status_atual_db == "em_analise"
                     )
 
-                    # # --------------------------------------------------
-                    # # CONTROLE DE ESTADO DE EDIÇÃO INLINE
-                    # # --------------------------------------------------
-                    # if "despesa_editando_id" not in st.session_state:
-                    #     st.session_state["despesa_editando_id"] = None
-
-                    # editando = st.session_state["despesa_editando_id"] == id_despesa
-
-
-                    # ==================================================
-                    # SEGMENTED CONTROL (ADMIN / EQUIPE)
-                    # ==================================================
                     if pode_avaliar_despesa:
 
                         STATUS_LABEL = {
@@ -2404,21 +2339,42 @@ if step_selecionado == "Despesas":
                                 key=status_key
                             )
 
+                        # ----------- TEXTO DE AUDITORIA -----------
+                        status_aprovacao = lanc.get("status_aprovacao")
+                        if status_aprovacao:
+                            st.markdown(
+                                f"""
+                                <div style="
+                                    text-align: right;
+                                    color: rgba(0,0,0,0.55);
+                                    font-size: 0.8rem;
+                                    margin-top: 4px;
+                                ">
+                                    {status_aprovacao}
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                            st.write('')
+
                         novo_status_db = STATUS_LABEL_INV[novo_status_ui]
 
-                        # --------------------------------------------------
-                        # MUDOU STATUS
-                        # --------------------------------------------------
                         if novo_status_db != status_despesa_db:
 
-                            # Atualiza status no objeto em memória
+                            nome = st.session_state.get("nome", "Usuário")
+                            data = data_hoje_br()
+
                             lanc["status_despesa"] = novo_status_db
 
-                            # Se devolveu, força abertura da devolutiva
-                            if novo_status_db == "aberto":
-                                st.session_state[f"mostrar_devolutiva_{id_despesa}"] = True
+                            if novo_status_db == "aceito":
+                                lanc["status_aprovacao"] = f"Verificado por {nome} em {data}"
 
-                            # Persiste no Mongo
+                            elif novo_status_db == "aberto":
+                                lanc["status_aprovacao"] = f"Devolvido por {nome} em {data}"
+
+                            elif novo_status_db == "em_analise":
+                                lanc.pop("status_aprovacao", None)
+
                             col_projetos.update_one(
                                 {"codigo": projeto["codigo"]},
                                 {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
@@ -2427,221 +2383,43 @@ if step_selecionado == "Despesas":
                             del st.session_state[status_key]
                             st.rerun()
 
-
-                    # ==================================================
-                    # DEVOLUTIVA (ADMIN / EQUIPE)
-                    # ==================================================
                     if (
                         pode_avaliar_despesa
                         and lanc.get("status_despesa") == "aberto"
                     ):
-
                         key_dev = f"devolutiva_despesa_{id_despesa}"
 
-                        # Pré-carrega texto salvo
                         if key_dev not in st.session_state:
                             st.session_state[key_dev] = lanc.get("devolutiva", "")
 
-                        st.text_area(
-                            "**Devolutiva:**",
-                            key=key_dev,
-                        )
+                        st.text_area("**Devolutiva:**", key=key_dev)
 
                         label_btn = "Atualizar devolutiva" if lanc.get("devolutiva") else "Salvar devolutiva"
 
                         with st.container(horizontal=True):
-
                             if st.button(
                                 label_btn,
                                 key=f"btn_save_dev_{id_despesa}",
                                 type="secondary",
                                 icon=":material/save:"
                             ):
-                                with st.spinner("Salvando devolutiva..."):
-                                    lanc["devolutiva"] = st.session_state[key_dev]
+                                nome = st.session_state.get("nome", "Usuário")
+                                data = data_hoje_br()
 
-                                    col_projetos.update_one(
-                                        {"codigo": projeto["codigo"]},
-                                        {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                    )
+                                lanc["devolutiva"] = st.session_state[key_dev]
+                                lanc["status_aprovacao"] = f"Devolvido por {nome} em {data}"
+
+                                col_projetos.update_one(
+                                    {"codigo": projeto["codigo"]},
+                                    {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
+                                )
 
                                 st.success("Devolutiva salva!", icon=":material/check:")
-                                time.sleep(2)
+                                time.sleep(3)
                                 st.rerun()
 
 
-                    # ==================================================
-                    # MOSTRA DEVOLUTIVA (blockquote)
-                    # ==================================================
-                    mostrar_devolutiva = False
 
-                    if status_atual_db == "modo_edicao":
-                        mostrar_devolutiva = bool(lanc.get("devolutiva"))
-
-                    elif status_atual_db == "em_analise":
-                        if not (usuario_admin or usuario_equipe and status_despesa_db == "aberto"):
-                            mostrar_devolutiva = bool(lanc.get("devolutiva"))
-
-                    if mostrar_devolutiva:
-                        texto = lanc["devolutiva"].replace("\n", "<br>")
-
-                        st.markdown(
-
-                            f"""
-                        <blockquote style="
-                            color: #000000;
-                            opacity: 0.9;
-                            border-left: 4px solid #F8D7DA;
-                            padding-left: 12px;
-                            margin-left: 0;
-                        ">
-                        <strong>Ajuste necessário:</strong><br>
-                        {texto.replace('\n', '<br>')}
-                        </blockquote>
-                        """,
-                            unsafe_allow_html=True
-                            )
-
-
-
-
-                    # ==================================================
-                    # EDIÇÃO INLINE (BENEFICIÁRIO)
-                    # ==================================================
-                    if pode_editar_despesa:
-
-                        with st.container(horizontal=True, horizontal_alignment="right"):
-                            if st.button(
-                                "Editar",
-                                key=f"btn_edit_despesa_{id_despesa}",
-                                icon=":material/edit:",
-                                type="tertiary"
-                            ):
-                                st.session_state["despesa_editando_id"] = id_despesa
-                                st.rerun()
-
-                    # ==================================================
-                    # FORMULÁRIO DE EDIÇÃO
-                    # ==================================================
-                    if editando:
-
-                        # --------------------------------------------------
-                        # CAMPOS PRINCIPAIS
-                        # --------------------------------------------------
-                        col1, col2 = st.columns(2)
-
-                        data = col1.date_input(
-                            "Data da despesa",
-                            value=pd.to_datetime(lanc["data_despesa"], dayfirst=True).date(),
-                            format="DD/MM/YYYY"
-                        )
-
-                        valor = col2.number_input(
-                            "Valor (R$)",
-                            value=float(lanc.get("valor_despesa", 0)),
-                            format="%.2f"
-                        )
-
-                        descricao = st.text_area("Descrição", value=lanc.get("descricao_despesa", ""))
-
-                        col1, col2 = st.columns([2, 1])
-
-                        fornecedor = col1.text_input("Fornecedor", value=lanc.get("fornecedor", ""))
-                        cpf_cnpj = col2.text_input("CPF/CNPJ", value=lanc.get("cpf_cnpj", ""))
-
-                        st.divider()
-
-                        # --------------------------------------------------
-                        # ANEXOS EXISTENTES (REMOVER)
-                        # --------------------------------------------------
-                        anexos_remover = []
-                        anexos_existentes = lanc.get("anexos", [])
-
-                        if anexos_existentes:
-                            st.markdown("**Anexos:**")
-
-                            for i, a in enumerate(anexos_existentes):
-                                nome = a.get("nome_arquivo", "arquivo")
-
-                                if st.checkbox(
-                                    f"**Remover:** {nome}",
-                                    key=f"rm_anexo_despesa_{id_despesa}_{i}"
-                                ):
-                                    anexos_remover.append(a)
-
-                        st.divider()
-
-                        # --------------------------------------------------
-                        # NOVOS ANEXOS
-                        # --------------------------------------------------
-                        novos_anexos = st.file_uploader(
-                            "Adicionar anexos",
-                            accept_multiple_files=True,
-                            key=f"novos_anexos_{id_despesa}"
-                        )
-
-                        st.divider()
-
-                        # --------------------------------------------------
-                        # AÇÕES
-                        # --------------------------------------------------
-                        with st.container(horizontal=True):
-
-                            if st.button("Salvar alterações", type="primary", icon=":material/save:"):
-
-                                with st.spinner("Salvando alterações..."):
-
-                                    # Atualiza campos simples
-                                    lanc.update({
-                                        "data_despesa": data.strftime("%d/%m/%Y"),
-                                        "descricao_despesa": descricao,
-                                        "fornecedor": fornecedor,
-                                        "cpf_cnpj": cpf_cnpj,
-                                        "valor_despesa": valor
-                                    })
-
-                                    # Remove anexos marcados (apenas do banco)
-                                    if anexos_remover:
-                                        lanc["anexos"] = [
-                                            a for a in lanc.get("anexos", [])
-                                            if a not in anexos_remover
-                                        ]
-
-                                    # Upload de novos anexos
-                                    if novos_anexos:
-                                        servico = obter_servico_drive()
-                                        pasta_proj = obter_pasta_projeto(
-                                            servico,
-                                            projeto["codigo"],
-                                            projeto["sigla"]
-                                        )
-                                        pasta_fin = obter_pasta_relatos_financeiros(servico, pasta_proj)
-                                        pasta_lanc = obter_ou_criar_pasta(servico, id_despesa, pasta_fin)
-
-                                        lanc.setdefault("anexos", [])
-
-                                        for arq in novos_anexos:
-                                            id_drive = enviar_arquivo_drive(servico, pasta_lanc, arq)
-                                            lanc["anexos"].append({
-                                                "nome_arquivo": arq.name,
-                                                "id_arquivo": id_drive
-                                            })
-
-                                    # Persistência no Mongo
-                                    col_projetos.update_one(
-                                        {"codigo": projeto["codigo"]},
-                                        {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                    )
-
-                                # Limpa estado e recarrega
-                                st.session_state["despesa_editando_id"] = None
-                                st.success("Despesa atualizada com sucesso!")
-                                time.sleep(2)
-                                st.rerun()
-
-                            if st.button("Cancelar"):
-                                st.session_state["despesa_editando_id"] = None
-                                st.rerun()
 
 
 
@@ -3955,7 +3733,7 @@ if step_selecionado == "Enviar":
             # Gera a data de envio no formato ISO (YYYY-MM-DD)
             data_envio = datetime.datetime.now().strftime("%Y-%m-%d")
 
-            with st.spinner("Enviando relatório para análise..."):
+            with st.spinner("Enviando relatório ..."):
 
                 # --------------------------------------------------
                 # 1. ATUALIZA STATUS E DATA DO RELATÓRIO
@@ -4011,21 +3789,21 @@ if step_selecionado == "Enviar":
                     )
 
 
-            # --------------------------------------------------
-            # ENVIA E-MAIL PARA PADRINHOS
-            # --------------------------------------------------
-            
-            logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
-            
-            notificar_padrinhos_relatorio(
-                col_pessoas=col_pessoas,
-                numero_relatorio=relatorio_numero,
-                projeto=projeto_atualizado,
-                logo_url=logo_cepf
-            )
+                # --------------------------------------------------
+                # ENVIA E-MAIL PARA PADRINHOS
+                # --------------------------------------------------
+                
+                logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+                
+                notificar_padrinhos_relatorio(
+                    col_pessoas=col_pessoas,
+                    numero_relatorio=relatorio_numero,
+                    projeto=projeto_atualizado,
+                    logo_url=logo_cepf
+                )
 
 
-            st.success("Relatório enviado para análise.")
+            st.success("Relatório enviado para análise.", icon=":material/check:")
 
             # Reseta para o rerun não se perder.
             st.session_state.step_relatorio = "Atividades"
@@ -4039,6 +3817,115 @@ if step_selecionado == "Enviar":
     else:
         st.info("Este relatório não pode ser editado no momento.")
 
+
+
+
+
+
+
+
+
+# ---------- AVALIAÇÃO ----------
+if step_selecionado == "Avaliação":
+
+    st.write("")
+
+    #######################################################################################################
+    # FUNÇÕES AUXILIARES
+    #######################################################################################################
+
+    def todos_relatos_aceitos(projeto, relatorio_numero):
+        """
+        Retorna True se TODOS os relatos do relatório informado
+        estiverem com status_relato == 'aceito'.
+
+        Se existir ao menos um relato do relatório que não seja aceito,
+        retorna False.
+
+        Se não existir nenhum relato nesse relatório, retorna False.
+        """
+
+        relatos_encontrados = []
+
+        componentes = projeto.get("plano_trabalho", {}).get("componentes", [])
+
+        for componente in componentes:
+            for entrega in componente.get("entregas", []):
+                for atividade in entrega.get("atividades", []):
+                    for relato in atividade.get("relatos", []):
+                        if relato.get("relatorio_numero") == relatorio_numero:
+                            relatos_encontrados.append(relato)
+
+        # Se não existe nenhum relato nesse relatório, não aprova
+        if not relatos_encontrados:
+            return False
+
+        # Todos precisam estar aceitos
+        return all(r.get("status_relato") == "aceito" for r in relatos_encontrados)
+
+
+
+    def todas_despesas_aceitas(projeto, relatorio_numero):
+        """
+        Retorna True se TODOS os lançamentos de despesas do relatório
+        estiverem com status_despesa == 'aceito'.
+
+        Se existir ao menos uma despesa não aceita, retorna False.
+        Se não existir nenhuma despesa nesse relatório, retorna False.
+        """
+
+        lancamentos = []
+
+        orcamento = projeto.get("financeiro", {}).get("orcamento", [])
+
+        for item in orcamento:
+            for lanc in item.get("lancamentos", []):
+                if lanc.get("relatorio_numero") == relatorio_numero:
+                    lancamentos.append(lanc)
+
+        if not lancamentos:
+            return False
+
+        return all(l.get("status_despesa") == "aceito" for l in lancamentos)
+
+
+
+    st.write("")
+
+    relatos_ok = todos_relatos_aceitos(projeto, relatorio_numero)
+    despesas_ok = todas_despesas_aceitas(projeto, relatorio_numero)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.checkbox(
+            "Relatos de atividades",
+            value=relatos_ok,
+            disabled=True,
+            key=f"chk_relatos_{idx}"
+        )
+
+        st.checkbox(
+            "Registros de despesas",
+            value=despesas_ok,
+            disabled=True,
+            key=f"chk_despesas_{idx}"
+        )
+
+        st.checkbox(
+            "Beneficiários e Benefícios",
+            key=f"chk_beneficiarios_{idx}"
+        )
+
+        st.checkbox(
+            "Pesquisas",
+            key=f"chk_pesquisas_{idx}"
+        )
+
+        st.checkbox(
+            "Formulário",
+            key=f"chk_formulario_{idx}"
+        )
 
 
 
