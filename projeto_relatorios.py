@@ -135,6 +135,66 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 
 
 
+def todos_relatos_aceitos(projeto, relatorio_numero):
+    """
+    Retorna True se TODOS os relatos do relatório informado
+    estiverem com status_relato == 'aceito'.
+
+    Se existir ao menos um relato do relatório que não seja aceito,
+    retorna False.
+
+    Se não existir nenhum relato nesse relatório, retorna False.
+    """
+
+    relatos_encontrados = []
+
+    componentes = projeto.get("plano_trabalho", {}).get("componentes", [])
+
+    for componente in componentes:
+        for entrega in componente.get("entregas", []):
+            for atividade in entrega.get("atividades", []):
+                for relato in atividade.get("relatos", []):
+                    if relato.get("relatorio_numero") == relatorio_numero:
+                        relatos_encontrados.append(relato)
+
+    # Se não existe nenhum relato nesse relatório, não aprova
+    if not relatos_encontrados:
+        return False
+
+    # Todos precisam estar aceitos
+    return all(r.get("status_relato") == "aceito" for r in relatos_encontrados)
+
+
+
+def todas_despesas_aceitas(projeto, relatorio_numero):
+    """
+    Retorna True se TODOS os lançamentos de despesas do relatório
+    estiverem com status_despesa == 'aceito'.
+
+    Se existir ao menos uma despesa não aceita, retorna False.
+    Se não existir nenhuma despesa nesse relatório, retorna False.
+    """
+
+    lancamentos = []
+
+    orcamento = projeto.get("financeiro", {}).get("orcamento", [])
+
+    for item in orcamento:
+        for lanc in item.get("lancamentos", []):
+            if lanc.get("relatorio_numero") == relatorio_numero:
+                lancamentos.append(lanc)
+
+    if not lancamentos:
+        return False
+
+    return all(l.get("status_despesa") == "aceito" for l in lancamentos)
+
+
+
+
+
+
+
 def notificar_padrinhos_relatorio(
     col_pessoas,
     numero_relatorio,
@@ -3821,6 +3881,47 @@ if step_selecionado == "Enviar":
 
 
 
+def texto_verificacao():
+    nome = st.session_state.get("nome", "Usuário")
+    data = datetime.datetime.now().strftime("%d/%m/%Y")
+    return f"Verificado por {nome} em {data}"
+
+
+
+def atualizar_verificacao_relatorio(projeto_codigo, relatorio_numero, campo, checkbox_key):
+    marcado = st.session_state.get(checkbox_key, False)
+
+    nome = st.session_state.get("nome", "Usuário")
+    data = datetime.datetime.now().strftime("%d/%m/%Y")
+
+    if marcado:
+        col_projetos.update_one(
+            {
+                "codigo": projeto_codigo,
+                "relatorios.numero": relatorio_numero
+            },
+            {
+                "$set": {
+                    f"relatorios.$.{campo}": f"Verificado por {nome} em {data}"
+                }
+            }
+        )
+    else:
+        col_projetos.update_one(
+            {
+                "codigo": projeto_codigo,
+                "relatorios.numero": relatorio_numero
+            },
+            {
+                "$unset": {
+                    f"relatorios.$.{campo}": ""
+                }
+            }
+        )
+
+
+
+
 
 
 
@@ -3829,103 +3930,304 @@ if step_selecionado == "Enviar":
 if step_selecionado == "Avaliação":
 
     st.write("")
-
-    #######################################################################################################
-    # FUNÇÕES AUXILIARES
-    #######################################################################################################
-
-    def todos_relatos_aceitos(projeto, relatorio_numero):
-        """
-        Retorna True se TODOS os relatos do relatório informado
-        estiverem com status_relato == 'aceito'.
-
-        Se existir ao menos um relato do relatório que não seja aceito,
-        retorna False.
-
-        Se não existir nenhum relato nesse relatório, retorna False.
-        """
-
-        relatos_encontrados = []
-
-        componentes = projeto.get("plano_trabalho", {}).get("componentes", [])
-
-        for componente in componentes:
-            for entrega in componente.get("entregas", []):
-                for atividade in entrega.get("atividades", []):
-                    for relato in atividade.get("relatos", []):
-                        if relato.get("relatorio_numero") == relatorio_numero:
-                            relatos_encontrados.append(relato)
-
-        # Se não existe nenhum relato nesse relatório, não aprova
-        if not relatos_encontrados:
-            return False
-
-        # Todos precisam estar aceitos
-        return all(r.get("status_relato") == "aceito" for r in relatos_encontrados)
-
-
-
-    def todas_despesas_aceitas(projeto, relatorio_numero):
-        """
-        Retorna True se TODOS os lançamentos de despesas do relatório
-        estiverem com status_despesa == 'aceito'.
-
-        Se existir ao menos uma despesa não aceita, retorna False.
-        Se não existir nenhuma despesa nesse relatório, retorna False.
-        """
-
-        lancamentos = []
-
-        orcamento = projeto.get("financeiro", {}).get("orcamento", [])
-
-        for item in orcamento:
-            for lanc in item.get("lancamentos", []):
-                if lanc.get("relatorio_numero") == relatorio_numero:
-                    lancamentos.append(lanc)
-
-        if not lancamentos:
-            return False
-
-        return all(l.get("status_despesa") == "aceito" for l in lancamentos)
-
-
-
     st.write("")
 
     relatos_ok = todos_relatos_aceitos(projeto, relatorio_numero)
     despesas_ok = todas_despesas_aceitas(projeto, relatorio_numero)
 
+    relatorio_db = next(
+        r for r in projeto["relatorios"]
+        if r["numero"] == relatorio_numero
+    )
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
+        st.write("**Checklist**")
+
         st.checkbox(
             "Relatos de atividades",
             value=relatos_ok,
             disabled=True,
-            key=f"chk_relatos_{idx}"
+            key=f"chk_relatos_{relatorio_numero}"
         )
 
         st.checkbox(
             "Registros de despesas",
             value=despesas_ok,
             disabled=True,
-            key=f"chk_despesas_{idx}"
+            key=f"chk_despesas_{relatorio_numero}"
         )
 
+        # -----------------------------
+        # BENEFICIÁRIOS
+        # -----------------------------
+        benef_key = f"chk_benef_{relatorio_numero}"
         st.checkbox(
             "Beneficiários e Benefícios",
-            key=f"chk_beneficiarios_{idx}"
+            value="benef_verif_por" in relatorio_db,
+            key=benef_key,
+            on_change=atualizar_verificacao_relatorio,
+            args=(
+                projeto_codigo,
+                relatorio_numero,
+                "benef_verif_por",
+                benef_key
+            )
         )
 
+        if relatorio_db.get("benef_verif_por"):
+            st.caption(relatorio_db["benef_verif_por"])
+
+        # -----------------------------
+        # PESQUISAS
+        # -----------------------------
+        pesq_key = f"chk_pesq_{relatorio_numero}"
         st.checkbox(
             "Pesquisas",
-            key=f"chk_pesquisas_{idx}"
+            value="pesq_verif_por" in relatorio_db,
+            key=pesq_key,
+            on_change=atualizar_verificacao_relatorio,
+            args=(
+                projeto_codigo,
+                relatorio_numero,
+                "pesq_verif_por",
+                pesq_key
+            )
         )
 
+        if relatorio_db.get("pesq_verif_por"):
+            st.caption(relatorio_db["pesq_verif_por"])
+
+        # -----------------------------
+        # FORMULÁRIO
+        # -----------------------------
+        form_key = f"chk_form_{relatorio_numero}"
         st.checkbox(
             "Formulário",
-            key=f"chk_formulario_{idx}"
+            value="form_verif_por" in relatorio_db,
+            key=form_key,
+            on_change=atualizar_verificacao_relatorio,
+            args=(
+                projeto_codigo,
+                relatorio_numero,
+                "form_verif_por",
+                form_key
+            )
         )
+
+        if relatorio_db.get("form_verif_por"):
+            st.caption(relatorio_db["form_verif_por"])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # ---------- AVALIAÇÃO ----------
+# if step_selecionado == "Avaliação":
+
+
+
+#     st.write("")
+#     st.write("")
+
+#     relatos_ok = todos_relatos_aceitos(projeto, relatorio_numero)
+#     despesas_ok = todas_despesas_aceitas(projeto, relatorio_numero)
+
+#     # --------------------------------------------------
+#     # VALORES ATUAIS DO BANCO
+#     # --------------------------------------------------
+#     relatorio_db = next(
+#         r for r in projeto["relatorios"]
+#         if r["numero"] == relatorio_numero
+#     )
+
+#     beneficiarios_checked = "benef_verif_por" in relatorio_db
+#     pesquisas_checked = "pesq_verif_por" in relatorio_db
+#     formulario_checked = "form_verif_por" in relatorio_db
+
+#     col1, col2, col3 = st.columns(3)
+
+#     with col1:
+#         st.write("**Checklist**")
+
+#         st.checkbox(
+#             "Relatos de atividades",
+#             value=relatos_ok,
+#             disabled=True,
+#             key=f"chk_relatos_{idx}"
+#         )
+
+#         st.checkbox(
+#             "Registros de despesas",
+#             value=despesas_ok,
+#             disabled=True,
+#             key=f"chk_despesas_{idx}"
+#         )
+
+
+
+#         st.checkbox(
+#             "Beneficiários e Benefícios",
+#             value=beneficiarios_checked,
+#             key=f"chk_benef_{relatorio_numero}",
+#             on_change=atualizar_verificacao_relatorio,
+#             args=(
+#                 projeto_codigo,
+#                 relatorio_numero,
+#                 "benef_verif_por",
+#                 f"chk_benef_{relatorio_numero}"
+#             )
+#         )
+
+#         st.checkbox(
+#             "Pesquisas",
+#             value=pesquisas_checked,
+#             key=f"chk_pesq_{relatorio_numero}",
+#             on_change=atualizar_verificacao_relatorio,
+#             args=(
+#                 projeto_codigo,
+#                 relatorio_numero,
+#                 "pesq_verif_por",
+#                 f"chk_pesq_{relatorio_numero}"
+#             )
+#         )
+
+#         st.checkbox(
+#             "Formulário",
+#             value=formulario_checked,
+#             key=f"chk_form_{relatorio_numero}",
+#             on_change=atualizar_verificacao_relatorio,
+#             args=(
+#                 projeto_codigo,
+#                 relatorio_numero,
+#                 "form_verif_por",
+#                 f"chk_form_{relatorio_numero}"
+#             )
+#         )
+
+
+
+
+
+
+
+
+
+
+
+        # st.checkbox(
+        #     "Beneficiários e Benefícios",
+        #     value=beneficiarios_checked,
+        #     key=f"chk_beneficiarios_{idx}",
+        #     on_change=atualizar_verificacao_relatorio,
+        #     args=(
+        #         projeto_codigo,
+        #         relatorio_numero,
+        #         "benef_verif_por",
+        #         st.session_state.get(f"chk_beneficiarios_{idx}", False)
+        #     )
+        # )
+
+        # st.checkbox(
+        #     "Pesquisas",
+        #     value=pesquisas_checked,
+        #     key=f"chk_pesquisas_{idx}",
+        #     on_change=atualizar_verificacao_relatorio,
+        #     args=(
+        #         projeto_codigo,
+        #         relatorio_numero,
+        #         "pesq_verif_por",
+        #         st.session_state.get(f"chk_pesquisas_{idx}", False)
+        #     )
+        # )
+
+        # st.checkbox(
+        #     "Formulário",
+        #     value=formulario_checked,
+        #     key=f"chk_formulario_{idx}",
+        #     on_change=atualizar_verificacao_relatorio,
+        #     args=(
+        #         projeto_codigo,
+        #         relatorio_numero,
+        #         "form_verif_por",
+        #         st.session_state.get(f"chk_formulario_{idx}", False)
+        #     )
+        # )
+
+
+
+
+
+
+
+
+
+# # ---------- AVALIAÇÃO ----------
+# if step_selecionado == "Avaliação":
+
+#     st.write("")
+#     st.write("")
+
+#     relatos_ok = todos_relatos_aceitos(projeto, relatorio_numero)
+#     despesas_ok = todas_despesas_aceitas(projeto, relatorio_numero)
+
+#     col1, col2, col3 = st.columns(3)
+
+#     with col1:
+#         st.write('**Checklist**')
+#         st.checkbox(
+#             "Relatos de atividades",
+#             value=relatos_ok,
+#             disabled=True,
+#             key=f"chk_relatos_{idx}"
+#         )
+
+#         st.checkbox(
+#             "Registros de despesas",
+#             value=despesas_ok,
+#             disabled=True,
+#             key=f"chk_despesas_{idx}"
+#         )
+
+#         st.checkbox(
+#             "Beneficiários e Benefícios",
+#             key=f"chk_beneficiarios_{idx}"
+#         )
+
+#         st.checkbox(
+#             "Pesquisas",
+#             key=f"chk_pesquisas_{idx}"
+#         )
+
+#         st.checkbox(
+#             "Formulário",
+#             key=f"chk_formulario_{idx}"
+#         )
 
 
 
