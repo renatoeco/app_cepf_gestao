@@ -4029,7 +4029,7 @@ if step_selecionado == "Avaliação":
     # Anotações
     with col2:
 
-        st.write("**Anotações da avaliação**")
+        st.write("**Anotações**")
 
         # --------------------------------------------------
         # DIALOG DE NOVA ANOTAÇÃO
@@ -4041,7 +4041,7 @@ if step_selecionado == "Avaliação":
                 placeholder="Digite sua anotação sobre este relatório..."
             )
 
-            if st.button("Salvar anotação", type="primary"):
+            if st.button("Salvar anotação", type="primary", icon=":material/save:"):
                 if not texto.strip():
                     st.warning("A anotação não pode estar vazia.")
                     return
@@ -4064,7 +4064,7 @@ if step_selecionado == "Avaliação":
                     }
                 )
 
-                st.success("Anotação salva com sucesso.")
+                st.success("Anotação salva com sucesso.", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
 
@@ -4080,11 +4080,19 @@ if step_selecionado == "Avaliação":
 
 
 
-        # Lista as anotações existentes
-        relatorio_db = next(
-            r for r in projeto["relatorios"]
-            if r["numero"] == relatorio_numero
-        )
+
+
+
+
+        # --------------------------------------------------
+        # RENDERIZAÇÃO DAS ANOTAÇÕES (POPOVER COM AÇÕES)
+        # --------------------------------------------------
+
+        if "anotacao_editando" not in st.session_state:
+            st.session_state["anotacao_editando"] = None
+
+        if "anotacao_apagando" not in st.session_state:
+            st.session_state["anotacao_apagando"] = None
 
         anotacoes = relatorio_db.get("anotacoes_avaliacao", [])
 
@@ -4093,218 +4101,133 @@ if step_selecionado == "Avaliação":
         else:
             for i, a in enumerate(reversed(anotacoes)):
 
+                idx_real = len(anotacoes) - 1 - i
+                autor = a.get("autor_anotacao")
+                data = a.get("data_anotacao")
+                texto = a.get("texto_anotacao")
+
                 with st.container(border=True):
 
-                    st.markdown(f"**{a['autor_anotacao']}** · {a['data_anotacao']}")
-                    st.write(a["texto_anotacao"])
+                    # Cabeçalho
+                    col_h1, col_h2 = st.columns([9, 1])
+                    col_h1.markdown(f"**{autor}** · {data}")
+
+                    # --------------------------------------------------
+                    # POPOVER DE AÇÕES (somente autor)
+                    # --------------------------------------------------
+                    if st.session_state.get("nome") == autor:
+
+                        with col_h2.popover("⋮", type="tertiary"):
+
+                            if st.button(
+                                "Editar anotação",
+                                key=f"btn_edit_anot_{relatorio_numero}_{idx_real}",
+                                icon=":material/edit:",
+                                type="tertiary"
+                            ):
+                                st.session_state["anotacao_editando"] = idx_real
+                                st.session_state["anotacao_apagando"] = None
+                                st.rerun()
+
+                            if st.button(
+                                "Apagar anotação",
+                                key=f"btn_del_anot_{relatorio_numero}_{idx_real}",
+                                icon=":material/delete:",
+                                type="tertiary"
+                            ):
+                                st.session_state["anotacao_apagando"] = idx_real
+                                st.session_state["anotacao_editando"] = None
+                                st.rerun()
+
+                    # --------------------------------------------------
+                    # CONFIRMAÇÃO DE EXCLUSÃO
+                    # --------------------------------------------------
+                    if st.session_state["anotacao_apagando"] == idx_real:
+
+                        st.warning("Tem certeza que deseja apagar esta anotação? Esta ação não pode ser desfeita.", icon=":material/warning:")
+
+                        with st.container(horizontal=True):
+
+                            if st.button(
+                                "Sim, apagar anotação",
+                                key=f"btn_confirm_del_{relatorio_numero}_{idx_real}",
+                                type="primary",
+                                icon=":material/delete:"
+                            ):
+                                del projeto["relatorios"][idx]["anotacoes_avaliacao"][idx_real]
+
+                                col_projetos.update_one(
+                                    {"codigo": projeto_codigo},
+                                    {"$set": {"relatorios": projeto["relatorios"]}}
+                                )
+
+                                st.success("Anotação apagada.", icon=":material/check:")
+                                time.sleep(3)
+
+                                st.session_state["anotacao_apagando"] = None
+                                st.rerun()
+
+                            if st.button(
+                                "Cancelar",
+                                key=f"btn_cancel_del_{relatorio_numero}_{idx_real}"
+                            ):
+                                st.session_state["anotacao_apagando"] = None
+                                st.rerun()
+
+                    # --------------------------------------------------
+                    # MODO EDIÇÃO
+                    # --------------------------------------------------
+                    elif st.session_state["anotacao_editando"] == idx_real:
+
+                        text_key = f"text_anot_{relatorio_numero}_{idx_real}"
+
+                        if text_key not in st.session_state:
+                            st.session_state[text_key] = texto
+
+                        novo_texto = st.text_area(
+                            "Editar anotação",
+                            key=text_key
+                        )
+
+                        with st.container(horizontal=True):
+
+                            if st.button(
+                                "Atualizar",
+                                key=f"btn_upd_{relatorio_numero}_{idx_real}",
+                                type="primary",
+                                icon=":material/save:"
+                            ):
+                                projeto["relatorios"][idx]["anotacoes_avaliacao"][idx_real]["texto_anotacao"] = novo_texto
+
+                                col_projetos.update_one(
+                                    {"codigo": projeto_codigo},
+                                    {"$set": {"relatorios": projeto["relatorios"]}}
+                                )
+
+                                st.success("Anotação atualizada.")
+                                time.sleep(3)
+
+                                st.session_state["anotacao_editando"] = None
+                                st.session_state.pop(text_key, None)
+                                st.rerun()
 
+                            if st.button(
+                                "Cancelar",
+                                key=f"btn_cancel_edit_{relatorio_numero}_{idx_real}"
+                            ):
+                                st.session_state["anotacao_editando"] = None
+                                st.session_state.pop(text_key, None)
+                                st.rerun()
 
+                    # --------------------------------------------------
+                    # MODO VISUALIZAÇÃO
+                    # --------------------------------------------------
+                    else:
+                        st.write(texto)
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # ---------- AVALIAÇÃO ----------
-# if step_selecionado == "Avaliação":
-
-
-
-#     st.write("")
-#     st.write("")
-
-#     relatos_ok = todos_relatos_aceitos(projeto, relatorio_numero)
-#     despesas_ok = todas_despesas_aceitas(projeto, relatorio_numero)
-
-#     # --------------------------------------------------
-#     # VALORES ATUAIS DO BANCO
-#     # --------------------------------------------------
-#     relatorio_db = next(
-#         r for r in projeto["relatorios"]
-#         if r["numero"] == relatorio_numero
-#     )
-
-#     beneficiarios_checked = "benef_verif_por" in relatorio_db
-#     pesquisas_checked = "pesq_verif_por" in relatorio_db
-#     formulario_checked = "form_verif_por" in relatorio_db
-
-#     col1, col2, col3 = st.columns(3)
-
-#     with col1:
-#         st.write("**Checklist**")
-
-#         st.checkbox(
-#             "Relatos de atividades",
-#             value=relatos_ok,
-#             disabled=True,
-#             key=f"chk_relatos_{idx}"
-#         )
-
-#         st.checkbox(
-#             "Registros de despesas",
-#             value=despesas_ok,
-#             disabled=True,
-#             key=f"chk_despesas_{idx}"
-#         )
-
-
-
-#         st.checkbox(
-#             "Beneficiários e Benefícios",
-#             value=beneficiarios_checked,
-#             key=f"chk_benef_{relatorio_numero}",
-#             on_change=atualizar_verificacao_relatorio,
-#             args=(
-#                 projeto_codigo,
-#                 relatorio_numero,
-#                 "benef_verif_por",
-#                 f"chk_benef_{relatorio_numero}"
-#             )
-#         )
-
-#         st.checkbox(
-#             "Pesquisas",
-#             value=pesquisas_checked,
-#             key=f"chk_pesq_{relatorio_numero}",
-#             on_change=atualizar_verificacao_relatorio,
-#             args=(
-#                 projeto_codigo,
-#                 relatorio_numero,
-#                 "pesq_verif_por",
-#                 f"chk_pesq_{relatorio_numero}"
-#             )
-#         )
-
-#         st.checkbox(
-#             "Formulário",
-#             value=formulario_checked,
-#             key=f"chk_form_{relatorio_numero}",
-#             on_change=atualizar_verificacao_relatorio,
-#             args=(
-#                 projeto_codigo,
-#                 relatorio_numero,
-#                 "form_verif_por",
-#                 f"chk_form_{relatorio_numero}"
-#             )
-#         )
-
-
-
-
-
-
-
-
-
-
-
-        # st.checkbox(
-        #     "Beneficiários e Benefícios",
-        #     value=beneficiarios_checked,
-        #     key=f"chk_beneficiarios_{idx}",
-        #     on_change=atualizar_verificacao_relatorio,
-        #     args=(
-        #         projeto_codigo,
-        #         relatorio_numero,
-        #         "benef_verif_por",
-        #         st.session_state.get(f"chk_beneficiarios_{idx}", False)
-        #     )
-        # )
-
-        # st.checkbox(
-        #     "Pesquisas",
-        #     value=pesquisas_checked,
-        #     key=f"chk_pesquisas_{idx}",
-        #     on_change=atualizar_verificacao_relatorio,
-        #     args=(
-        #         projeto_codigo,
-        #         relatorio_numero,
-        #         "pesq_verif_por",
-        #         st.session_state.get(f"chk_pesquisas_{idx}", False)
-        #     )
-        # )
-
-        # st.checkbox(
-        #     "Formulário",
-        #     value=formulario_checked,
-        #     key=f"chk_formulario_{idx}",
-        #     on_change=atualizar_verificacao_relatorio,
-        #     args=(
-        #         projeto_codigo,
-        #         relatorio_numero,
-        #         "form_verif_por",
-        #         st.session_state.get(f"chk_formulario_{idx}", False)
-        #     )
-        # )
-
-
-
-
-
-
-
-
-
-# # ---------- AVALIAÇÃO ----------
-# if step_selecionado == "Avaliação":
-
-#     st.write("")
-#     st.write("")
-
-#     relatos_ok = todos_relatos_aceitos(projeto, relatorio_numero)
-#     despesas_ok = todas_despesas_aceitas(projeto, relatorio_numero)
-
-#     col1, col2, col3 = st.columns(3)
-
-#     with col1:
-#         st.write('**Checklist**')
-#         st.checkbox(
-#             "Relatos de atividades",
-#             value=relatos_ok,
-#             disabled=True,
-#             key=f"chk_relatos_{idx}"
-#         )
-
-#         st.checkbox(
-#             "Registros de despesas",
-#             value=despesas_ok,
-#             disabled=True,
-#             key=f"chk_despesas_{idx}"
-#         )
-
-#         st.checkbox(
-#             "Beneficiários e Benefícios",
-#             key=f"chk_beneficiarios_{idx}"
-#         )
-
-#         st.checkbox(
-#             "Pesquisas",
-#             key=f"chk_pesquisas_{idx}"
-#         )
-
-#         st.checkbox(
-#             "Formulário",
-#             key=f"chk_formulario_{idx}"
-#         )
 
 
 
