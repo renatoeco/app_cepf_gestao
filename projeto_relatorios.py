@@ -135,6 +135,49 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 
 
 
+# Texto do status da avaliação de Relatos de Atividades ou de Despesas de relatório
+def texto_verificacao():
+    nome = st.session_state.get("nome", "Usuário")
+    data = datetime.datetime.now().strftime("%d/%m/%Y")
+    return f"Verificado por {nome} em {data}"
+
+
+# Atualiza o status da avaliação de Relatos de Atividades ou de Despesas
+def atualizar_verificacao_relatorio(projeto_codigo, relatorio_numero, campo, checkbox_key):
+    marcado = st.session_state.get(checkbox_key, False)
+
+    nome = st.session_state.get("nome", "Usuário")
+    data = datetime.datetime.now().strftime("%d/%m/%Y")
+
+    if marcado:
+        col_projetos.update_one(
+            {
+                "codigo": projeto_codigo,
+                "relatorios.numero": relatorio_numero
+            },
+            {
+                "$set": {
+                    f"relatorios.$.{campo}": f"Verificado por {nome} em {data}"
+                }
+            }
+        )
+    else:
+        col_projetos.update_one(
+            {
+                "codigo": projeto_codigo,
+                "relatorios.numero": relatorio_numero
+            },
+            {
+                "$unset": {
+                    f"relatorios.$.{campo}": ""
+                }
+            }
+        )
+
+
+
+
+
 def todos_relatos_aceitos(projeto, relatorio_numero):
     """
     Retorna True se TODOS os relatos do relatório informado
@@ -3881,45 +3924,6 @@ if step_selecionado == "Enviar":
 
 
 
-def texto_verificacao():
-    nome = st.session_state.get("nome", "Usuário")
-    data = datetime.datetime.now().strftime("%d/%m/%Y")
-    return f"Verificado por {nome} em {data}"
-
-
-
-def atualizar_verificacao_relatorio(projeto_codigo, relatorio_numero, campo, checkbox_key):
-    marcado = st.session_state.get(checkbox_key, False)
-
-    nome = st.session_state.get("nome", "Usuário")
-    data = datetime.datetime.now().strftime("%d/%m/%Y")
-
-    if marcado:
-        col_projetos.update_one(
-            {
-                "codigo": projeto_codigo,
-                "relatorios.numero": relatorio_numero
-            },
-            {
-                "$set": {
-                    f"relatorios.$.{campo}": f"Verificado por {nome} em {data}"
-                }
-            }
-        )
-    else:
-        col_projetos.update_one(
-            {
-                "codigo": projeto_codigo,
-                "relatorios.numero": relatorio_numero
-            },
-            {
-                "$unset": {
-                    f"relatorios.$.{campo}": ""
-                }
-            }
-        )
-
-
 
 
 
@@ -3942,6 +3946,7 @@ if step_selecionado == "Avaliação":
 
     col1, col2, col3 = st.columns(3)
 
+    # Checklist
     with col1:
         st.write("**Checklist**")
 
@@ -4020,6 +4025,78 @@ if step_selecionado == "Avaliação":
             st.caption(relatorio_db["form_verif_por"])
 
 
+
+    # Anotações
+    with col2:
+
+        st.write("**Anotações da avaliação**")
+
+        # --------------------------------------------------
+        # DIALOG DE NOVA ANOTAÇÃO
+        # --------------------------------------------------
+        @st.dialog("Nova anotação")
+        def dialog_nova_anotacao():
+            texto = st.text_area(
+                "Anotação",
+                placeholder="Digite sua anotação sobre este relatório..."
+            )
+
+            if st.button("Salvar anotação", type="primary"):
+                if not texto.strip():
+                    st.warning("A anotação não pode estar vazia.")
+                    return
+
+                nova = {
+                    "texto_anotacao": texto.strip(),
+                    "data_anotacao": datetime.datetime.now().strftime("%d/%m/%Y"),
+                    "autor_anotacao": st.session_state.get("nome", "Usuário")
+                }
+
+                col_projetos.update_one(
+                    {
+                        "codigo": projeto_codigo,
+                        "relatorios.numero": relatorio_numero
+                    },
+                    {
+                        "$push": {
+                            "relatorios.$.anotacoes_avaliacao": nova
+                        }
+                    }
+                )
+
+                st.success("Anotação salva com sucesso.")
+                time.sleep(3)
+                st.rerun()
+
+        # --------------------------------------------------
+        # BOTÃO NOVA ANOTAÇÃO
+        # --------------------------------------------------
+        if st.button(
+            "+ Nova anotação",
+            type="secondary",
+            icon=":material/add:"
+        ):
+            dialog_nova_anotacao()
+
+
+
+        # Lista as anotações existentes
+        relatorio_db = next(
+            r for r in projeto["relatorios"]
+            if r["numero"] == relatorio_numero
+        )
+
+        anotacoes = relatorio_db.get("anotacoes_avaliacao", [])
+
+        if not anotacoes:
+            st.caption("Nenhuma anotação registrada.")
+        else:
+            for i, a in enumerate(reversed(anotacoes)):
+
+                with st.container(border=True):
+
+                    st.markdown(f"**{a['autor_anotacao']}** · {a['data_anotacao']}")
+                    st.write(a["texto_anotacao"])
 
 
 
