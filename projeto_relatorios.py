@@ -1558,6 +1558,8 @@ relatorio = relatorios[idx]
 relatorio_numero = relatorio["numero"]
 projeto_codigo = projeto["codigo"]
 
+st.subheader(f"Relatório {relatorio_numero}")
+
 ###########################################################################################################
 # STATUS ATUAL DO RELATÓRIO
 ###########################################################################################################
@@ -3080,7 +3082,7 @@ if step_selecionado == "Beneficiários":
 
 
         # Coluna à esquerda para diminuir a largura dos inputs de beneficiários
-        content, vazio_d = st.columns([7, 6])
+        content, vazio_d = st.columns([8, 4])
 
         # -------------------------------
         # LINHA: JOVENS
@@ -3696,7 +3698,7 @@ if step_selecionado == "Pesquisas":
         upload_key = f"upload_{relatorio_numero}_{pesquisa['id']}"
         upload_salvo_key = f"upload_salvo_{relatorio_numero}_{pesquisa['id']}"
 
-        col1, col2, col3, col4, col5 = st.columns([4, 3, 1, 1, 1])
+        col1, col2, col3, col4, col5 = st.columns([4, 3, 2, 2, 1])
 
         # -------- PESQUISA --------
         with col1:
