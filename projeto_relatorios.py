@@ -2664,6 +2664,20 @@ if step_selecionado == "Despesas":
                             )
 
 
+                        # --------------------------------------------------
+                        # BOTÃO EDITAR (somente beneficiário, despesa aberta)
+                        # --------------------------------------------------
+                        if pode_editar_despesa:
+
+                            with st.container(horizontal=True, horizontal_alignment="right"):
+                                if st.button(
+                                    "Editar",
+                                    key=f"btn_edit_despesa_{id_despesa}",
+                                    icon=":material/edit:",
+                                    type="tertiary"
+                                ):
+                                    st.session_state["despesa_editando_id"] = id_despesa
+                                    st.rerun()
 
 
                     # ==================================================
@@ -2731,7 +2745,7 @@ if step_selecionado == "Despesas":
                                 ):
                                     anexos_remover.append(a)
 
-                        st.divider()
+                            st.divider()
 
                         # --------------------------------------------------
                         # NOVOS ANEXOS
