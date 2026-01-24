@@ -2826,37 +2826,56 @@ if step_selecionado == "Despesas":
                                 st.session_state["despesa_editando_id"] = None
                                 st.rerun()
 
-
+                    
 
 
 
 
                     # ==================================================
-                    # AVALIAÇÃO (ADMIN / EQUIPE)
+                    # AVALIAÇÃO (ADMIN / EQUIPE) — MESMA REGRA DE ATIVIDADES
                     # ==================================================
                     if pode_avaliar_despesa:
 
-                        STATUS_LABEL = {
+                        STATUS_DESPESA_LABEL = {
                             "em_analise": "Em análise",
                             "aberto": "Devolver",
                             "aceito": "Aceito"
                         }
-                        STATUS_LABEL_INV = {v: k for k, v in STATUS_LABEL.items()}
 
-                        status_ui = STATUS_LABEL.get(status_despesa_db, "Em análise")
+                        STATUS_DESPESA_LABEL_INV = {v: k for k, v in STATUS_DESPESA_LABEL.items()}
+
+                        status_despesa_db = lanc.get("status_despesa", "em_analise")
+                        status_label = STATUS_DESPESA_LABEL.get(status_despesa_db, "Em análise")
+
                         status_key = f"status_despesa_ui_{id_despesa}"
+                        devolutiva_key = f"devolutiva_despesa_{id_despesa}"
+
+                        # --------------------------------------------------
+                        # Estado inicial do segmented_control
+                        # Regra igual à Atividades:
+                        # aberto sem devolutiva → Em análise
+                        # --------------------------------------------------
+                        if status_despesa_db == "aberto" and not lanc.get("devolutiva"):
+                            status_label = "Em análise"
 
                         if status_key not in st.session_state:
-                            st.session_state[status_key] = status_ui
+                            st.session_state[status_key] = status_label
 
+                        # --------------------------------------------------
+                        # SEGMENTED CONTROL
+                        # --------------------------------------------------
                         with st.container(horizontal=True, horizontal_alignment="right"):
-                            novo_status_ui = st.segmented_control(
+                            novo_status_label = st.segmented_control(
                                 label="",
-                                options=list(STATUS_LABEL.values()),
+                                options=["Em análise", "Devolver", "Aceito"],
                                 key=status_key
                             )
 
-                        # -------- TEXTO DE AUDITORIA --------
+                        novo_status_db = STATUS_DESPESA_LABEL_INV.get(novo_status_label)
+
+                        # --------------------------------------------------
+                        # TEXTO DE AUDITORIA
+                        # --------------------------------------------------
                         status_aprovacao = lanc.get("status_aprovacao")
                         if status_aprovacao:
                             st.markdown(
@@ -2872,11 +2891,55 @@ if step_selecionado == "Despesas":
                                 """,
                                 unsafe_allow_html=True
                             )
-                            st.write('')
+                            st.write("")
 
-                        novo_status_db = STATUS_LABEL_INV[novo_status_ui]
+                        # ==================================================
+                        # CASO DEVOLVER (ação, não mudança de status)
+                        # ==================================================
+                        if novo_status_label == "Devolver":
 
-                        if novo_status_db != status_despesa_db:
+                            if devolutiva_key not in st.session_state:
+                                st.session_state[devolutiva_key] = lanc.get("devolutiva", "")
+
+                            st.text_area(
+                                "**Devolutiva:**",
+                                key=devolutiva_key,
+                                placeholder="Explique o que precisa ser ajustado nesta despesa..."
+                            )
+
+                            tem_devolutiva = bool(st.session_state.get(devolutiva_key, "").strip())
+                            label_botao = "Atualizar" if tem_devolutiva else "Salvar devolutiva"
+
+                            with st.container(horizontal=True):
+                                if st.button(
+                                    label_botao,
+                                    key=f"btn_save_dev_{id_despesa}",
+                                    type="primary",
+                                    icon=":material/save:"
+                                ):
+                                    nome = st.session_state.get("nome", "Usuário")
+                                    data = data_hoje_br()
+
+                                    lanc["status_despesa"] = "aberto"
+                                    lanc["devolutiva"] = st.session_state.get(devolutiva_key, "")
+                                    lanc["status_aprovacao"] = f"Devolvido por {nome} em {data}"
+
+                                    col_projetos.update_one(
+                                        {"codigo": projeto["codigo"]},
+                                        {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
+                                    )
+
+                                    st.session_state.pop(status_key, None)
+                                    st.session_state.pop(devolutiva_key, None)
+
+                                    st.success("Devolutiva salva.", icon=":material/check:")
+                                    time.sleep(3)
+                                    st.rerun()
+
+                        # ==================================================
+                        # CASO EM ANÁLISE OU ACEITO (mudança real de status)
+                        # ==================================================
+                        elif novo_status_db != status_despesa_db:
 
                             nome = st.session_state.get("nome", "Usuário")
                             data = data_hoje_br()
@@ -2884,10 +2947,8 @@ if step_selecionado == "Despesas":
                             lanc["status_despesa"] = novo_status_db
 
                             if novo_status_db == "aceito":
+                                lanc.pop("devolutiva", None)
                                 lanc["status_aprovacao"] = f"Verificado por {nome} em {data}"
-
-                            elif novo_status_db == "aberto":
-                                lanc["status_aprovacao"] = f"Devolvido por {nome} em {data}"
 
                             elif novo_status_db == "em_analise":
                                 lanc.pop("status_aprovacao", None)
@@ -2897,47 +2958,31 @@ if step_selecionado == "Despesas":
                                 {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
                             )
 
-                            del st.session_state[status_key]
+                            st.session_state.pop(status_key, None)
                             st.rerun()
 
+
                     # ==================================================
-                    # DEVOLUTIVA
+                    # MOSTRA DEVOLUTIVA (MESMA REGRA DE ATIVIDADES)
                     # ==================================================
-                    if (
-                        pode_avaliar_despesa
-                        and lanc.get("status_despesa") == "aberto"
-                    ):
-                        key_dev = f"devolutiva_despesa_{id_despesa}"
+                    status_despesa_db = lanc.get("status_despesa")
+                    devolutiva = lanc.get("devolutiva")
 
-                        if key_dev not in st.session_state:
-                            st.session_state[key_dev] = lanc.get("devolutiva", "")
+                    mostrar_devolutiva = False
 
-                        st.text_area("**Devolutiva:**", key=key_dev)
+                    # Regra 1: relatório em modo edição
+                    if status_atual_db == "modo_edicao":
+                        mostrar_devolutiva = bool(devolutiva)
 
-                        label_btn = "Atualizar devolutiva" if lanc.get("devolutiva") else "Salvar devolutiva"
-
-                        with st.container(horizontal=True):
-                            if st.button(
-                                label_btn,
-                                key=f"btn_save_dev_{id_despesa}",
-                                type="secondary",
-                                icon=":material/save:"
-                            ):
-                                nome = st.session_state.get("nome", "Usuário")
-                                data = data_hoje_br()
-
-                                lanc["devolutiva"] = st.session_state[key_dev]
-                                lanc["status_aprovacao"] = f"Devolvido por {nome} em {data}"
-
-                                col_projetos.update_one(
-                                    {"codigo": projeto["codigo"]},
-                                    {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                )
-
-                                st.success("Devolutiva salva!", icon=":material/check:")
-                                time.sleep(3)
-                                st.rerun()
-
+                    # Regra 2: relatório em análise
+                    elif status_atual_db == "em_analise":
+                        if (
+                            tipo_usuario in ["admin", "equipe"]
+                            and status_despesa_db == "aberto"
+                        ):
+                            mostrar_devolutiva = False
+                        else:
+                            mostrar_devolutiva = bool(devolutiva)
 
 
 
