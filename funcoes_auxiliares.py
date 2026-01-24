@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
-#  de de e-mail
+# Envio de e-mail
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -246,6 +246,30 @@ def obter_pasta_relatos_financeiros(servico, pasta_projeto_id):
         "Relatos_financeiros",
         pasta_projeto_id
     )
+
+
+
+def obter_pasta_recibos(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Recibos' dentro da pasta do projeto.
+    Cria se não existir.
+
+    Usa cache no session_state para evitar múltiplas criações.
+    """
+
+    if "pasta_recibos_id" in st.session_state:
+        return st.session_state["pasta_recibos_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Recibos",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_recibos_id"] = pasta_id
+    return pasta_id
+
+
 
 
 
