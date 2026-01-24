@@ -4,7 +4,6 @@ import streamlit_antd_components as sac
 import time
 import datetime
 from collections import defaultdict
-import streamlit_antd_components as sac
 
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
@@ -235,6 +234,96 @@ def todas_despesas_aceitas(projeto, relatorio_numero):
 
 
 
+def gerar_email_relatorio_aprovado(
+    nome_do_contato: str,
+    relatorio_numero: int,
+    projeto: dict,
+    organizacao: str,
+    logo_url: str
+):
+
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-top: 6px solid #2e7d32;
+            padding: 30px;
+        }}
+        .logo {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .content {{
+            color: #333;
+            font-size: 15px;
+            line-height: 1.6;
+        }}
+        .footer {{
+            margin-top: 40px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }}
+        .highlight {{
+            color: #2e7d32;
+            font-weight: bold;
+        }}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="logo">
+            <img src="{logo_url}" height="70" alt="IEB">
+        </div>
+
+        <div class="content">
+
+            <p>Olá <strong>{nome_do_contato}</strong>,</p>
+
+            <p>
+                Informamos que o <span class="highlight">Relatório {relatorio_numero}</span>
+                do projeto <span class="highlight">{projeto['nome_do_projeto']}</span>
+                da organização <strong>{organizacao}</strong> foi <strong>aprovado</strong>.
+            </p>
+
+            <p>
+                O relatório já está validado no sistema e segue para os próximos encaminhamentos.
+            </p>
+
+            <p>
+                Atenciosamente,<br>
+                <strong>Sistema de Gestão de Projetos do IEB</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            Este é um e-mail automático. Não responda.
+        </div>
+
+    </div>
+
+</body>
+</html>
+"""
+
+
+
+
+
 
 
 
@@ -250,7 +339,7 @@ def notificar_padrinhos_relatorio(
         return False
 
     for padrinho in padrinhos:
-        html = montar_email_relatorio(
+        html = montar_email_relatorio_envio(
             nome=padrinho["nome_completo"],
             numero_relatorio=numero_relatorio,
             codigo=projeto["codigo"],
@@ -267,7 +356,12 @@ def notificar_padrinhos_relatorio(
     return True
 
 
-def montar_email_relatorio(
+
+
+
+
+
+def montar_email_relatorio_envio(
     nome: str,
     numero_relatorio: int,
     codigo: str,
@@ -1380,6 +1474,8 @@ if "step_relatorio" not in st.session_state:
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
+# Logo hospedada no site do IEB para renderizar nos e-mails.
+logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
 
 
 # Logo do sidebar
@@ -1449,7 +1545,7 @@ aba_selecionada = sac.tabs(
     items=[sac.TabsItem(label=l) for l in labels_relatorios],
     align="left",
     variant="outline",
-    size="xl"
+    # size="xl"
 )
 
 idx = labels_relatorios.index(aba_selecionada)
@@ -1576,7 +1672,7 @@ step_selecionado = sac.tabs(
     items=[sac.TabsItem(label=s) for s in labels_steps],
     align="start",
     use_container_width=True,
-    size="md"
+    # size="md"
 )
 
 ###########################################################################################################
@@ -3896,7 +3992,6 @@ if step_selecionado == "Enviar":
                 # ENVIA E-MAIL PARA PADRINHOS
                 # --------------------------------------------------
                 
-                logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
                 
                 notificar_padrinhos_relatorio(
                     col_pessoas=col_pessoas,
@@ -3944,21 +4039,21 @@ if step_selecionado == "Avaliação":
         if r["numero"] == relatorio_numero
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3, gap="large")
 
     # Checklist
     with col1:
         st.write("**Checklist**")
 
         st.checkbox(
-            "Relatos de atividades",
+            "Relatos de atividades (auto)",
             value=relatos_ok,
             disabled=True,
             key=f"chk_relatos_{relatorio_numero}"
         )
 
         st.checkbox(
-            "Registros de despesas",
+            "Registros de despesas (auto)",
             value=despesas_ok,
             disabled=True,
             key=f"chk_despesas_{relatorio_numero}"
@@ -4223,7 +4318,404 @@ if step_selecionado == "Avaliação":
                     # MODO VISUALIZAÇÃO
                     # --------------------------------------------------
                     else:
-                        st.write(texto)
+                        st.markdown(
+                            texto.replace("\n", "<br>"),
+                            unsafe_allow_html=True
+                        )
+                        
+
+
+
+
+
+
+
+
+    # ==================================================
+    # COLUNA 3 — APROVAÇÃO DO RELATÓRIO
+    # ==================================================
+    with col3:
+
+        st.write("**Aprovação**")
+        st.write("")
+
+        # --------------------------------------------------
+        # REGRA: só pode aprovar se TODO checklist estiver OK
+        # --------------------------------------------------
+        pode_aprovar = all([
+            relatos_ok,
+            despesas_ok,
+            "benef_verif_por" in relatorio_db,
+            "pesq_verif_por" in relatorio_db,
+            "form_verif_por" in relatorio_db
+        ])
+
+        # --------------------------------------------------
+        # BOTÃO DE APROVAÇÃO
+        # --------------------------------------------------
+        if st.button(
+            "Aprovar e enviar e-mail",
+            type="primary",
+            icon=":material/check_circle:",
+            disabled=not pode_aprovar
+        ):
+
+            with st.spinner("Aprovando relatório..."):
+
+                # Data atual (dd/mm/yyyy)
+                data_hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+
+                # Nome do aprovador
+                nome_aprovador = st.session_state.get("nome", "Usuário")
+
+                # --------------------------------------------------
+                # ATUALIZA RELATÓRIO EM MEMÓRIA
+                # --------------------------------------------------
+                projeto["relatorios"][idx]["status_relatorio"] = "aprovado"
+                projeto["relatorios"][idx]["data_aprovacao"] = data_hoje
+                projeto["relatorios"][idx]["aprovado_por"] = nome_aprovador
+
+                # --------------------------------------------------
+                # PERSISTE NO BANCO DE DADOS
+                # --------------------------------------------------
+                col_projetos.update_one(
+                    {"codigo": projeto_codigo},
+                    {"$set": {"relatorios": projeto["relatorios"]}}
+                )
+
+                # --------------------------------------------------
+                # ENVIO DE E-MAIL PARA TODOS OS CONTATOS
+                # --------------------------------------------------
+                for contato in projeto.get("contatos", []):
+
+                    email = contato.get("email")
+                    nome_contato = contato.get("nome", "Olá")
+
+                    if not email:
+                        continue
+
+                    corpo_html = gerar_email_relatorio_aprovado(
+                        nome_do_contato=nome_contato,
+                        relatorio_numero=relatorio_numero,
+                        projeto=projeto,
+                        organizacao=projeto.get("organizacao", ""),
+                        logo_url=logo_cepf
+                    )
+
+                    enviar_email(
+                        corpo_html=corpo_html,
+                        destinatarios=[email],
+                        assunto=f"Relatório {relatorio_numero} aprovado!"
+                    )
+
+            # --------------------------------------------------
+            # FEEDBACK VISUAL E RECARREGAMENTO
+            # --------------------------------------------------
+            st.success("Relatório aprovado e e-mails enviados com sucesso.", icon=":marterial/check:")
+            time.sleep(3)
+            st.rerun()
+
+        # --------------------------------------------------
+        # INFORMAÇÃO DE APROVAÇÃO (APÓS APROVAR)
+        # --------------------------------------------------
+        if relatorio_db.get("status_relatorio") == "aprovado":
+
+            data_aprov = relatorio_db.get("data_aprovacao")
+            nome_aprov = relatorio_db.get("aprovado_por", "")
+
+            if data_aprov:
+                st.caption(f"Aprovado em {data_aprov} por {nome_aprov}")
+                st.caption("Os contatos do projeto foram notificados por e-mail.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # # Aprovação
+    # with col3:
+
+    #     st.write("**Aprovação**")
+    #     st.write("")
+
+    #     # --------------------------------------------------
+    #     # CONDIÇÃO PARA APROVAR
+    #     # --------------------------------------------------
+    #     pode_aprovar = all([
+    #         relatos_ok,
+    #         despesas_ok,
+    #         "benef_verif_por" in relatorio_db,
+    #         "pesq_verif_por" in relatorio_db,
+    #         "form_verif_por" in relatorio_db
+    #     ])
+
+    #     # --------------------------------------------------
+    #     # BOTÃO DE APROVAÇÃO
+    #     # --------------------------------------------------
+    #     if st.button(
+    #         "Aprovar e enviar e-mail",
+    #         type="primary",
+    #         icon=":material/check_circle:",
+    #         disabled=not pode_aprovar
+    #     ):
+    #         with st.spinner("Aprovando relatório e enviando e-mails..."):
+
+    #             data_hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+    #             nome_aprovador = st.session_state.get("nome", "Usuário")
+
+    #             # -----------------------------
+    #             # ATUALIZA EM MEMÓRIA
+    #             # -----------------------------
+    #             projeto["relatorios"][idx]["status_relatorio"] = "aprovado"
+    #             projeto["relatorios"][idx]["data_aprovacao"] = data_hoje
+    #             projeto["relatorios"][idx]["aprovado_por"] = nome_aprovador
+
+    #             # -----------------------------
+    #             # PERSISTE NO BANCO
+    #             # -----------------------------
+    #             col_projetos.update_one(
+    #                 {"codigo": projeto_codigo},
+    #                 {"$set": {"relatorios": projeto["relatorios"]}}
+    #             )
+
+    #             # -----------------------------
+    #             # MONTA LISTA DE DESTINATÁRIOS
+    #             # -----------------------------
+    #             contatos = projeto.get("contatos", [])
+    #             emails = [
+    #                 c["email"] for c in contatos
+    #                 if c.get("email")
+    #             ]
+
+    #             # -----------------------------
+    #             # ENVIA E-MAIL (se houver emails)
+    #             # -----------------------------
+    #             if emails:
+
+    #                 assunto = f"Relatório {relatorio_numero} aprovado!"
+
+    #                 corpo_html = f"""
+    #                 <p>Olá,</p>
+
+    #                 <p>
+    #                     Informamos que o <strong>Relatório {relatorio_numero}</strong>
+    #                     do projeto <strong>{projeto['nome_do_projeto']}</strong>
+    #                     foi <strong>aprovado</strong>.
+    #                 </p>
+
+    #                 <p>
+    #                     <strong>Data da aprovação:</strong> {data_hoje}<br>
+    #                     <strong>Aprovado por:</strong> {nome_aprovador}
+    #                 </p>
+
+    #                 <p>
+    #                     O relatório já está validado no sistema e segue para os próximos
+    #                     encaminhamentos.
+    #                 </p>
+
+    #                 <p>
+    #                     Atenciosamente,<br>
+    #                     Plataforma de Gestão de Projetos
+    #                 </p>
+    #                 """
+
+    #                 enviar_email(
+    #                     corpo_html=corpo_html,
+    #                     destinatarios=emails,
+    #                     assunto=assunto
+    #                 )
+
+    #         st.toast("Relatório aprovado e e-mail enviado.", icon="📧")
+    #         time.sleep(3)
+    #         st.rerun()
+
+    #     # --------------------------------------------------
+    #     # INFORMAÇÃO DE APROVAÇÃO (se já aprovado)
+    #     # --------------------------------------------------
+    #     if relatorio_db.get("status_relatorio") == "aprovado":
+
+    #         data_aprov = relatorio_db.get("data_aprovacao")
+    #         nome_aprov = relatorio_db.get("aprovado_por", "")
+
+    #         if data_aprov:
+    #             st.caption(f"Aprovado em {data_aprov} por {nome_aprov}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # # Aprovação
+    # with col3:
+
+    #     st.write("**Aprovação**")
+    #     st.write("")
+
+    #     # --------------------------------------------------
+    #     # CONDIÇÃO PARA APROVAR
+    #     # --------------------------------------------------
+    #     pode_aprovar = all([
+    #         relatos_ok,
+    #         despesas_ok,
+    #         "benef_verif_por" in relatorio_db,
+    #         "pesq_verif_por" in relatorio_db,
+    #         "form_verif_por" in relatorio_db
+    #     ])
+
+    #     # --------------------------------------------------
+    #     # BOTÃO DE APROVAÇÃO
+    #     # --------------------------------------------------
+    #     if st.button(
+    #         "Aprovar e enviar e-mail",
+    #         type="primary",
+    #         icon=":material/check_circle:",
+    #         disabled=not pode_aprovar
+    #     ):
+    #         with st.spinner("Aprovando relatório..."):
+
+    #             data_hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+    #             nome_aprovador = st.session_state.get("nome", "Usuário")
+
+    #             # Atualiza no objeto em memória
+    #             projeto["relatorios"][idx]["status_relatorio"] = "aprovado"
+    #             projeto["relatorios"][idx]["data_aprovacao"] = data_hoje
+    #             projeto["relatorios"][idx]["aprovado_por"] = nome_aprovador
+
+    #             # Persiste no banco
+    #             col_projetos.update_one(
+    #                 {"codigo": projeto_codigo},
+    #                 {"$set": {"relatorios": projeto["relatorios"]}}
+    #             )
+
+    #         st.toast("Relatório aprovado com sucesso.", icon="✅")
+    #         time.sleep(3)
+    #         st.rerun()
+
+    #     # --------------------------------------------------
+    #     # INFORMAÇÃO DE APROVAÇÃO (se já aprovado)
+    #     # --------------------------------------------------
+    #     if relatorio_db.get("status_relatorio") == "aprovado":
+
+    #         data_aprov = relatorio_db.get("data_aprovacao")
+    #         nome_aprov = relatorio_db.get("aprovado_por", "")
+
+    #         if data_aprov:
+    #             st.caption(f"Aprovado em {data_aprov} por {nome_aprov}")
+
+
+
+
+
+
+    # # Aprovação
+    # with col3:
+
+    #     st.write("**Aprovação**")
+    #     st.write("")
+
+    #     # --------------------------------------------------
+    #     # CONDIÇÃO PARA APROVAR
+    #     # --------------------------------------------------
+    #     pode_aprovar = all([
+    #         relatos_ok,
+    #         despesas_ok,
+    #         "benef_verif_por" in relatorio_db,
+    #         "pesq_verif_por" in relatorio_db,
+    #         "form_verif_por" in relatorio_db
+    #     ])
+
+    #     # --------------------------------------------------
+    #     # BOTÃO DE APROVAÇÃO
+    #     # --------------------------------------------------
+    #     if st.button(
+    #         "Aprovar e enviar e-mail",
+    #         type="primary",
+    #         icon=":material/check_circle:",
+    #         disabled=not pode_aprovar,
+    #         width=250
+    #     ):
+    #         with st.spinner("Aprovando relatório..."):
+
+    #             # Atualiza status do relatório no objeto em memória
+    #             projeto["relatorios"][idx]["status_relatorio"] = "aprovado"
+
+    #             # Persiste no banco
+    #             col_projetos.update_one(
+    #                 {"codigo": projeto_codigo},
+    #                 {"$set": {"relatorios": projeto["relatorios"]}}
+    #             )
+
+    #         st.success("Relatório aprovado com sucesso.")
+    #         time.sleep(3)
+    #         st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

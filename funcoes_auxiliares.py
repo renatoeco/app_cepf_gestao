@@ -13,6 +13,8 @@ from googleapiclient.http import MediaIoBaseUpload
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
+
 
 
 
@@ -41,7 +43,8 @@ def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
 
     # Criando mensagem
     msg = MIMEMultipart()
-    msg["From"] = endereco_email
+    # msg["From"] = endereco_email
+    msg["From"] = formataddr(("Sistema de Gestão de Projetos do IEB", endereco_email))
     msg["To"] = ", ".join(destinatarios)
     msg["Subject"] = assunto
 

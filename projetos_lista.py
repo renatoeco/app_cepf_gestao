@@ -232,6 +232,8 @@ if df_filtrado.empty:
     st.warning("Nenhum projeto encontrado.")
     st.stop()
 
+# Ordenar ascendente pela sigla
+df_filtrado = df_filtrado.sort_values(by="sigla", ignore_index=True)
 
 
 # ============================================
