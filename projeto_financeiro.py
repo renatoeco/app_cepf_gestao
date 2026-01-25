@@ -1469,7 +1469,7 @@ if usuario_interno:
         # ============================
         # Layout único
         # ============================
-        LAYOUT_COLUNAS_RECIBOS = [1, 2, 2, 4]
+        LAYOUT_COLUNAS_RECIBOS = [1, 2, 2, 2, 5]
 
         servico_drive = obter_servico_drive()
         pasta_projeto_id = obter_pasta_projeto(
@@ -1486,7 +1486,7 @@ if usuario_interno:
 
             numero = parcela.get("numero")
 
-            col1, col2, col3, col4 = st.columns(LAYOUT_COLUNAS_RECIBOS)
+            col1, col2, col3, col4, col5 = st.columns(LAYOUT_COLUNAS_RECIBOS)
 
             col1.write(f"**Parcela {numero}**")
 
@@ -1511,16 +1511,25 @@ if usuario_interno:
             ):
                 st.session_state["recibo_aberto_parcela"] = numero
 
+
             # ----------------------------
-            # STATUS
+            # LINK DO RECIBO (se existir)
             # ----------------------------
             recibos_salvos = financeiro.get("recibos", {})
             recibo_parcela = recibos_salvos.get(str(numero))
 
             if recibo_parcela:
-                col4.success("Recibo salvo")
-            else:
-                col4.warning("Não salvo")
+                id_recibo = recibo_parcela.get("id_recibo")
+                nome_arquivo = recibo_parcela.get("nome_arquivo", "Recibo")
+
+                if id_recibo:
+                    col4.write(':material/check: Recibo salvo')
+                    link = gerar_link_drive(id_recibo)
+                    col5.markdown(f"[{nome_arquivo}]({link})")
+
+
+
+
 
 
             # =====================================================
