@@ -11,16 +11,6 @@ from funcoes_auxiliares import (
     sidebar_projeto
 )
 
-# import os
-# import tempfile
-# import json
-# import io
-
-
-# # Google Drive API
-# from google.oauth2.service_account import Credentials
-# from googleapiclient.discovery import build
-# from googleapiclient.http import MediaIoBaseUpload
 
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT
@@ -63,11 +53,20 @@ col_indicadores = db["indicadores"]
 ###########################################################################################################
 
 
+# Função auxiliar que salva lista de impactos no banco
+def salvar_impactos(chave, impactos, codigo_projeto):
+    """
+    Salva lista de impactos no banco.
+    """
+    resultado = col_projetos.update_one(
+        {"codigo": codigo_projeto},
+        {"$set": {chave: impactos}}
+    )
 
-# ==========================================================================================
+    return resultado.modified_count == 1
+
+
 # DIÁLOGO: VER RELATOS 
-# ==========================================================================================
-
 
 @st.dialog("Relatos de atividade", width="large")
 def dialog_relatos():
@@ -236,34 +235,6 @@ def dialog_relatos():
 
 
 
-
-
-
-
-
-# @st.dialog("Relatos de atividade", width="large")
-# def dialog_relatos():
-
-#     atividade = st.session_state.get("atividade_selecionada")
-
-#     # Se por algum motivo vier vazio/None
-#     if not isinstance(atividade, dict):
-#         st.warning("Nenhuma atividade selecionada. Feche o diálogo e selecione uma atividade na tabela.")
-#         return
-
-#     # Tenta pegar primeiro "atividade", depois "Atividade", depois usa texto padrão
-#     nome_atividade = (
-#         atividade.get("atividade")
-#         or atividade.get("Atividade")
-#         or "Atividade sem nome"
-#     )
-
-#     st.markdown(f"### {nome_atividade}")
-#     st.write("")
-
-
-
-
 ###########################################################################################################
 # TRATAMENTO DE DADOS
 ###########################################################################################################
@@ -311,10 +282,6 @@ if "_id" in df_indicadores.columns:
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
-
-# ???????????????????????
-# with st.expander("Colunas do projeto"):
-#     st.write(df_projeto.columns)
 
 
 # Logo do sidebar
@@ -790,7 +757,24 @@ with plano_trabalho:
         # --------------------------------------------------
         # MODO DE EDIÇÃO — ENTREGAS
         # --------------------------------------------------
+                      
+        
         if opcao_editar_pt == "Entregas":
+
+            # ------------------------------------------------------------------
+            # Carrega a lista de indicadores da coleção indicadores
+            # Esses indicadores serão usados no multiselect do data_editor
+            # ------------------------------------------------------------------
+            df_indicadores = pd.DataFrame(list(col_indicadores.find()))
+
+            # Garante que o campo _id é string
+            if "_id" in df_indicadores.columns:
+                df_indicadores["_id"] = df_indicadores["_id"].astype(str)
+
+            # Lista de opções que aparecerão no multiselect
+            # Você pode usar só o texto ou id + texto, aqui usei só o texto
+            lista_indicadores = df_indicadores["indicador"].tolist()
+
 
 
             st.write("")
@@ -822,21 +806,47 @@ with plano_trabalho:
             # 3) Carrega entregas existentes do componente selecionado
             entregas_existentes = componente.get("entregas", [])
 
-            # Cria um DataFrame SOMENTE com a coluna "entrega"
+
+
+            # ------------------------------------------------------------------
+            # Cria o DataFrame das entregas incluindo a coluna indicadores
+            # ------------------------------------------------------------------
             if entregas_existentes:
                 df_entregas = pd.DataFrame({
-                    "entrega": [e.get("entrega", "") for e in entregas_existentes]
+                    # Nome da entrega
+                    "entrega": [e.get("entrega", "") for e in entregas_existentes],
+
+                    # Lista de indicadores já associados à entrega (se existir)
+                    "Indicadores": [
+                        e.get("indicadores_doador", []) for e in entregas_existentes
+                    ]
                 })
             else:
-                df_entregas = pd.DataFrame({"entrega": pd.Series(dtype="str")})
+                df_entregas = pd.DataFrame({
+                    "entrega": pd.Series(dtype="str"),
+                    "Indicadores": pd.Series(dtype="object")
+                })
 
-            # Mostra o editor
+
+
+            # ------------------------------------------------------------------
+            # Editor de dados com coluna multiselect para indicadores
+            # ------------------------------------------------------------------
             df_editado = st.data_editor(
                 df_entregas,
                 num_rows="dynamic",
                 hide_index=True,
-                key="editor_entregas"
+                key="editor_entregas",
+                column_config={
+                    "Indicadores": st.column_config.MultiselectColumn(
+                        "Indicadores",
+                        options=lista_indicadores,
+                        help="Selecione os indicadores do doador associados a esta entrega"
+                    )
+                }
             )
+
+
 
             # Botão salvar
             salvar_entregas = st.button(
@@ -846,33 +856,45 @@ with plano_trabalho:
                 key="btn_salvar_entregas"
             )
 
+
             if salvar_entregas:
 
-                # Remove vazios
+                # --------------------------------------------------------------
+                # Remove linhas vazias
+                # --------------------------------------------------------------
                 df_editado["entrega"] = df_editado["entrega"].astype(str).str.strip()
                 df_editado = df_editado[df_editado["entrega"] != ""]
 
-                # IDs originais na ordem correta
+                # --------------------------------------------------------------
+                # IDs originais para manter consistência
+                # --------------------------------------------------------------
                 ids_original = [e["id"] for e in entregas_existentes]
 
                 nova_lista = []
                 import bson
 
+                # --------------------------------------------------------------
+                # Monta nova lista de entregas já com indicadores_doador
+                # --------------------------------------------------------------
                 for idx, row in df_editado.iterrows():
-                    nome = row["entrega"]
 
-                    # Se existia antes, mantém ID
+                    # Mantém ID antigo ou gera novo
                     if idx < len(ids_original):
                         id_usado = ids_original[idx]
                     else:
-                        id_usado = str(bson.ObjectId())  # ID novo
+                        id_usado = str(bson.ObjectId())
 
                     nova_lista.append({
                         "id": id_usado,
-                        "entrega": nome
+                        "entrega": row["entrega"],
+
+                        # Aqui é onde os indicadores são salvos no banco
+                        "indicadores_doador": row.get("Indicadores", [])
                     })
 
-                # Atualizar SOMENTE o componente selecionado
+                # --------------------------------------------------------------
+                # Atualiza apenas o componente selecionado
+                # --------------------------------------------------------------
                 componentes_atualizados = []
 
                 for comp in componentes:
@@ -884,18 +906,23 @@ with plano_trabalho:
                     else:
                         componentes_atualizados.append(comp)
 
-                # Salvar no banco de dados
+                # --------------------------------------------------------------
+                # Persistência no MongoDB
+                # --------------------------------------------------------------
                 resultado = col_projetos.update_one(
                     {"codigo": codigo_projeto_atual},
                     {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
                 )
 
                 if resultado.matched_count == 1:
-                    st.success("Entregas atualizadas com sucesso!")
+                    st.success("Entregas atualizadas com sucesso.", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
                 else:
                     st.error("Erro ao atualizar entregas.")
+
+
+
 
 
 
@@ -1000,18 +1027,6 @@ with plano_trabalho:
 # IMPACTOS
 # ###################################################################################################
 
-
-# Função auxiliar que salva lista de impactos no banco
-def salvar_impactos(chave, impactos, codigo_projeto):
-    """
-    Salva lista de impactos no banco.
-    """
-    resultado = col_projetos.update_one(
-        {"codigo": codigo_projeto},
-        {"$set": {chave: impactos}}
-    )
-
-    return resultado.modified_count == 1
 
 
 
@@ -1469,6 +1484,252 @@ with indicadores:
                     st.rerun()
                 else:
                     st.error("Erro ao salvar indicadores.")
+
+
+
+
+
+
+# ###################################################################################################
+# MONITORAMENTO
+# ###################################################################################################
+
+
+
+
+
+
+
+
+with monitoramento:
+    # ------------------------------------------------------------------
+    # Título principal da aba
+    # ------------------------------------------------------------------
+    st.header("Monitoramento")
+
+    # ------------------------------------------------------------------
+    # Recupera os componentes do plano de trabalho
+    # ------------------------------------------------------------------
+    componentes = df_projeto.iloc[0]["plano_trabalho"]["componentes"]
+
+    # ------------------------------------------------------------------
+    # Loop principal: percorre todos os componentes
+    # ------------------------------------------------------------------
+    for idx_comp, componente in enumerate(componentes, start=1):
+
+        # --------------------------------------------------------------
+        # Cabeçalho do componente
+        # --------------------------------------------------------------
+        st.subheader(f"Componente {idx_comp}: {componente['componente']}")
+
+        entregas = componente.get("entregas", [])
+
+        if not entregas:
+            st.info("Este componente não possui entregas cadastradas.")
+            continue
+
+        # --------------------------------------------------------------
+        # Loop secundário: percorre as entregas
+        # --------------------------------------------------------------
+        for idx_ent, entrega in enumerate(entregas, start=1):
+
+            # ----------------------------------------------------------
+            # Cada entrega tem seu próprio container visual
+            # ----------------------------------------------------------
+            with st.container(border=True):
+
+                # ------------------------------------------------------
+                # Título da entrega
+                # ------------------------------------------------------
+                st.markdown(f"### Entrega {idx_ent}: {entrega['entrega']}")
+
+                # ======================================================
+                # 1) INDICADORES DO DOADOR EM DUAS COLUNAS
+                # ======================================================
+
+                col1, col2 = st.columns([1, 3])
+
+                with col1:
+                    st.markdown("Indicadores do doador associados:")
+
+                with col2:
+                    indicadores_doador = entrega.get("indicadores_doador", [])
+                    if indicadores_doador:
+                        for ind in indicadores_doador:
+                            st.markdown(f"- {ind}")
+                    else:
+                        st.write("Nenhum indicador associado.")
+
+                # ======================================================
+                # 2) DATA EDITOR DE INDICADORES DO PROJETO
+                # ======================================================
+
+                # ------------------------------------------------------
+                # Recupera indicadores do projeto já salvos (se existirem)
+                # ------------------------------------------------------
+                dados_existentes = entrega.get("indicadores_projeto", [])
+
+                # ------------------------------------------------------
+                # Converte para DataFrame
+                # ------------------------------------------------------
+                if dados_existentes:
+                    df_monitoramento = pd.DataFrame(dados_existentes)
+                else:
+                    df_monitoramento = pd.DataFrame(
+                        columns=[
+                            "indicador_projeto",
+                            "linha_base",
+                            "meta",
+                            "resultado_atual",
+                            "observacoes_coleta",
+                            "unidade_medida",
+                            "periodicidade",
+                            "fonte_verificacao",
+                            "responsavel",
+                            "data_coleta"
+                        ]
+                    )
+
+                # ------------------------------------------------------
+                # Renomeia colunas para exibição
+                # ------------------------------------------------------
+                df_monitoramento = df_monitoramento.rename(columns={
+                    "indicador_projeto": "Indicador do projeto",
+                    "linha_base": "Linha de base",
+                    "meta": "Meta",
+                    "resultado_atual": "Resultado atual",
+                    "observacoes_coleta": "Observações da coleta",
+                    "unidade_medida": "Unidade de medida",
+                    "periodicidade": "Periodicidade",
+                    "fonte_verificacao": "Fonte de verificação",
+                    "responsavel": "Responsável",
+                    "data_coleta": "Data da coleta"
+                })
+
+                # ------------------------------------------------------
+                # Renderiza o data_editor
+                # ------------------------------------------------------
+                df_editado = st.data_editor(
+                    df_monitoramento,
+                    num_rows="dynamic",
+                    hide_index=True,
+                    key=f"editor_monitoramento_{componente['id']}_{entrega['id']}",
+                    column_config={
+                        "Indicador do projeto": st.column_config.TextColumn(),
+                        "Linha de base": st.column_config.NumberColumn(
+                            format="%.1f",
+                            step=0.1
+                        ),
+                        "Meta": st.column_config.NumberColumn(
+                            format="%.1f",
+                            step=0.1
+                        ),
+                        "Resultado atual": st.column_config.TextColumn(disabled=True),
+                        "Observações da coleta": st.column_config.TextColumn(disabled=True),
+                        "Unidade de medida": st.column_config.TextColumn(),
+                        "Periodicidade": st.column_config.TextColumn(),
+                        "Fonte de verificação": st.column_config.TextColumn(),
+                        "Responsável": st.column_config.TextColumn(),
+                        "Data da coleta": st.column_config.DateColumn(disabled=True)
+                    }
+                )
+
+                # ======================================================
+                # 3) BOTÃO DE SALVAR
+                # ======================================================
+
+                if st.button(
+                    "Salvar indicadores do projeto",
+                    key=f"btn_salvar_{componente['id']}_{entrega['id']}"
+                ):
+
+                    # --------------------------------------------------
+                    # Limpa linhas vazias
+                    # --------------------------------------------------
+                    df_editado = df_editado.dropna(
+                        how="all"
+                    )
+
+                    # --------------------------------------------------
+                    # Renomeia colunas para o padrão do banco
+                    # --------------------------------------------------
+                    df_para_salvar = df_editado.rename(columns={
+                        "Indicador do projeto": "indicador_projeto",
+                        "Linha de base": "linha_base",
+                        "Meta": "meta",
+                        "Resultado atual": "resultado_atual",
+                        "Observações da coleta": "observacoes_coleta",
+                        "Unidade de medida": "unidade_medida",
+                        "Periodicidade": "periodicidade",
+                        "Fonte de verificação": "fonte_verificacao",
+                        "Responsável": "responsavel",
+                        "Data da coleta": "data_coleta"
+                    })
+
+                    # --------------------------------------------------
+                    # Converte para lista de dicionários
+                    # --------------------------------------------------
+                    lista_indicadores_projeto = df_para_salvar.to_dict("records")
+
+                    # --------------------------------------------------
+                    # Atualiza apenas a entrega correta
+                    # --------------------------------------------------
+                    componentes_atualizados = []
+
+                    for comp in componentes:
+                        if comp["id"] == componente["id"]:
+                            novas_entregas = []
+
+                            for ent in comp.get("entregas", []):
+                                if ent["id"] == entrega["id"]:
+                                    novas_entregas.append({
+                                        **ent,
+                                        "indicadores_projeto": lista_indicadores_projeto
+                                    })
+                                else:
+                                    novas_entregas.append(ent)
+
+                            componentes_atualizados.append({
+                                **comp,
+                                "entregas": novas_entregas
+                            })
+                        else:
+                            componentes_atualizados.append(comp)
+
+                    # --------------------------------------------------
+                    # Persistência no MongoDB
+                    # --------------------------------------------------
+                    resultado = col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
+                        {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+                    )
+
+                    # --------------------------------------------------
+                    # Feedback ao usuário
+                    # --------------------------------------------------
+                    if resultado.matched_count == 1:
+                        st.success("Indicadores do projeto salvos com sucesso.")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Erro ao salvar indicadores do projeto.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
