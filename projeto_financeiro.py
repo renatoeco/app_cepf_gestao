@@ -20,6 +20,56 @@ from funcoes_auxiliares import (
     gerar_link_drive,
 )
 
+
+###########################################################################################################
+# CONFIGURAÇÕES DO STREAMLIT
+###########################################################################################################
+
+
+# Traduzindo o texto do st.file_uploader
+# Texto interno
+st.markdown("""
+<style>
+/* Esconde o texto padrão */
+[data-testid="stFileUploaderDropzone"] div div::before {
+    content: "";
+    color: rgba(49, 51, 63, 0.7);
+    font-size: 0.9rem;
+    font-weight: 400;
+    position: absolute;
+    top: 50px;              /* fixa no topo */
+    left: 50%;
+    transform: translate(-50%, 10%);
+    pointer-events: none;
+}
+/* Esconde o texto original */
+[data-testid="stFileUploaderDropzone"] div div span {
+    visibility: hidden !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Traduzindo Botão do file_uploader
+st.markdown("""
+<style>
+/* Alvo: apenas o botão dentro do componente de upload */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
+    font-size: 0px !important;   /* esconde o texto original */
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    min-width: 160px !important;
+}
+/* Insere o texto traduzido */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
+    content: "Selecionar arquivo";
+    font-size: 14px !important;
+    color: inherit;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################
@@ -1441,15 +1491,16 @@ with orcamento:
 
 
 
-
-
 # --------------------------------------------------
 # ABA RECIBOS
 # --------------------------------------------------
 
 if usuario_interno:
 
-    # Controle de estado para ajudar a abrir só um editor de recibo por vez
+    # ==================================================
+    # CONTROLE DE ESTADO
+    # Permite abrir apenas um uploader de recibo por vez
+    # ==================================================
     if "recibo_aberto_parcela" not in st.session_state:
         st.session_state["recibo_aberto_parcela"] = None
 
@@ -1460,39 +1511,54 @@ if usuario_interno:
         st.write("")
         st.write("")
 
+        # --------------------------------------------------
+        # Parcelas do projeto
+        # --------------------------------------------------
         parcelas = financeiro.get("parcelas", [])
 
         if not parcelas:
             st.caption("Não há parcelas cadastradas.")
             st.stop()
 
-        # ============================
-        # Layout único
-        # ============================
-        LAYOUT_COLUNAS_RECIBOS = [1, 2, 2, 2, 5]
+        # ==================================================
+        # Layout único das colunas
+        # (alterar aqui muda tudo)
+        # ==================================================
+        LAYOUT_COLUNAS_RECIBOS = [1.5, 2, 2, 2, 5]
 
+        # ==================================================
+        # Conexão com Google Drive
+        # ==================================================
         servico_drive = obter_servico_drive()
+
         pasta_projeto_id = obter_pasta_projeto(
             servico_drive,
             projeto["codigo"],
             projeto["sigla"]
         )
-        pasta_recibos_id = obter_pasta_recibos(servico_drive, pasta_projeto_id)
 
-        # ============================
-        # LINHAS
-        # ============================
+        pasta_recibos_id = obter_pasta_recibos(
+            servico_drive,
+            pasta_projeto_id
+        )
+
+        # ==================================================
+        # LINHAS (uma por parcela)
+        # ==================================================
         for parcela in parcelas:
 
             numero = parcela.get("numero")
 
             col1, col2, col3, col4, col5 = st.columns(LAYOUT_COLUNAS_RECIBOS)
 
+            # --------------------------------------------------
+            # COLUNA 1 — Identificação da parcela
+            # --------------------------------------------------
             col1.write(f"**Parcela {numero}**")
 
-            # ----------------------------
-            # GERAR RECIBO (futuro)
-            # ----------------------------
+            # --------------------------------------------------
+            # COLUNA 2 — Gerar recibo (placeholder futuro)
+            # --------------------------------------------------
             col2.button(
                 "Gerar recibo",
                 key=f"gerar_recibo_{numero}",
@@ -1500,9 +1566,9 @@ if usuario_interno:
                 icon=":material/receipt_long:"
             )
 
-            # ----------------------------
-            # GUARDAR RECIBO
-            # ----------------------------
+            # --------------------------------------------------
+            # COLUNA 3 — Guardar recibo (abre uploader)
+            # --------------------------------------------------
             if col3.button(
                 "Guardar recibo",
                 key=f"abrir_uploader_{numero}",
@@ -1512,94 +1578,280 @@ if usuario_interno:
                 st.session_state["recibo_aberto_parcela"] = numero
 
 
-            # ----------------------------
-            # LINK DO RECIBO (se existir)
-            # ----------------------------
-            recibos_salvos = financeiro.get("recibos", {})
-            recibo_parcela = recibos_salvos.get(str(numero))
+            # --------------------------------------------------
+            # COLUNA 4 + 5 — Link do recibo (se existir)
+            # Agora o recibo está DENTRO da parcela
+            # --------------------------------------------------
+            recibo = parcela.get("recibo")
 
-            if recibo_parcela:
-                id_recibo = recibo_parcela.get("id_recibo")
-                nome_arquivo = recibo_parcela.get("nome_arquivo", "Recibo")
+            if recibo:
+                id_recibo = recibo.get("id_recibo")
+                nome_arquivo = recibo.get("nome_arquivo", "Recibo")
 
                 if id_recibo:
-                    col4.write(':material/check: Recibo salvo')
+                    col4.write(":material/check: Recibo salvo")
                     link = gerar_link_drive(id_recibo)
                     col5.markdown(f"[{nome_arquivo}]({link})")
 
 
-
-
-
-
-            # =====================================================
+            # ==================================================
             # BLOCO DE UPLOAD (abre somente para a parcela ativa)
-            # =====================================================
+            # ==================================================
             if st.session_state["recibo_aberto_parcela"] == numero:
-
+                st.write('')
                 with st.container(border=True):
 
                     st.markdown(f"**Enviar recibo da Parcela {numero}**")
 
                     arquivo = st.file_uploader(
-                        "Selecione o arquivo do recibo",
+                        "Selecione o arquivo do recibo:",
                         type=["pdf", "png", "jpg", "jpeg"],
                         key=f"uploader_recibo_{numero}"
                     )
+    
+                    st.write('')
 
-                    col_salvar, col_cancelar = st.columns([1, 1])
+                    with st.container(horizontal=True):
 
-                    # ----------------------------
-                    # CANCELAR
-                    # ----------------------------
-                    if col_cancelar.button("Cancelar", key=f"cancelar_{numero}"):
-                        st.session_state["recibo_aberto_parcela"] = None
-                        st.rerun()
-
-                    # ----------------------------
-                    # SALVAR
-                    # ----------------------------
-                    if col_salvar.button(
-                        "Salvar recibo",
-                        key=f"salvar_recibo_{numero}",
-                        type="primary"
-                    ):
-
-                        if not arquivo:
-                            st.error("Selecione um arquivo antes de salvar.")
-                            st.stop()
-
-                        # Upload no Drive
-                        id_arquivo = enviar_arquivo_drive(
-                            servico_drive,
-                            pasta_recibos_id,
-                            arquivo
-                        )
-
-                        if not id_arquivo:
-                            st.stop()
 
                         # ----------------------------
-                        # Salvar no Mongo
+                        # SALVAR
                         # ----------------------------
-                        col_projetos.update_one(
-                            {"codigo": codigo_projeto_atual},
-                            {
-                                "$set": {
-                                    f"financeiro.recibos.{numero}": {
-                                        "id_recibo": id_arquivo,
-                                        "nome_arquivo": arquivo.name
+                        if st.button(
+                            "Salvar recibo",
+                            key=f"salvar_recibo_{numero}",
+                            type="primary",
+                            icon=":material/save:",
+                            width=180
+
+                        ):
+
+                            # Validação básica
+                            if not arquivo:
+                                st.error("Selecione um arquivo antes de salvar.")
+                                st.stop()
+
+                            # -----------------------------------
+                            # Upload no Google Drive
+                            # -----------------------------------
+                            id_arquivo = enviar_arquivo_drive(
+                                servico_drive,
+                                pasta_recibos_id,
+                                arquivo
+                            )
+
+                            if not id_arquivo:
+                                st.stop()
+
+                            # -----------------------------------
+                            # SALVAR NO MONGODB (dentro da parcela)
+                            # -----------------------------------
+                            col_projetos.update_one(
+                                {
+                                    "codigo": codigo_projeto_atual,
+                                    "financeiro.parcelas.numero": numero
+                                },
+                                {
+                                    "$set": {
+                                        "financeiro.parcelas.$.recibo": {
+                                            "id_recibo": id_arquivo,
+                                            "nome_arquivo": arquivo.name
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
 
-                        st.success("Recibo salvo com sucesso!")
-                        st.session_state["recibo_aberto_parcela"] = None
-                        time.sleep(1.5)
-                        st.rerun()
+                            # -----------------------------------
+                            # Feedback + reset de estado
+                            # -----------------------------------
+                            st.success(
+                                "Recibo salvo com sucesso!",
+                                icon=":material/check:"
+                            )
+                            st.session_state["recibo_aberto_parcela"] = None
+                            time.sleep(3)
+                            st.rerun()
+
+                        # ----------------------------
+                        # CANCELAR
+                        # ----------------------------
+                        if st.button(
+                            "Cancelar",
+                            key=f"cancelar_{numero}",
+                            icon=":material/close:",
+                            width=180
+                        ):
+                            st.session_state["recibo_aberto_parcela"] = None
+                            st.rerun()
+
 
             st.divider()
+
+
+
+
+
+
+
+
+
+# # --------------------------------------------------
+# # ABA RECIBOS
+# # --------------------------------------------------
+
+# if usuario_interno:
+
+#     # Controle de estado para ajudar a abrir só um editor de recibo por vez
+#     if "recibo_aberto_parcela" not in st.session_state:
+#         st.session_state["recibo_aberto_parcela"] = None
+
+
+#     with recibos:
+
+#         st.markdown("### Recibos")
+#         st.write("")
+#         st.write("")
+
+#         parcelas = financeiro.get("parcelas", [])
+
+#         if not parcelas:
+#             st.caption("Não há parcelas cadastradas.")
+#             st.stop()
+
+#         # ============================
+#         # Layout único
+#         # ============================
+#         LAYOUT_COLUNAS_RECIBOS = [1, 2, 2, 2, 5]
+
+#         servico_drive = obter_servico_drive()
+#         pasta_projeto_id = obter_pasta_projeto(
+#             servico_drive,
+#             projeto["codigo"],
+#             projeto["sigla"]
+#         )
+#         pasta_recibos_id = obter_pasta_recibos(servico_drive, pasta_projeto_id)
+
+#         # ============================
+#         # LINHAS
+#         # ============================
+#         for parcela in parcelas:
+
+#             numero = parcela.get("numero")
+
+#             col1, col2, col3, col4, col5 = st.columns(LAYOUT_COLUNAS_RECIBOS)
+
+#             col1.write(f"**Parcela {numero}**")
+
+#             # ----------------------------
+#             # GERAR RECIBO (futuro)
+#             # ----------------------------
+#             col2.button(
+#                 "Gerar recibo",
+#                 key=f"gerar_recibo_{numero}",
+#                 width="stretch",
+#                 icon=":material/receipt_long:"
+#             )
+
+#             # ----------------------------
+#             # GUARDAR RECIBO
+#             # ----------------------------
+#             if col3.button(
+#                 "Guardar recibo",
+#                 key=f"abrir_uploader_{numero}",
+#                 width="stretch",
+#                 icon=":material/save:"
+#             ):
+#                 st.session_state["recibo_aberto_parcela"] = numero
+
+
+#             # ----------------------------
+#             # LINK DO RECIBO (se existir)
+#             # ----------------------------
+#             recibos_salvos = financeiro.get("recibos", {})
+#             recibo_parcela = recibos_salvos.get(str(numero))
+
+#             if recibo_parcela:
+#                 id_recibo = recibo_parcela.get("id_recibo")
+#                 nome_arquivo = recibo_parcela.get("nome_arquivo", "Recibo")
+
+#                 if id_recibo:
+#                     col4.write(':material/check: Recibo salvo')
+#                     link = gerar_link_drive(id_recibo)
+#                     col5.markdown(f"[{nome_arquivo}]({link})")
+
+
+
+
+
+
+#             # =====================================================
+#             # BLOCO DE UPLOAD (abre somente para a parcela ativa)
+#             # =====================================================
+#             if st.session_state["recibo_aberto_parcela"] == numero:
+
+#                 with st.container(border=True):
+
+#                     st.markdown(f"**Enviar recibo da Parcela {numero}**")
+
+#                     arquivo = st.file_uploader(
+#                         "Selecione o arquivo do recibo",
+#                         type=["pdf", "png", "jpg", "jpeg"],
+#                         key=f"uploader_recibo_{numero}"
+#                     )
+
+#                     col_salvar, col_cancelar = st.columns([1, 1])
+
+#                     # ----------------------------
+#                     # CANCELAR
+#                     # ----------------------------
+#                     if col_cancelar.button("Cancelar", key=f"cancelar_{numero}"):
+#                         st.session_state["recibo_aberto_parcela"] = None
+#                         st.rerun()
+
+#                     # ----------------------------
+#                     # SALVAR
+#                     # ----------------------------
+#                     if col_salvar.button(
+#                         "Salvar recibo",
+#                         key=f"salvar_recibo_{numero}",
+#                         type="primary"
+#                     ):
+
+#                         if not arquivo:
+#                             st.error("Selecione um arquivo antes de salvar.")
+#                             st.stop()
+
+#                         # Upload no Drive
+#                         id_arquivo = enviar_arquivo_drive(
+#                             servico_drive,
+#                             pasta_recibos_id,
+#                             arquivo
+#                         )
+
+#                         if not id_arquivo:
+#                             st.stop()
+
+#                         # ----------------------------
+#                         # Salvar no Mongo
+#                         # ----------------------------
+#                         col_projetos.update_one(
+#                             {"codigo": codigo_projeto_atual},
+#                             {
+#                                 "$set": {
+#                                     f"financeiro.recibos.{numero}": {
+#                                         "id_recibo": id_arquivo,
+#                                         "nome_arquivo": arquivo.name
+#                                     }
+#                                 }
+#                             }
+#                         )
+
+#                         st.success("Recibo salvo com sucesso!", icon=":material/check:")
+#                         st.session_state["recibo_aberto_parcela"] = None
+#                         time.sleep(3)
+#                         st.rerun()
+
+#             st.divider()
 
 
 
