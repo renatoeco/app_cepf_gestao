@@ -97,6 +97,7 @@ db = conectar_mongo_cepf_gestao()
 # Define as coleções específicas que serão utilizadas a partir do banco
 col_projetos = db["projetos"]
 
+col_organizacoes = db["organizacoes"]
 
 ###########################################################################################################
 # TRATAMENTO DE DADOS
@@ -175,8 +176,7 @@ def gerar_recibo_docx(
     valor_extenso = valor_por_extenso(valor_parcela)
     ordinal = numero_ordinal_pt(numero_parcela)
 
-    data_assinatura = "XX/XX/XXXX"
-    # data_assinatura = data_extenso_pt(data_assinatura_contrato)
+    data_assinatura = data_extenso_pt(data_assinatura_contrato)
 
     data_hoje = data_extenso_pt(datetime.datetime.today())
 
@@ -1751,22 +1751,40 @@ if usuario_interno:
                                 "Cadastre ao menos um contato com essa opção marcada antes de gerar o recibo."
                                 )
                         else:
+                            # ==========================
+                            # CARREGA ORGANIZAÇÃO SOMENTE AGORA
+                            # ==========================
+                            organizacao_doc = col_organizacoes.find_one(
+                                {"nome_organizacao": projeto["organizacao"]},
+                                {"cnpj": 1}
+                            )
+
+                            if not organizacao_doc:
+                                st.error(
+                                    f"Não foi encontrado CNPJ para a organização '{projeto['organizacao']}'."
+                                )
+                                st.stop()
+
+                            cnpj_organizacao = organizacao_doc.get("cnpj")
+
+                            # ==========================
+                            # GERA RECIBO
+                            # ==========================
                             gerar_recibo_docx(
                                 caminho_arquivo=caminho,
                                 valor_parcela=parcela.get("valor", 0),
                                 numero_parcela=numero,
                                 nome_projeto=projeto["nome_do_projeto"],
-                                data_assinatura_contrato=datetime.datetime.strptime(
-                                    projeto["data_inicio_contrato"], "%d/%m/%Y"
-                                ).date(),
+                                data_assinatura_contrato=projeto.get("contrato_data_assinatura"),
                                 contatos=contatos_assinam,
                                 nome_organizacao=projeto["organizacao"],
-                                cnpj_organizacao="00.000.000/0001-00"
+                                cnpj_organizacao=cnpj_organizacao
                             )
 
                             st.session_state["recibos_gerados"][chave] = caminho
                             st.rerun()
-
+       
+       
                 # ==========================
                 # BAIXAR RECIBO
                 # ==========================

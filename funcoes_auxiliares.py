@@ -3,11 +3,6 @@ from pymongo import MongoClient
 import datetime
 import pandas as pd
 import io
-
-# # Geração de docx
-# from docx import Document
-# from docx.shared import Pt
-# from docx.enum.text import WD_ALIGN_PARAGRAPH
 from num2words import num2words
 
 # Google Drive API

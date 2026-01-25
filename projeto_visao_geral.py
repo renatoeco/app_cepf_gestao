@@ -666,6 +666,27 @@ else:
         st.divider()
         
         st.write('**Contratos e Emendas de contrato**')
+
+
+        # ---------- DATA DE ASSINATURA DO CONTRATO ----------
+
+        # Valor salvo no banco (pode não existir)
+        data_assinatura_salva = projeto.get("contrato_data_assinatura")
+
+        if data_assinatura_salva:
+            # converte datetime/string para date
+            data_assinatura_default = pd.to_datetime(data_assinatura_salva).date()
+        else:
+            data_assinatura_default = None
+
+        data_assinatura_contrato = st.date_input(
+            "Data de assinatura do contrato:",
+            value=data_assinatura_default,
+            format="DD/MM/YYYY",
+            width=200
+        )
+
+        st.write('')
         
         contratos = projeto.get("contratos", [])
 
@@ -687,7 +708,7 @@ else:
         )
 
         st.write('')
-        st.write(":material/add: Adicionar documento")
+        st.write("Adicionar documento:")
 
         descricao_contrato = st.text_input(
             "Descrição do documento",
@@ -784,7 +805,17 @@ else:
                         # --------------------------------------------------
                         # ATUALIZA O PROJETO
                         # --------------------------------------------------
-                        
+
+                        # Converte para datetime (Mongo)
+                        if data_assinatura_contrato:
+                            data_assinatura_dt = datetime.datetime.combine(
+                                data_assinatura_contrato, datetime.datetime.min.time()
+                            )
+                        else:
+                            data_assinatura_dt = None
+
+
+
                         # Atualizações na coleção de Projetos
                         col_projetos.update_one(
                             {"_id": projeto_id},
@@ -802,6 +833,7 @@ else:
                                     "responsavel": responsavel_str,
                                     "direcoes_estrategicas": direcoes or [],
                                     "publicos": publicos or [],
+                                    "contrato_data_assinatura": data_assinatura_dt, 
                                 }
                             }
                         )
