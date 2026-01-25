@@ -4,6 +4,12 @@ import datetime
 import pandas as pd
 import io
 
+# # Geração de docx
+# from docx import Document
+# from docx.shared import Pt
+# from docx.enum.text import WD_ALIGN_PARAGRAPH
+from num2words import num2words
+
 # Google Drive API
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -16,6 +22,117 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 
 
+def gerar_recibo_docx(
+    caminho_arquivo,
+    valor_parcela,
+    numero_parcela,
+    nome_projeto,
+    data_assinatura_contrato,
+    contatos,
+    nome_organizacao,
+    cnpj_organizacao
+):
+    """
+    Gera um arquivo DOCX de recibo com texto padrão do projeto.
+    """
+
+    doc = Document()
+
+    # ============================
+    # TÍTULO
+    # ============================
+    titulo = doc.add_paragraph("Recibo")
+    titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    titulo.runs[0].bold = True
+    titulo.runs[0].font.size = Pt(14)
+
+    doc.add_paragraph("")
+
+    # ============================
+    # TEXTO PRINCIPAL
+    # ============================
+    valor_fmt = f"R$ {valor_parcela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    valor_extenso = valor_por_extenso(valor_parcela)
+    ordinal = numero_ordinal_pt(numero_parcela)
+
+    data_assinatura = data_extenso_pt(data_assinatura_contrato)
+    data_hoje = data_extenso_pt(datetime.today())
+
+    texto = (
+        f"Recebi do Instituto Internacional de Educação do Brasil (IEB), "
+        f"a quantia de {valor_fmt} ({valor_extenso}), referente à {ordinal} "
+        f"parcela de Recursos destinados a apoiar o projeto titulado {nome_projeto}, "
+        f"sob o Mecanismo de Pequenos Apoios, conforme o contrato de subvenção nº "
+        f"IEB/CEPF/33-2025, assinado em {data_assinatura}, no âmbito do Fundo de "
+        f"Parceria para Ecossistemas Críticos - CEPF Cerrado.\n\n"
+        f"Brasília-DF, {data_hoje}"
+    )
+
+    p = doc.add_paragraph(texto)
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    doc.add_paragraph("\n")
+
+    # ============================
+    # ASSINATURAS
+    # ============================
+    for contato in contatos:
+
+        doc.add_paragraph("\n\n")
+
+        linha = doc.add_paragraph("_" * 50)
+        linha.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        nome_org = doc.add_paragraph(nome_organizacao)
+        nome_org.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        nome_org.runs[0].bold = True
+
+        doc.add_paragraph(f"CNPJ {cnpj_organizacao}").alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_paragraph(contato.get("nome", "")).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_paragraph(contato.get("funcao", "")).alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # ============================
+    # SALVAR
+    # ============================
+    doc.save(caminho_arquivo)
+
+
+
+
+
+
+
+def valor_por_extenso(valor: float) -> str:
+    return num2words(valor, lang="pt_BR", to="currency")
+
+
+
+
+def data_extenso_pt(data: datetime) -> str:
+    meses = [
+        "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+        "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+    ]
+
+    return f"{data.day} de {meses[data.month - 1]} de {data.year}"
+
+
+
+
+def numero_ordinal_pt(numero: int) -> str:
+    mapa = {
+        1: "primeira",
+        2: "segunda",
+        3: "terceira",
+        4: "quarta",
+        5: "quinta",
+        6: "sexta",
+        7: "sétima",
+        8: "oitava",
+        9: "nona",
+        10: "décima"
+    }
+    return mapa.get(numero, f"{numero}ª")
 
 
 
@@ -638,7 +755,7 @@ def sidebar_projeto():
     if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
 
         # if st.sidebar.button("Voltar para Home", icon=":material/arrow_back:", type="tertiary"):
-        if st.sidebar.button("Sair do projeto", icon=":material/arrow_back:", type="tertiary"):
+        if st.sidebar.button("Voltar ao Painel", icon=":material/arrow_back:", type="tertiary"):
             
             if st.session_state.tipo_usuario == 'admin':
                 st.session_state.pagina_atual = 'home_admin'
