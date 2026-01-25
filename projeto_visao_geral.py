@@ -195,33 +195,6 @@ def obter_pasta_projeto(servico, codigo, sigla):
 
 
 
-# def obter_pasta_projeto(servico, codigo, sigla):
-#     """
-#     Retorna o ID da pasta do projeto no Google Drive.
-
-#     - Usa o nome: 'codigo - sigla'
-#     - Cria a pasta somente se não existir
-#     - Guarda o ID no session_state para evitar duplicações
-#     """
-
-#     chave = f"pasta_projeto_{codigo}"
-
-#     # Se já foi criada nesta sessão, reutiliza
-#     if chave in st.session_state:
-#         return st.session_state[chave]
-
-#     # Cria ou localiza a pasta do projeto
-#     pasta_id = obter_ou_criar_pasta(
-#         servico,
-#         f"{codigo} - {sigla}",
-#         st.secrets["drive"]["pasta_drive_projetos"]
-#     )
-
-#     # Guarda no session_state
-#     st.session_state[chave] = pasta_id
-
-#     return pasta_id
-
 
 def obter_pasta_locais(servico, pasta_projeto_id):
     """
@@ -1247,18 +1220,6 @@ else:
 
 
 
-# if not anotacoes_visiveis:
-# # if not anotacoes:
-#     st.caption("Não há anotações.")
-# else:
-#     df_anotacoes = pd.DataFrame(anotacoes_visiveis)
-#     # df_anotacoes = pd.DataFrame(anotacoes)
-#     df_anotacoes = df_anotacoes[["data", "texto", "autor", "tipo"]]
-#     # df_anotacoes = df_anotacoes[["data", "texto", "autor"]]
-#     with st.container():
-#         ui.table(data=df_anotacoes, key="tabela_anotacoes_fixa")
-
-
 
 st.write('')
 st.write('')
@@ -1470,6 +1431,8 @@ def gerenciar_contatos():
     # Abas para criar e editar contatos
     nova_tab, editar_tab = st.tabs(["Novo contato", "Editar contato"])
 
+
+
     # ========================================================
     # NOVO CONTATO
     # ========================================================
@@ -1480,6 +1443,13 @@ def gerenciar_contatos():
         funcao = st.text_input("Função no projeto")
         telefone = st.text_input("Telefone")
         email = st.text_input("E-mail")
+
+        assina_docs = st.checkbox(
+            "Incluir na assinatura de contratos e recibos",
+            value=False,
+            key="novo_contato_assina_docs"
+        )
+
 
         st.write('')
         # Botão de salvar
@@ -1501,6 +1471,7 @@ def gerenciar_contatos():
                 "funcao": funcao.strip(),
                 "telefone": telefone.strip(),
                 "email": email.strip(),
+                "assina_docs": assina_docs,  # 👈 NOVO
                 "autor": st.session_state.nome,
             }
 
@@ -1516,6 +1487,12 @@ def gerenciar_contatos():
                 st.rerun()
             else:
                 st.error("Erro ao salvar contato.")
+
+
+
+
+
+
 
     # ========================================================
     # EDITAR CONTATO
@@ -1558,6 +1535,14 @@ def gerenciar_contatos():
         telefone = st.text_input("Telefone", value=contato_selecionado.get("telefone", ""))
         email = st.text_input("E-mail", value=contato_selecionado.get("email", ""))
 
+        # CHECKBOX PRÉ-CARREGADO DO BANCO
+        assina_docs = st.checkbox(
+            "Incluir na assinatura de contratos e recibos",
+            value=contato_selecionado.get("assina_docs", False),
+            key=f"editar_contato_assina_docs_{contato_selecionado['nome']}"
+        )
+
+
         st.write('')
         # Botão de salvar alterações
         if st.button(
@@ -1571,7 +1556,7 @@ def gerenciar_contatos():
                 st.warning("Nome e função são obrigatórios.")
                 return
 
-            # Atualiza o contato específico (sem ID)
+            # Atualiza o contato específico
             resultado = col_projetos.update_one(
                 {
                     "codigo": st.session_state.projeto_atual,
@@ -1585,16 +1570,19 @@ def gerenciar_contatos():
                         "contatos.$.funcao": funcao.strip(),
                         "contatos.$.telefone": telefone.strip(),
                         "contatos.$.email": email.strip(),
+                        "contatos.$.assina_docs": assina_docs,  # 👈 NOVO
                     }
                 }
             )
 
             if resultado.modified_count == 1:
-                st.success("Contato atualizado com sucesso!")
+                st.success("Contato atualizado com sucesso!", icon=":material/check:")
                 time.sleep(2)
                 st.rerun()
             else:
                 st.error("Erro ao atualizar contato.")
+
+
 
 
 with st.container(horizontal=True, horizontal_alignment="right"):
@@ -1609,6 +1597,11 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 
 
 
+
+
+
+
+
 contatos = (
     df_projeto["contatos"].values[0]
     if "contatos" in df_projeto.columns and df_projeto["contatos"].values[0]
@@ -1620,6 +1613,12 @@ if not contatos:
 else:
     df_contatos = pd.DataFrame(contatos)
 
+    # Coluna de exibição: assina documentos
+    df_contatos["Assina documentos"] = df_contatos.apply(
+        lambda row: "Sim" if row.get("assina_docs", False) is True else "",
+        axis=1
+    )
+
     # Renomeia colunas para exibição
     df_contatos = df_contatos.rename(columns={
         "nome": "Nome",
@@ -1629,10 +1628,15 @@ else:
     })
 
     # Define ordem das colunas
-    df_contatos = df_contatos[["Nome", "Função no projeto", "Telefone", "E-mail"]]
+    df_contatos = df_contatos[
+        ["Nome", "Função no projeto", "Telefone", "E-mail", "Assina documentos"]
+    ]
 
     with st.container():
         ui.table(data=df_contatos, key="tabela_contatos")
+
+
+
 
 
 

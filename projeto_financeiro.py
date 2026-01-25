@@ -30,6 +30,14 @@ from funcoes_auxiliares import (
 )
 
 
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+sidebar_projeto()
+
+
+
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT
 ###########################################################################################################
@@ -226,33 +234,37 @@ def gerar_recibo_docx(
         p.paragraph_format.line_spacing = 1.3
         if bold:
             p.runs[0].bold = True
+        return p  # retorna para ajuste de fonte depois
+
 
     for contato in contatos:
 
-        # Espaço ANTES do bloco (um único espaço controlado)
+        # Espaço ANTES do bloco
         p = doc.add_paragraph("")
         p.paragraph_format.space_after = Pt(18)
 
         # Linha de assinatura
-        add_assinatura_centralizada(doc, "_" * 65)
+        p = add_assinatura_centralizada(doc, "_" * 65)
 
         # Organização
-        add_assinatura_centralizada(doc, nome_organizacao, bold=True)
+        p = add_assinatura_centralizada(doc, nome_organizacao, bold=True)
 
         # CNPJ
-        add_assinatura_centralizada(doc, f"CNPJ {cnpj_organizacao}", bold=True)
+        p = add_assinatura_centralizada(doc, f"CNPJ {cnpj_organizacao}", bold=True)
 
         # Nome
-        add_assinatura_centralizada(doc, contato.get("nome", ""))
+        p = add_assinatura_centralizada(doc, contato.get("nome", ""))
 
         # Função
-        add_assinatura_centralizada(doc, contato.get("funcao", ""))
+        p = add_assinatura_centralizada(doc, contato.get("funcao", ""))
 
+        # Parágrafo vazio entre assinaturas
         p = doc.add_paragraph("")
 
-    # Ajusta o tamanho da fonte
-    for run in p.runs:
-        run.font.size = Pt(12.5)
+        # Ajuste de fonte do último parágrafo criado
+        for run in p.runs:
+            run.font.size = Pt(12.5)
+
 
 
     # ============================
@@ -1697,19 +1709,32 @@ if usuario_interno:
             col1.write(f"**Parcela {numero}**")
 
             # --------------------------------------------------
-            # COLUNA 2 — Gerar recibo (placeholder futuro)
+            # COLUNA 2 — Gerar recibo
             # --------------------------------------------------
  
- 
+
             with col2:
 
                 codigo = projeto["codigo"]
                 chave = f"{numero}_{codigo}"
+                contatos = projeto.get("contatos", [])
+
+
                 caminho = f"/tmp/recibo_parcela_{numero}_{codigo}.docx"
 
-                # ==================================================
-                # ESTADO 1 — AINDA NÃO GERADO
-                # ==================================================
+                # Inicializa estado
+                if "recibos_gerados" not in st.session_state:
+                    st.session_state["recibos_gerados"] = {}
+
+                # Filtra contatos aptos para assinatura
+                contatos_assinam = [
+                    c for c in contatos
+                    if c.get("assina_docs", False) is True
+                ]
+
+                # ==========================
+                # GERAR RECIBO
+                # ==========================
                 if chave not in st.session_state["recibos_gerados"]:
 
                     if st.button(
@@ -1719,7 +1744,13 @@ if usuario_interno:
                         icon=":material/receipt_long:",
                         type="secondary"
                     ):
-                        with st.spinner("Gerando recibo..."):
+
+                        if not contatos_assinam:
+                            st.error(
+                                ":material/warning: Não há contatos cadastrados com a responsabilidade de assinar documentos. "
+                                "Cadastre ao menos um contato com essa opção marcada antes de gerar o recibo."
+                                )
+                        else:
                             gerar_recibo_docx(
                                 caminho_arquivo=caminho,
                                 valor_parcela=parcela.get("valor", 0),
@@ -1728,17 +1759,17 @@ if usuario_interno:
                                 data_assinatura_contrato=datetime.datetime.strptime(
                                     projeto["data_inicio_contrato"], "%d/%m/%Y"
                                 ).date(),
-                                contatos=projeto.get("contatos", []),
+                                contatos=contatos_assinam,
                                 nome_organizacao=projeto["organizacao"],
                                 cnpj_organizacao="00.000.000/0001-00"
                             )
 
-                        st.session_state["recibos_gerados"][chave] = caminho
-                        st.rerun()
+                            st.session_state["recibos_gerados"][chave] = caminho
+                            st.rerun()
 
-                # ==================================================
-                # ESTADO 2 — JÁ GERADO → DOWNLOAD
-                # ==================================================
+                # ==========================
+                # BAIXAR RECIBO
+                # ==========================
                 else:
                     with open(caminho, "rb") as f:
                         st.download_button(
@@ -1752,116 +1783,9 @@ if usuario_interno:
                             use_container_width=True
                         )
 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-            # with col2:
+                    st.caption("Clique para baixar")
 
 
-            #     if st.button(
-            #         "Gerar recibo",
-            #         key=f"gerar_recibo_{numero}",
-            #         width="stretch",
-            #         icon=":material/receipt_long:"
-            #     ):
-
-            #         # Caminho temporário
-            #         codigo_projeto = projeto["codigo"]
-            #         caminho = f"/tmp/recibo_parcela_{numero}_{codigo_projeto}.docx"
-
-            #         # Gerar o arquivo
-            #         gerar_recibo_docx(
-            #             caminho_arquivo=caminho,
-            #             valor_parcela=parcela.get("valor", 0),
-            #             numero_parcela=numero,
-            #             nome_projeto=projeto["nome_do_projeto"],
-            #             data_assinatura_contrato=datetime.datetime.strptime(
-            #                 projeto["data_inicio_contrato"], "%d/%m/%Y"
-            #             ).date(),
-            #             contatos=projeto.get("contatos", []),
-            #             nome_organizacao=projeto.get("organizacao", ""),
-            #             cnpj_organizacao="00.000.000/0001-00"
-            #         )
-
-            #         # Download imediato
-            #         with open(caminho, "rb") as f:
-            #             st.download_button(
-            #                 label="⬇️ Baixando recibo...",
-            #                 data=f,
-            #                 file_name=f"recibo_parcela_{numero}_{codigo_projeto}.docx",
-            #                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            #             )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            # if col2.button(
-            #     "Gerar recibo",
-            #     key=f"gerar_recibo_{numero}",
-            #     width="stretch",
-            #     icon=":material/receipt_long:"
-            # ):
-
-            #     codigo = projeto["codigo"]
-            #     caminho = f"/tmp/recibo_parcela_{numero}_{codigo}.docx"
-
-            #     # caminho = f"/tmp/recibo_parcela_{numero}.docx"
-
-            #     gerar_recibo_docx(
-            #         caminho_arquivo=caminho,
-            #         valor_parcela=parcela.get("valor", 0),
-            #         numero_parcela=numero,
-            #         nome_projeto=projeto["nome_do_projeto"],
-            #         data_assinatura_contrato=datetime.datetime.strptime(
-            #             projeto["data_inicio_contrato"], "%d/%m/%Y"
-            #         ),
-            #         contatos=projeto.get("contatos", []),
-            #         nome_organizacao=projeto.get("organizacao", ""),
-            #         cnpj_organizacao="00.000.000/0001-00"  # ajustar depois
-            #     )
-
-            #     with open(caminho, "rb") as f:
-            #         st.download_button(
-            #             "Baixar recibo",
-            #             f,
-            #             file_name=f"recibo_parcela_{numero}.docx"
-            #         )
-
-
-            # col2.button(
-            #     "Gerar recibo",
-            #     key=f"gerar_recibo_{numero}",
-            #     width="stretch",
-            #     icon=":material/receipt_long:"
-            # )
 
             # --------------------------------------------------
             # COLUNA 3 — Guardar recibo (abre uploader)
@@ -1987,259 +1911,3 @@ if usuario_interno:
 
 
 
-
-
-
-
-
-# # --------------------------------------------------
-# # ABA RECIBOS
-# # --------------------------------------------------
-
-# if usuario_interno:
-
-#     # Controle de estado para ajudar a abrir só um editor de recibo por vez
-#     if "recibo_aberto_parcela" not in st.session_state:
-#         st.session_state["recibo_aberto_parcela"] = None
-
-
-#     with recibos:
-
-#         st.markdown("### Recibos")
-#         st.write("")
-#         st.write("")
-
-#         parcelas = financeiro.get("parcelas", [])
-
-#         if not parcelas:
-#             st.caption("Não há parcelas cadastradas.")
-#             st.stop()
-
-#         # ============================
-#         # Layout único
-#         # ============================
-#         LAYOUT_COLUNAS_RECIBOS = [1, 2, 2, 2, 5]
-
-#         servico_drive = obter_servico_drive()
-#         pasta_projeto_id = obter_pasta_projeto(
-#             servico_drive,
-#             projeto["codigo"],
-#             projeto["sigla"]
-#         )
-#         pasta_recibos_id = obter_pasta_recibos(servico_drive, pasta_projeto_id)
-
-#         # ============================
-#         # LINHAS
-#         # ============================
-#         for parcela in parcelas:
-
-#             numero = parcela.get("numero")
-
-#             col1, col2, col3, col4, col5 = st.columns(LAYOUT_COLUNAS_RECIBOS)
-
-#             col1.write(f"**Parcela {numero}**")
-
-#             # ----------------------------
-#             # GERAR RECIBO (futuro)
-#             # ----------------------------
-#             col2.button(
-#                 "Gerar recibo",
-#                 key=f"gerar_recibo_{numero}",
-#                 width="stretch",
-#                 icon=":material/receipt_long:"
-#             )
-
-#             # ----------------------------
-#             # GUARDAR RECIBO
-#             # ----------------------------
-#             if col3.button(
-#                 "Guardar recibo",
-#                 key=f"abrir_uploader_{numero}",
-#                 width="stretch",
-#                 icon=":material/save:"
-#             ):
-#                 st.session_state["recibo_aberto_parcela"] = numero
-
-
-#             # ----------------------------
-#             # LINK DO RECIBO (se existir)
-#             # ----------------------------
-#             recibos_salvos = financeiro.get("recibos", {})
-#             recibo_parcela = recibos_salvos.get(str(numero))
-
-#             if recibo_parcela:
-#                 id_recibo = recibo_parcela.get("id_recibo")
-#                 nome_arquivo = recibo_parcela.get("nome_arquivo", "Recibo")
-
-#                 if id_recibo:
-#                     col4.write(':material/check: Recibo salvo')
-#                     link = gerar_link_drive(id_recibo)
-#                     col5.markdown(f"[{nome_arquivo}]({link})")
-
-
-
-
-
-
-#             # =====================================================
-#             # BLOCO DE UPLOAD (abre somente para a parcela ativa)
-#             # =====================================================
-#             if st.session_state["recibo_aberto_parcela"] == numero:
-
-#                 with st.container(border=True):
-
-#                     st.markdown(f"**Enviar recibo da Parcela {numero}**")
-
-#                     arquivo = st.file_uploader(
-#                         "Selecione o arquivo do recibo",
-#                         type=["pdf", "png", "jpg", "jpeg"],
-#                         key=f"uploader_recibo_{numero}"
-#                     )
-
-#                     col_salvar, col_cancelar = st.columns([1, 1])
-
-#                     # ----------------------------
-#                     # CANCELAR
-#                     # ----------------------------
-#                     if col_cancelar.button("Cancelar", key=f"cancelar_{numero}"):
-#                         st.session_state["recibo_aberto_parcela"] = None
-#                         st.rerun()
-
-#                     # ----------------------------
-#                     # SALVAR
-#                     # ----------------------------
-#                     if col_salvar.button(
-#                         "Salvar recibo",
-#                         key=f"salvar_recibo_{numero}",
-#                         type="primary"
-#                     ):
-
-#                         if not arquivo:
-#                             st.error("Selecione um arquivo antes de salvar.")
-#                             st.stop()
-
-#                         # Upload no Drive
-#                         id_arquivo = enviar_arquivo_drive(
-#                             servico_drive,
-#                             pasta_recibos_id,
-#                             arquivo
-#                         )
-
-#                         if not id_arquivo:
-#                             st.stop()
-
-#                         # ----------------------------
-#                         # Salvar no Mongo
-#                         # ----------------------------
-#                         col_projetos.update_one(
-#                             {"codigo": codigo_projeto_atual},
-#                             {
-#                                 "$set": {
-#                                     f"financeiro.recibos.{numero}": {
-#                                         "id_recibo": id_arquivo,
-#                                         "nome_arquivo": arquivo.name
-#                                     }
-#                                 }
-#                             }
-#                         )
-
-#                         st.success("Recibo salvo com sucesso!", icon=":material/check:")
-#                         st.session_state["recibo_aberto_parcela"] = None
-#                         time.sleep(3)
-#                         st.rerun()
-
-#             st.divider()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# with recibos:
-
-#     st.markdown("### Recibos")
-#     st.write('')
-#     st.write('')
-
-#     parcelas = financeiro.get("parcelas", [])
-
-#     if not parcelas:
-#         st.caption("Não há parcelas cadastradas.")
-#         st.stop()
-
-#     # ============================
-#     # Layout único das colunas
-#     # ============================
-#     LAYOUT_COLUNAS_RECIBOS = [1, 2, 2, 4]
-
-
-#     # ============================
-#     # LINHAS
-#     # ============================
-#     for parcela in parcelas:
-
-#         numero = parcela.get("numero")
-#         valor = parcela.get("valor", 0)
-
-#         valor_fmt = (
-#             f"R$ {valor:,.2f}"
-#             .replace(",", "X")
-#             .replace(".", ",")
-#             .replace("X", ".")
-#         )
-
-#         col1, col2, col3, col4 = st.columns(LAYOUT_COLUNAS_RECIBOS)
-
-#         # Parcela
-#         col1.write(f"**Parcela {numero}**")
-
-#         # Gerar recibo
-#         if col2.button(
-#             "Gerar recibo",
-#             key=f"gerar_recibo_{numero}",
-#             width="stretch",
-#             icon=":material/receipt_long:"
-#         ):
-#             st.toast(f"Recibo da parcela {numero} gerado")
-
-#         # Guardar recibo
-#         if col3.button(
-#             "Guardar recibo",
-#             key=f"guardar_recibo_{numero}",
-#             width="stretch",
-#             icon=":material/save:"
-#         ):
-#             st.toast(f"Recibo da parcela {numero} guardado")
-
-#         # Recibo salvo (status)
-#         col4.write("❌ Não")
-
-#         st.divider()
-
-
-
-
-
-
-
-
-
-# ###################################################################################################
-# SIDEBAR DA PÁGINA DO PROJETO
-# ###################################################################################################
-
-sidebar_projeto()
