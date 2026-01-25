@@ -623,7 +623,7 @@ with plano_trabalho:
 
                     "atividade": st.column_config.TextColumn(
                         label="Atividade",
-                        width=1000
+                        width=700
                     ),
 
                     "data_inicio": st.column_config.TextColumn(
@@ -741,7 +741,7 @@ with plano_trabalho:
                 )
 
                 if resultado.matched_count == 1:
-                    st.success("Atividades atualizadas com sucesso!")
+                    st.success("Atividades atualizadas com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
                 else:

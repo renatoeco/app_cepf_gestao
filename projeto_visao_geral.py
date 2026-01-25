@@ -959,6 +959,10 @@ st.divider()
 # STATUS DO PROJETO
 # #############################################################################################
 
+# ?????
+# df_projeto = calcular_status_projetos(df_projeto)
+
+
 status_projeto = df_projeto["status"].values[0]
 
 cores_status = {
@@ -995,14 +999,19 @@ else:
         st.caption("Este projeto ainda não possui cronograma de Parcelas e Relatórios.")
 
     else:
+
+        # # ???
+        # # DEBUG: MANIPULAÇÃO DA DATA DE HOJE
+        # hoje = datetime.date(2026, 4, 30)
+
         hoje = datetime.date.today()
 
         # Texto da data
         if pd.notna(data_proximo_evento):
             if data_proximo_evento == hoje:
-                texto_data = "previsto para hoje."
+                texto_data = "previsto para hoje"
             else:
-                texto_data = f"previsto para **{data_proximo_evento.strftime('%d/%m/%Y')}**."
+                texto_data = f"previsto para **{data_proximo_evento.strftime('%d/%m/%Y')}**"
         else:
             texto_data = "com data não informada."
 

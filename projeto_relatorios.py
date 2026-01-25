@@ -624,6 +624,7 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
                 )
 
             st.success("Despesa registrada com sucesso!", icon=":material/check:")
+            time.sleep(3)
             st.rerun()
 
         if st.button("Cancelar"):
@@ -1347,24 +1348,63 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     # --------------------------------------------------
     # 6. APLICA AS REGRAS NOS RELATOS
     # --------------------------------------------------
+    # ------------------------------------------------------------------
+    # Percorre todos os componentes
+    # ------------------------------------------------------------------
     for componente in componentes:
-        for entrega in componente["entregas"]:
-            for atividade in entrega["atividades"]:
-                for relato in atividade.get("relatos", []):
+
+        # Recupera entregas de forma segura
+        entregas = componente.get("entregas", [])
+
+        # Se não houver entregas, continua
+        if not entregas:
+            continue
+
+        # ------------------------------------------------------------------
+        # Percorre entregas
+        # ------------------------------------------------------------------
+        for entrega in entregas:
+
+            # Recupera atividades de forma segura
+            atividades = entrega.get("atividades", [])
+
+            # --------------------------------------------------------------
+            # Se a entrega não tiver atividades, apenas ignora
+            # --------------------------------------------------------------
+            if not atividades:
+                continue
+
+            # --------------------------------------------------------------
+            # Percorre atividades
+            # --------------------------------------------------------------
+            for atividade in atividades:
+
+                # Recupera relatos de forma segura
+                relatos = atividade.get("relatos", [])
+
+                # Se não houver relatos, continua
+                if not relatos:
+                    continue
+
+                # ----------------------------------------------------------
+                # Percorre relatos
+                # ----------------------------------------------------------
+                for relato in relatos:
 
                     # Apenas relatos do relatório atual
                     if relato.get("relatorio_numero") != relatorio_numero:
                         continue
 
-                    # Regra A: em_analise/aprovado → modo_edicao
+                    # Regra A: em_analise -> aberto
                     if aplica_regra_a and relato.get("status_relato") == "em_analise":
                         relato["status_relato"] = "aberto"
                         houve_alteracao = True
 
-                    # Regra B: modo_edicao → em_analise/aprovado
+                    # Regra B: aberto -> em_analise
                     if aplica_regra_b and relato.get("status_relato") == "aberto":
                         relato["status_relato"] = "em_analise"
                         houve_alteracao = True
+
 
     # --------------------------------------------------
     # 7. SALVA NO BANCO APENAS SE HOUVE ALTERAÇÃO
@@ -1742,15 +1782,46 @@ if step_selecionado == "Atividades":
 
     tem_relato = False
 
+    # ------------------------------------------------------------------
+    # Percorre componentes do plano de trabalho
+    # ------------------------------------------------------------------
     for componente in projeto["plano_trabalho"]["componentes"]:
-        for entrega in componente["entregas"]:
-            for atividade in entrega["atividades"]:
 
+        # Recupera entregas do componente de forma segura
+        entregas = componente.get("entregas", [])
+
+        # Caso o componente não tenha entregas, apenas continua
+        if not entregas:
+            continue
+
+        # ------------------------------------------------------------------
+        # Percorre entregas
+        # ------------------------------------------------------------------
+        for entrega in entregas:
+
+            # Recupera atividades de forma segura
+            atividades = entrega.get("atividades", [])
+
+            # --------------------------------------------------------------
+            # Caso não existam atividades, mostra aviso e continua
+            # --------------------------------------------------------------
+            if not atividades:
+                continue
+
+            # --------------------------------------------------------------
+            # Percorre atividades normalmente
+            # --------------------------------------------------------------
+            for atividade in atividades:
+
+                # ----------------------------------------------------------
+                # Filtra relatos do relatório atual
+                # ----------------------------------------------------------
                 relatos = [
                     r for r in atividade.get("relatos", [])
                     if r.get("relatorio_numero") == relatorio_numero
                 ]
 
+                # Se não há relatos para essa atividade, pula
                 if not relatos:
                     continue
 
@@ -1758,6 +1829,9 @@ if step_selecionado == "Atividades":
 
                 st.write("")
                 st.markdown(f"#### {atividade['atividade']}")
+
+
+
 
                 for relato in relatos:
 
@@ -3043,6 +3117,8 @@ if step_selecionado == "Beneficiários":
     # INICIALIZAÇÃO DO ESTADO DA MATRIZ DE BENEFICIÁRIOS
     # ======================================================
 
+
+
     if "beneficiarios_quant" not in st.session_state:
         st.session_state.beneficiarios_quant = (
             relatorio.get("beneficiarios_quant") or {
@@ -3215,7 +3291,7 @@ if step_selecionado == "Beneficiários":
                     }
                 )
 
-                st.success("Quantitativo de beneficiários salvo com sucesso.")
+                st.success("Beneficiários salvos com sucesso.", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
 
@@ -3235,7 +3311,9 @@ if step_selecionado == "Beneficiários":
 
     else:
 
+
         dados = st.session_state.beneficiarios_quant
+
 
         # -------------------------------
         # Totais por gênero
@@ -3698,7 +3776,7 @@ if step_selecionado == "Pesquisas":
         upload_key = f"upload_{relatorio_numero}_{pesquisa['id']}"
         upload_salvo_key = f"upload_salvo_{relatorio_numero}_{pesquisa['id']}"
 
-        col1, col2, col3, col4, col5 = st.columns([4, 3, 2, 2, 1])
+        col1, col2, col3, col4, col5 = st.columns([4, 3, 2, 2, 2])
 
         # -------- PESQUISA --------
         with col1:
@@ -4229,7 +4307,7 @@ if step_selecionado == "Formulário":
                 }
             )
 
-            st.success("Respostas salvas com sucesso!")
+            st.success("Respostas salvas com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -4325,19 +4403,63 @@ if step_selecionado == "Enviar":
 
                 houve_alteracao = False
 
-                for componente in componentes:
-                    for entrega in componente["entregas"]:
-                        for atividade in entrega["atividades"]:
-                            for relato in atividade.get("relatos", []):
 
+                # ------------------------------------------------------
+                # Percorre componentes do plano de trabalho
+                # ------------------------------------------------------
+                for componente in componentes:
+
+                    # Recupera entregas de forma segura
+                    entregas = componente.get("entregas", [])
+
+                    # Se não houver entregas, pula o componente
+                    if not entregas:
+                        continue
+
+                    # --------------------------------------------------
+                    # Percorre entregas
+                    # --------------------------------------------------
+                    for entrega in entregas:
+
+                        # Recupera atividades de forma segura
+                        atividades = entrega.get("atividades", [])
+
+                        # --------------------------------------------------
+                        # Se não houver atividades, apenas continua
+                        # (não quebra o código)
+                        # --------------------------------------------------
+                        if not atividades:
+                            continue
+
+                        # --------------------------------------------------
+                        # Percorre atividades
+                        # --------------------------------------------------
+                        for atividade in atividades:
+
+                            # Recupera relatos de forma segura
+                            relatos = atividade.get("relatos", [])
+
+                            # Se não houver relatos, continua
+                            if not relatos:
+                                continue
+
+                            # --------------------------------------------------
+                            # Percorre relatos
+                            # --------------------------------------------------
+                            for relato in relatos:
+
+                                # ----------------------------------------------
                                 # Apenas relatos do relatório atual
                                 # e que ainda estejam abertos
+                                # ----------------------------------------------
                                 if (
                                     relato.get("relatorio_numero") == relatorio_numero
                                     and relato.get("status_relato") == "aberto"
                                 ):
                                     relato["status_relato"] = "em_analise"
                                     houve_alteracao = True
+
+
 
                 # Salva no Mongo apenas se houve mudança
                 if houve_alteracao:

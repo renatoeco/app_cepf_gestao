@@ -623,6 +623,11 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         if col not in df_projetos.columns:
             df_projetos[col] = None
 
+    # # ???
+    # # DEBUG: MANIPULAÇÃO DA DATA DE HOJE
+    # hoje = datetime.date(2026, 4, 30)
+
+
     hoje = datetime.date.today()
 
     for idx, projeto in df_projetos.iterrows():
@@ -689,7 +694,7 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
                     "tipo": "Relatório",
                     "numero": r.get("numero"),
                     "data_prevista": pd.to_datetime(r.get("data_prevista"), errors="coerce"),
-                    "realizado": r.get("data_realizada") is not None
+                    "realizado": r.get("data_envio") is not None
                 })
 
         # Remove eventos inválidos
@@ -712,6 +717,7 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         eventos.sort(key=lambda x: x["data_prevista"])
 
         proximo = next((e for e in eventos if not e["realizado"]), None)
+
 
         if not proximo:
             df_projetos.at[idx, "status"] = "Concluído"

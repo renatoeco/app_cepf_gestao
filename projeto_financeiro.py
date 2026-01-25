@@ -541,10 +541,6 @@ with cron_desemb:
                         .replace("X", ".")
                         if valor is not None else ""
                     ),
-                    # "Percentual": (
-                    #     f"{int(percentual)} %"
-                    #     if percentual is not None else ""
-                    # ),
                     "Data prevista": pd.to_datetime(
                         data_prevista, errors="coerce"
                     ),
@@ -562,7 +558,7 @@ with cron_desemb:
             numero = r.get("numero")
             entregas = r.get("entregas", [])
             data_prevista = r.get("data_prevista")
-            data_realizada = r.get("data_realizada")
+            data_realizada = r.get("data_envio")
 
             linhas_cronograma.append(
                 {
@@ -1660,7 +1656,7 @@ if usuario_interno:
     with recibos:
 
         st.markdown("### Recibos")
-        st.write("")
+        st.caption("É necessário guardar os recibos e informar as **datas de pagamento**, para a evolução do cronograma do projeto.")
         st.write("")
 
         # --------------------------------------------------
@@ -1833,25 +1829,44 @@ if usuario_interno:
                     col5.markdown(f"[{nome_arquivo}]({link})")
 
 
+
+
+
+
+
+
             # ==================================================
             # BLOCO DE UPLOAD (abre somente para a parcela ativa)
             # ==================================================
             if st.session_state["recibo_aberto_parcela"] == numero:
-                st.write('')
+                st.write("")
+
                 with st.container(border=True):
 
                     st.markdown(f"**Enviar recibo da Parcela {numero}**")
 
+                    # --------------------------------------------------
+                    # Data do pagamento (obrigatória)
+                    # --------------------------------------------------
+                    data_pagamento = st.date_input(
+                        "Data do pagamento:",
+                        format="DD/MM/YYYY",
+                        key=f"data_pagamento_{numero}",
+                        width=180
+                    )
+
+                    # --------------------------------------------------
+                    # Upload do arquivo
+                    # --------------------------------------------------
                     arquivo = st.file_uploader(
                         "Selecione o arquivo do recibo:",
                         type=["pdf", "png", "jpg", "jpeg"],
                         key=f"uploader_recibo_{numero}"
                     )
-    
-                    st.write('')
+
+                    st.write("")
 
                     with st.container(horizontal=True):
-
 
                         # ----------------------------
                         # SALVAR
@@ -1862,12 +1877,20 @@ if usuario_interno:
                             type="primary",
                             icon=":material/save:",
                             width=180
-
                         ):
 
-                            # Validação básica
+                            # -----------------------------------
+                            # Validação do arquivo
+                            # -----------------------------------
                             if not arquivo:
-                                st.error("Selecione um arquivo antes de salvar.")
+                                st.error("Selecione um arquivo antes de salvar.", icon=":material/warning:")
+                                st.stop()
+
+                            # -----------------------------------
+                            # Validação da data
+                            # -----------------------------------
+                            if not data_pagamento:
+                                st.error("Selecione a data do pagamento.")
                                 st.stop()
 
                             # -----------------------------------
@@ -1882,8 +1905,13 @@ if usuario_interno:
                             if not id_arquivo:
                                 st.stop()
 
+
+
                             # -----------------------------------
-                            # SALVAR NO MONGODB (dentro da parcela)
+                            # SALVAR NO MONGODB
+                            # -----------------------------------
+                            # A data é salva como string no formato ISO
+                            # yyyy-mm-dd (padrão do projeto)
                             # -----------------------------------
                             col_projetos.update_one(
                                 {
@@ -1895,18 +1923,45 @@ if usuario_interno:
                                         "financeiro.parcelas.$.recibo": {
                                             "id_recibo": id_arquivo,
                                             "nome_arquivo": arquivo.name
-                                        }
+                                        },
+                                        "financeiro.parcelas.$.data_realizada": data_pagamento.strftime("%Y-%m-%d")
                                     }
                                 }
                             )
 
+
+
+
+
+
+
+
+
+
+
+                            # col_projetos.update_one(
+                            #     {
+                            #         "codigo": codigo_projeto_atual,
+                            #         "financeiro.parcelas.numero": numero
+                            #     },
+                            #     {
+                            #         "$set": {
+                            #             "financeiro.parcelas.$.recibo": {
+                            #                 "id_recibo": id_arquivo,
+                            #                 "nome_arquivo": arquivo.name
+                            #             },
+                            #             "financeiro.parcelas.$.data_realizada": datetime.datetime.combine(
+                            #                 data_pagamento,
+                            #                 datetime.time.min
+                            #             )
+                            #         }
+                            #     }
+                            # )
+
                             # -----------------------------------
                             # Feedback + reset de estado
                             # -----------------------------------
-                            st.success(
-                                "Recibo salvo com sucesso!",
-                                icon=":material/check:"
-                            )
+                            st.success("Recibo salvo com sucesso!", icon=":material/check:")
                             st.session_state["recibo_aberto_parcela"] = None
                             time.sleep(3)
                             st.rerun()
