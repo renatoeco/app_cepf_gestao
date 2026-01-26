@@ -1689,9 +1689,14 @@ if tipo_usuario in ["equipe", "admin"]:
             args=(idx, relatorio_numero, projeto_codigo) if not aguardando else None
         )
 
+
+
+
 ###########################################################################################################
-# MENSAGEM DE AGUARDO
+# MENSAGEM DE AGUARDO + STEPS DO RELATÓRIO
 ###########################################################################################################
+
+labels_steps = steps_relatorio
 
 if aguardando:
     st.write("")
@@ -1699,23 +1704,21 @@ if aguardando:
         "Aguardando a aprovação do relatório anterior.",
         icon=":material/nest_clock_farsight_analog:"
     )
-    st.stop()
+    step_selecionado = None  # importante para evitar uso depois
+else:
+    st.write("")
+    st.write("")
 
-st.write("")
-st.write("")
+    step_selecionado = sac.tabs(
+        items=[sac.TabsItem(label=s) for s in labels_steps],
+        align="start",
+        use_container_width=True,
+        # size="md"
+    )
 
-###########################################################################################################
-# STEPS DO RELATÓRIO (sac.tabs)
-###########################################################################################################
 
-labels_steps = steps_relatorio
 
-step_selecionado = sac.tabs(
-    items=[sac.TabsItem(label=s) for s in labels_steps],
-    align="start",
-    use_container_width=True,
-    # size="md"
-)
+
 
 ###########################################################################################################
 # CONTEÚDO DOS STEPS
@@ -2178,7 +2181,7 @@ if step_selecionado == "Atividades":
 
 
                         # ==================================================
-                        # MODO EDIÇÃO INLINE (VERSÃO FINAL CORRIGIDA)
+                        # MODO EDIÇÃO INLINE 
                         # ==================================================
                         else:
                             st.markdown(f"**Editando {id_relato.upper()}**")
