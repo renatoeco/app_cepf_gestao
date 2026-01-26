@@ -3123,27 +3123,18 @@ if step_selecionado == "Beneficiários":
     # ======================================================
 
 
+    key_benef_quant = f"beneficiarios_quant_rel_{relatorio_numero}"
 
-    if "beneficiarios_quant" not in st.session_state:
-        st.session_state.beneficiarios_quant = (
+    if key_benef_quant not in st.session_state:
+        st.session_state[key_benef_quant] = (
             relatorio.get("beneficiarios_quant") or {
-                "mulheres": {
-                    "jovens": 0,
-                    "adultas": 0,
-                    "idosas": 0
-                },
-                "homens": {
-                    "jovens": 0,
-                    "adultos": 0,
-                    "idosos": 0
-                },
-                "nao_binarios": {
-                    "jovens": 0,
-                    "adultos": 0,
-                    "idosos": 0
-                }
+                "mulheres": {"jovens": 0, "adultas": 0, "idosas": 0},
+                "homens": {"jovens": 0, "adultos": 0, "idosos": 0},
+                "nao_binarios": {"jovens": 0, "adultos": 0, "idosos": 0}
             }
         )
+
+
 
 
     # ======================================================
@@ -3171,29 +3162,29 @@ if step_selecionado == "Beneficiários":
         col_m, col_h, col_nb = content.columns(3)
 
         with col_m:
-            st.session_state.beneficiarios_quant["mulheres"]["jovens"] = st.number_input(
+            st.session_state[key_benef_quant]["mulheres"]["jovens"] = st.number_input(
                 "Mulheres – Jovens (até 24 anos)",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["mulheres"]["jovens"],
+                value=st.session_state[key_benef_quant]["mulheres"]["jovens"],
                 key="bq_mulheres_jovens"
             )
 
         with col_h:
-            st.session_state.beneficiarios_quant["homens"]["jovens"] = st.number_input(
+            st.session_state[key_benef_quant]["homens"]["jovens"] = st.number_input(
                 "Homens – Jovens (até 24 anos)",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["homens"]["jovens"],
+                value=st.session_state[key_benef_quant]["homens"]["jovens"],
                 key="bq_homens_jovens"
             )
 
         with col_nb:
-            st.session_state.beneficiarios_quant["nao_binarios"]["jovens"] = st.number_input(
+            st.session_state[key_benef_quant]["nao_binarios"]["jovens"] = st.number_input(
                 "Não-binários – Jovens (até 24 anos)",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["nao_binarios"]["jovens"],
+                value=st.session_state[key_benef_quant]["nao_binarios"]["jovens"],
                 key="bq_nb_jovens"
             )
 
@@ -3203,29 +3194,29 @@ if step_selecionado == "Beneficiários":
         col_m, col_h, col_nb = content.columns(3)
 
         with col_m:
-            st.session_state.beneficiarios_quant["mulheres"]["adultas"] = st.number_input(
+            st.session_state[key_benef_quant]["mulheres"]["adultas"] = st.number_input(
                 "Mulheres – Adultas",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["mulheres"]["adultas"],
+                value=st.session_state[key_benef_quant]["mulheres"]["adultas"],
                 key="bq_mulheres_adultas"
             )
 
         with col_h:
-            st.session_state.beneficiarios_quant["homens"]["adultos"] = st.number_input(
+            st.session_state[key_benef_quant]["homens"]["adultos"] = st.number_input(
                 "Homens – Adultos",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["homens"]["adultos"],
+                value=st.session_state[key_benef_quant]["homens"]["adultos"],
                 key="bq_homens_adultos"
             )
 
         with col_nb:
-            st.session_state.beneficiarios_quant["nao_binarios"]["adultos"] = st.number_input(
+            st.session_state[key_benef_quant]["nao_binarios"]["adultos"] = st.number_input(
                 "Não-binários – Adultos",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["nao_binarios"]["adultos"],
+                value=st.session_state[key_benef_quant]["nao_binarios"]["adultos"],
                 key="bq_nb_adultos"
             )
 
@@ -3235,29 +3226,29 @@ if step_selecionado == "Beneficiários":
         col_m, col_h, col_nb = content.columns(3)
 
         with col_m:
-            st.session_state.beneficiarios_quant["mulheres"]["idosas"] = st.number_input(
+            st.session_state[key_benef_quant]["mulheres"]["idosas"] = st.number_input(
                 "Mulheres – Idosas (60+ anos)",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["mulheres"]["idosas"],
+                value=st.session_state[key_benef_quant]["mulheres"]["idosas"],
                 key="bq_mulheres_idosas"
             )
 
         with col_h:
-            st.session_state.beneficiarios_quant["homens"]["idosos"] = st.number_input(
+            st.session_state[key_benef_quant]["homens"]["idosos"] = st.number_input(
                 "Homens – Idosos (60+ anos)",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["homens"]["idosos"],
+                value=st.session_state[key_benef_quant]["homens"]["idosos"],
                 key="bq_homens_idosos"
             )
 
         with col_nb:
-            st.session_state.beneficiarios_quant["nao_binarios"]["idosos"] = st.number_input(
+            st.session_state[key_benef_quant]["nao_binarios"]["idosos"] = st.number_input(
                 "Não-binários – Idosos (60+ anos)",
                 min_value=0,
                 step=1,
-                value=st.session_state.beneficiarios_quant["nao_binarios"]["idosos"],
+                value=st.session_state[key_benef_quant]["nao_binarios"]["idosos"],
                 key="bq_nb_idosos"
             )
 
@@ -3291,7 +3282,7 @@ if step_selecionado == "Beneficiários":
                     {
                         "$set": {
                             "relatorios.$.beneficiarios_quant":
-                                st.session_state.beneficiarios_quant
+                                st.session_state[key_benef_quant]
                         }
                     }
                 )
@@ -3317,7 +3308,7 @@ if step_selecionado == "Beneficiários":
     else:
 
 
-        dados = st.session_state.beneficiarios_quant
+        dados = st.session_state[key_benef_quant]
 
 
         # -------------------------------
