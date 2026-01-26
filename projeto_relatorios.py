@@ -1585,6 +1585,7 @@ aba_selecionada = sac.tabs(
     items=[sac.TabsItem(label=l) for l in labels_relatorios],
     align="left",
     variant="outline",
+    key="tabs_relatorios"
     # size="xl"
 )
 
@@ -1713,6 +1714,7 @@ else:
         items=[sac.TabsItem(label=s) for s in labels_steps],
         align="start",
         use_container_width=True,
+        key=f"steps_relatorio_{idx}"
         # size="md"
     )
 
