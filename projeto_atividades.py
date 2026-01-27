@@ -12,6 +12,20 @@ from funcoes_auxiliares import (
 )
 
 
+
+
+
+
+
+
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+sidebar_projeto()
+
+
+
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT
 ###########################################################################################################
@@ -303,7 +317,7 @@ with col_identificacao:
 
 
 
-plano_trabalho, impactos, indicadores, monitoramento = st.tabs(["Plano de trabalho", "Impactos", "Indicadores", "Monitoramento"])
+plano_trabalho, impactos, indicadores, monitoramento = st.tabs(["Plano de trabalho", "Impactos", "Indicadores", "Plano de Monitoramento"])
 
 
 
@@ -572,7 +586,7 @@ with plano_trabalho:
             # ============================================================
 
             nome_entrega_sel = st.selectbox(
-                "Selecione a entrega",
+                "Selecione a entrega:",
                 [item["label"] for item in lista_entregas],
                 key="select_entrega_ativ"
             )
@@ -755,7 +769,7 @@ with plano_trabalho:
 
 
         # --------------------------------------------------
-        # MODO DE EDIÇÃO — ENTREGAS
+        # MODO DE EDIÇÃO - ENTREGAS
         # --------------------------------------------------
                       
         
@@ -797,7 +811,7 @@ with plano_trabalho:
             nomes_componentes = list(mapa_comp_por_nome.keys())
 
             nome_componente_selecionado = st.selectbox(
-                "Selecione o componente",
+                "Selecione o componente:",
                 nomes_componentes
             )
 
@@ -871,7 +885,6 @@ with plano_trabalho:
                 ids_original = [e["id"] for e in entregas_existentes]
 
                 nova_lista = []
-                import bson
 
                 # --------------------------------------------------------------
                 # Monta nova lista de entregas já com indicadores_doador
@@ -1505,7 +1518,7 @@ with monitoramento:
     # ------------------------------------------------------------------
     # Título principal da aba
     # ------------------------------------------------------------------
-    st.header("Monitoramento")
+    st.subheader("Plano de Monitoramento")
 
     # ------------------------------------------------------------------
     # Recupera os componentes do plano de trabalho
@@ -1520,7 +1533,9 @@ with monitoramento:
         # --------------------------------------------------------------
         # Cabeçalho do componente
         # --------------------------------------------------------------
-        st.subheader(f"Componente {idx_comp}: {componente['componente']}")
+        st.markdown(f"##### {componente['componente']}")
+        
+        # st.markdown(f"##### Componente {idx_comp}: {componente['componente']}")
 
         entregas = componente.get("entregas", [])
 
@@ -1541,7 +1556,9 @@ with monitoramento:
                 # ------------------------------------------------------
                 # Título da entrega
                 # ------------------------------------------------------
-                st.markdown(f"### Entrega {idx_ent}: {entrega['entrega']}")
+                st.markdown(f"###### {entrega['entrega']}")
+                
+                # st.markdown(f"###### Entrega {idx_ent}: {entrega['entrega']}")
 
                 # ======================================================
                 # 1) INDICADORES DO DOADOR EM DUAS COLUNAS
@@ -1558,7 +1575,7 @@ with monitoramento:
                         for ind in indicadores_doador:
                             st.markdown(f"- {ind}")
                     else:
-                        st.write("Nenhum indicador associado.")
+                        st.caption("Nenhum indicador associado.")
 
                 # ======================================================
                 # 2) DATA EDITOR DE INDICADORES DO PROJETO
@@ -1606,6 +1623,31 @@ with monitoramento:
                     "data_coleta": "Data da coleta"
                 })
 
+
+                # ------------------------------------------------------
+                # Reordena colunas para melhor UX
+                # (colunas editáveis primeiro, bloqueadas no final)
+                # ------------------------------------------------------
+                ordem_colunas = [
+                    "Indicador do projeto",
+                    "Linha de base",
+                    "Meta",
+                    "Unidade de medida",
+                    "Periodicidade",
+                    "Fonte de verificação",
+                    "Responsável",
+                    "Resultado atual",
+                    "Observações da coleta",
+                    "Data da coleta"
+                ]
+
+                # Mantém apenas colunas que existem (segurança)
+                ordem_colunas = [c for c in ordem_colunas if c in df_monitoramento.columns]
+
+                df_monitoramento = df_monitoramento[ordem_colunas]
+
+
+
                 # ------------------------------------------------------
                 # Renderiza o data_editor
                 # ------------------------------------------------------
@@ -1640,6 +1682,7 @@ with monitoramento:
 
                 if st.button(
                     "Salvar indicadores do projeto",
+                    icon=":material/save:",
                     key=f"btn_salvar_{componente['id']}_{entrega['id']}"
                 ):
 
@@ -1649,6 +1692,28 @@ with monitoramento:
                     df_editado = df_editado.dropna(
                         how="all"
                     )
+
+
+                    # --------------------------------------------------
+                    # REMOVE ESPAÇOS EM BRANCO NO INÍCIO E FIM DOS TEXTOS
+                    # --------------------------------------------------
+                    colunas_texto = [
+                        "Indicador do projeto",
+                        "Observações da coleta",
+                        "Unidade de medida",
+                        "Periodicidade",
+                        "Fonte de verificação",
+                        "Responsável"
+                    ]
+
+                    for col in colunas_texto:
+                        if col in df_editado.columns:
+                            df_editado[col] = (
+                                df_editado[col]
+                                .astype(str)
+                                .str.strip()
+                                .replace("nan", "")
+                            )
 
                     # --------------------------------------------------
                     # Renomeia colunas para o padrão do banco
@@ -1708,7 +1773,7 @@ with monitoramento:
                     # Feedback ao usuário
                     # --------------------------------------------------
                     if resultado.matched_count == 1:
-                        st.success("Indicadores do projeto salvos com sucesso.")
+                        st.success("Indicadores do projeto salvos com sucesso.", icon=":material/check:")
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -1734,16 +1799,4 @@ with monitoramento:
 
 
 
-
-
-
-
-
-
-
-# ###################################################################################################
-# SIDEBAR DA PÁGINA DO PROJETO
-# ###################################################################################################
-
-sidebar_projeto()
 
