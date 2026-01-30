@@ -517,7 +517,7 @@ with cron_desemb:
     # --------------------------------------------------
     if not modo_edicao:
 
-        st.markdown('#### Cronograma de Parcelas e Relatórios')
+        st.markdown('### Cronograma de Parcelas e Relatórios')
 
         st.write("")
 
@@ -1076,7 +1076,7 @@ with orcamento:
 
 
 
-    st.markdown("#### Orçamento")
+    st.markdown("### Orçamento")
     st.write("")
 
 
@@ -1183,7 +1183,7 @@ with orcamento:
                 )
             )
 
-            # Saldo total (fica vermelho se negativo)
+            # Saldo total 
             col3.metric(
                 label="Saldo",
                 value=(
@@ -1197,18 +1197,56 @@ with orcamento:
             )
 
 
-        # if valor_total is not None:
-        #     st.metric(
-        #         label="Valor total do projeto",
-        #         value=(
-        #             f"R$ {valor_total:,.2f}"
-        #             .replace(",", "X")
-        #             .replace(".", ",")
-        #             .replace("X", ".")
-        #         )
-        #     )
         else:
             st.caption("Valor total do projeto ainda não cadastrado.")
+
+
+        # --------------------------------------------------
+        # BARRAS DE PROGRESSO: recebido x gasto
+        # --------------------------------------------------
+
+        # -----------------------------
+        # Cálculo do valor recebido
+        # -----------------------------
+        parcelas = financeiro.get("parcelas", [])
+
+        valor_recebido = sum(
+            p.get("valor", 0)
+            for p in parcelas
+            if p.get("data_realizada") not in [None, ""]
+        )
+
+        # -----------------------------
+        # Percentuais (0 a 1)
+        # -----------------------------
+        pct_recebido = min(valor_recebido / valor_total, 1) if valor_total else 0
+        pct_gasto = min(gasto_total / valor_total, 1) if valor_total else 0
+
+        # -----------------------------
+        # Barra de valor recebido
+        # -----------------------------
+        st.progress(
+            pct_recebido,
+            text=(
+                f"Valor recebido: R$ {valor_recebido:,.2f}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+                # + f"  ({pct_recebido*100:.1f}%)"
+            )
+        )
+
+        # -----------------------------
+        # Barra de valor gasto
+        # -----------------------------
+        st.progress(
+            pct_gasto,
+            text=(
+                f"Valor gasto: R$ {gasto_total:,.2f}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+                # + f"  ({pct_gasto*100:.1f}%)"
+            )
+        )
+
+
 
         st.write("")
 
@@ -1333,7 +1371,7 @@ with orcamento:
         for categoria in categorias:
 
             st.write("")
-            st.write(f"**{categoria}**")
+            st.markdown(f"##### {categoria}")
 
             # Filtra categoria
             df_cat = df_orcamento[df_orcamento["categoria"] == categoria].copy()
