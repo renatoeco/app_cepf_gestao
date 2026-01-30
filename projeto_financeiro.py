@@ -141,6 +141,17 @@ financeiro = projeto.get("financeiro", {})
 ###########################################################################################################
 
 
+def calcular_gasto(item):
+    lancamentos = item.get("lancamentos", [])
+    return sum(
+        l.get("valor_despesa", 0)
+        for l in lancamentos
+        if l.get("valor_despesa") is not None
+    )
+
+
+
+
 def gerar_recibo_docx(
     caminho_arquivo,
     valor_parcela,
@@ -614,127 +625,6 @@ with cron_desemb:
         
 
 
-
-
-            # st.write('')
-            # st.write('')
-            # st.write('')
-
-
-
-            # st.markdown('#### OPÇÃO 2 de layout da tabela de cronograma')
-
-
-            # # -----------------------------
-            # # Construir cronograma
-            # # -----------------------------
-            # linhas_cronograma = []
-
-            # # ===== Parcelas =====
-            # parcelas = financeiro.get("parcelas", [])
-
-            # for p in parcelas:
-            #     linhas_cronograma.append(
-            #         {
-            #             "evento": f"Parcela {p.get('numero')}",
-            #             "entregas": [],
-            #             "valor": (
-            #                 f"R$ {p['valor']:,.2f}".replace(",", "X")
-            #                 .replace(".", ",")
-            #                 .replace("X", ".")
-            #                 if p.get("valor") is not None else ""
-            #             ),
-            #             "percentual": (
-            #                 f"{int(p['percentual'])} %"
-            #                 if p.get("percentual") is not None else ""
-            #             ),
-            #             "data_prevista": (
-            #                 pd.to_datetime(p.get("data_prevista")).strftime("%d/%m/%Y")
-            #                 if p.get("data_prevista") else ""
-            #             ),
-            #             "data_realizada": (
-            #                 pd.to_datetime(p.get("data_realizada")).strftime("%d/%m/%Y")
-            #                 if p.get("data_realizada") else ""
-            #             ),
-            #         }
-            #     )
-
-            # # ===== Relatórios =====
-            # relatorios = projeto.get("relatorios", [])
-
-            # for r in relatorios:
-            #     linhas_cronograma.append(
-            #         {
-            #             "evento": f"Relatório {r.get('numero')}",
-            #             "entregas": r.get("entregas", []),
-            #             "valor": "",
-            #             "percentual": "",
-            #             "data_prevista": (
-            #                 pd.to_datetime(r.get("data_prevista")).strftime("%d/%m/%Y")
-            #                 if r.get("data_prevista") else ""
-            #             ),
-            #             "data_realizada": (
-            #                 pd.to_datetime(r.get("data_realizada")).strftime("%d/%m/%Y")
-            #                 if r.get("data_realizada") else ""
-            #             ),
-            #         }
-            #     )
-
-            # # Ordenar por data prevista
-            # linhas_cronograma = sorted(
-            #     linhas_cronograma,
-            #     key=lambda x: pd.to_datetime(
-            #         x["data_prevista"], dayfirst=True, errors="coerce"
-            #     )
-            # )
-
-            # # -----------------------------
-            # # Layout das colunas
-            # # -----------------------------
-            # layout_colunas = [2, 7, 2, 2, 2, 2]
-
-
-            # # -----------------------------
-            # # Cabeçalho
-            # # -----------------------------
-            # col_header = st.columns(layout_colunas)
-            # col_header[0].write("**Evento**")
-            # col_header[1].write("**Entregas**")
-            # col_header[2].write("**Valor**")
-            # col_header[3].write("**Percentual**")
-            # col_header[4].write("**Data prevista**")
-            # col_header[5].write("**Data realizada**")
-
-            # st.divider()
-
-            # # -----------------------------
-            # # Linhas
-            # # -----------------------------
-            # for row in linhas_cronograma:
-
-            #     cols = st.columns(layout_colunas)
-
-            #     # Evento
-            #     cols[0].write(row["evento"])
-
-            #     # Entregas (multilinha real)
-            #     if row["entregas"]:
-            #         for entrega in row["entregas"]:
-            #             cols[1].write(f"{entrega}")
-            #     else:
-            #         cols[1].write("")
-
-            #     # Valor
-            #     cols[2].write(row["valor"])
-
-            #     # Percentual
-            #     cols[3].write(row["percentual"])
-
-            #     # Datas
-            #     cols[4].write(row["data_prevista"])
-            #     cols[5].write(row["data_realizada"])
-
-            #     st.divider()
 
 
 
@@ -1237,18 +1127,42 @@ with orcamento:
 
 
 
+
     # ==================================================
     # MODO VISUALIZAÇÃO — ORÇAMENTO AGRUPADO POR CATEGORIA
     # ==================================================
     if not modo_edicao:
 
         # -----------------------------
-        # Métrica do valor total
+        # Métrica do valor total do projeto
         # -----------------------------
         valor_total = financeiro.get("valor_total")
 
+
         if valor_total is not None:
-            st.metric(
+
+            # --------------------------------------------------
+            # Cálculo de gasto e saldo total do projeto
+            # --------------------------------------------------
+            orcamento = financeiro.get("orcamento", [])
+
+            gasto_total = 0
+            for item in orcamento:
+                gasto_total += sum(
+                    l.get("valor_despesa", 0)
+                    for l in item.get("lancamentos", [])
+                    if l.get("valor_despesa") is not None
+                )
+
+            saldo_total = valor_total - gasto_total
+
+            # --------------------------------------------------
+            # Exibição das métricas em 3 colunas
+            # --------------------------------------------------
+            col1, col2, col3 = st.columns(3)
+
+            # Valor total do projeto
+            col1.metric(
                 label="Valor total do projeto",
                 value=(
                     f"R$ {valor_total:,.2f}"
@@ -1257,13 +1171,49 @@ with orcamento:
                     .replace("X", ".")
                 )
             )
+
+            # Gasto total
+            col2.metric(
+                label="Gasto",
+                value=(
+                    f"R$ {gasto_total:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                )
+            )
+
+            # Saldo total (fica vermelho se negativo)
+            col3.metric(
+                label="Saldo",
+                value=(
+                    f"R$ {saldo_total:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                ),
+                delta=None if saldo_total >= 0 else "Negativo",
+                delta_color="inverse" if saldo_total < 0 else "normal"
+            )
+
+
+        # if valor_total is not None:
+        #     st.metric(
+        #         label="Valor total do projeto",
+        #         value=(
+        #             f"R$ {valor_total:,.2f}"
+        #             .replace(",", "X")
+        #             .replace(".", ",")
+        #             .replace("X", ".")
+        #         )
+        #     )
         else:
             st.caption("Valor total do projeto ainda não cadastrado.")
 
         st.write("")
 
         # --------------------------------------------------
-        # ESTADOS DO DIÁLOGO (inicialização segura)
+        # ESTADOS DO DIÁLOGO (mantidos como no seu código)
         # --------------------------------------------------
         if "despesa_selecionada" not in st.session_state:
             st.session_state["despesa_selecionada"] = None
@@ -1283,9 +1233,27 @@ with orcamento:
             st.caption("Nenhuma despesa cadastrada no orçamento.")
             st.stop()
 
+        # --------------------------------------------------
+        # Cálculo de gasto e saldo (inalterado)
+        # --------------------------------------------------
+        for item in orcamento:
+            gasto = calcular_gasto(item)
+            valor_item = item.get("valor_total", 0) or 0
+
+            item["gasto"] = gasto
+            item["saldo"] = valor_item - gasto
+
+        # --------------------------------------------------
+        # Criação do DataFrame
+        # --------------------------------------------------
         df_orcamento = pd.DataFrame(orcamento)
 
-        # Garantir colunas
+        # coluna auxiliar numérica (NÃO exibida)
+        df_orcamento["saldo_num"] = df_orcamento["saldo"]
+
+        # --------------------------------------------------
+        # Garantir colunas mínimas
+        # --------------------------------------------------
         for col in [
             "categoria",
             "nome_despesa",
@@ -1298,27 +1266,21 @@ with orcamento:
             if col not in df_orcamento.columns:
                 df_orcamento[col] = None
 
-        # -----------------------------------
-        # Formatação para exibição
-        # -----------------------------------
-        df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(
-            lambda x: (
-                f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                if x not in [None, ""]
-                else ""
-            )
-        )
+        # --------------------------------------------------
+        # Formatação monetária (apenas exibição)
+        # --------------------------------------------------
+        def fmt_moeda(x):
+            if x in [None, ""]:
+                return ""
+            return f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-        df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(
-            lambda x: (
-                f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                if x not in [None, ""]
-                else ""
-            )
-        )
+        df_orcamento["Valor unitário"] = df_orcamento["valor_unitario"].apply(fmt_moeda)
+        df_orcamento["Valor total"] = df_orcamento["valor_total"].apply(fmt_moeda)
+        df_orcamento["Gasto"] = df_orcamento["gasto"].apply(fmt_moeda)
+        df_orcamento["Saldo"] = df_orcamento["saldo"].apply(fmt_moeda)
 
         # --------------------------------------------------
-        # Agrupar por categoria
+        # Agrupamento por categoria
         # --------------------------------------------------
         categorias = (
             df_orcamento["categoria"]
@@ -1328,7 +1290,7 @@ with orcamento:
         )
 
         # --------------------------------------------------
-        # CALLBACK PARA ABERTURA DO DIÁLOGO DE RELATOS
+        # CALLBACK (mantido como está)
         # --------------------------------------------------
         def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
 
@@ -1372,10 +1334,11 @@ with orcamento:
 
             st.write("")
             st.write(f"**{categoria}**")
-            # st.divider()
 
+            # Filtra categoria
             df_cat = df_orcamento[df_orcamento["categoria"] == categoria].copy()
 
+            # Renomeia colunas para exibição
             df_vis = df_cat.rename(columns={
                 "nome_despesa": "Despesa",
                 "descricao_despesa": "Descrição",
@@ -1386,10 +1349,12 @@ with orcamento:
             colunas_vis = [
                 "Despesa",
                 "Descrição",
-                "Unidade",
-                "Quantidade",
-                "Valor unitário",
+                # "Unidade",
+                # "Quantidade",
+                # "Valor unitário",
                 "Valor total",
+                "Gasto",
+                "Saldo",
             ]
 
             key_df = f"df_vis_orcamento_{categoria}"
@@ -1399,8 +1364,29 @@ with orcamento:
                 key_df
             )
 
+            # --------------------------------------------------
+            # Estilo: saldo negativo em vermelho
+            # --------------------------------------------------
+            def estilo_saldo(col):
+                estilos = []
+                for idx in col.index:
+                    if df_cat.loc[idx, "saldo_num"] < 0:
+                        estilos.append("color: red;")
+                    else:
+                        estilos.append("")
+                return estilos
+
+            df_estilizado = (
+                df_vis[colunas_vis]
+                .style
+                .apply(estilo_saldo, subset=["Saldo"])
+            )
+
+            # --------------------------------------------------
+            # DataFrame final
+            # --------------------------------------------------
             st.dataframe(
-                df_vis[colunas_vis],
+                df_estilizado,
                 hide_index=True,
                 selection_mode="single-row",
                 key=key_df,
@@ -1412,6 +1398,8 @@ with orcamento:
                     "Quantidade": st.column_config.NumberColumn(width=80),
                     "Valor unitário": st.column_config.TextColumn(width=120),
                     "Valor total": st.column_config.TextColumn(width=120),
+                    "Gasto": st.column_config.TextColumn(width=120),
+                    "Saldo": st.column_config.TextColumn(width=120),
                 }
             )
 
@@ -1421,10 +1409,6 @@ with orcamento:
         if st.session_state.get("abrir_dialogo_despesa"):
             dialog_relatos_fin()
             st.session_state["abrir_dialogo_despesa"] = False
-
-
-
-
 
 
 
@@ -1930,33 +1914,6 @@ if usuario_interno:
                             )
 
 
-
-
-
-
-
-
-
-
-
-                            # col_projetos.update_one(
-                            #     {
-                            #         "codigo": codigo_projeto_atual,
-                            #         "financeiro.parcelas.numero": numero
-                            #     },
-                            #     {
-                            #         "$set": {
-                            #             "financeiro.parcelas.$.recibo": {
-                            #                 "id_recibo": id_arquivo,
-                            #                 "nome_arquivo": arquivo.name
-                            #             },
-                            #             "financeiro.parcelas.$.data_realizada": datetime.datetime.combine(
-                            #                 data_pagamento,
-                            #                 datetime.time.min
-                            #             )
-                            #         }
-                            #     }
-                            # )
 
                             # -----------------------------------
                             # Feedback + reset de estado
