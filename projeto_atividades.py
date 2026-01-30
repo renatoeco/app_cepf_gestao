@@ -395,7 +395,9 @@ with plano_trabalho:
                 for entrega in componente.get("entregas", []):
 
                     st.write("")
-                    st.write(f"**{entrega.get('entrega', 'Entrega sem nome')}**")
+                    st.markdown(f"##### {entrega.get('entrega', 'Entrega sem nome')}")
+                    
+                    # st.write(f"**{entrega.get('entrega', 'Entrega sem nome')}**")
 
                     atividades = entrega.get("atividades", [])
 
@@ -897,13 +899,53 @@ with plano_trabalho:
                     else:
                         id_usado = str(bson.ObjectId())
 
-                    nova_lista.append({
-                        "id": id_usado,
-                        "entrega": row["entrega"],
 
-                        # Aqui é onde os indicadores são salvos no banco
-                        "indicadores_doador": row.get("Indicadores", [])
-                    })
+
+
+                    # --------------------------------------------------------------
+                    # Monta nova lista de entregas SEM PERDER atividades
+                    # --------------------------------------------------------------
+                    for idx, row in df_editado.iterrows():
+
+                        # Mantém ID antigo ou gera novo
+                        if idx < len(ids_original):
+                            id_usado = ids_original[idx]
+                        else:
+                            id_usado = str(bson.ObjectId())
+
+                        # ----------------------------------------------------------
+                        # Busca a entrega original (se existir)
+                        # ----------------------------------------------------------
+                        entrega_original = next(
+                            (e for e in entregas_existentes if e["id"] == id_usado),
+                            {}
+                        )
+
+                        # ----------------------------------------------------------
+                        # Cria nova entrega copiando TUDO da original
+                        # ----------------------------------------------------------
+                        nova_entrega = {
+                            **entrega_original,   # <-- ISSO PRESERVA atividades
+                            "id": id_usado,
+                            "entrega": row["entrega"],
+                            "indicadores_doador": row.get("Indicadores", [])
+                        }
+
+                        nova_lista.append(nova_entrega)
+
+
+
+
+
+
+
+                    # nova_lista.append({
+                    #     "id": id_usado,
+                    #     "entrega": row["entrega"],
+
+                    #     # Aqui é onde os indicadores são salvos no banco
+                    #     "indicadores_doador": row.get("Indicadores", [])
+                    # })
 
                 # --------------------------------------------------------------
                 # Atualiza apenas o componente selecionado
