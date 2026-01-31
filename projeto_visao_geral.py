@@ -476,7 +476,7 @@ if not editar_cadastro:
 # MODO DE EDIÇÃO
 
 else:
-    st.write("**Editar informações cadastrais do projeto**")
+    st.markdown("##### Editar informações cadastrais do projeto")
 
     with st.form("form_editar_projeto", border=False):
 
@@ -665,29 +665,52 @@ else:
         
         st.divider()
         
-        st.write('**Contratos e Emendas de contrato**')
+        st.markdown('##### Contratos e Emendas')
 
 
-        # ---------- DATA DE ASSINATURA DO CONTRATO ----------
+        # ---------- DATA DE ASSINATURA DO CONTRATO (PARA O RECIBO) ----------
 
-        # Valor salvo no banco (pode não existir)
-        data_assinatura_salva = projeto.get("contrato_data_assinatura")
+        with st.container(horizontal=True, horizontal_alignment="left"):
 
-        if data_assinatura_salva:
-            # converte datetime/string para date
-            data_assinatura_default = pd.to_datetime(data_assinatura_salva).date()
-        else:
-            data_assinatura_default = None
+            # Valor salvo no banco (pode não existir)
+            data_assinatura_salva = projeto.get("contrato_data_assinatura")
 
-        data_assinatura_contrato = st.date_input(
-            "Data de assinatura do contrato:",
-            value=data_assinatura_default,
-            format="DD/MM/YYYY",
-            width=200
-        )
+            if data_assinatura_salva:
+                # converte datetime/string para date
+                data_assinatura_default = pd.to_datetime(data_assinatura_salva).date()
+            else:
+                data_assinatura_default = None
+
+            data_assinatura_contrato = st.date_input(
+                "Data de assinatura do contrato:",
+                value=data_assinatura_default,
+                format="DD/MM/YYYY",
+                width=200
+            )
+
+
+
+            # ---------- NOME/NÚMERO DO CONTRATO (PARA O RECIBO)----------
+
+            # Valor salvo no banco
+            contrato_nome_salvo = projeto.get("contrato_nome", "")
+
+            contrato_nome = st.text_input(
+                "Nome/número do contrato (para gerar o recibo)",
+                value=contrato_nome_salvo,
+                placeholder="Ex: IEB/CEPF/33-2026",
+                width=600
+            )
 
         st.write('')
-        
+
+
+
+
+
+
+        # ---------- LISTA DE DOCUMENTOS DE CONTRATO ----------
+
         contratos = projeto.get("contratos", [])
 
         if contratos:
@@ -833,7 +856,9 @@ else:
                                     "responsavel": responsavel_str,
                                     "direcoes_estrategicas": direcoes or [],
                                     "publicos": publicos or [],
-                                    "contrato_data_assinatura": data_assinatura_dt, 
+                                    "contrato_data_assinatura": data_assinatura_dt,
+                                    "contrato_nome": contrato_nome.strip() if contrato_nome else None,
+ 
                                 }
                             }
                         )
@@ -936,9 +961,9 @@ else:
 
 
 
-                        st.success(":material/check: Projeto atualizado com sucesso!")
-                        time.sleep(3)
-                        st.rerun()
+                    st.success(":material/check: Projeto atualizado com sucesso!")
+                    time.sleep(3)
+                    st.rerun()
 
 
 

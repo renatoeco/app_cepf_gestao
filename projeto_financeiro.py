@@ -160,11 +160,48 @@ def gerar_recibo_docx(
     data_assinatura_contrato,
     contatos,
     nome_organizacao,
-    cnpj_organizacao
+    cnpj_organizacao,
+    contrato_nome
 ):
     """
     Gera um arquivo DOCX de recibo com texto padrão do projeto.
     """
+
+
+    # ============================
+    # VALIDAÇÃO DE CAMPOS OBRIGATÓRIOS
+    # ============================
+
+    campos_obrigatorios = {
+        "Nome/número do contrato": contrato_nome,
+        "Data de assinatura do contrato": data_assinatura_contrato,
+        "Nome do projeto": nome_projeto,
+        "Valor da parcela": valor_parcela,
+        "Número da parcela": numero_parcela,
+        "Organização": nome_organizacao,
+        "CNPJ da organização": cnpj_organizacao,
+        "Contatos para assinatura": contatos,
+    }
+
+    campos_faltando = []
+
+    for nome, valor in campos_obrigatorios.items():
+        if valor is None:
+            campos_faltando.append(nome)
+        elif isinstance(valor, str) and not valor.strip():
+            campos_faltando.append(nome)
+        elif isinstance(valor, list) and len(valor) == 0:
+            campos_faltando.append(nome)
+
+    if campos_faltando:
+        st.error(
+            "Não foi possível gerar o recibo. "
+            "Os seguintes campos estão faltando:\n\n"
+            + "\n".join([f"- {c}" for c in campos_faltando]),
+            icon=":material/error:"
+        )
+        return False
+
 
     doc = Document()
 
@@ -217,7 +254,7 @@ def gerar_recibo_docx(
         ", sob o Mecanismo de Pequenos Apoios, conforme o contrato de subvenção nº "
     )
 
-    r = p.add_run("IEB/CEPF/33-2025")
+    r = p.add_run(contrato_nome)
     r.bold = True
     r.italic = True
 
@@ -282,6 +319,7 @@ def gerar_recibo_docx(
     # SALVAR
     # ============================
     doc.save(caminho_arquivo)
+    return True
 
 
 
@@ -1678,7 +1716,7 @@ if usuario_interno:
     with recibos:
 
         st.markdown("### Recibos")
-        st.caption("É necessário guardar os recibos e informar as **datas de pagamento**, para a evolução do cronograma do projeto.")
+        st.caption("É necessário informar as **datas de pagamento** para a evolução do cronograma do projeto.")
         st.write("")
 
         # --------------------------------------------------
@@ -1788,7 +1826,7 @@ if usuario_interno:
                             # ==========================
                             # GERA RECIBO
                             # ==========================
-                            gerar_recibo_docx(
+                            sucesso = gerar_recibo_docx(
                                 caminho_arquivo=caminho,
                                 valor_parcela=parcela.get("valor", 0),
                                 numero_parcela=numero,
@@ -1796,11 +1834,14 @@ if usuario_interno:
                                 data_assinatura_contrato=projeto.get("contrato_data_assinatura"),
                                 contatos=contatos_assinam,
                                 nome_organizacao=projeto["organizacao"],
-                                cnpj_organizacao=cnpj_organizacao
+                                cnpj_organizacao=cnpj_organizacao,
+                                contrato_nome=projeto.get("contrato_nome")
                             )
 
-                            st.session_state["recibos_gerados"][chave] = caminho
-                            st.rerun()
+                            if sucesso:
+                                st.session_state["recibos_gerados"][chave] = caminho
+                                st.rerun()
+
        
        
                 # ==========================
