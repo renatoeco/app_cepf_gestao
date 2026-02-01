@@ -445,7 +445,30 @@ if not editar_cadastro:
 
 
 
-    st.write(f"**Responsável:** {df_projeto['responsavel'].values[0]}")
+
+    # ---------- RESPONSÁVEL(IS) (DERIVADO DA COLEÇÃO DE PESSOAS | SOMENTE BENEFICIÁRIOS) ----------
+
+    codigo_projeto = projeto["codigo"]
+
+    df_responsaveis = df_pessoas[
+        (df_pessoas["tipo_usuario"] == "beneficiario") &   # 👈 filtra tipo
+        (
+            df_pessoas["projetos"].apply(
+                lambda x: isinstance(x, list) and codigo_projeto in x
+            )
+        )
+    ]
+
+    if df_responsaveis.empty:
+        st.markdown(
+            "**Responsável:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+            unsafe_allow_html=True
+        )
+    else:
+        nomes = ", ".join(sorted(df_responsaveis["nome_completo"].tolist()))
+        st.write(f"**Responsável:** {nomes}")
+
+
 
     # Padrinho
     valor = df_projeto["padrinho"].values[0]
@@ -558,37 +581,63 @@ else:
 
 
 
-        # ---------- RESPONSÁVEL(IS) ----------
 
-        # Filtra apenas usuários do tipo beneficiário
+        # ---------- RESPONSÁVEL(IS) (VINCULADO ÀS PESSOAS) ----------
+
+        codigo_projeto = projeto["codigo"]
+
+        # Filtra apenas beneficiários
         df_pessoas_benef = df_pessoas[
             df_pessoas["tipo_usuario"] == "beneficiario"
         ].copy()
 
-        # Lista de opções
         lista_beneficiarios = df_pessoas_benef["nome_completo"].dropna().tolist()
 
-        # Valor atual salvo no projeto
-        responsavel_atual = projeto.get("responsavel")
+        # Responsáveis atuais = pessoas que já têm o projeto no array
+        responsaveis_atuais = df_pessoas_benef[
+            df_pessoas_benef["projetos"].apply(
+                lambda x: isinstance(x, list) and codigo_projeto in x
+            )
+        ]["nome_completo"].tolist()
 
-        # Normaliza o valor para lista válida
-        if isinstance(responsavel_atual, list):
-            # remove valores vazios
-            responsavel_atual = [r for r in responsavel_atual if r]
-        elif isinstance(responsavel_atual, str) and responsavel_atual.strip():
-            responsavel_atual = [responsavel_atual]
-        else:
-            responsavel_atual = []  # <- deixa vazio se não houver valor válido
-
-        # Campo de seleção
         responsavel = st.multiselect(
             "Responsável",
             options=lista_beneficiarios,
-            default=responsavel_atual
+            default=responsaveis_atuais
         )
 
-        # Converte lista de responsáveis em string separada por vírgula
-        responsavel_str = ", ".join(responsavel) if responsavel else ""
+
+
+
+        # # Filtra apenas usuários do tipo beneficiário
+        # df_pessoas_benef = df_pessoas[
+        #     df_pessoas["tipo_usuario"] == "beneficiario"
+        # ].copy()
+
+        # # Lista de opções
+        # lista_beneficiarios = df_pessoas_benef["nome_completo"].dropna().tolist()
+
+        # # Valor atual salvo no projeto
+        # responsavel_atual = projeto.get("responsavel")
+
+        # # Normaliza o valor para lista válida
+        # if isinstance(responsavel_atual, list):
+        #     # remove valores vazios
+        #     responsavel_atual = [r for r in responsavel_atual if r]
+        # elif isinstance(responsavel_atual, str) and responsavel_atual.strip():
+        #     responsavel_atual = [responsavel_atual]
+        # else:
+        #     responsavel_atual = []  # <- deixa vazio se não houver valor válido
+
+        # # Campo de seleção
+        # responsavel = st.multiselect(
+        #     "Responsável",
+        #     options=lista_beneficiarios,
+        #     default=responsavel_atual
+        # )
+
+        # # Converte lista de responsáveis em string separada por vírgula
+        # responsavel_str = ", ".join(responsavel) if responsavel else ""
 
 
         # ---------- PADRINHO / MADRINHA ----------
@@ -853,7 +902,7 @@ else:
                                     "duracao": duracao,
                                     "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
                                     "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
-                                    "responsavel": responsavel_str,
+                                    # "responsavel": responsavel_str,
                                     "direcoes_estrategicas": direcoes or [],
                                     "publicos": publicos or [],
                                     "contrato_data_assinatura": data_assinatura_dt,
@@ -907,6 +956,35 @@ else:
                                 {"$addToSet": {"projetos": codigo}}
                             )
 
+                        # --------------------------------------------------
+                        # ATUALIZA RESPONSÁVEIS DO PROJETO (NAS PESSOAS)
+                        # --------------------------------------------------
+
+                        # Pessoas que eram responsáveis antes
+                        responsaveis_antes = set(responsaveis_atuais)
+
+                        # Pessoas selecionadas agora
+                        responsaveis_novos = set(responsavel)
+
+                        # Pessoas que precisam ser removidas
+                        remover = responsaveis_antes - responsaveis_novos
+
+                        # Pessoas que precisam ser adicionadas
+                        adicionar = responsaveis_novos - responsaveis_antes
+
+                        # Remove projeto das pessoas que saíram
+                        for nome in remover:
+                            col_pessoas.update_one(
+                                {"nome_completo": nome},
+                                {"$pull": {"projetos": codigo}}
+                            )
+
+                        # Adiciona projeto às pessoas novas
+                        for nome in adicionar:
+                            col_pessoas.update_one(
+                                {"nome_completo": nome},
+                                {"$addToSet": {"projetos": codigo}}
+                            )
 
                         # --------------------------------------------------
                         # SALVAR CONTRATO (SE INFORMADO)
@@ -961,7 +1039,7 @@ else:
 
 
 
-                    st.success(":material/check: Projeto atualizado com sucesso!")
+                    st.success("Projeto atualizado com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
 
