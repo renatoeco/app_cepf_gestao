@@ -1270,20 +1270,20 @@ with impactos:
 # INDICADORES
 # ###################################################################################################
 
-with indicadores:
 
+
+###########################################################################################################
+# ABA INDICADORES
+###########################################################################################################
+
+with indicadores:
 
     # --------------------------------------------------
     # PERMISSÃO
     # --------------------------------------------------
     usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
-
-    # Valor padrão
     modo_edicao = False
 
-    # --------------------------------------------------
-    # TOGGLE (somente para quem pode)
-    # --------------------------------------------------
     if usuario_interno:
         with st.container(horizontal=True, horizontal_alignment="right"):
             modo_edicao = st.toggle(
@@ -1291,27 +1291,13 @@ with indicadores:
                 key="editar_indicadores"
             )
 
-
-    # --------------------------------------------------
-    # TÍTULO DA SUBPÁGINA
-    # --------------------------------------------------
     st.subheader("Indicadores")
 
-
-
-    # --------------------------------------------------
-    # RENDERIZAÇÃO CONDICIONAL
-    # --------------------------------------------------
+    #######################################################################################################
+    # MODO VISUALIZAÇÃO
+    #######################################################################################################
     if not modo_edicao:
 
-
-        # -------------------------
-        # MODO VISUALIZAÇÃO — INDICADORES
-        # -------------------------
-
-        st.write("")
-
-        # Recupera indicadores do projeto
         indicadores_projeto = (
             df_projeto["indicadores"].values[0]
             if "indicadores" in df_projeto.columns
@@ -1320,11 +1306,8 @@ with indicadores:
 
         if not indicadores_projeto:
             st.caption("Nenhum indicador associado a este projeto.")
-
         else:
-            # --------------------------------------------------
-            # Mapeia id_indicador -> nome do indicador
-            # --------------------------------------------------
+            # Mapeia id do indicador para o nome
             mapa_indicadores = {
                 row["_id"]: row["indicador"]
                 for _, row in df_indicadores.iterrows()
@@ -1333,35 +1316,39 @@ with indicadores:
             dados_tabela = []
 
             for item in indicadores_projeto:
-
-                id_indicador = item.get("id_indicador")
-                valor = item.get("valor")
-                descricao = item.get("descricao_contribuicao", "")
-
-                nome_indicador = mapa_indicadores.get(
-                    id_indicador,
-                    "Indicador não encontrado"
-                )
-
                 dados_tabela.append({
-                    "Indicadores": nome_indicador,
-                    "Contribuição esperada": valor,
-                    "Descrição da contribuição": descricao
+                    "Indicadores": mapa_indicadores.get(
+                        item.get("id_indicador"),
+                        "Indicador não encontrado"
+                    ),
+                    "Contribuição esperada": item.get("valor"),
+                    "Descrição da contribuição": item.get(
+                        "descricao_contribuicao", ""
+                    ),
+                    "Resultado intermediário": item.get(
+                        "resultado_intermediario", ""
+                    ),
+                    "Resultado final": item.get(
+                        "resultado_final", ""
+                    )
                 })
 
             df_visualizacao = pd.DataFrame(dados_tabela)
-
             ui.table(df_visualizacao)
 
-
+    #######################################################################################################
+    # MODO EDIÇÃO
+    #######################################################################################################
     else:
 
-
-        # -------------------------
-        # MODO EDIÇÃO — INDICADORES
-        # -------------------------
-
         st.write("*Selecione os indicadores que serão acompanhados no projeto.*")
+        st.markdown(
+            "<span style='color:#2F5AA1;'>***Lembre-se de salvar no final da página.***</span>",
+            unsafe_allow_html=True
+        )
+
+        # st.write("*Lembre-se de salvar no final da página.*")
+
         st.write("")
 
         # --------------------------------------------------
@@ -1380,43 +1367,44 @@ with indicadores:
             for item in indicadores_salvos:
                 estado[item["id_indicador"]] = {
                     "valor": item.get("valor", 0),
-                    "descricao": item.get("descricao_contribuicao", "")
+                    "descricao": item.get("descricao_contribuicao", ""),
+                    "resultado_intermediario": item.get(
+                        "resultado_intermediario", ""
+                    ),
+                    "resultado_final": item.get(
+                        "resultado_final", ""
+                    )
                 }
 
             st.session_state.valores_indicadores = estado
-
-        else:
-            # NORMALIZA ESTADO ANTIGO (int → dict)
-            for k, v in list(st.session_state.valores_indicadores.items()):
-                if isinstance(v, int):
-                    st.session_state.valores_indicadores[k] = {
-                        "valor": v,
-                        "descricao": ""
-                    }
 
         # --------------------------------------------------
         # GARANTIA DE DADOS
         # --------------------------------------------------
         if df_indicadores.empty:
             st.caption("Não há indicadores cadastrados.")
-
         else:
-            # --------------------------------------------------
+
+
+            # CONFIGURAÇÃO ÚNICA DAS COLUNAS
+            colunas_indicadores = [5, 2, 4, 2, 2]
+
             # CABEÇALHO
-            # --------------------------------------------------
-            col_h1, col_h2, col_h3 = st.columns([6, 2, 4])
+            col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns(colunas_indicadores)
 
             with col_h1:
                 st.markdown("**Indicadores do CEPF**")
-
             with col_h2:
                 st.markdown("**Contribuição esperada**")
-
             with col_h3:
                 st.markdown("**Descrição da contribuição esperada**")
+            with col_h4:
+                st.markdown("**Resultado intermediário**")
+            with col_h5:
+                st.markdown("**Resultado final**")
 
-            # st.divider()
-            st.write('')
+            st.write("")
+            st.write("")
 
             # --------------------------------------------------
             # LISTAGEM DOS INDICADORES
@@ -1428,17 +1416,17 @@ with indicadores:
 
                 dados_atual = st.session_state.valores_indicadores.get(
                     id_indicador,
-                    {"valor": 0, "descricao": ""}
+                    {
+                        "valor": 0,
+                        "descricao": "",
+                        "resultado_intermediario": "",
+                        "resultado_final": ""
+                    }
                 )
 
-                valor_atual = dados_atual.get("valor", 0)
-                descricao_atual = dados_atual.get("descricao", "")
+                col_check, col_valor, col_desc, col_res_int, col_res_final = st.columns(colunas_indicadores)
 
-                col_check, col_valor, col_desc = st.columns([6, 2, 4])
-
-                # -------------------------
                 # CHECKBOX
-                # -------------------------
                 with col_check:
                     marcado = st.checkbox(
                         nome_indicador,
@@ -1446,37 +1434,69 @@ with indicadores:
                         value=id_indicador in st.session_state.valores_indicadores
                     )
 
-                # -------------------------
                 # VALOR NUMÉRICO
-                # -------------------------
                 with col_valor:
                     if marcado:
                         valor = st.number_input(
                             "",
                             step=1,
-                            value=valor_atual,
+                            value=dados_atual["valor"],
                             key=f"num_{id_indicador}"
                         )
 
-                # -------------------------
-                # DESCRIÇÃO
-                # -------------------------
+                # DESCRIÇÃO DA CONTRIBUIÇÃO
                 with col_desc:
                     if marcado:
                         descricao = st.text_area(
                             "",
-                            value=descricao_atual,
+                            value=dados_atual["descricao"],
                             key=f"desc_{id_indicador}",
                             height=80
                         )
 
-                # -------------------------
+
+                # RESULTADO INTERMEDIÁRIO
+                with col_res_int:
+                    if marcado:
+                        resultado_intermediario = st.number_input(
+                            "",
+                            step=1,
+                            value=(
+                                dados_atual.get("resultado_intermediario")
+                                if isinstance(
+                                    dados_atual.get("resultado_intermediario"), (int, float)
+                                )
+                                else 0
+                            ),
+                            key=f"res_int_{id_indicador}"
+                        )
+
+
+
+                # RESULTADO FINAL
+                with col_res_final:
+                    if marcado:
+                        resultado_final = st.number_input(
+                            "",
+                            step=1,
+                            value=(
+                                dados_atual.get("resultado_final")
+                                if isinstance(
+                                    dados_atual.get("resultado_final"), (int, float)
+                                )
+                                else 0
+                            ),
+                            key=f"res_fin_{id_indicador}"
+                        )
+
+
                 # ATUALIZA ESTADO
-                # -------------------------
                 if marcado:
                     st.session_state.valores_indicadores[id_indicador] = {
                         "valor": valor,
-                        "descricao": descricao
+                        "descricao": descricao,
+                        "resultado_intermediario": resultado_intermediario,
+                        "resultado_final": resultado_final
                     }
                 else:
                     st.session_state.valores_indicadores.pop(id_indicador, None)
@@ -1515,14 +1535,18 @@ with indicadores:
                         )
                         st.stop()
 
+
                 indicadores_para_salvar = [
                     {
                         "id_indicador": id_indicador,
                         "valor": dados["valor"],
-                        "descricao_contribuicao": dados["descricao"].strip()
+                        "descricao_contribuicao": dados["descricao"].strip(),
+                        "resultado_intermediario": dados["resultado_intermediario"],
+                        "resultado_final": dados["resultado_final"]
                     }
                     for id_indicador, dados in st.session_state.valores_indicadores.items()
                 ]
+
 
                 resultado = col_projetos.update_one(
                     {"codigo": codigo_projeto_atual},
@@ -1534,11 +1558,14 @@ with indicadores:
                 )
 
                 if resultado.matched_count == 1:
-                    st.success("Indicadores atualizados com sucesso!")
+                    st.success("Indicadores atualizados com sucesso!", icon=":material/check:")
                     time.sleep(2)
                     st.rerun()
                 else:
                     st.error("Erro ao salvar indicadores.")
+
+
+
 
 
 
