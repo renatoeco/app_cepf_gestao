@@ -1477,6 +1477,28 @@ def formatar_numero_br_dinamico(valor):
     # Converte para padrão pt-BR
     return texto.replace(",", "X").replace(".", ",").replace("X", ".")
 
+# Função para formatar números no padrão brasileiro na aba de Indicadores de Resultados
+def parse_numero_br(valor_str):
+    """
+    Converte string no formato brasileiro para float.
+    Ex:
+    - '50,15' -> 50.15
+    - '1.234,56' -> 1234.56
+    """
+    if valor_str is None:
+        return None
+
+    valor_str = valor_str.strip()
+
+    if not valor_str:
+        return None
+
+    try:
+        return float(
+            valor_str.replace(".", "").replace(",", ".")
+        )
+    except ValueError:
+        return None
 
 
 def data_hoje_br():
@@ -1551,6 +1573,7 @@ if tipo_usuario in ["admin", "equipe"]:
     steps_relatorio = [
         "Atividades",
         "Despesas",
+        "Resultados",
         "Beneficiários",
         "Pesquisas",
         "Formulário",
@@ -1560,6 +1583,7 @@ else:
     steps_relatorio = [
         "Atividades",
         "Despesas",
+        "Resultados",
         "Beneficiários",
         "Pesquisas",
         "Formulário",
@@ -1746,7 +1770,7 @@ if step_selecionado == "Atividades":
     st.write("")
     st.write("")
 
-    st.markdown("### Relatos de atividades")
+    st.markdown("#### Relatos de atividades")
     st.write('')
 
     # --------------------------------------------------
@@ -2474,7 +2498,7 @@ if step_selecionado == "Despesas":
     st.write("")
     st.write("")
 
-    st.markdown("### Registros de despesas")
+    st.markdown("#### Registros de despesas")
     st.write("")
 
     # --------------------------------------------------
@@ -3064,6 +3088,265 @@ if step_selecionado == "Despesas":
                             mostrar_devolutiva = False
                         else:
                             mostrar_devolutiva = bool(devolutiva)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ==================================================
+# ---------- RESULTADOS ----------
+# ==================================================
+
+
+
+
+
+
+
+if step_selecionado == "Resultados":
+
+    # Espaçamento visual
+    st.write("")
+    st.write("")
+
+    # Título da seção
+    st.markdown("#### Indicadores de projeto")
+    st.write("")
+
+    # Recupera os componentes do plano de trabalho
+    componentes = projeto.get("plano_trabalho", {}).get("componentes", [])
+
+    # Lista auxiliar para armazenar todas as entregas,
+    # independentemente do componente
+    entregas = []
+
+    # Percorre os componentes e coleta todas as entregas
+    for componente in componentes:
+        for entrega in componente.get("entregas", []):
+            entregas.append(entrega)
+
+    # Caso não existam entregas
+    if not entregas:
+        st.info("Este projeto não possui entregas com indicadores.")
+    else:
+        # Loop por entrega
+        for idx_ent, entrega in enumerate(entregas):
+
+            # Título da entrega
+            st.markdown(f"##### {entrega.get('entrega')}")
+
+            # Lista de indicadores do projeto dentro da entrega
+            indicadores = entrega.get("indicadores_projeto", [])
+
+            # Caso a entrega não tenha indicadores
+            if not indicadores:
+                st.caption("Esta entrega não possui indicadores de projeto.")
+                continue
+
+            # Loop por indicador
+            for idx_ind, indicador in enumerate(indicadores):
+
+                # Container visual para cada indicador
+                with st.container(border=True):
+
+                    # Nome do indicador
+                    st.markdown(
+                        f"**Indicador:** {indicador.get('indicador_projeto')}"
+                    )
+
+                    # Unidade de medida
+                    st.markdown(
+                        f"**Unidade de medida:** {indicador.get('unidade_medida')}"
+                    )
+
+                    # Layout em colunas
+                    col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
+
+                    # Linha base (somente leitura)
+                    col1.markdown(
+                        f"**Início do projeto:** {indicador.get('linha_base')}"
+                    )
+
+                    # Meta (somente leitura)
+                    col2.markdown(
+                        f"**Meta:** {indicador.get('meta')}"
+                    )
+
+                    # ======================================================
+                    # KEYS ISOLADAS
+                    # ======================================================
+
+                    key_resultado = (
+                        f"resultado_"
+                        f"{relatorio_numero}_"
+                        f"{entrega.get('id')}_"
+                        f"{idx_ind}"
+                    )
+
+                    key_obs = (
+                        f"obs_"
+                        f"{relatorio_numero}_"
+                        f"{entrega.get('id')}_"
+                        f"{idx_ind}"
+                    )
+
+                    key_save = (
+                        f"save_"
+                        f"{relatorio_numero}_"
+                        f"{entrega.get('id')}_"
+                        f"{idx_ind}"
+                    )
+
+                    # ======================================================
+                    # PRÉ-CARGA DO ESTADO (somente uma vez)
+                    # ======================================================
+
+                    # Resultado atual (float do banco → string pt-BR)
+                    if key_resultado not in st.session_state:
+                        valor_resultado = indicador.get("resultado_atual")
+
+                        if valor_resultado is None:
+                            st.session_state[key_resultado] = ""
+                        else:
+                            st.session_state[key_resultado] = (
+                                formatar_numero_br_dinamico(valor_resultado)
+                            )
+
+                    # Observações
+                    if key_obs not in st.session_state:
+                        valor_observacoes = indicador.get("observacoes_coleta")
+                        if valor_observacoes is None or valor_observacoes == "None":
+                            valor_observacoes = ""
+                        st.session_state[key_obs] = valor_observacoes
+
+                    # ======================================================
+                    # RENDERIZAÇÃO CONDICIONAL
+                    # ======================================================
+
+                    if pode_editar_relatorio:
+                        # Campo editável: resultado atual (texto, formato BR)
+                        resultado_atual_str = col3.text_input(
+                            "Resultado atual",
+                            key=key_resultado,
+                            # placeholder="Ex: 1.234,56"
+                        )
+
+                        # Campo editável: observações
+                        observacoes = col4.text_input(
+                            "Observações",
+                            key=key_obs
+                        )
+                    else:
+                        # Apenas exibição
+                        col3.write(
+                            f"**Resultado atual:** "
+                            f"{formatar_numero_br_dinamico(indicador.get('resultado_atual'))}"
+                        )
+
+                        valor_obs = st.session_state[key_obs]
+                        if not valor_obs:
+                            valor_obs = "-"
+
+                        col4.write(
+                            f"**Observações:** {valor_obs}"
+                        )
+
+                        resultado_atual_str = st.session_state[key_resultado]
+                        observacoes = st.session_state[key_obs]
+
+                    # ======================================================
+                    # BOTÃO SALVAR (sempre aparece quando pode editar)
+                    # ======================================================
+
+                    if pode_editar_relatorio:
+                        with st.container(horizontal=True, horizontal_alignment="right"):
+                            salvar = st.button(
+                                "Salvar",
+                                key=key_save,
+                                icon=":material/save:",
+                                width=200,
+                                type="primary"
+                            )
+                    else:
+                        salvar = False
+
+                    # ======================================================
+                    # AÇÃO DE SALVAMENTO
+                    # ======================================================
+
+                    if salvar:
+                        # Converte string pt-BR para float
+                        resultado_float = parse_numero_br(resultado_atual_str)
+
+                        if resultado_float is None:
+                            st.error(
+                                "Resultado atual inválido. "
+                                "Use o formato brasileiro, por exemplo: 1.234,56"
+                            )
+                            st.stop()
+
+                        data_coleta = datetime.datetime.now()
+
+                        observacoes_salvar = observacoes
+                        if observacoes_salvar is None or observacoes_salvar == "None":
+                            observacoes_salvar = ""
+
+                        # Atualiza no MongoDB
+                        col_projetos.update_one(
+                            {
+                                "codigo": projeto_codigo
+                            },
+                            {
+                                "$set": {
+                                    "plano_trabalho.componentes.$[c].entregas.$[e].indicadores_projeto.$[i].resultado_atual": resultado_float,
+                                    "plano_trabalho.componentes.$[c].entregas.$[e].indicadores_projeto.$[i].observacoes_coleta": observacoes_salvar,
+                                    "plano_trabalho.componentes.$[c].entregas.$[e].indicadores_projeto.$[i].data_coleta": data_coleta
+                                }
+                            },
+                            array_filters=[
+                                {"c.entregas.id": entrega.get("id")},
+                                {"e.id": entrega.get("id")},
+                                {"i.indicador_projeto": indicador.get("indicador_projeto")}
+                            ]
+                        )
+
+                        # Atualiza o objeto em memória
+                        indicador["resultado_atual"] = resultado_float
+                        indicador["observacoes_coleta"] = observacoes_salvar
+                        indicador["data_coleta"] = data_coleta
+
+                        st.success("Indicador salvo com sucesso.", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+
+                # Espaçamento entre indicadores
+                st.write("")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

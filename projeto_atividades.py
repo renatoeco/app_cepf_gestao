@@ -1714,7 +1714,7 @@ with monitoramento:
                         "Periodicidade": st.column_config.TextColumn(),
                         "Fonte de verificação": st.column_config.TextColumn(),
                         "Responsável": st.column_config.TextColumn(),
-                        "Data da coleta": st.column_config.DateColumn(disabled=True)
+                        "Data da coleta": st.column_config.DateColumn(disabled=True, format="DD/MM/YYYY")
                     }
                 )
 
