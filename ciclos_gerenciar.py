@@ -224,13 +224,9 @@ with tab1:
                                 }}
                             )
 
-                            st.success("Ciclo de Investimento atualizado com sucesso!")
+                            st.success("Ciclo de Investimento atualizado com sucesso!", icon=":material/check:")
                             time.sleep(2)
                             st.rerun()
-                    else:
-                        st.warning("Não foi possível localizar o Ciclo de Investimento selecionado.")
-
-
 
 
 

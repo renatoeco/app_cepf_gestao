@@ -99,6 +99,13 @@ col_projetos = db["projetos"]
 
 col_organizacoes = db["organizacoes"]
 
+col_editais = db["editais"]
+
+col_ciclos = db["ciclos_investimento"]
+
+col_investidores = db["investidores"]
+
+
 ###########################################################################################################
 # TRATAMENTO DE DADOS
 ###########################################################################################################
@@ -141,6 +148,110 @@ financeiro = projeto.get("financeiro", {})
 ###########################################################################################################
 
 
+
+
+def obter_nome_investidor(db, projeto):
+    """
+    Resolve o texto do investidor para uso no recibo, no formato:
+    Nome do Investidor - SIGLA / Nome do Investidor - SIGLA
+
+    Não usa st.stop().
+    Retorna:
+        - nome_investidor (str ou None)
+        - erros (list[str])
+    """
+
+    # Coleções
+    col_editais = db["editais"]
+    col_ciclos = db["ciclos_investimento"]
+    col_investidores = db["investidores"]
+
+    nome_investidor = None
+    erros = []
+
+    # --------------------------------------------------
+    # 1. Buscar edital do projeto
+    # --------------------------------------------------
+    codigo_edital = projeto.get("edital")
+
+    if not codigo_edital:
+        erros.append("Projeto sem código de edital.")
+        return nome_investidor, erros
+
+    edital = col_editais.find_one(
+        {"codigo_edital": codigo_edital},
+        {"ciclo_investimento": 1}
+    )
+
+    if not edital:
+        erros.append(f"Edital '{codigo_edital}' não encontrado.")
+        return nome_investidor, erros
+
+    codigo_ciclo = edital.get("ciclo_investimento")
+
+    if not codigo_ciclo:
+        erros.append("Edital sem ciclo de investimento definido.")
+        return nome_investidor, erros
+
+    # --------------------------------------------------
+    # 2. Buscar ciclo de investimento
+    # --------------------------------------------------
+    ciclo = col_ciclos.find_one(
+        {"codigo_ciclo": codigo_ciclo},
+        {"investidores": 1}
+    )
+
+    if not ciclo:
+        erros.append(f"Ciclo de investimento '{codigo_ciclo}' não encontrado.")
+        return nome_investidor, erros
+
+    siglas = ciclo.get("investidores", [])
+
+    if not siglas:
+        erros.append("Nenhum investidor definido no ciclo de investimento.")
+        return nome_investidor, erros
+
+    # --------------------------------------------------
+    # 3. Resolver investidores (nome + sigla)
+    # --------------------------------------------------
+    nomes_formatados = []
+
+    for sigla in siglas:
+        investidor = col_investidores.find_one(
+            {"sigla_investidor": sigla},
+            {"nome_investidor": 1, "sigla_investidor": 1}
+        )
+
+        if not investidor:
+            erros.append(f"Investidor com sigla '{sigla}' não encontrado.")
+            continue
+
+        nome = investidor.get("nome_investidor")
+        sigla_inv = investidor.get("sigla_investidor")
+
+        if not nome or not sigla_inv:
+            erros.append(f"Investidor '{sigla}' com dados incompletos.")
+            continue
+
+        # Formato final exigido no recibo
+        nomes_formatados.append(f"{nome} - {sigla_inv}")
+
+    if not nomes_formatados:
+        erros.append("Não foi possível resolver o nome de nenhum investidor.")
+        return nome_investidor, erros
+
+    # --------------------------------------------------
+    # 4. Texto final
+    # --------------------------------------------------
+    nome_investidor = " / ".join(nomes_formatados)
+
+    return nome_investidor, erros
+
+
+
+
+
+
 def calcular_gasto(item):
     lancamentos = item.get("lancamentos", [])
     return sum(
@@ -148,7 +259,6 @@ def calcular_gasto(item):
         for l in lancamentos
         if l.get("valor_despesa") is not None
     )
-
 
 
 
@@ -161,8 +271,10 @@ def gerar_recibo_docx(
     contatos,
     nome_organizacao,
     cnpj_organizacao,
-    contrato_nome
+    contrato_nome,
+    nome_investidor  # NOVO PARÂMETRO
 ):
+
     """
     Gera um arquivo DOCX de recibo com texto padrão do projeto.
     """
@@ -181,6 +293,8 @@ def gerar_recibo_docx(
         "Organização": nome_organizacao,
         "CNPJ da organização": cnpj_organizacao,
         "Contatos para assinatura": contatos,
+        "Investidor": nome_investidor,
+
     }
 
     campos_faltando = []
@@ -258,9 +372,16 @@ def gerar_recibo_docx(
     r.bold = True
     r.italic = True
 
+
     p.add_run(
-        f", assinado em {data_assinatura}, no âmbito do Fundo de "
-        "Parceria para Ecossistemas Críticos - CEPF Cerrado.\n\n"
+        f", assinado em {data_assinatura}, no âmbito do "
+    )
+
+    r = p.add_run(nome_investidor)
+    r.bold = True
+
+    p.add_run(
+        ".\n\n"
         f"Brasília-DF, {data_hoje}"
     )
 
@@ -1728,6 +1849,15 @@ if usuario_interno:
             st.caption("Não há parcelas cadastradas.")
             st.stop()
 
+
+
+        # --------------------------------------------------
+        # Nome do investidor para o recibo
+        # --------------------------------------------------
+        nome_investidor, erros_investidor = obter_nome_investidor(db, projeto)
+
+
+
         # ==================================================
         # Layout único das colunas
         # (alterar aqui muda tudo)
@@ -1788,6 +1918,8 @@ if usuario_interno:
                     if c.get("assina_docs", False) is True
                 ]
 
+
+
                 # ==========================
                 # GERAR RECIBO
                 # ==========================
@@ -1801,46 +1933,71 @@ if usuario_interno:
                         type="secondary"
                     ):
 
+                        # --------------------------------------------------
+                        # 1. Validação: contatos que assinam
+                        # --------------------------------------------------
                         if not contatos_assinam:
                             st.error(
-                                ":material/warning: Não há contatos cadastrados com a responsabilidade de assinar documentos. "
+                                "Não há contatos cadastrados com a responsabilidade de assinar documentos. "
                                 "Cadastre ao menos um contato com essa opção marcada antes de gerar o recibo."
-                                )
+                            )
+
                         else:
-                            # ==========================
-                            # CARREGA ORGANIZAÇÃO SOMENTE AGORA
-                            # ==========================
-                            organizacao_doc = col_organizacoes.find_one(
-                                {"nome_organizacao": projeto["organizacao"]},
-                                {"cnpj": 1}
-                            )
+                            # --------------------------------------------------
+                            # 2. Resolver nome do investidor
+                            # (função utilitária, sem st.stop)
+                            # --------------------------------------------------
+                            nome_investidor, erros_investidor = obter_nome_investidor(db, projeto)
 
-                            if not organizacao_doc:
+                            if not nome_investidor:
+                                # Mostra erro, mas NÃO interrompe a aplicação
                                 st.error(
-                                    f"Não foi encontrado CNPJ para a organização '{projeto['organizacao']}'."
+                                    "Não foi possível identificar o investidor do projeto:\n\n"
+                                    + "\n".join([f"- {e}" for e in erros_investidor]),
+                                    icon=":material/error:"
                                 )
-                                st.stop()
 
-                            cnpj_organizacao = organizacao_doc.get("cnpj")
+                            else:
+                                # --------------------------------------------------
+                                # 3. Buscar organização (CNPJ)
+                                # --------------------------------------------------
+                                organizacao_doc = col_organizacoes.find_one(
+                                    {"nome_organizacao": projeto["organizacao"]},
+                                    {"cnpj": 1}
+                                )
 
-                            # ==========================
-                            # GERA RECIBO
-                            # ==========================
-                            sucesso = gerar_recibo_docx(
-                                caminho_arquivo=caminho,
-                                valor_parcela=parcela.get("valor", 0),
-                                numero_parcela=numero,
-                                nome_projeto=projeto["nome_do_projeto"],
-                                data_assinatura_contrato=projeto.get("contrato_data_assinatura"),
-                                contatos=contatos_assinam,
-                                nome_organizacao=projeto["organizacao"],
-                                cnpj_organizacao=cnpj_organizacao,
-                                contrato_nome=projeto.get("contrato_nome")
-                            )
+                                if not organizacao_doc:
+                                    st.error(
+                                        f"Não foi encontrado CNPJ para a organização '{projeto['organizacao']}'."
+                                    )
 
-                            if sucesso:
-                                st.session_state["recibos_gerados"][chave] = caminho
-                                st.rerun()
+                                else:
+                                    cnpj_organizacao = organizacao_doc.get("cnpj")
+
+                                    # --------------------------------------------------
+                                    # 4. Gerar recibo DOCX
+                                    # --------------------------------------------------
+                                    sucesso = gerar_recibo_docx(
+                                        caminho_arquivo=caminho,
+                                        valor_parcela=parcela.get("valor", 0),
+                                        numero_parcela=numero,
+                                        nome_projeto=projeto["nome_do_projeto"],
+                                        data_assinatura_contrato=projeto.get("contrato_data_assinatura"),
+                                        contatos=contatos_assinam,
+                                        nome_organizacao=projeto["organizacao"],
+                                        cnpj_organizacao=cnpj_organizacao,
+                                        contrato_nome=projeto.get("contrato_nome"),
+                                        nome_investidor=nome_investidor
+                                    )
+
+                                    # --------------------------------------------------
+                                    # 5. Pós-geração
+                                    # --------------------------------------------------
+                                    if sucesso:
+                                        st.session_state["recibos_gerados"][chave] = caminho
+                                        st.rerun()
+
+
 
        
        
