@@ -882,29 +882,36 @@ with plano_trabalho:
                 df_editado = df_editado[df_editado["entrega"] != ""]
 
                 # --------------------------------------------------------------
-                # IDs originais para manter consistência
+                # VALIDAÇÃO: cada entrega deve ter ao menos um indicador
                 # --------------------------------------------------------------
-                ids_original = [e["id"] for e in entregas_existentes]
+                erro_validacao = False
 
-                nova_lista = []
-
-                # --------------------------------------------------------------
-                # Monta nova lista de entregas já com indicadores_doador
-                # --------------------------------------------------------------
                 for idx, row in df_editado.iterrows():
 
-                    # Mantém ID antigo ou gera novo
-                    if idx < len(ids_original):
-                        id_usado = ids_original[idx]
-                    else:
-                        id_usado = str(bson.ObjectId())
+                    indicadores_linha = row.get("Indicadores")
+
+                    if not indicadores_linha or not isinstance(indicadores_linha, list):
+                        st.error(
+                            f"A entrega '{row['entrega']}' deve ter pelo menos um indicador associado."
+                        )
+                        erro_validacao = True
 
 
+                # --------------------------------------------------------------
+                # SE NÃO HOUVER ERRO, CONTINUA O SALVAMENTO
+                # --------------------------------------------------------------
+                if not erro_validacao:
 
+                    # ----------------------------------------------------------
+                    # IDs originais para manter consistência
+                    # ----------------------------------------------------------
+                    ids_original = [e["id"] for e in entregas_existentes]
 
-                    # --------------------------------------------------------------
+                    nova_lista = []
+
+                    # ----------------------------------------------------------
                     # Monta nova lista de entregas SEM PERDER atividades
-                    # --------------------------------------------------------------
+                    # ----------------------------------------------------------
                     for idx, row in df_editado.iterrows():
 
                         # Mantém ID antigo ou gera novo
@@ -913,19 +920,15 @@ with plano_trabalho:
                         else:
                             id_usado = str(bson.ObjectId())
 
-                        # ----------------------------------------------------------
                         # Busca a entrega original (se existir)
-                        # ----------------------------------------------------------
                         entrega_original = next(
                             (e for e in entregas_existentes if e["id"] == id_usado),
                             {}
                         )
 
-                        # ----------------------------------------------------------
-                        # Cria nova entrega copiando TUDO da original
-                        # ----------------------------------------------------------
+                        # Cria nova entrega copiando tudo da original
                         nova_entrega = {
-                            **entrega_original,   # <-- ISSO PRESERVA atividades
+                            **entrega_original,   # preserva atividades
                             "id": id_usado,
                             "entrega": row["entrega"],
                             "indicadores_doador": row.get("Indicadores", [])
@@ -933,52 +936,34 @@ with plano_trabalho:
 
                         nova_lista.append(nova_entrega)
 
+                    # ----------------------------------------------------------
+                    # Atualiza apenas o componente selecionado
+                    # ----------------------------------------------------------
+                    componentes_atualizados = []
 
+                    for comp in componentes:
+                        if comp["componente"] == nome_componente_selecionado:
+                            componentes_atualizados.append({
+                                **comp,
+                                "entregas": nova_lista
+                            })
+                        else:
+                            componentes_atualizados.append(comp)
 
+                    # ----------------------------------------------------------
+                    # Persistência no MongoDB
+                    # ----------------------------------------------------------
+                    resultado = col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
+                        {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+                    )
 
-
-
-
-                    # nova_lista.append({
-                    #     "id": id_usado,
-                    #     "entrega": row["entrega"],
-
-                    #     # Aqui é onde os indicadores são salvos no banco
-                    #     "indicadores_doador": row.get("Indicadores", [])
-                    # })
-
-                # --------------------------------------------------------------
-                # Atualiza apenas o componente selecionado
-                # --------------------------------------------------------------
-                componentes_atualizados = []
-
-                for comp in componentes:
-                    if comp["componente"] == nome_componente_selecionado:
-                        componentes_atualizados.append({
-                            **comp,
-                            "entregas": nova_lista
-                        })
+                    if resultado.matched_count == 1:
+                        st.success("Entregas atualizadas com sucesso.", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
                     else:
-                        componentes_atualizados.append(comp)
-
-                # --------------------------------------------------------------
-                # Persistência no MongoDB
-                # --------------------------------------------------------------
-                resultado = col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
-                )
-
-                if resultado.matched_count == 1:
-                    st.success("Entregas atualizadas com sucesso.", icon=":material/check:")
-                    time.sleep(3)
-                    st.rerun()
-                else:
-                    st.error("Erro ao atualizar entregas.")
-
-
-
-
+                        st.error("Erro ao atualizar entregas.")
 
 
 
