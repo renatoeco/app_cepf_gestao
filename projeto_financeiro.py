@@ -1700,10 +1700,10 @@ with orcamento:
 
 
 
-        altura_editor = ajustar_altura_data_editor(
-            df_orcamento,
-            linhas_adicionais=1
-        )
+        # altura_editor = ajustar_altura_data_editor(
+        #     df_orcamento,
+        #     linhas_adicionais=1
+        # )
 
         df_editado = st.data_editor(
             df_orcamento[
@@ -1718,7 +1718,7 @@ with orcamento:
                 ]
             ],
             num_rows="dynamic",
-            height=altura_editor,
+            # height=altura_editor,
             column_config={
                 "categoria": st.column_config.SelectboxColumn(
                     "Categoria de despesa",
