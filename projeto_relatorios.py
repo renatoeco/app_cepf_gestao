@@ -16,6 +16,7 @@ from funcoes_auxiliares import (
     obter_pasta_pesquisas,
     obter_pasta_projeto,
     obter_pasta_relatos_financeiros,
+    obter_pasta_relatorios,
     enviar_arquivo_drive,
     gerar_link_drive,
     enviar_email
@@ -4322,12 +4323,20 @@ if step_selecionado == "Formulário":
 
 
 
+
     ###########################################################################
     # 3. RENDERIZAÇÃO DO FORMULÁRIO
     ###########################################################################
 
     st.write("")
     st.write("")
+
+    # -------------------------------------------------------------------------
+    # Armazena uploads temporários em memória (evita múltiplos envios no rerun)
+    # Somente no clique do botão "Salvar formulário" os arquivos serão enviados
+    # -------------------------------------------------------------------------
+    if "temp_uploads" not in st.session_state:
+        st.session_state.temp_uploads = {}
 
 
     for pergunta in perguntas:
@@ -4346,9 +4355,7 @@ if step_selecionado == "Formulário":
         if tipo == "titulo":
             st.subheader(texto)
             st.write("")
-
             continue
-
 
 
         # ---------------------------------------------------------------------
@@ -4357,22 +4364,7 @@ if step_selecionado == "Formulário":
         elif tipo == "subtitulo":
             st.markdown(f"##### {texto}")
             st.write("")
-
             continue
-
-
-
-        # # ---------------------------------------------------------------------
-        # # DIVISÓRIA (não usa texto)
-        # # ---------------------------------------------------------------------
-        # elif tipo == "divisoria":
-        #     st.divider()
-
-        #     respostas_formulario.append({
-        #         "tipo": "divisoria",
-        #         "ordem": ordem
-        #     })
-        #     continue
 
 
         # ---------------------------------------------------------------------
@@ -4381,7 +4373,6 @@ if step_selecionado == "Formulário":
         elif tipo == "paragrafo":
             st.write(texto)
             st.write("")
-
             continue
 
 
@@ -4389,8 +4380,7 @@ if step_selecionado == "Formulário":
         # TEXTO CURTO
         # ---------------------------------------------------------------------
         elif tipo == "texto_curto":
-        
-        
+
             resposta_atual = (
                 st.session_state.respostas_formulario
                 .get(chave, {})
@@ -4414,15 +4404,11 @@ if step_selecionado == "Formulário":
                 renderizar_visualizacao(texto, resposta_atual)
 
 
-
-
-
         # ---------------------------------------------------------------------
         # TEXTO LONGO
         # ---------------------------------------------------------------------
         elif tipo == "texto_longo":
-        
-        
+
             resposta_atual = (
                 st.session_state.respostas_formulario
                 .get(chave, {})
@@ -4447,13 +4433,11 @@ if step_selecionado == "Formulário":
                 renderizar_visualizacao(texto, resposta_atual)
 
 
-
         # ---------------------------------------------------------------------
         # NÚMERO
         # ---------------------------------------------------------------------
         elif tipo == "numero":
-        
-        
+
             resposta_atual = (
                 st.session_state.respostas_formulario
                 .get(chave, {})
@@ -4482,14 +4466,11 @@ if step_selecionado == "Formulário":
                 )
 
 
-
-
         # ---------------------------------------------------------------------
         # ESCOLHA ÚNICA
         # ---------------------------------------------------------------------
         elif tipo == "escolha_unica":
-        
-        
+
             resposta_atual = (
                 st.session_state.respostas_formulario
                 .get(chave, {})
@@ -4514,15 +4495,11 @@ if step_selecionado == "Formulário":
                 renderizar_visualizacao(texto, resposta_atual)
 
 
-
-
         # ---------------------------------------------------------------------
         # MÚLTIPLA ESCOLHA
         # ---------------------------------------------------------------------
-
         elif tipo == "multipla_escolha":
-        
-        
+
             resposta_atual = (
                 st.session_state.respostas_formulario
                 .get(chave, {})
@@ -4544,14 +4521,82 @@ if step_selecionado == "Formulário":
                     "resposta": resposta
                 }
             else:
-                renderizar_visualizacao(
-                    texto,
-                    ", ".join(resposta_atual)
+                renderizar_visualizacao(texto, ", ".join(resposta_atual))
+
+
+
+        # ---------------------------------------------------------------------
+        # UPLOAD DE ARQUIVOS
+        # ---------------------------------------------------------------------
+        elif tipo == "upload_arquivo":
+
+            MAX_MB = 10
+            MAX_BYTES = MAX_MB * 1024 * 1024
+
+            resposta_atual = (
+                st.session_state.respostas_formulario
+                .get(chave, {})
+                .get("resposta", [])
+            )
+
+            if pode_editar_relatorio:
+
+                arquivos = st.file_uploader(
+                    label=f"{texto} (máx. 10 MB por arquivo)",
+                    accept_multiple_files=True,
+                    key=f"input_{chave}"
                 )
 
+                # ---------------------------------------------------------
+                # Validação 
+                # ---------------------------------------------------------
+                if arquivos:
+                    validos = [
+                        arq for arq in arquivos
+                        if arq.size <= MAX_BYTES
+                    ]
 
+                    for arq in arquivos:
+                        if arq.size > MAX_BYTES:
+                            st.warning(
+                                f"O arquivo '{arq.name}' excede 10 MB e não será enviado."
+                            )
 
+                    # substitui (não acumula)
+                    st.session_state.temp_uploads[chave] = validos
+                else:
+                    # se remover seleção, limpa também
+                    st.session_state.temp_uploads.pop(chave, None)
 
+                # ---------------------------------------------------------
+                # Lista de arquivos já salvos (após uploader)
+                # ---------------------------------------------------------
+                if resposta_atual:
+                    st.caption("Arquivos já enviados:")
+                    for arq in resposta_atual:
+                        link = gerar_link_drive(arq["id"])
+                        st.markdown(
+                            f":material/attach_file: [{arq['nome']}]({link})"
+                        )
+
+                st.session_state.respostas_formulario[chave] = {
+                    "tipo": tipo,
+                    "ordem": ordem,
+                    "pergunta": texto,
+                    "resposta": resposta_atual
+                }
+
+            else:
+                st.markdown(f"**{texto}**")
+
+                if resposta_atual:
+                    for arq in resposta_atual:
+                        link = gerar_link_drive(arq["id"])
+                        st.markdown(
+                            f":material/attach_file: [{arq['nome']}]({link})"
+                        )
+                else:
+                    st.caption("Nenhum arquivo enviado")
 
 
         # ---------------------------------------------------------------------
@@ -4560,35 +4605,101 @@ if step_selecionado == "Formulário":
         else:
             st.warning(f"Tipo de pergunta não suportado: {tipo}")
 
-        st.write("")  # Espaçamento entre perguntas
-
-
+        st.write("")
 
 
 
 
     ###########################################################################
-    # 4. BOTÃO PARA SALVAR RESPOSTAS NO RELATÓRIO CORRETO (MONGODB)
+    # 4. BOTÃO PARA SALVAR RESPOSTAS + UPLOAD REAL PARA O DRIVE
     ###########################################################################
     if pode_editar_relatorio:
         if st.button("Salvar formulário", type="primary", icon=":material/save:"):
 
-            col_projetos.update_one(
-                {
-                    "codigo": projeto["codigo"],
-                    "relatorios.numero": relatorio_numero
-                },
-                {
-                    "$set": {
-                        "relatorios.$.respostas_formulario":
-                            st.session_state.respostas_formulario
+            with st.spinner("Salvando o formulário..."):
+
+                servico = None
+
+                # ---------------------------------------------------------
+                # Upload incremental (somente se houver novos arquivos)
+                # ---------------------------------------------------------
+                for chave, arquivos in list(st.session_state.temp_uploads.items()):
+
+                    if not arquivos:
+                        continue
+
+                    if not servico:
+                        servico = obter_servico_drive()
+
+                    pasta_projeto_id = obter_pasta_projeto(
+                        servico,
+                        projeto["codigo"],
+                        projeto["sigla"]
+                    )
+
+                    pasta_relatorios_id = obter_pasta_relatorios(
+                        servico,
+                        pasta_projeto_id
+                    )
+
+                    novos_arquivos = []
+
+                    for arquivo in arquivos:
+                        arquivo_id = enviar_arquivo_drive(
+                            servico,
+                            pasta_relatorios_id,
+                            arquivo
+                        )
+
+                        if arquivo_id:
+                            novos_arquivos.append({
+                                "id": arquivo_id,
+                                "nome": arquivo.name
+                            })
+
+                    existentes = (
+                        st.session_state.respostas_formulario[chave]
+                        .get("resposta", [])
+                    )
+
+                    st.session_state.respostas_formulario[chave]["resposta"] = (
+                        existentes + novos_arquivos
+                    )
+
+                # ---------------------------------------------------------
+                # LIMPEZA CRÍTICA (evita duplicação no rerun)
+                # ---------------------------------------------------------
+                st.session_state.temp_uploads = {}
+
+                # limpa widgets file_uploader
+                for k in list(st.session_state.keys()):
+                    if k.startswith("input_pergunta_"):
+                        del st.session_state[k]
+
+                # ---------------------------------------------------------
+                # Salva no Mongo
+                # ---------------------------------------------------------
+                col_projetos.update_one(
+                    {
+                        "codigo": projeto["codigo"],
+                        "relatorios.numero": relatorio_numero
+                    },
+                    {
+                        "$set": {
+                            "relatorios.$.respostas_formulario":
+                                st.session_state.respostas_formulario
+                        }
                     }
-                }
-            )
+                )
 
             st.success("Respostas salvas com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
+
+
+
+
+
 
 
 

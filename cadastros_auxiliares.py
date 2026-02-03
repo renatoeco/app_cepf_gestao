@@ -93,13 +93,14 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "Número",
             "Múltipla escolha",
             "Escolha única",
+            "Upload de arquivos",  # 👈 NOVO
             "Título",
             "Subtítulo",
             "Parágrafo",
-            # "Linha divisória"
         ],
         key="tipo_pergunta_nova"
     )
+
 
     # ------------------------------------------------------
     # CAMPOS DINÂMICOS
@@ -124,6 +125,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
         "Número",
         "Título",
         "Subtítulo",
+        "Upload de arquivos",
     ]:
         pergunta = st.text_input(
             label_texto,
@@ -179,7 +181,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
             "Escolha única": "escolha_unica",
             "Título": "titulo",
             "Subtítulo": "subtitulo",
-            # "Linha divisória": "divisoria",
+            "Upload de arquivos": "upload_arquivo",
             "Parágrafo": "paragrafo"
         }
 
@@ -216,7 +218,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
 
 
         # Feedback
-        st.success("Pergunta adicionada com sucesso!")
+        st.success("Pergunta adicionada com sucesso!", icon=":material/check:")
         time.sleep(3)
 
         # Limpa campos dinâmicos
@@ -383,8 +385,21 @@ with aba_perguntas:
                         "texto_longo": "Resposta longa",
                         "numero": "Número",
                         "multipla_escolha": "Múltipla escolha",
-                        "escolha_unica": "Escolha única"
+                        "escolha_unica": "Escolha única",
+                        "upload_arquivo": "Upload de arquivos",  # 👈
+                        "titulo": "Título",
+                        "subtitulo": "Subtítulo",
+                        "paragrafo": "Parágrafo"
                     }.get(p["tipo"], p["tipo"])
+
+
+                    # tipo_legivel = {
+                    #     "texto_curto": "Resposta curta",
+                    #     "texto_longo": "Resposta longa",
+                    #     "numero": "Número",
+                    #     "multipla_escolha": "Múltipla escolha",
+                    #     "escolha_unica": "Escolha única"
+                    # }.get(p["tipo"], p["tipo"])
 
                     st.caption(f"Tipo: {tipo_legivel}")
 
@@ -444,11 +459,26 @@ with aba_perguntas:
                         "numero": "Número",
                         "multipla_escolha": "Múltipla escolha",
                         "escolha_unica": "Escolha única",
+                        "upload_arquivo": "Upload de arquivos",
                         "titulo": "Título",
                         "subtitulo": "Subtítulo",
-                        # "divisoria": "Linha divisória",
                         "paragrafo": "Parágrafo"
                     }
+
+
+
+
+                    # mapa_tipo_inv = {
+                    #     "texto_curto": "Resposta curta",
+                    #     "texto_longo": "Resposta longa",
+                    #     "numero": "Número",
+                    #     "multipla_escolha": "Múltipla escolha",
+                    #     "escolha_unica": "Escolha única",
+                    #     "titulo": "Título",
+                    #     "subtitulo": "Subtítulo",
+                    #     # "divisoria": "Linha divisória",
+                    #     "paragrafo": "Parágrafo"
+                    # }
 
                     tipo_atual = mapa_tipo_inv.get(pergunta_atual["tipo"])
 
@@ -476,10 +506,12 @@ with aba_perguntas:
                     elif tipo == "Parágrafo":
                         label_texto = "Texto do parágrafo"
 
+
                     if tipo in [
                         "Resposta curta",
                         "Resposta longa",
                         "Número",
+                        "Upload de arquivos",
                         "Título",
                         "Subtítulo"
                     ]:
@@ -487,6 +519,20 @@ with aba_perguntas:
                             label_texto,
                             value=pergunta_atual.get("pergunta", "")
                         )
+
+
+
+                    # if tipo in [
+                    #     "Resposta curta",
+                    #     "Resposta longa",
+                    #     "Número",
+                    #     "Título",
+                    #     "Subtítulo"
+                    # ]:
+                    #     texto = st.text_input(
+                    #         label_texto,
+                    #         value=pergunta_atual.get("pergunta", "")
+                    #     )
 
                     elif tipo == "Parágrafo":
                         texto = st.text_area(
@@ -533,7 +579,7 @@ with aba_perguntas:
                                     "Escolha única": "escolha_unica",
                                     "Título": "titulo",
                                     "Subtítulo": "subtitulo",
-                                    # "Linha divisória": "divisoria",
+                                    "Upload de arquivos": "upload_arquivo",
                                     "Parágrafo": "paragrafo"
                                 }
 

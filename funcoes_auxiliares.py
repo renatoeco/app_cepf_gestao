@@ -17,6 +17,8 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 
 
+
+
 def gerar_recibo_docx(
     caminho_arquivo,
     valor_parcela,
@@ -359,6 +361,25 @@ def obter_pasta_relatos_financeiros(servico, pasta_projeto_id):
         pasta_projeto_id
     )
 
+def obter_pasta_relatorios(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Relatorios' dentro da pasta do projeto.
+    Cria se não existir.
+    """
+
+    chave = f"pasta_relatorios_{pasta_projeto_id}"
+
+    if chave in st.session_state:
+        return st.session_state[chave]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Relatorios",
+        pasta_projeto_id
+    )
+
+    st.session_state[chave] = pasta_id
+    return pasta_id
 
 
 def obter_pasta_recibos(servico, pasta_projeto_id):
