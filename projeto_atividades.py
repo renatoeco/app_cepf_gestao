@@ -261,20 +261,6 @@ with plano_trabalho:
 
     # ===============================================================================================
     # NORMALIZAÇÃO SEGURA DOS DADOS DO PROJETO
-    # -----------------------------------------------------------------------------------------------
-    # Projetos recém-criados podem NÃO ter:
-    #   - campo plano_trabalho
-    #   - componentes
-    #   - entregas
-    #
-    # Se acessarmos direto:
-    #   df_projeto.iloc[0]["plano_trabalho"]["componentes"]
-    # ocorre KeyError.
-    #
-    # Portanto:
-    # 1) Convertemos para dict
-    # 2) Garantimos estrutura mínima
-    # 3) Usamos apenas variáveis seguras daqui pra frente
     # ===============================================================================================
 
     projeto_dict = df_projeto.iloc[0].to_dict()
@@ -1796,28 +1782,6 @@ with monitoramento:
 
 
 
-
-# with monitoramento:
-#     # ------------------------------------------------------------------
-#     # Título principal da aba
-#     # ------------------------------------------------------------------
-#     st.subheader("Plano de Monitoramento")
-
-#     # ------------------------------------------------------------------
-#     # Recupera os componentes do plano de trabalho
-#     # ------------------------------------------------------------------
-
-#     projeto_dict = df_projeto.iloc[0].to_dict()
-
-#     plano_trabalho_dict = projeto_dict.get("plano_trabalho") or {}
-
-#     if not isinstance(plano_trabalho_dict, dict):
-#         plano_trabalho_dict = {}
-
-#     componentes = plano_trabalho_dict.get("componentes") or []
-
-#     if not isinstance(componentes, list):
-#         componentes = []
 
         # ------------------------------------------------------------------
         # Loop principal: percorre todos os componentes

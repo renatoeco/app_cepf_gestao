@@ -15,7 +15,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
     sidebar_projeto,
-    ajustar_altura_data_editor,
 
     # Google Drive
     obter_servico_drive,
@@ -1390,52 +1389,6 @@ with orcamento:
 
 
 
-
-
-
-
-            # col1, col2, col3 = st.columns(3)
-
-            # # Valor total do projeto
-            # col1.metric(
-            #     label="Valor total do projeto",
-            #     value=(
-            #         f"R$ {valor_total:,.2f}"
-            #         .replace(",", "X")
-            #         .replace(".", ",")
-            #         .replace("X", ".")
-            #     )
-            # )
-
-            # # Gasto total
-            # col2.metric(
-            #     label="Gasto",
-            #     value=(
-            #         f"R$ {gasto_total:,.2f}"
-            #         .replace(",", "X")
-            #         .replace(".", ",")
-            #         .replace("X", ".")
-            #     )
-            # )
-
-            # # Saldo total 
-            # col3.metric(
-            #     label="Saldo",
-            #     value=(
-            #         f"R$ {saldo_total:,.2f}"
-            #         .replace(",", "X")
-            #         .replace(".", ",")
-            #         .replace("X", ".")
-            #     ),
-            #     delta=None if saldo_total >= 0 else "Negativo",
-            #     delta_color="inverse" if saldo_total < 0 else "normal"
-            # )
-
-
-        # else:
-        #     st.caption("Valor total do projeto ainda não cadastrado.")
-
-
         # --------------------------------------------------
         # BARRAS DE PROGRESSO: recebido x gasto
         # --------------------------------------------------
@@ -1465,8 +1418,6 @@ with orcamento:
 
 
 
-        # pct_recebido = min(valor_recebido / valor_total, 1) if valor_total else 0
-        # pct_gasto = min(gasto_total / valor_total, 1) if valor_total else 0
 
         # -----------------------------
         # Barra de valor recebido
@@ -1563,15 +1514,19 @@ with orcamento:
         df_orcamento["Gasto"] = df_orcamento["gasto"].apply(fmt_moeda)
         df_orcamento["Saldo"] = df_orcamento["saldo"].apply(fmt_moeda)
 
+
         # --------------------------------------------------
-        # Agrupamento por categoria
+        # Agrupamento por categoria (ordem alfabética)
         # --------------------------------------------------
-        categorias = (
+        categorias = sorted(
             df_orcamento["categoria"]
             .dropna()
             .unique()
-            .tolist()
+            .tolist(),
+            key=str.lower  # ordenação case-insensitive
         )
+
+
 
         # --------------------------------------------------
         # CALLBACK (mantido como está)
@@ -1784,14 +1739,6 @@ with orcamento:
         # -----------------------------------
         
 
-
-
-
-        # altura_editor = ajustar_altura_data_editor(
-        #     df_orcamento,
-        #     linhas_adicionais=1
-        # )
-
         df_editado = st.data_editor(
             df_orcamento[
                 [
@@ -1805,7 +1752,7 @@ with orcamento:
                 ]
             ],
             num_rows="dynamic",
-            # height=altura_editor,
+            height="content",
             column_config={
                 "categoria": st.column_config.SelectboxColumn(
                     "Categoria de despesa",
