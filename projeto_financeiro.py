@@ -147,6 +147,61 @@ financeiro = projeto.get("financeiro", {})
 ###########################################################################################################
 
 
+# ==================================================
+# Função utilitária
+# Efetiva o remanejamento no orçamento
+# (redistribui valores entre as despesas)
+# ==================================================
+def efetivar_remanejamento(
+    col_projetos,
+    codigo_projeto_atual,
+    financeiro,
+    reduzidas,
+    aumentadas
+):
+    """
+    Aplica o remanejamento diretamente nas linhas do orçamento.
+
+    Regras:
+    • diminui valor_total das despesas reduzidas
+    • aumenta valor_total das despesas aumentadas
+    • NÃO altera financeiro.valor_total (total do projeto)
+    """
+
+    orcamento_atual = financeiro.get("orcamento", []) or []
+
+    # percorre cada linha do orçamento
+    for item in orcamento_atual:
+
+        nome = item.get("nome_despesa")
+        valor_atual = item.get("valor_total", 0) or 0
+
+        # aplicar reduções
+        for r in reduzidas:
+            if r["nome_despesa"] == nome:
+                valor_atual -= float(r["valor_reduzido"])
+
+        # aplicar aumentos
+        for a in aumentadas:
+            if a["nome_despesa"] == nome:
+                valor_atual += float(a["valor_aumentado"])
+
+        item["valor_total"] = valor_atual
+
+    # salva apenas o orçamento atualizado
+    col_projetos.update_one(
+        {"codigo": codigo_projeto_atual},
+        {
+            "$set": {
+                "financeiro.orcamento": orcamento_atual
+            }
+        }
+    )
+
+
+
+
+
 
 
 def obter_nome_investidor(db, projeto):
@@ -634,12 +689,12 @@ usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
 
 if usuario_interno:
-    cron_desemb, orcamento, recibos = st.tabs(
-        ["Cronograma", "Orçamento", "Recibos"]
+    cron_desemb, orcamento, remanejamentos, recibos = st.tabs(
+        ["Cronograma", "Orçamento", "Remanejamentos", "Recibos"]
     )
 else:
-    cron_desemb, orcamento = st.tabs(
-        ["Cronograma", "Orçamento"]
+    cron_desemb, orcamento, remanejamentos = st.tabs(
+        ["Cronograma", "Orçamento", "Remanejamentos"]
     )
 
 
@@ -2207,6 +2262,565 @@ if usuario_interno:
 
 
             st.divider()
+
+
+
+
+
+
+
+
+# --------------------------------------------------
+# ABA REMANEJAMENTOS
+# --------------------------------------------------
+
+
+
+
+
+
+with remanejamentos:
+
+    st.markdown("### Remanejamentos")
+
+
+
+
+
+    @st.fragment
+    def fragmento_remanejamento(financeiro):
+
+        with st.container(border=True):
+
+            st.markdown("##### Nova solicitação de remanejamento")
+
+            st.write('')
+
+            # ==================================================
+            # Segurança
+            # ==================================================
+            orcamento = financeiro.get("orcamento", []) or []
+
+            if not orcamento:
+                st.info("Não há linhas de despesa cadastradas no orçamento.")
+                return
+
+            # ==================================================
+            # Montar opções + saldos
+            # ==================================================
+            opcoes_base = [" "]
+            mapa_saldos = {}
+
+            for item in orcamento:
+
+                nome = item.get("nome_despesa", "Despesa")
+                valor_total = item.get("valor_total", 0) or 0
+
+                gasto = sum(
+                    l.get("valor_despesa", 0)
+                    for l in item.get("lancamentos", [])
+                    if l.get("valor_despesa") is not None
+                )
+
+                saldo = valor_total - gasto
+
+                saldo_fmt = (
+                    f"R$ {saldo:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                )
+
+                label = f"{nome} (saldo: {saldo_fmt})"
+
+                opcoes_base.append(label)
+                mapa_saldos[label] = saldo
+
+            # ==================================================
+            # Estados
+            # ==================================================
+            if "reducoes" not in st.session_state:
+                st.session_state["reducoes"] = [{"despesa": " ", "valor": 0.0}]
+
+            if "aumentos" not in st.session_state:
+                st.session_state["aumentos"] = [{"despesa": " ", "valor": 0.0}]
+
+            reducoes = st.session_state["reducoes"]
+            aumentos = st.session_state["aumentos"]
+
+            # ==================================================
+            # Layout principal
+            # ==================================================
+            col_form, col_resumo = st.columns([3, 1], gap="large")
+
+            # ==================================================
+            # Função render linhas
+            # ==================================================
+            def render_linhas(lista, prefixo, tipo):
+
+                total = 0
+
+                for i in range(len(lista)):
+
+                    usadas = {
+                        x["despesa"]
+                        for x in (reducoes + aumentos)
+                        if x["despesa"] != " "
+                    }
+
+                    atual = lista[i]["despesa"]
+
+                    opcoes_local = [
+                        o for o in opcoes_base
+                        if o == " " or o == atual or o not in usadas
+                    ]
+
+                    c1, c2, c3 = st.columns([3, 1, 1])
+
+                    with c1:
+                        escolha = st.selectbox(
+                            "Despesa",
+                            options=opcoes_local,
+                            key=f"{prefixo}_sel_{i}"
+                        )
+
+                    lista[i]["despesa"] = escolha
+
+                    if escolha != " ":
+
+                        saldo = mapa_saldos.get(escolha, 0)
+
+
+                        with c2:
+                            label_valor = "Valor reduzido" if tipo == "reduzir" else "Valor aumentado"
+
+                            valor = st.number_input(
+                                label_valor,
+                                min_value=0.0,
+                                max_value=float(saldo) if tipo == "reduzir" else None,
+                                step=100.0,
+                                key=f"{prefixo}_val_{i}"
+                            )
+
+
+
+                        lista[i]["valor"] = valor
+
+                        with c3:
+                            saldo_final = saldo - valor if tipo == "reduzir" else saldo + valor
+
+                            st.markdown(
+                                f"Saldo final:  \nR$ {saldo_final:,.2f}"
+                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                            )
+
+                        total += valor
+
+                    else:
+                        lista[i]["valor"] = 0
+
+                # ==================================================
+                # Botão adicionar linha CENTRALIZADO
+                # ==================================================
+                with st.container(horizontal=True, horizontal_alignment="center"):
+                    if st.button(
+                        "+ Adicionar linha",
+                        key=f"{prefixo}_add",
+                        icon=":material/add:",
+                        type="tertiary"
+                    ):
+                        lista.append({"despesa": " ", "valor": 0.0})
+                        st.rerun()
+
+                return total
+
+            # ==================================================
+            # COLUNA ESQUERDA — FORMULÁRIO
+            # ==================================================
+            with col_form:
+
+                st.write("**:material/arrow_downward: Reduzir despesas**")
+                total_reduzido = render_linhas(reducoes, "red", "reduzir")
+
+                st.divider()
+
+                st.write("**:material/arrow_upward: Aumentar despesas**")
+                total_aumentado = render_linhas(aumentos, "aum", "aumentar")
+
+                st.divider()
+
+                justificativa = st.text_area(
+                    "**Justificativa do remanejamento:**"
+                )
+
+            # ==================================================
+            # COLUNA DIREITA — RESUMO
+            # ==================================================
+            with col_resumo:
+
+                st.write('')
+                st.write('**Resumo do remanejamento**')
+
+                fmt = lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                st.metric("Total reduzido", fmt(total_reduzido))
+                st.metric("Total aumentado", fmt(total_aumentado))
+
+                saldo_remanejamento = total_reduzido - total_aumentado
+
+                st.write("")
+                st.write("")
+
+
+
+                # ==================================================
+                # MENSAGENS DINÂMICAS
+                # ==================================================
+
+
+                # --------------------------------------------------
+                # CASO 1 — Nenhuma despesa foi preenchida ainda
+                # --------------------------------------------------
+                # Se ambos totais são zero, o usuário ainda não
+                # selecionou linhas para reduzir ou aumentar.
+                # Mostramos apenas uma instrução simples.
+                # --------------------------------------------------
+                if total_reduzido == 0 and total_aumentado == 0:
+
+                    st.write("*Selecione despesas para reduzir e aumentar os valores*")
+
+
+                # --------------------------------------------------
+                # CASO 2 — Valores preenchidos, mas NÃO batem
+                # --------------------------------------------------
+                # Aqui existe diferença entre o total reduzido
+                # e o total aumentado.
+                #
+                # saldo_remanejamento = reduzido - aumentado
+                #
+                # > 0  → ainda pode aumentar
+                # < 0  → aumentou demais, precisa reduzir
+                # --------------------------------------------------
+                elif saldo_remanejamento != 0:
+
+                    if saldo_remanejamento > 0:
+                        # Ainda sobra valor para aumentar
+                        st.metric("Pode aumentar:", fmt(saldo_remanejamento))
+                    else:
+                        # Passou do limite
+                        st.metric(
+                            ":material/warning: Ops, passou do ponto, reduza:",
+                            fmt(abs(saldo_remanejamento))
+                        )
+
+
+                # --------------------------------------------------
+                # CASO 3 — Valores batem (saldo == 0)
+                # --------------------------------------------------
+                # Agora o remanejamento está matematicamente correto.
+                # Próximo passo: validar a justificativa.
+                # --------------------------------------------------
+                else:
+
+                    # ----------------------------------------------
+                    # Subcaso 3A — sem justificativa
+                    # ----------------------------------------------
+                    # Mesmo com as contas corretas, NÃO liberamos
+                    # o botão de envio sem justificativa.
+                    # ----------------------------------------------
+                    if not justificativa.strip():
+
+                        st.write(":material/check: As contas estão corretas")
+                        st.write(":material/warning: *Preencha a justificativa*")
+
+
+                    # ----------------------------------------------
+                    # Subcaso 3B — tudo válido
+                    # ----------------------------------------------
+                    # • totais batem
+                    # • justificativa preenchida
+                    # → liberar botão de envio
+                    # ----------------------------------------------
+                    else:
+
+                        st.write(":material/check: *Tudo certo! Pode enviar a solicitação.*")
+
+
+                        # ------------------------------------------
+                        # Botão de envio da solicitação
+                        # ------------------------------------------
+                        if st.button(
+                            "Enviar solicitação",
+                            icon=":material/mail:",
+                            type="primary",
+                            use_container_width=True
+                        ):
+
+   
+                            # --------------------------------------
+                            # Montar lista de REDUÇÕES
+                            # --------------------------------------
+                            # Guarda somente:
+                            # • nome_despesa
+                            # • valor_reduzido
+                            # Ignora linhas vazias ou valor 0
+                            # --------------------------------------
+                            reduzidas = [
+                                {
+                                    "nome_despesa": r["despesa"].split(" (")[0],
+                                    "valor_reduzido": r["valor"]
+                                }
+                                for r in reducoes if r["valor"] > 0
+                            ]
+
+
+                            # --------------------------------------
+                            # Montar lista de AUMENTOS
+                            # --------------------------------------
+                            aumentadas = [
+                                {
+                                    "nome_despesa": a["despesa"].split(" (")[0],
+                                    "valor_aumentado": a["valor"]
+                                }
+                                for a in aumentos if a["valor"] > 0
+                            ]
+
+
+
+                            # ------------------------------------------------------
+                            # REGRA AUTOMÁTICA DE STATUS
+                            # ------------------------------------------------------
+                            # • soma o total já remanejado no projeto
+                            # • adiciona o valor desta solicitação
+                            # • compara com 15% do valor total do projeto
+                            # ------------------------------------------------------
+
+                            valor_remanejado_atual = financeiro.get("valor_remanejado", 0) or 0
+                            valor_total_projeto = financeiro.get("valor_total", 0) or 0
+
+                            novo_total_remanejado = valor_remanejado_atual + float(total_reduzido)
+
+                            limite_remanejamento = valor_total_projeto * 0.15
+
+                            if novo_total_remanejado <= limite_remanejamento:
+                                status_remanejamento = "aceito"
+                            else:
+                                status_remanejamento = "em_analise"
+
+
+                            # ------------------------------------------------------
+                            # Estrutura do registro no MongoDB
+                            # ------------------------------------------------------
+                            registro = {
+                                "data_solicit_remanej": datetime.datetime.now(datetime.UTC),
+                                "status_remanejamento": status_remanejamento,
+                                "justificativa": justificativa.strip(),
+                                "reduzidas": reduzidas,
+                                "aumentadas": aumentadas
+                            }
+
+
+
+
+                            # --------------------------------------
+                            # Salvar no banco
+                            # --------------------------------------
+                            col_projetos.update_one(
+                                {"codigo": codigo_projeto_atual},
+                                {
+                                    "$push": {
+                                        "financeiro.remanejamentos_financeiros": registro
+                                    },
+                                    "$inc": {
+                                        "financeiro.valor_remanejado": float(total_reduzido)
+                                    }
+                                }
+                            )
+
+
+                            # --------------------------------------------------
+                            # Se aprovado automaticamente, efetiva no orçamento
+                            # --------------------------------------------------
+                            if status_remanejamento == "aceito":
+                                efetivar_remanejamento(
+                                    col_projetos,
+                                    codigo_projeto_atual,
+                                    financeiro,
+                                    reduzidas,
+                                    aumentadas
+                                )
+
+
+
+
+
+
+                            # --------------------------------------
+                            # Feedback visual + reset de estado
+                            # --------------------------------------
+                            st.success("Solicitação registrada com sucesso.", icon=":material/check:")
+
+
+                            # limpa listas para novo formulário
+                            st.session_state["reducoes"] = [{"despesa": " ", "valor": 0.0}]
+                            st.session_state["aumentos"] = [{"despesa": " ", "valor": 0.0}]
+
+                            # Aguarda
+                            time.sleep(3)
+
+                            # Fecha o fragment de novo remanejamento
+                            st.session_state["mostrar_remanejamento"] = False
+
+
+                            # recarrega apenas o fragmento
+                            st.rerun()
+
+
+
+
+
+
+
+
+
+
+    st.write("")
+
+
+
+    # --------------------------------------------------
+    # Estado de visibilidade do fragment
+    # --------------------------------------------------
+    if "mostrar_remanejamento" not in st.session_state:
+        st.session_state["mostrar_remanejamento"] = False
+
+
+    # --------------------------------------------------
+    # Botão toggle abrir formulário
+    # --------------------------------------------------
+    if st.button("Solicitar remanejamento", icon=":material/compare_arrows:"):
+
+        st.session_state["mostrar_remanejamento"] = not st.session_state["mostrar_remanejamento"]
+
+
+    # --------------------------------------------------
+    # Fragmento (formulário)
+    # --------------------------------------------------
+    if st.session_state["mostrar_remanejamento"]:
+        fragmento_remanejamento(financeiro)
+
+
+
+
+
+
+# --------------------------------------------------
+# Histórico de remanejamentos
+# --------------------------------------------------
+
+st.write("")
+st.write("")
+st.write("##### Histórico de remanejamentos")
+
+
+# --------------------------------------------------
+# Aviso quando remanejamentos excedem 15% do orçamento
+# --------------------------------------------------
+valor_remanejado = financeiro.get("valor_remanejado", 0) or 0
+valor_total = financeiro.get("valor_total", 0) or 0
+
+if valor_total and valor_remanejado > valor_total * 0.15:
+
+    st.markdown(
+        "<span style='color: orange'>Os pedidos de remanejamento já excederam 15% do orçamento do projeto. Portanto, as próximas solicitações serão analisadas pela equipe do Fundo.</span>",
+        unsafe_allow_html=True
+    )
+
+
+
+
+
+lista_remanej = financeiro.get("remanejamentos_financeiros", [])
+
+if not lista_remanej:
+    st.caption("Nenhum remanejamento até o momento.")
+else:
+
+
+    for item in reversed(lista_remanej):
+
+        data_solic = item.get("data_solicit_remanej")
+        data_aprov = item.get("data_aprov_remanej")  # pode não existir
+        status = item.get("status_remanejamento", "-")
+
+        # ------------------------------------------
+        # formatação de datas
+        # ------------------------------------------
+        def fmt_data(dt):
+            if not dt:
+                return "-"
+            try:
+                return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+            except:
+                return str(dt)
+
+        with st.container(border=True):
+
+            col1, col2 = st.columns(2)
+
+            # ==================================================
+            # COLUNA 1 — datas + reduzidas
+            # ==================================================
+            with col1:
+
+                st.write(f"**Data da solicitação:** {fmt_data(data_solic)}")
+
+                if data_aprov:
+                    st.write(f"**Data de aprovação:** {fmt_data(data_aprov)}")
+
+                st.write("")
+                st.write("**Despesas reduzidas:**")
+
+                reduzidas = item.get("reduzidas", [])
+
+                if not reduzidas:
+                    st.caption("Nenhuma")
+                else:
+                    for r in reduzidas:
+                        st.write(
+                            f"- {r['nome_despesa']} — "
+                            + f"R$ {r['valor_reduzido']:,.2f}"
+                            .replace(",", "X").replace(".", ",").replace("X", ".")
+                        )
+
+            # ==================================================
+            # COLUNA 2 — situação + aumentadas
+            # ==================================================
+            with col2:
+
+                st.write(f"**Situação:** {status}")
+
+                st.write("")
+                st.write("**Despesas aumentadas:**")
+
+                aumentadas = item.get("aumentadas", [])
+
+                if not aumentadas:
+                    st.caption("Nenhuma")
+                else:
+                    for a in aumentadas:
+                        st.write(
+                            f"- {a['nome_despesa']} — "
+                            + f"R$ {a['valor_aumentado']:,.2f}"
+                            .replace(",", "X").replace(".", ",").replace("X", ".")
+                        )
+
+            # ==================================================
+            # JUSTIFICATIVA (fora das colunas)
+            # ==================================================
+            st.write("")
+            st.write("**Justificativa:**")
+            st.caption(item.get("justificativa", ""))
 
 
 
