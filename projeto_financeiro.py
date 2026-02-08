@@ -1070,7 +1070,7 @@ with cron_desemb:
             if not entregas_projeto:
                 st.warning(
                     "Nenhuma entrega cadastrada para este projeto. "
-                    "Cadastre as entregas no Plano de Trabalho antes de continuar."
+                    "Cadastre as entregas no Plano de Trabalho antes de continuar.", icon=":material/warning:"
                 )
 
 
@@ -1292,20 +1292,22 @@ with orcamento:
     # ==================================================
     if not modo_edicao:
 
+
+        # --------------------------------------------------
+        # Métricas financeiras (robusto para projeto vazio)
+        # --------------------------------------------------
+
+        valor_total = financeiro.get("valor_total") or 0
+        orcamento = financeiro.get("orcamento", [])
+        parcelas = financeiro.get("parcelas", [])
+
+        gasto_total = 0
+        valor_recebido = 0
+
         # -----------------------------
-        # Métrica do valor total do projeto
+        # Calcular gasto total (se houver orçamento)
         # -----------------------------
-        valor_total = financeiro.get("valor_total")
-
-
-        if valor_total is not None:
-
-            # --------------------------------------------------
-            # Cálculo de gasto e saldo total do projeto
-            # --------------------------------------------------
-            orcamento = financeiro.get("orcamento", [])
-
-            gasto_total = 0
+        if orcamento:
             for item in orcamento:
                 gasto_total += sum(
                     l.get("valor_despesa", 0)
@@ -1313,51 +1315,125 @@ with orcamento:
                     if l.get("valor_despesa") is not None
                 )
 
-            saldo_total = valor_total - gasto_total
-
-            # --------------------------------------------------
-            # Exibição das métricas em 3 colunas
-            # --------------------------------------------------
-            col1, col2, col3 = st.columns(3)
-
-            # Valor total do projeto
-            col1.metric(
-                label="Valor total do projeto",
-                value=(
-                    f"R$ {valor_total:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                )
+        # -----------------------------
+        # Calcular valor recebido (se houver parcelas)
+        # -----------------------------
+        if parcelas:
+            valor_recebido += sum(
+                p.get("valor", 0)
+                for p in parcelas
+                if p.get("data_realizada") not in [None, ""]
             )
 
-            # Gasto total
-            col2.metric(
-                label="Gasto",
-                value=(
-                    f"R$ {gasto_total:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                )
-            )
-
-            # Saldo total 
-            col3.metric(
-                label="Saldo",
-                value=(
-                    f"R$ {saldo_total:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                ),
-                delta=None if saldo_total >= 0 else "Negativo",
-                delta_color="inverse" if saldo_total < 0 else "normal"
-            )
+        saldo_total = valor_total - gasto_total
 
 
-        else:
-            st.caption("Valor total do projeto ainda não cadastrado.")
+
+
+
+
+
+
+
+
+
+        # # -----------------------------
+        # # Métrica do valor total do projeto
+        # # -----------------------------
+        # valor_total = financeiro.get("valor_total")
+
+
+        # if valor_total is not None:
+
+        #     # --------------------------------------------------
+        #     # Cálculo de gasto e saldo total do projeto
+        #     # --------------------------------------------------
+        #     orcamento = financeiro.get("orcamento", [])
+
+        #     gasto_total = 0
+        #     for item in orcamento:
+        #         gasto_total += sum(
+        #             l.get("valor_despesa", 0)
+        #             for l in item.get("lancamentos", [])
+        #             if l.get("valor_despesa") is not None
+        #         )
+
+        #     saldo_total = valor_total - gasto_total
+
+
+
+
+        # --------------------------------------------------
+        # Exibição das métricas em 3 colunas
+        # --------------------------------------------------
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            label="Valor total do projeto",
+            value=f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        )
+
+        col2.metric(
+            label="Gasto",
+            value=f"R$ {gasto_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        )
+
+        col3.metric(
+            label="Saldo",
+            value=f"R$ {saldo_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            delta=None if saldo_total >= 0 else "Negativo",
+            delta_color="inverse" if saldo_total < 0 else "normal"
+        )
+
+
+
+
+
+
+
+
+
+            # col1, col2, col3 = st.columns(3)
+
+            # # Valor total do projeto
+            # col1.metric(
+            #     label="Valor total do projeto",
+            #     value=(
+            #         f"R$ {valor_total:,.2f}"
+            #         .replace(",", "X")
+            #         .replace(".", ",")
+            #         .replace("X", ".")
+            #     )
+            # )
+
+            # # Gasto total
+            # col2.metric(
+            #     label="Gasto",
+            #     value=(
+            #         f"R$ {gasto_total:,.2f}"
+            #         .replace(",", "X")
+            #         .replace(".", ",")
+            #         .replace("X", ".")
+            #     )
+            # )
+
+            # # Saldo total 
+            # col3.metric(
+            #     label="Saldo",
+            #     value=(
+            #         f"R$ {saldo_total:,.2f}"
+            #         .replace(",", "X")
+            #         .replace(".", ",")
+            #         .replace("X", ".")
+            #     ),
+            #     delta=None if saldo_total >= 0 else "Negativo",
+            #     delta_color="inverse" if saldo_total < 0 else "normal"
+            # )
+
+
+        # else:
+        #     st.caption("Valor total do projeto ainda não cadastrado.")
 
 
         # --------------------------------------------------
@@ -1378,8 +1454,19 @@ with orcamento:
         # -----------------------------
         # Percentuais (0 a 1)
         # -----------------------------
-        pct_recebido = min(valor_recebido / valor_total, 1) if valor_total else 0
-        pct_gasto = min(gasto_total / valor_total, 1) if valor_total else 0
+
+        if valor_total > 0:
+            pct_recebido = min(valor_recebido / valor_total, 1)
+            pct_gasto = min(gasto_total / valor_total, 1)
+        else:
+            pct_recebido = 0
+            pct_gasto = 0
+
+
+
+
+        # pct_recebido = min(valor_recebido / valor_total, 1) if valor_total else 0
+        # pct_gasto = min(gasto_total / valor_total, 1) if valor_total else 0
 
         # -----------------------------
         # Barra de valor recebido
