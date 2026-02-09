@@ -154,6 +154,118 @@ financeiro = projeto.get("financeiro", {})
 
 
 
+# ==================================================
+# Aprova remanejamento manualmente
+# • muda status para aceito
+# • grava data
+# • efetiva orçamento
+# ==================================================
+def aprovar_remanejamento(
+    codigo_projeto,
+    idx,
+    item
+):
+    """
+    Aprova o remanejamento selecionado.
+    """
+
+    projeto = col_projetos.find_one({"codigo": codigo_projeto})
+    financeiro = projeto.get("financeiro", {})
+    lista = financeiro.get("remanejamentos_financeiros", [])
+
+    if idx >= len(lista):
+        return
+
+    # --------------------------------------------------
+    # Atualiza status + data
+    # --------------------------------------------------
+    lista[idx]["status_remanejamento"] = "aceito"
+    lista[idx]["data_aprov_remanej"] = datetime.datetime.now(datetime.UTC)
+
+    col_projetos.update_one(
+        {"codigo": codigo_projeto},
+        {
+            "$set": {
+                "financeiro.remanejamentos_financeiros": lista
+            }
+        }
+    )
+
+    # --------------------------------------------------
+    # Efetiva impacto no orçamento
+    # --------------------------------------------------
+    efetivar_remanejamento(
+        col_projetos,
+        codigo_projeto,
+        financeiro,
+        lista[idx].get("reduzidas", []),
+        lista[idx].get("aumentadas", [])
+    )
+
+    st.rerun()
+
+
+
+
+
+# ==================================================
+# Atualiza aceite técnico/financeiro imediatamente, na análise do remanejamento
+# ==================================================
+# ==================================================
+# Atualiza aceite técnico/financeiro do remanejamento
+# (mesmo padrão usado nos relatórios)
+# ==================================================
+def atualizar_aceite_remanejamento(
+    projeto_codigo,
+    idx,
+    campo,          # "aceite_tecnico" ou "aceite_financeiro"
+    checkbox_key
+):
+    """
+    Disparado automaticamente quando checkbox muda.
+
+    • Lê estado real do checkbox via session_state
+    • Atualiza item do array em memória
+    • Regrava lista completa no Mongo (forma segura)
+    """
+
+    marcado = st.session_state.get(checkbox_key, False)
+
+    nome = st.session_state.get("nome", "Usuário")
+    data = datetime.datetime.now().strftime("%d/%m/%Y")
+
+    # --------------------------------------------------
+    # Carrega documento atualizado do banco
+    # --------------------------------------------------
+    projeto = col_projetos.find_one({"codigo": projeto_codigo})
+    financeiro = projeto.get("financeiro", {})
+    lista = financeiro.get("remanejamentos_financeiros", [])
+
+    if idx >= len(lista):
+        return
+
+    # --------------------------------------------------
+    # Atualiza item em memória
+    # --------------------------------------------------
+    if marcado:
+        lista[idx][campo] = f"Aceito por {nome} em {data}"
+    else:
+        lista[idx].pop(campo, None)
+
+    # --------------------------------------------------
+    # Salva lista inteira (Mongo não atualiza por índice)
+    # --------------------------------------------------
+    col_projetos.update_one(
+        {"codigo": projeto_codigo},
+        {
+            "$set": {
+                "financeiro.remanejamentos_financeiros": lista
+            }
+        }
+    )
+
+
+
 
 
 # ==================================================
@@ -2867,7 +2979,6 @@ with remanejamentos:
 
 
 
-    st.write("")
 
 
 
@@ -2878,26 +2989,31 @@ with remanejamentos:
         st.session_state["mostrar_remanejamento"] = False
 
 
+
     # --------------------------------------------------
-    # Botão toggle abrir formulário
+    # Botão só para beneficiário
     # --------------------------------------------------
+    if st.session_state.get("tipo_usuario") == "beneficiario":
 
-    # Verifica se já existe remanejamento em análise
-    remanejamentos = financeiro.get("remanejamentos_financeiros", []) or []
-
-    tem_pendente = any(
-        r.get("status_remanejamento") == "em_analise"
-        for r in remanejamentos
-    )
+        st.write("")
 
 
-    if st.button(
-        "Solicitar remanejamento",
-        icon=":material/compare_arrows:",
-        disabled=tem_pendente
-    ):
+        # Verifica se já existe remanejamento em análise
+        remanejamentos = financeiro.get("remanejamentos_financeiros", []) or []
 
-        st.session_state["mostrar_remanejamento"] = not st.session_state["mostrar_remanejamento"]
+        tem_pendente = any(
+            r.get("status_remanejamento") == "em_analise"
+            for r in remanejamentos
+        )
+
+
+        if st.button(
+            "Solicitar remanejamento",
+            icon=":material/compare_arrows:",
+            disabled=tem_pendente
+        ):
+
+            st.session_state["mostrar_remanejamento"] = not st.session_state["mostrar_remanejamento"]
 
 
     # --------------------------------------------------
@@ -2914,6 +3030,10 @@ with remanejamentos:
     # --------------------------------------------------
     # Histórico de remanejamentos
     # --------------------------------------------------
+
+
+    # st.write(st.session_state)
+
 
     st.write("")
     st.write("")
@@ -2943,8 +3063,12 @@ with remanejamentos:
         st.caption("Nenhum remanejamento até o momento.")
     else:
 
+        for idx in range(len(lista_remanej) - 1, -1, -1):
+            item = lista_remanej[idx]
 
-        for item in reversed(lista_remanej):
+        # for idx, item in enumerate(reversed(lista_remanej)):
+
+        # for item in reversed(lista_remanej):
 
             data_solic = item.get("data_solicit_remanej")
             data_aprov = item.get("data_aprov_remanej")  # pode não existir
@@ -2957,73 +3081,69 @@ with remanejamentos:
                 if not dt:
                     return "-"
                 try:
-                    return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+                    return dt.astimezone().strftime("%d/%m/%Y")
                 except:
                     return str(dt)
 
+
+
+
+
+
+
             with st.container(border=True):
 
-                col1, col2 = st.columns(2)
+                # ==================================================
+                # Função formatação de datas
+                # ==================================================
+                def fmt_data(dt):
+                    if not dt:
+                        return "-"
+                    try:
+                        return dt.astimezone().strftime("%d/%m/%Y")
+                    except:
+                        return str(dt)
+
+
+                dist_colunas = [2,2,1]
 
                 # ==================================================
-                # COLUNA 1 — datas + reduzidas
+                # LINHA 1 — DATAS + STATUS
                 # ==================================================
+                col1, col2, col3 = st.columns(dist_colunas)
+
+                # ------------------------------------------
+                # Coluna 1 — Data solicitação
+                # ------------------------------------------
                 with col1:
-
                     st.write(f"**Data da solicitação:** {fmt_data(data_solic)}")
 
-                    if data_aprov:
-                        st.write(f"**Data de aprovação:** {fmt_data(data_aprov)}")
-
-                    st.write("")
-                    st.write("**Despesas reduzidas:**")
-
-                    reduzidas = item.get("reduzidas", [])
-
-                    if not reduzidas:
-                        st.caption("Nenhuma")
-                    else:
-                        for r in reduzidas:
-                            st.write(
-                                f"- {r['nome_despesa']}: "
-                                + f"R$ {r['valor_reduzido']:,.2f}"
-                                .replace(",", "X").replace(".", ",").replace("X", ".")
-                            )
-
-                # ==================================================
-                # COLUNA 2 — situação + aumentadas
-                # ==================================================
+                # ------------------------------------------
+                # Coluna 2 — Data aceite
+                # ------------------------------------------
                 with col2:
+                    if data_aprov:
+                        st.write(f"**Data de aceite:** {fmt_data(data_aprov)}")
 
-                    # --------------------------------------------------
-                    # Definição visual do badge
-                    # --------------------------------------------------
+
+                # ------------------------------------------
+                # Coluna 3 — Badge status
+                # ------------------------------------------
+                with col3:
+
                     if status == "aceito":
                         badge = {
                             "label": "Aceito",
-                            "bg": "#D4EDDA",     # verde claro
-                            "color": "#155724"  # verde escuro
+                            "bg": "#D4EDDA",
+                            "color": "#155724"
                         }
 
                     elif status == "em_analise":
                         badge = {
                             "label": "Em análise",
-                            "bg": "#FFF3CD",     # amarelo claro
-                            "color": "#856404"   # amarelo escuro
+                            "bg": "#FFF3CD",
+                            "color": "#856404"
                         }
-
-                    # else:
-                    #     badge = {
-                    #         "label": status,
-                    #         "bg": "#E2E3E5",
-                    #         "color": "#383D41"
-                    #     }
-
-
-                    # --------------------------------------------------
-                    # Render do badge
-                    # --------------------------------------------------
-                    # st.write("**Situação**")
 
                     st.markdown(
                         f"""
@@ -3044,7 +3164,40 @@ with remanejamentos:
                     )
 
 
-                    st.write("")
+                st.write('')
+
+
+                # ==================================================
+                # LINHA 2 — REDUÇÕES | AUMENTOS | AÇÕES
+                # ==================================================
+                col1, col2, col3 = st.columns(dist_colunas)
+
+
+                # ------------------------------------------
+                # Coluna 1 — Reduzidas
+                # ------------------------------------------
+                with col1:
+
+                    st.write("**Despesas reduzidas:**")
+
+                    reduzidas = item.get("reduzidas", [])
+
+                    if not reduzidas:
+                        st.caption("Nenhuma")
+                    else:
+                        for r in reduzidas:
+                            st.write(
+                                f"- {r['nome_despesa']}: "
+                                + f"R$ {r['valor_reduzido']:,.2f}"
+                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                            )
+
+
+                # ------------------------------------------
+                # Coluna 2 — Aumentadas
+                # ------------------------------------------
+                with col2:
+
                     st.write("**Despesas aumentadas:**")
 
                     aumentadas = item.get("aumentadas", [])
@@ -3059,11 +3212,337 @@ with remanejamentos:
                                 .replace(",", "X").replace(".", ",").replace("X", ".")
                             )
 
+
+                # ------------------------------------------
+                # Coluna 3 — Aceites + botão
+                # ------------------------------------------
+
+
+                with col3:
+
+                    # --------------------------------------------------
+                    # Ações somente para admin/equipe
+                    # --------------------------------------------------
+
+
+                    # --------------------------------------------------
+                    # Mostrar ações somente para admin/equipe
+                    # e somente se ainda NÃO aceito
+                    # --------------------------------------------------
+                    if st.session_state.get("tipo_usuario") in ["admin", "equipe"] and status != "aceito":
+
+                        # ==================================================
+                        # PRE-CARREGAR estados a partir do banco
+                        # (ESSENCIAL para checkbox iniciar marcado)
+                        # ==================================================
+
+                        tec_key = f"tec_{idx}"
+                        fin_key = f"fin_{idx}"
+
+                        if tec_key not in st.session_state:
+                            st.session_state[tec_key] = "aceite_tecnico" in item
+
+                        if fin_key not in st.session_state:
+                            st.session_state[fin_key] = "aceite_financeiro" in item
+
+
+                        # ==================================================
+                        # CHECKBOX TÉCNICO
+                        # ==================================================
+                        st.checkbox(
+                            "Aceite técnico",
+                            key=tec_key,
+                            on_change=atualizar_aceite_remanejamento,
+                            args=(codigo_projeto_atual, idx, "aceite_tecnico", tec_key)
+                        )
+
+                        if item.get("aceite_tecnico"):
+                            st.caption(item["aceite_tecnico"])
+
+
+                        # ==================================================
+                        # CHECKBOX FINANCEIRO
+                        # ==================================================
+                        st.checkbox(
+                            "Aceite financeiro",
+                            key=fin_key,
+                            on_change=atualizar_aceite_remanejamento,
+                            args=(codigo_projeto_atual, idx, "aceite_financeiro", fin_key)
+                        )
+
+                        if item.get("aceite_financeiro"):
+                            st.caption(item["aceite_financeiro"])
+
+
+                        # ==================================================
+                        # BOTÃO APROVAR
+                        # ==================================================
+                        habilitar = st.session_state[tec_key] and st.session_state[fin_key]
+
+                        if st.button(
+                            "Aprovar remanejamento",
+                            disabled=not habilitar,
+                            key=f"aprovar_{idx}",
+                            type="primary"
+                        ):
+                            aprovar_remanejamento(
+                                codigo_projeto_atual,
+                                idx,
+                                item
+                            )
+
+
+
+
+
+                    # if st.session_state.get("tipo_usuario") in ["admin", "equipe"]:
+
+                    #     nome_usuario = st.session_state.get("nome_completo", "Usuário")
+
+                    #     # ==================================================
+                    #     # ACEITE TÉCNICO
+                    #     # ==================================================
+                    #     tec_key = f"tec_{idx}"
+
+                    #     # Pré-carrega estado do banco no session_state
+                    #     if tec_key not in st.session_state:
+                    #         st.session_state[tec_key] = "aceite_tecnico" in item
+
+                    #     st.checkbox(
+                    #         "Aceite técnico",
+                    #         key=tec_key,
+                    #         on_change=atualizar_aceite_remanejamento,
+                    #         args=(
+                    #             codigo_projeto_atual,
+                    #             idx,
+                    #             "aceite_tecnico",
+                    #             tec_key
+                    #         )
+                    #     )
+
+                    #     # Caption sempre baseado no BD
+                    #     if item.get("aceite_tecnico"):
+                    #         st.caption(item["aceite_tecnico"])
+
+
+                    #     # ==================================================
+                    #     # ACEITE FINANCEIRO
+                    #     # ==================================================
+                    #     fin_key = f"fin_{idx}"
+
+                    #     if fin_key not in st.session_state:
+                    #         st.session_state[fin_key] = "aceite_financeiro" in item
+
+                    #     st.checkbox(
+                    #         "Aceite financeiro",
+                    #         key=fin_key,
+                    #         on_change=atualizar_aceite_remanejamento,
+                    #         args=(
+                    #             codigo_projeto_atual,
+                    #             idx,
+                    #             "aceite_financeiro",
+                    #             fin_key
+                    #         )
+                    #     )
+
+                    #     if item.get("aceite_financeiro"):
+                    #         st.caption(item["aceite_financeiro"])
+
+
+                    #     # ==================================================
+                    #     # BOTÃO APROVAR
+                    #     # Habilita somente quando ambos aceites existem no BD
+                    #     # ==================================================
+                    #     habilitar = (
+                    #         "aceite_tecnico" in item and
+                    #         "aceite_financeiro" in item
+                    #     )
+
+                    #     # Só mostra ações se ainda NÃO estiver aceito
+                    #     if status != "aceito":
+
+                    #         aceite_tecnico = st.checkbox("Aceite técnico", key=tec_key)
+                    #         aceite_fin = st.checkbox("Aceite financeiro", key=fin_key)
+
+                    #         habilitar = aceite_tecnico and aceite_fin
+
+                    #         if st.button(
+                    #             "Aprovar remanejamento",
+                    #             disabled=not habilitar,
+                    #             key=f"aprovar_{idx}",
+                    #             type="primary"
+                    #         ):
+                    #             aprovar_remanejamento(
+                    #                 codigo_projeto_atual,
+                    #                 idx,
+                    #                 item
+                    #             )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                # with col3:
+
+                #     # ------------------------------------------
+                #     # Mostrar ações somente para admin/equipe
+                #     # ------------------------------------------
+                #     if st.session_state.get("tipo_usuario") in ["admin", "equipe"]:
+
+                #         aceite_tecnico = st.checkbox("Aceite técnico", key=f"tec_{idx}")
+                #         aceite_fin = st.checkbox("Aceite financeiro", key=f"fin_{idx}")
+
+                #         habilitar = aceite_tecnico and aceite_fin
+
+                #         if st.button(
+                #             "Aprovar remanejamento",
+                #             disabled=not habilitar,
+                #             key=f"aprovar_{idx}",
+                #             type="primary"
+                #         ):
+                #             pass  # depois você liga à função efetivar_remanejamento()
+
+                #         if data_aprov:
+                #             st.caption(f"Aceito em {fmt_data(data_aprov)}")
+
+               
+
+
+                st.write('')
+
+
                 # ==================================================
                 # JUSTIFICATIVA (fora das colunas)
                 # ==================================================
-                st.write("")
-                st.write(f"**Justificativa:** {item.get("justificativa", "")}")
+                st.write(f"**Justificativa:** {item.get('justificativa', '')}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            # with st.container(border=True):
+
+            #     col1, col2 = st.columns(2)
+
+            #     # ==================================================
+            #     # COLUNA 1 — datas + reduzidas
+            #     # ==================================================
+            #     with col1:
+
+            #         st.write(f"**Data da solicitação:** {fmt_data(data_solic)}")
+
+            #         if data_aprov:
+            #             st.write(f"**Data de aprovação:** {fmt_data(data_aprov)}")
+
+            #         st.write("")
+            #         st.write("**Despesas reduzidas:**")
+
+            #         reduzidas = item.get("reduzidas", [])
+
+            #         if not reduzidas:
+            #             st.caption("Nenhuma")
+            #         else:
+            #             for r in reduzidas:
+            #                 st.write(
+            #                     f"- {r['nome_despesa']}: "
+            #                     + f"R$ {r['valor_reduzido']:,.2f}"
+            #                     .replace(",", "X").replace(".", ",").replace("X", ".")
+            #                 )
+
+            #     # ==================================================
+            #     # COLUNA 2 — situação + aumentadas
+            #     # ==================================================
+            #     with col2:
+
+            #         # --------------------------------------------------
+            #         # Definição visual do badge
+            #         # --------------------------------------------------
+            #         if status == "aceito":
+            #             badge = {
+            #                 "label": "Aceito",
+            #                 "bg": "#D4EDDA",     # verde claro
+            #                 "color": "#155724"  # verde escuro
+            #             }
+
+            #         elif status == "em_analise":
+            #             badge = {
+            #                 "label": "Em análise",
+            #                 "bg": "#FFF3CD",     # amarelo claro
+            #                 "color": "#856404"   # amarelo escuro
+            #             }
+
+            #         # else:
+            #         #     badge = {
+            #         #         "label": status,
+            #         #         "bg": "#E2E3E5",
+            #         #         "color": "#383D41"
+            #         #     }
+
+
+            #         # --------------------------------------------------
+            #         # Render do badge
+            #         # --------------------------------------------------
+            #         # st.write("**Situação**")
+
+            #         st.markdown(
+            #             f"""
+            #             <div style="margin-bottom:6px;">
+            #                 <span style="
+            #                     background:{badge['bg']};
+            #                     color:{badge['color']};
+            #                     padding:4px 10px;
+            #                     border-radius:20px;
+            #                     font-size:12px;
+            #                     font-weight:600;
+            #                 ">
+            #                     {badge['label']}
+            #                 </span>
+            #             </div>
+            #             """,
+            #             unsafe_allow_html=True
+            #         )
+
+
+            #         st.write("")
+            #         st.write("**Despesas aumentadas:**")
+
+            #         aumentadas = item.get("aumentadas", [])
+
+            #         if not aumentadas:
+            #             st.caption("Nenhuma")
+            #         else:
+            #             for a in aumentadas:
+            #                 st.write(
+            #                     f"- {a['nome_despesa']}: "
+            #                     + f"R$ {a['valor_aumentado']:,.2f}"
+            #                     .replace(",", "X").replace(".", ",").replace("X", ".")
+            #                 )
+
+            #     # ==================================================
+            #     # JUSTIFICATIVA (fora das colunas)
+            #     # ==================================================
+            #     st.write("")
+            #     st.write(f"**Justificativa:** {item.get("justificativa", "")}")
 
 
 
