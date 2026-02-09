@@ -8,9 +8,6 @@ from collections import defaultdict
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
     sidebar_projeto,
-    # ajustar_altura_data_editor,
-
-    # Google Drive
     obter_servico_drive,
     obter_ou_criar_pasta,
     obter_pasta_pesquisas,

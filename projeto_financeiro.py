@@ -25,7 +25,8 @@ from funcoes_auxiliares import (
     gerar_link_drive,
     valor_por_extenso,
     numero_ordinal_pt,
-    data_extenso_pt
+    data_extenso_pt,
+    enviar_email
 )
 
 
@@ -109,6 +110,11 @@ col_investidores = db["investidores"]
 # TRATAMENTO DE DADOS
 ###########################################################################################################
 
+# Logo hospedada no site do IEB para renderizar nos e-mails.
+logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+
+
+
 codigo_projeto_atual = st.session_state.get("projeto_atual")
 
 if not codigo_projeto_atual:
@@ -145,6 +151,203 @@ financeiro = projeto.get("financeiro", {})
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+
+
+
+# ==================================================
+# Envia notificação de remanejamento para equipe/admin
+# ==================================================
+def enviar_email_remanejamento(
+    db,
+    codigo_projeto,
+    sigla,
+    nome_projeto,
+    organizacao,
+    reduzidas,
+    aumentadas,
+    status_remanejamento
+):
+    """
+    Envia e-mail para:
+    • tipo_usuario in ["admin", "equipe"]
+    • pessoa vinculada ao projeto
+
+    Usa HTML padrão do sistema.
+    """
+
+    col_pessoas = db["pessoas"]
+
+    # --------------------------------------------------
+    # Buscar destinatários
+    # --------------------------------------------------
+    pessoas = list(
+        col_pessoas.find({
+            "status": "ativo",
+            "tipo_usuario": {"$in": ["admin", "equipe"]},
+            "projetos": codigo_projeto
+        })
+    )
+
+    if not pessoas:
+        return
+
+    emails = [p["e_mail"] for p in pessoas if p.get("e_mail")]
+
+    # --------------------------------------------------
+    # Montar tabelas HTML
+    # --------------------------------------------------
+    def montar_lista_html(itens, campo_valor):
+        if not itens:
+            return "<p>Nenhuma</p>"
+
+        linhas = ""
+        for i in itens:
+            linhas += f"<li>{i['nome_despesa']}: R$ {i[campo_valor]:,.2f}</li>"
+
+        return f"<ul>{linhas}</ul>"
+
+
+    lista_reduzidas = montar_lista_html(reduzidas, "valor_reduzido")
+    lista_aumentadas = montar_lista_html(aumentadas, "valor_aumentado")
+
+    # --------------------------------------------------
+    # Mensagem condicional
+    # --------------------------------------------------
+    if status_remanejamento == "aceito":
+        mensagem_status = (
+            "O remanejamento <strong>foi aceito automaticamente</strong> e o orçamento já está atualizado."
+        )
+    else:
+        mensagem_status = (
+            "<b>AÇÃO NECESSÁRIA: Esse remanejamento depende de análise e aprovação</b><br><br>"
+            "Visite a página de remanejamentos no Sistema de Gestão de Projetos para dar continuidade."
+        )
+
+    # --------------------------------------------------
+    # Assunto
+    # --------------------------------------------------
+    assunto = f"Solicitação de remanejamento - {codigo_projeto} - {sigla}"
+
+    # --------------------------------------------------
+    # Enviar para cada pessoa (personalizado)
+    # --------------------------------------------------
+    logo = logo_cepf
+
+    with st.spinner("Enviando..."):
+
+
+        for pessoa in pessoas:
+
+            nome = pessoa.get("nome_completo", "").split()[0]
+
+            corpo_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="utf-8">
+            <style>
+
+            body {{
+                font-family: Arial, Helvetica, sans-serif;
+                background-color: #f5f5f5;
+            }}
+
+            .container {{
+                max-width: 760px;   /* mais largo */
+                margin: 0 auto;
+                background: white;
+                border-top: 6px solid #A0C256;
+                padding: 30px;
+            }}
+
+            .logo {{
+                text-align: center;   /* centraliza imagem */
+                margin-bottom: 20px;
+            }}
+
+            .highlight {{
+                color: #A0C256;
+                font-weight: bold;
+            }}
+
+            /* remove bolinhas e espaçamentos */
+            ul {{
+                list-style: none;
+                padding-left: 0;
+                margin: 0;
+            }}
+
+            li {{
+                margin: 0;
+                padding: 0;
+            }}
+
+            </style>
+            </head>
+
+            <body>
+
+            <div class="container">
+
+                <br>
+
+                <div class="logo">
+                    <img src="{logo}" height="60">
+                </div>
+
+                <br>
+
+                <p>Olá <strong>{nome}</strong>,</p>
+
+                <p>
+                O projeto <span class="highlight">{codigo_projeto} - {sigla} - {nome_projeto}</span>,
+                da organização <span class="highlight">{organizacao}</span>,
+                enviou uma nova solicitação de remanejamento financeiro.
+                </p>
+
+                <br>
+
+                <p><strong>Resumo do remanejamento:</strong></p>
+
+                <table width="100%">
+                <tr>
+                    <td valign="top" width="50%">
+                    <strong>Reduções</strong>
+                    {lista_reduzidas}
+                    </td>
+
+                    <td valign="top" width="50%">
+                    <strong>Aumentos</strong>
+                    {lista_aumentadas}
+                    </td>
+                </tr>
+                </table>
+
+                <br>
+
+                <p>{mensagem_status}</p>
+
+                <br>
+                <p>Sistema de Gestão de Projetos</p>
+
+            </div>
+
+            </body>
+            </html>
+            """
+
+
+            enviar_email(corpo_html, [pessoa["e_mail"]], assunto)
+
+
+
+
+
+
+
+
 
 
 # ==================================================
@@ -1384,39 +1587,6 @@ with orcamento:
 
 
 
-
-
-
-
-
-
-
-        # # -----------------------------
-        # # Métrica do valor total do projeto
-        # # -----------------------------
-        # valor_total = financeiro.get("valor_total")
-
-
-        # if valor_total is not None:
-
-        #     # --------------------------------------------------
-        #     # Cálculo de gasto e saldo total do projeto
-        #     # --------------------------------------------------
-        #     orcamento = financeiro.get("orcamento", [])
-
-        #     gasto_total = 0
-        #     for item in orcamento:
-        #         gasto_total += sum(
-        #             l.get("valor_despesa", 0)
-        #             for l in item.get("lancamentos", [])
-        #             if l.get("valor_despesa") is not None
-        #         )
-
-        #     saldo_total = valor_total - gasto_total
-
-
-
-
         # --------------------------------------------------
         # Exibição das métricas em 3 colunas
         # --------------------------------------------------
@@ -2652,13 +2822,26 @@ with remanejamentos:
 
 
 
+                            # --------------------------------------------------
+                            # Enviar e-mails de notificação
+                            # --------------------------------------------------
+                            enviar_email_remanejamento(
+                                db,
+                                projeto["codigo"],
+                                projeto["sigla"],
+                                projeto["nome_do_projeto"],
+                                projeto["organizacao"],
+                                reduzidas,
+                                aumentadas,
+                                status_remanejamento
+                            )
 
 
 
                             # --------------------------------------
                             # Feedback visual + reset de estado
                             # --------------------------------------
-                            st.success("Solicitação registrada com sucesso.", icon=":material/check:")
+                            st.success("Solicitação enviada.", icon=":material/check:")
 
 
                             # limpa listas para novo formulário
@@ -2698,7 +2881,21 @@ with remanejamentos:
     # --------------------------------------------------
     # Botão toggle abrir formulário
     # --------------------------------------------------
-    if st.button("Solicitar remanejamento", icon=":material/compare_arrows:"):
+
+    # Verifica se já existe remanejamento em análise
+    remanejamentos = financeiro.get("remanejamentos_financeiros", []) or []
+
+    tem_pendente = any(
+        r.get("status_remanejamento") == "em_analise"
+        for r in remanejamentos
+    )
+
+
+    if st.button(
+        "Solicitar remanejamento",
+        icon=":material/compare_arrows:",
+        disabled=tem_pendente
+    ):
 
         st.session_state["mostrar_remanejamento"] = not st.session_state["mostrar_remanejamento"]
 
@@ -2714,113 +2911,159 @@ with remanejamentos:
 
 
 
-# --------------------------------------------------
-# Histórico de remanejamentos
-# --------------------------------------------------
+    # --------------------------------------------------
+    # Histórico de remanejamentos
+    # --------------------------------------------------
 
-st.write("")
-st.write("")
-st.write("##### Histórico de remanejamentos")
-
-
-# --------------------------------------------------
-# Aviso quando remanejamentos excedem 15% do orçamento
-# --------------------------------------------------
-valor_remanejado = financeiro.get("valor_remanejado", 0) or 0
-valor_total = financeiro.get("valor_total", 0) or 0
-
-if valor_total and valor_remanejado > valor_total * 0.15:
-
-    st.markdown(
-        "<span style='color: orange'>Os pedidos de remanejamento já excederam 15% do orçamento do projeto. Portanto, as próximas solicitações serão analisadas pela equipe do Fundo.</span>",
-        unsafe_allow_html=True
-    )
+    st.write("")
+    st.write("")
+    st.write("##### Histórico de remanejamentos")
 
 
+    # --------------------------------------------------
+    # Aviso quando remanejamentos excedem 15% do orçamento
+    # --------------------------------------------------
+    valor_remanejado = financeiro.get("valor_remanejado", 0) or 0
+    valor_total = financeiro.get("valor_total", 0) or 0
+
+    if valor_total and valor_remanejado > valor_total * 0.15:
+
+        st.markdown(
+            "<span style='color: #cb410b'>Os remanejamentos excederam 15% do orçamento do projeto. Portanto, as próximas solicitações serão analisadas pela equipe do Fundo.</span>",
+            unsafe_allow_html=True
+        )
 
 
 
-lista_remanej = financeiro.get("remanejamentos_financeiros", [])
-
-if not lista_remanej:
-    st.caption("Nenhum remanejamento até o momento.")
-else:
 
 
-    for item in reversed(lista_remanej):
+    lista_remanej = financeiro.get("remanejamentos_financeiros", [])
 
-        data_solic = item.get("data_solicit_remanej")
-        data_aprov = item.get("data_aprov_remanej")  # pode não existir
-        status = item.get("status_remanejamento", "-")
+    if not lista_remanej:
+        st.caption("Nenhum remanejamento até o momento.")
+    else:
 
-        # ------------------------------------------
-        # formatação de datas
-        # ------------------------------------------
-        def fmt_data(dt):
-            if not dt:
-                return "-"
-            try:
-                return dt.astimezone().strftime("%d/%m/%Y %H:%M")
-            except:
-                return str(dt)
 
-        with st.container(border=True):
+        for item in reversed(lista_remanej):
 
-            col1, col2 = st.columns(2)
+            data_solic = item.get("data_solicit_remanej")
+            data_aprov = item.get("data_aprov_remanej")  # pode não existir
+            status = item.get("status_remanejamento", "-")
 
-            # ==================================================
-            # COLUNA 1 — datas + reduzidas
-            # ==================================================
-            with col1:
+            # ------------------------------------------
+            # formatação de datas
+            # ------------------------------------------
+            def fmt_data(dt):
+                if not dt:
+                    return "-"
+                try:
+                    return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+                except:
+                    return str(dt)
 
-                st.write(f"**Data da solicitação:** {fmt_data(data_solic)}")
+            with st.container(border=True):
 
-                if data_aprov:
-                    st.write(f"**Data de aprovação:** {fmt_data(data_aprov)}")
+                col1, col2 = st.columns(2)
 
+                # ==================================================
+                # COLUNA 1 — datas + reduzidas
+                # ==================================================
+                with col1:
+
+                    st.write(f"**Data da solicitação:** {fmt_data(data_solic)}")
+
+                    if data_aprov:
+                        st.write(f"**Data de aprovação:** {fmt_data(data_aprov)}")
+
+                    st.write("")
+                    st.write("**Despesas reduzidas:**")
+
+                    reduzidas = item.get("reduzidas", [])
+
+                    if not reduzidas:
+                        st.caption("Nenhuma")
+                    else:
+                        for r in reduzidas:
+                            st.write(
+                                f"- {r['nome_despesa']}: "
+                                + f"R$ {r['valor_reduzido']:,.2f}"
+                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                            )
+
+                # ==================================================
+                # COLUNA 2 — situação + aumentadas
+                # ==================================================
+                with col2:
+
+                    # --------------------------------------------------
+                    # Definição visual do badge
+                    # --------------------------------------------------
+                    if status == "aceito":
+                        badge = {
+                            "label": "Aceito",
+                            "bg": "#D4EDDA",     # verde claro
+                            "color": "#155724"  # verde escuro
+                        }
+
+                    elif status == "em_analise":
+                        badge = {
+                            "label": "Em análise",
+                            "bg": "#FFF3CD",     # amarelo claro
+                            "color": "#856404"   # amarelo escuro
+                        }
+
+                    # else:
+                    #     badge = {
+                    #         "label": status,
+                    #         "bg": "#E2E3E5",
+                    #         "color": "#383D41"
+                    #     }
+
+
+                    # --------------------------------------------------
+                    # Render do badge
+                    # --------------------------------------------------
+                    # st.write("**Situação**")
+
+                    st.markdown(
+                        f"""
+                        <div style="margin-bottom:6px;">
+                            <span style="
+                                background:{badge['bg']};
+                                color:{badge['color']};
+                                padding:4px 10px;
+                                border-radius:20px;
+                                font-size:12px;
+                                font-weight:600;
+                            ">
+                                {badge['label']}
+                            </span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+
+                    st.write("")
+                    st.write("**Despesas aumentadas:**")
+
+                    aumentadas = item.get("aumentadas", [])
+
+                    if not aumentadas:
+                        st.caption("Nenhuma")
+                    else:
+                        for a in aumentadas:
+                            st.write(
+                                f"- {a['nome_despesa']}: "
+                                + f"R$ {a['valor_aumentado']:,.2f}"
+                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                            )
+
+                # ==================================================
+                # JUSTIFICATIVA (fora das colunas)
+                # ==================================================
                 st.write("")
-                st.write("**Despesas reduzidas:**")
-
-                reduzidas = item.get("reduzidas", [])
-
-                if not reduzidas:
-                    st.caption("Nenhuma")
-                else:
-                    for r in reduzidas:
-                        st.write(
-                            f"- {r['nome_despesa']} — "
-                            + f"R$ {r['valor_reduzido']:,.2f}"
-                            .replace(",", "X").replace(".", ",").replace("X", ".")
-                        )
-
-            # ==================================================
-            # COLUNA 2 — situação + aumentadas
-            # ==================================================
-            with col2:
-
-                st.write(f"**Situação:** {status}")
-
-                st.write("")
-                st.write("**Despesas aumentadas:**")
-
-                aumentadas = item.get("aumentadas", [])
-
-                if not aumentadas:
-                    st.caption("Nenhuma")
-                else:
-                    for a in aumentadas:
-                        st.write(
-                            f"- {a['nome_despesa']} — "
-                            + f"R$ {a['valor_aumentado']:,.2f}"
-                            .replace(",", "X").replace(".", ",").replace("X", ".")
-                        )
-
-            # ==================================================
-            # JUSTIFICATIVA (fora das colunas)
-            # ==================================================
-            st.write("")
-            st.write("**Justificativa:**")
-            st.caption(item.get("justificativa", ""))
+                st.write(f"**Justificativa:** {item.get("justificativa", "")}")
 
 
 
