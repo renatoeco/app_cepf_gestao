@@ -2731,9 +2731,15 @@ with remanejamentos:
 
                 st.divider()
 
-                justificativa = st.text_area(
-                    "**Justificativa do remanejamento:**"
-                )
+                with st.container(horizontal=True, vertical_alignment="bottom"):
+
+                    justificativa = st.text_area(
+                        "**Justificativa do remanejamento:**"
+                    )
+
+                    st.button(
+                        "Salvar justificativa",
+                    )
 
             # ==================================================
             # COLUNA DIREITA — RESUMO
@@ -2742,12 +2748,13 @@ with remanejamentos:
 
                 st.write('')
                 st.write('**Resumo do remanejamento**')
+                st.write('')
 
                 fmt = lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-                st.metric("Total reduzido", fmt(total_reduzido))
-                st.metric("Total aumentado", fmt(total_aumentado))
-
+                st.metric(":material/arrow_downward: Total reduzido", fmt(total_reduzido))
+                st.metric(":material/arrow_upward: Total aumentado", fmt(total_aumentado))
+                
                 saldo_remanejamento = total_reduzido - total_aumentado
 
                 st.write("")
@@ -2769,7 +2776,7 @@ with remanejamentos:
                 # --------------------------------------------------
                 if total_reduzido == 0 and total_aumentado == 0:
 
-                    st.write("*Selecione despesas para reduzir e aumentar os valores*")
+                    st.markdown("<span style='color:green; font-size:120%'>*Selecione despesas para reduzir e aumentar os valores*</span>", unsafe_allow_html=True)
 
 
                 # --------------------------------------------------
@@ -2787,13 +2794,49 @@ with remanejamentos:
 
                     if saldo_remanejamento > 0:
                         # Ainda sobra valor para aumentar
-                        st.metric("Pode aumentar:", fmt(saldo_remanejamento))
+
+                        st.markdown(f"""
+                                    <span style=
+                                        'color:green; 
+                                        font-size:120%; 
+                                        margin-bottom:0
+                                    '>
+                                        :material/arrow_upward: Pode aumentar:
+                                    </span>
+                                    <br>
+                                    <span style=
+                                        'color:green; 
+                                        font-size:220%
+                                    '>
+                                        R$ {saldo_remanejamento:,.2f} 
+                                    </span>
+                                    """
+                                    , unsafe_allow_html=True)
+
+
+
                     else:
                         # Passou do limite
-                        st.metric(
-                            ":material/warning: Ops, passou do ponto, reduza:",
-                            fmt(abs(saldo_remanejamento))
-                        )
+
+                        st.markdown(f"""
+                                    <span style=
+                                        'color:red; 
+                                        font-size:120%; 
+                                        margin-bottom:0
+                                    '>
+                                        :material/arrow_downward: Passou um pouco. <br>Reduza mais despesas ou diminua o aumento.
+                                    </span>
+                                    <br>
+                                    <span style=
+                                        'color:red; 
+                                        font-size:220%
+                                    '>
+                                        R$ {saldo_remanejamento:,.2f} 
+                                    </span>
+                                    """
+                                    , unsafe_allow_html=True)
+
+
 
 
                 # --------------------------------------------------
@@ -2812,8 +2855,32 @@ with remanejamentos:
                     # ----------------------------------------------
                     if not justificativa.strip():
 
-                        st.write(":material/check: As contas estão corretas")
-                        st.write(":material/warning: *Preencha a justificativa*")
+
+                        st.markdown(f"""
+                                    <span style=
+                                        'color:green; 
+                                        font-size:120%; 
+                                        margin-bottom:0
+                                    '>
+                                        :material/check: As contas estão corretas
+                                    </span>
+                                    """
+                                    , unsafe_allow_html=True)
+
+
+
+                        st.markdown(f"""
+                                    <span style=
+                                        'color:red; 
+                                        font-size:120%
+                                    '>
+                                        :material/warning: Preencha a justificativa
+
+                                    </span>
+                                    """
+                                    , unsafe_allow_html=True)
+
+
 
 
                     # ----------------------------------------------
@@ -2825,8 +2892,18 @@ with remanejamentos:
                     # ----------------------------------------------
                     else:
 
-                        st.write(":material/check: *Tudo certo! Pode enviar a solicitação.*")
+                        st.markdown(f"""
+                                    <span style=
+                                        'color:green; 
+                                        font-size:120%; 
+                                        margin-bottom:0
+                                    '>
+                                        :material/check: Tudo certo. Pode enviar.
+                                    </span>
+                                    """
+                                    , unsafe_allow_html=True)
 
+                        st.write('')
 
                         # ------------------------------------------
                         # Botão de envio da solicitação
@@ -3059,6 +3136,7 @@ with remanejamentos:
 
     lista_remanej = financeiro.get("remanejamentos_financeiros", [])
 
+
     if not lista_remanej:
         st.caption("Nenhum remanejamento até o momento.")
     else:
@@ -3066,27 +3144,9 @@ with remanejamentos:
         for idx in range(len(lista_remanej) - 1, -1, -1):
             item = lista_remanej[idx]
 
-        # for idx, item in enumerate(reversed(lista_remanej)):
-
-        # for item in reversed(lista_remanej):
-
             data_solic = item.get("data_solicit_remanej")
             data_aprov = item.get("data_aprov_remanej")  # pode não existir
             status = item.get("status_remanejamento", "-")
-
-            # ------------------------------------------
-            # formatação de datas
-            # ------------------------------------------
-            def fmt_data(dt):
-                if not dt:
-                    return "-"
-                try:
-                    return dt.astimezone().strftime("%d/%m/%Y")
-                except:
-                    return str(dt)
-
-
-
 
 
 
@@ -3131,6 +3191,7 @@ with remanejamentos:
                 # ------------------------------------------
                 with col3:
 
+
                     if status == "aceito":
                         badge = {
                             "label": "Aceito",
@@ -3144,6 +3205,15 @@ with remanejamentos:
                             "bg": "#FFF3CD",
                             "color": "#856404"
                         }
+
+                    elif status == "recusado":
+                        badge = {
+                            "label": "Recusado",
+                            "bg": "#F8D7DA",     # vermelho claro
+                            "color": "#721C24"  # vermelho escuro
+                        }
+
+
 
                     st.markdown(
                         f"""
@@ -3165,6 +3235,9 @@ with remanejamentos:
 
 
                 st.write('')
+
+
+
 
 
                 # ==================================================
@@ -3277,13 +3350,17 @@ with remanejamentos:
                         # ==================================================
                         # BOTÃO APROVAR
                         # ==================================================
+
                         habilitar = st.session_state[tec_key] and st.session_state[fin_key]
+
 
                         if st.button(
                             "Aprovar remanejamento",
                             disabled=not habilitar,
                             key=f"aprovar_{idx}",
-                            type="primary"
+                            type="primary",
+                            icon=":material/check:",
+                            width="stretch"
                         ):
                             aprovar_remanejamento(
                                 codigo_projeto_atual,
@@ -3293,128 +3370,87 @@ with remanejamentos:
 
 
 
+                        # ==================================================
+                        # BOTÃO RECUSAR (abre campo de justificativa)
+                        # ==================================================
+                        recusar_key = f"abrir_recusa_{idx}"
+
+                        if recusar_key not in st.session_state:
+                            st.session_state[recusar_key] = False
 
 
-                    # if st.session_state.get("tipo_usuario") in ["admin", "equipe"]:
-
-                    #     nome_usuario = st.session_state.get("nome_completo", "Usuário")
-
-                    #     # ==================================================
-                    #     # ACEITE TÉCNICO
-                    #     # ==================================================
-                    #     tec_key = f"tec_{idx}"
-
-                    #     # Pré-carrega estado do banco no session_state
-                    #     if tec_key not in st.session_state:
-                    #         st.session_state[tec_key] = "aceite_tecnico" in item
-
-                    #     st.checkbox(
-                    #         "Aceite técnico",
-                    #         key=tec_key,
-                    #         on_change=atualizar_aceite_remanejamento,
-                    #         args=(
-                    #             codigo_projeto_atual,
-                    #             idx,
-                    #             "aceite_tecnico",
-                    #             tec_key
-                    #         )
-                    #     )
-
-                    #     # Caption sempre baseado no BD
-                    #     if item.get("aceite_tecnico"):
-                    #         st.caption(item["aceite_tecnico"])
+                        if st.button(
+                            "Recusar remanejamento",
+                            key=f"recusar_btn_{idx}",
+                            type="secondary",
+                            icon=":material/close:",
+                            width="stretch"
+                        ):
+                            st.session_state[recusar_key] = True
 
 
-                    #     # ==================================================
-                    #     # ACEITE FINANCEIRO
-                    #     # ==================================================
-                    #     fin_key = f"fin_{idx}"
+                        # ==================================================
+                        # FORMULÁRIO DE RECUSA
+                        # ==================================================
+                        if st.session_state[recusar_key]:
 
-                    #     if fin_key not in st.session_state:
-                    #         st.session_state[fin_key] = "aceite_financeiro" in item
+                            motivo = st.text_area(
+                                "Justificativa da recusa:",
+                                key=f"motivo_recusa_{idx}"
+                            )
 
-                    #     st.checkbox(
-                    #         "Aceite financeiro",
-                    #         key=fin_key,
-                    #         on_change=atualizar_aceite_remanejamento,
-                    #         args=(
-                    #             codigo_projeto_atual,
-                    #             idx,
-                    #             "aceite_financeiro",
-                    #             fin_key
-                    #         )
-                    #     )
+                            if st.button(
+                                "Confirmar recusa",
+                                key=f"confirmar_recusa_{idx}",
+                                type="primary",
+                                width="stretch"
+                            ):
 
-                    #     if item.get("aceite_financeiro"):
-                    #         st.caption(item["aceite_financeiro"])
+                                if not motivo.strip():
+                                    st.warning("Informe a justificativa da recusa.")
+                                else:
+
+                                    nome = st.session_state.get("nome", "Usuário")
+                                    data = datetime.datetime.now().strftime("%d/%m/%Y")
+
+                                    log_recusa = f"Recusado por {nome} em {data}"
+
+                                    col_projetos.update_one(
+                                        {"codigo": codigo_projeto_atual},
+                                        {
+                                            "$set": {
+                                                f"financeiro.remanejamentos_financeiros.{idx}.status_remanejamento": "recusado",
+                                                f"financeiro.remanejamentos_financeiros.{idx}.motivo_recusa": motivo.strip(),
+                                                f"financeiro.remanejamentos_financeiros.{idx}.log_recusa": log_recusa
+                                            }
+                                        }
+                                    )
 
 
-                    #     # ==================================================
-                    #     # BOTÃO APROVAR
-                    #     # Habilita somente quando ambos aceites existem no BD
-                    #     # ==================================================
-                    #     habilitar = (
-                    #         "aceite_tecnico" in item and
-                    #         "aceite_financeiro" in item
-                    #     )
+              
+                                    st.session_state[recusar_key] = False
+                                    st.rerun()
 
-                    #     # Só mostra ações se ainda NÃO estiver aceito
-                    #     if status != "aceito":
 
-                    #         aceite_tecnico = st.checkbox("Aceite técnico", key=tec_key)
-                    #         aceite_fin = st.checkbox("Aceite financeiro", key=fin_key)
+                    # --------------------------------------------------
+                    # Mostrar motivo da recusa para beneficiário
+                    # --------------------------------------------------
 
-                    #         habilitar = aceite_tecnico and aceite_fin
+                    if status == "recusado":
 
-                    #         if st.button(
-                    #             "Aprovar remanejamento",
-                    #             disabled=not habilitar,
-                    #             key=f"aprovar_{idx}",
-                    #             type="primary"
-                    #         ):
-                    #             aprovar_remanejamento(
-                    #                 codigo_projeto_atual,
-                    #                 idx,
-                    #                 item
-                    #             )
+                        st.write("")
+
+                        if item.get("log_recusa"):
+                            st.caption(item["log_recusa"])
+
+                        if item.get("motivo_recusa"):
+                            # st.write("**Motivo da recusa:**")
+                            st.write(item.get("motivo_recusa"))
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-                # with col3:
-
-                #     # ------------------------------------------
-                #     # Mostrar ações somente para admin/equipe
-                #     # ------------------------------------------
-                #     if st.session_state.get("tipo_usuario") in ["admin", "equipe"]:
-
-                #         aceite_tecnico = st.checkbox("Aceite técnico", key=f"tec_{idx}")
-                #         aceite_fin = st.checkbox("Aceite financeiro", key=f"fin_{idx}")
-
-                #         habilitar = aceite_tecnico and aceite_fin
-
-                #         if st.button(
-                #             "Aprovar remanejamento",
-                #             disabled=not habilitar,
-                #             key=f"aprovar_{idx}",
-                #             type="primary"
-                #         ):
-                #             pass  # depois você liga à função efetivar_remanejamento()
-
-                #         if data_aprov:
-                #             st.caption(f"Aceito em {fmt_data(data_aprov)}")
-
-               
+              
 
 
                 st.write('')
@@ -3427,122 +3463,6 @@ with remanejamentos:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-            # with st.container(border=True):
-
-            #     col1, col2 = st.columns(2)
-
-            #     # ==================================================
-            #     # COLUNA 1 — datas + reduzidas
-            #     # ==================================================
-            #     with col1:
-
-            #         st.write(f"**Data da solicitação:** {fmt_data(data_solic)}")
-
-            #         if data_aprov:
-            #             st.write(f"**Data de aprovação:** {fmt_data(data_aprov)}")
-
-            #         st.write("")
-            #         st.write("**Despesas reduzidas:**")
-
-            #         reduzidas = item.get("reduzidas", [])
-
-            #         if not reduzidas:
-            #             st.caption("Nenhuma")
-            #         else:
-            #             for r in reduzidas:
-            #                 st.write(
-            #                     f"- {r['nome_despesa']}: "
-            #                     + f"R$ {r['valor_reduzido']:,.2f}"
-            #                     .replace(",", "X").replace(".", ",").replace("X", ".")
-            #                 )
-
-            #     # ==================================================
-            #     # COLUNA 2 — situação + aumentadas
-            #     # ==================================================
-            #     with col2:
-
-            #         # --------------------------------------------------
-            #         # Definição visual do badge
-            #         # --------------------------------------------------
-            #         if status == "aceito":
-            #             badge = {
-            #                 "label": "Aceito",
-            #                 "bg": "#D4EDDA",     # verde claro
-            #                 "color": "#155724"  # verde escuro
-            #             }
-
-            #         elif status == "em_analise":
-            #             badge = {
-            #                 "label": "Em análise",
-            #                 "bg": "#FFF3CD",     # amarelo claro
-            #                 "color": "#856404"   # amarelo escuro
-            #             }
-
-            #         # else:
-            #         #     badge = {
-            #         #         "label": status,
-            #         #         "bg": "#E2E3E5",
-            #         #         "color": "#383D41"
-            #         #     }
-
-
-            #         # --------------------------------------------------
-            #         # Render do badge
-            #         # --------------------------------------------------
-            #         # st.write("**Situação**")
-
-            #         st.markdown(
-            #             f"""
-            #             <div style="margin-bottom:6px;">
-            #                 <span style="
-            #                     background:{badge['bg']};
-            #                     color:{badge['color']};
-            #                     padding:4px 10px;
-            #                     border-radius:20px;
-            #                     font-size:12px;
-            #                     font-weight:600;
-            #                 ">
-            #                     {badge['label']}
-            #                 </span>
-            #             </div>
-            #             """,
-            #             unsafe_allow_html=True
-            #         )
-
-
-            #         st.write("")
-            #         st.write("**Despesas aumentadas:**")
-
-            #         aumentadas = item.get("aumentadas", [])
-
-            #         if not aumentadas:
-            #             st.caption("Nenhuma")
-            #         else:
-            #             for a in aumentadas:
-            #                 st.write(
-            #                     f"- {a['nome_despesa']}: "
-            #                     + f"R$ {a['valor_aumentado']:,.2f}"
-            #                     .replace(",", "X").replace(".", ",").replace("X", ".")
-            #                 )
-
-            #     # ==================================================
-            #     # JUSTIFICATIVA (fora das colunas)
-            #     # ==================================================
-            #     st.write("")
-            #     st.write(f"**Justificativa:** {item.get("justificativa", "")}")
 
 
 

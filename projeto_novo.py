@@ -40,7 +40,7 @@ if "form_projeto" not in st.session_state:
         "duracao": 1,
         "data_inicio": None,
         "data_fim": None,
-        "responsavel": "",
+        "responsavel": [],
         "direcoes": [],
         "publicos": [],
         "objetivo": ""
@@ -86,7 +86,8 @@ mapa_id_nome = {
     for _, row in pessoas_benef.iterrows()
 }
 
-lista_ids = [None] + list(mapa_id_nome.keys())
+lista_ids = list(mapa_id_nome.keys())
+
 
 
 ###########################################################################################################
