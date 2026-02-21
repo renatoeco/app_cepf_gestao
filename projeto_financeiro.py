@@ -152,6 +152,20 @@ financeiro = projeto.get("financeiro", {})
 # FUNÇÕES
 ###########################################################################################################
 
+# -----------------------------------
+# Formata float para moeda R$
+# -----------------------------------
+def format_brl(valor):
+    return (
+        f"R$ {valor:,.2f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    ) if valor else ""
+
+
+
+
 
 
 # ==================================================
@@ -201,6 +215,15 @@ def aprovar_remanejamento(
         lista[idx].get("reduzidas", []),
         lista[idx].get("aumentadas", [])
     )
+
+
+    projeto_atualizado = col_projetos.find_one({"codigo": codigo_projeto})
+    enviar_email_remanejamento_aprovado(
+        projeto_atualizado,
+        lista[idx]
+    )
+
+
 
     st.rerun()
 
@@ -268,6 +291,340 @@ def atualizar_aceite_remanejamento(
 
 
 
+
+
+# ==================================================
+# Envia e-mail para o beneficiárioquando remanejamento é recusado
+# ==================================================
+def enviar_email_remanejamento_recusado(
+    projeto,
+    item_remanejamento
+):
+    """
+    Envia e-mail para todos os contatos cadastrados
+    na chave 'contatos' do projeto quando o
+    remanejamento for recusado.
+    """
+
+    contatos = projeto.get("contatos", [])
+
+    # --------------------------------------------------
+    # Coletar e-mails
+    # --------------------------------------------------
+    destinatarios = [
+        c.get("email")
+        for c in contatos
+        if c.get("email")
+    ]
+
+    if not destinatarios:
+        return
+
+    codigo = projeto.get("codigo")
+    nome_projeto = projeto.get("nome_do_projeto")
+    organizacao = projeto.get("organizacao")
+
+    reduzidas = item_remanejamento.get("reduzidas", [])
+    aumentadas = item_remanejamento.get("aumentadas", [])
+    justificativa = item_remanejamento.get("justificativa", "")
+    motivo_recusa = item_remanejamento.get("motivo_recusa", "")
+
+    total_reduzido = sum(r.get("valor_reduzido", 0) for r in reduzidas)
+
+    # --------------------------------------------------
+    # Montar listas HTML
+    # --------------------------------------------------
+    def montar_lista_html(itens, campo_valor):
+        if not itens:
+            return "<p>Nenhuma</p>"
+
+        linhas = ""
+        for i in itens:
+            linhas += f"<li>{i['nome_despesa']}: {format_brl(i[campo_valor])}</li>"
+
+        return f"<ul>{linhas}</ul>"
+
+    lista_reduzidas = montar_lista_html(reduzidas, "valor_reduzido")
+    lista_aumentadas = montar_lista_html(aumentadas, "valor_aumentado")
+
+    assunto = "Remanejamento recusado"
+
+    logo = logo_cepf
+
+    corpo_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <style>
+
+    body {{
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #f5f5f5;
+    }}
+
+    .container {{
+        max-width: 760px;
+        margin: 0 auto;
+        background: white;
+        border-top: 6px solid #C82333; /* vermelho */
+        padding: 30px;
+    }}
+
+    .logo {{
+        text-align: center;
+        margin-bottom: 20px;
+    }}
+
+    .highlight {{
+        color: #C82333;
+        font-weight: bold;
+    }}
+
+    ul {{
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+    }}
+
+    li {{
+        margin: 0;
+        padding: 0;
+    }}
+
+    </style>
+    </head>
+
+    <body>
+
+    <div class="container">
+
+        <div class="logo">
+            <img src="{logo}" height="60">
+        </div>
+
+        <p>
+        Foi <span class="highlight"><strong>recusado</strong></span>
+        o remanejamento de
+        <span class="highlight">{format_brl(total_reduzido)}</span>
+        no orçamento do projeto
+        <span class="highlight">{codigo} - {nome_projeto}</span>
+        da organização
+        <span class="highlight">{organizacao}</span>,
+        conforme detalhado a seguir:
+        </p>
+
+        <br>
+
+        <table width="100%">
+        <tr>
+            <td valign="top" width="50%">
+                <strong>Despesas reduzidas</strong>
+                {lista_reduzidas}
+            </td>
+
+            <td valign="top" width="50%">
+                <strong>Despesas aumentadas</strong>
+                {lista_aumentadas}
+            </td>
+        </tr>
+        </table>
+
+        <br>
+
+        <p><strong>Justificativa original:</strong></p>
+        <p>{justificativa}</p>
+
+        <br>
+
+        <p><strong>Motivo da recusa:</strong></p>
+        <p>{motivo_recusa}</p>
+
+        <br>
+        <p>Sistema de Gestão de Projetos</p>
+
+    </div>
+
+    </body>
+    </html>
+    """
+
+    enviar_email(corpo_html, destinatarios, assunto)
+
+
+
+
+
+
+
+# ==================================================
+# Envia e-mail para o beneficiário quando remanejamento é aprovado
+# ==================================================
+def enviar_email_remanejamento_aprovado(
+    projeto,
+    item_remanejamento
+):
+    """
+    Envia e-mail para todos os contatos cadastrados
+    na chave 'contatos' do projeto.
+    """
+
+    contatos = projeto.get("contatos", [])
+
+    # --------------------------------------------------
+    # Coletar e-mails dos contatos
+    # --------------------------------------------------
+    destinatarios = [
+        c.get("email")
+        for c in contatos
+        if c.get("email")
+    ]
+
+    if not destinatarios:
+        return
+
+    codigo = projeto.get("codigo")
+    nome_projeto = projeto.get("nome_do_projeto")
+    organizacao = projeto.get("organizacao")
+
+    reduzidas = item_remanejamento.get("reduzidas", [])
+    aumentadas = item_remanejamento.get("aumentadas", [])
+    justificativa = item_remanejamento.get("justificativa", "")
+
+    # --------------------------------------------------
+    # Soma total reduzido
+    # --------------------------------------------------
+    total_reduzido = sum(r.get("valor_reduzido", 0) for r in reduzidas)
+
+    # --------------------------------------------------
+    # Montar listas HTML (sem bolinha)
+    # --------------------------------------------------
+    def montar_lista_html(itens, campo_valor):
+        if not itens:
+            return "<p>Nenhuma</p>"
+
+        linhas = ""
+        for i in itens:
+            linhas += f"<li>{i['nome_despesa']}: {format_brl(i[campo_valor])}</li>"
+
+        return f"<ul>{linhas}</ul>"
+
+    lista_reduzidas = montar_lista_html(reduzidas, "valor_reduzido")
+    lista_aumentadas = montar_lista_html(aumentadas, "valor_aumentado")
+
+    # --------------------------------------------------
+    # Assunto
+    # --------------------------------------------------
+    assunto = "Remanejamento aprovado"
+
+    logo = logo_cepf
+
+    corpo_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <style>
+
+    body {{
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #f5f5f5;
+    }}
+
+    .container {{
+        max-width: 760px;
+        margin: 0 auto;
+        background: white;
+        border-top: 6px solid #A0C256;
+        padding: 30px;
+    }}
+
+    .logo {{
+        text-align: center;
+        margin-bottom: 20px;
+    }}
+
+    .highlight {{
+        color: #A0C256;
+        font-weight: bold;
+    }}
+
+    ul {{
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+    }}
+
+    li {{
+        margin: 0;
+        padding: 0;
+    }}
+
+    </style>
+    </head>
+
+    <body>
+
+    <div class="container">
+
+        <div class="logo">
+            <img src="{logo}" height="60">
+        </div>
+
+        <p>
+        Foi <span class="highlight"><strong>aprovado</strong></span>
+        o remanejamento de
+        <span class="highlight">{format_brl(total_reduzido)}</span>
+        no orçamento do projeto
+        <span class="highlight">{codigo} - {nome_projeto}</span>
+        da organização
+        <span class="highlight">{organizacao}</span>,
+        conforme detalhado a seguir:
+        </p>
+
+        <br>
+
+        <table width="100%">
+        <tr>
+            <td valign="top" width="50%">
+                <strong>Despesas reduzidas</strong>
+                {lista_reduzidas}
+            </td>
+
+            <td valign="top" width="50%">
+                <strong>Despesas aumentadas</strong>
+                {lista_aumentadas}
+            </td>
+        </tr>
+        </table>
+
+        <br>
+
+        <p><strong>Justificativa:</strong></p>
+        <p>{justificativa}</p>
+
+        <br>
+
+        <p>
+        O orçamento do projeto já está atualizado no sistema.
+        </p>
+
+        <br>
+        <p>Sistema de Gestão de Projetos</p>
+
+    </div>
+
+    </body>
+    </html>
+    """
+
+    enviar_email(corpo_html, destinatarios, assunto)
+
+
+
+
+
+
 # ==================================================
 # Envia notificação de remanejamento para equipe/admin
 # ==================================================
@@ -316,9 +673,10 @@ def enviar_email_remanejamento(
 
         linhas = ""
         for i in itens:
-            linhas += f"<li>{i['nome_despesa']}: R$ {i[campo_valor]:,.2f}</li>"
+            linhas += f"<li>{i['nome_despesa']}: {format_brl(i[campo_valor])}</li>"
 
         return f"<ul>{linhas}</ul>"
+
 
 
     lista_reduzidas = montar_lista_html(reduzidas, "valor_reduzido")
@@ -2057,16 +2415,6 @@ with orcamento:
             df_orcamento["quantidade"] * df_orcamento["valor_unitario"]
         )
 
-        # -----------------------------------
-        # Formatação para exibição
-        # -----------------------------------
-        def format_brl(valor):
-            return (
-                f"R$ {valor:,.2f}"
-                .replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
-            ) if valor else ""
 
         df_orcamento["valor_unitario_fmt"] = df_orcamento["valor_unitario"].apply(format_brl)
         df_orcamento["valor_total_fmt"] = df_orcamento["valor_total"].apply(format_brl)
@@ -3426,7 +3774,12 @@ with remanejamentos:
                                         }
                                     )
 
+                                    projeto_atualizado = col_projetos.find_one({"codigo": codigo_projeto_atual})
 
+                                    enviar_email_remanejamento_recusado(
+                                        projeto_atualizado,
+                                        projeto_atualizado["financeiro"]["remanejamentos_financeiros"][idx]
+                                    )
               
                                     st.session_state[recusar_key] = False
                                     st.rerun()
