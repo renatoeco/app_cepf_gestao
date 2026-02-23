@@ -25,7 +25,7 @@ col_publicos = db["publicos"]
 col_beneficios = db["beneficios"]
 
 # Direções Estratégicas
-col_direcoes = db["direcoes_estrategicas"]
+# col_direcoes = db["direcoes_estrategicas"]
 
 # Indicadores
 col_indicadores = db["indicadores"]
@@ -1204,359 +1204,240 @@ with aba_beneficios:
 
 
 
-
-
-
-# with aba_beneficios:
-
-#     # ------------------------------------------------------
-#     # TÍTULO DA ABA
-#     # ------------------------------------------------------
-#     st.subheader("Tipos de benefício")
-#     st.write("")
-
-#     # ------------------------------------------------------
-#     # SELEÇÃO DO EDITAL
-#     # ------------------------------------------------------
-
-#     lista_editais = df_editais["codigo_edital"].unique().tolist()
-
-#     edital_selecionado_beneficio = st.selectbox(
-#         "Selecione o Edital:",
-#         options=[""] + lista_editais,
-#         index=0,
-#         width=300,
-#         key="edital_tipos_beneficio"
-#     )
-
-#     if not edital_selecionado_beneficio:
-#         st.caption("Selecione um edital para continuar.")
-
-#     else:
-#         # ------------------------------------------------------
-#         # BUSCA O EDITAL NO BANCO
-#         # ------------------------------------------------------
-
-#         edital = col_editais.find_one(
-#             {"codigo_edital": edital_selecionado_beneficio}
-#         )
-
-#         # Recupera os tipos de benefício
-#         tipos_beneficio = edital.get("tipos_beneficio", [])
-
-#         # ======================================================
-#         # CRIAÇÃO DAS ABAS INTERNAS
-#         # ======================================================
-
-#         aba_visualizar, aba_novo, aba_editar = st.tabs([
-#             "Tipos de benefício",
-#             "Novo",
-#             "Editar / Excluir"
-#         ])
-
-
-#         # ======================================================
-#         # ABA 1 — VISUALIZAR TIPOS
-#         # ======================================================
-
-#         with aba_visualizar:
-
-#             if not tipos_beneficio:
-#                 st.caption("Nenhum tipo de benefício cadastrado.")
-#             else:
-        
-#                 st.write('')
-
-#                 for idx, tipo in enumerate(tipos_beneficio, start=1):
-#                     st.markdown(f"**{idx}. {tipo['nome_tipo_beneficio']}**")
-
-
-
-
-
-#         # ======================================================
-#         # ABA 2 — NOVO TIPO DE BENEFÍCIO
-#         # ======================================================
-
-#         with aba_novo:
-
-#             st.write("")
-
-#             st.markdown("##### Cadastrar novo tipo de benefício")
-
-#             with st.form(
-#                 key="form_novo_tipo_beneficio",
-#                 clear_on_submit=True,
-#                 border=False
-#             ):
-
-#                 nome_tipo = st.text_input(
-#                     "Nome do tipo de benefício"
-#                 )
-
-#                 st.write("")
-
-#                 submitted = st.form_submit_button(
-#                     "Salvar tipo de benefício",
-#                     type="primary",
-#                     icon=":material/save:"
-#                 )
-
-#                 if submitted:
-
-#                     if not nome_tipo.strip():
-#                         st.warning("O nome do tipo de benefício não pode estar vazio.")
-#                     else:
-#                         novo_tipo = {
-#                             "nome_tipo_beneficio": nome_tipo.strip()
-#                         }
-
-#                         col_editais.update_one(
-#                             {"codigo_edital": edital_selecionado_beneficio},
-#                             {"$push": {"tipos_beneficio": novo_tipo}}
-#                         )
-
-#                         st.success("Tipo de benefício cadastrado com sucesso!")
-#                         time.sleep(3)
-#                         st.rerun()
-
-
-
-#         # ======================================================
-#         # ABA 3 — EDITAR / EXCLUIR
-#         # ======================================================
-
-#         with aba_editar:
-
-#             st.write("")
-
-#             if not tipos_beneficio:
-#                 st.caption("Nenhum tipo de benefício cadastrado.")
-#             else:
-#                 st.markdown("##### Selecione um tipo para editar ou excluir")
-
-#                 mapa_tipos = {
-#                     t["nome_tipo_beneficio"]: t
-#                     for t in tipos_beneficio
-#                 }
-
-#                 selecionado = st.selectbox(
-#                     "",
-#                     list(mapa_tipos.keys()),
-#                     key="select_tipo_beneficio"
-#                 )
-
-#                 if selecionado:
-#                     tipo_atual = mapa_tipos[selecionado]
-
-#                     st.divider()
-
-#                     novo_nome = st.text_input(
-#                         "Nome do tipo de benefício",
-#                         value=tipo_atual["nome_tipo_beneficio"],
-#                         key="editar_tipo_beneficio"
-#                     )
-
-#                     st.write('')
-
-#                     with st.container(horizontal=True):
-
-#                         # -------- SALVAR --------
-#                         if st.button(
-#                             "Salvar alterações",
-#                             type="primary",
-#                             icon=":material/save:",
-#                             key="btn_editar_tipo_beneficio"
-#                         ):
-
-#                             novo = {
-#                                 "nome_tipo_beneficio": novo_nome.strip()
-#                             }
-
-#                             tipos_atualizados = [
-#                                 novo if t == tipo_atual else t
-#                                 for t in tipos_beneficio
-#                             ]
-
-#                             col_editais.update_one(
-#                                 {"codigo_edital": edital_selecionado_beneficio},
-#                                 {"$set": {"tipos_beneficio": tipos_atualizados}}
-#                             )
-
-#                             st.success("Tipo de benefício atualizado com sucesso!")
-#                             time.sleep(3)
-#                             st.rerun()
-
-#                         # -------- EXCLUIR --------
-#                         if st.button(
-#                             "Excluir tipo",
-#                             icon=":material/delete:",
-#                             key="btn_excluir_tipo_beneficio"
-#                         ):
-
-#                             novos = [
-#                                 t for t in tipos_beneficio
-#                                 if t != tipo_atual
-#                             ]
-
-#                             col_editais.update_one(
-#                                 {"codigo_edital": edital_selecionado_beneficio},
-#                                 {"$push": {"tipos_beneficio": novo_tipo}}
-#                             )
-
-#                             # Limpa o campo de texto
-#                             st.session_state["novo_tipo_beneficio"] = ""
-
-#                             st.success("Tipo de benefício cadastrado com sucesso!")
-#                             time.sleep(3)
-#                             st.rerun()
-
-
-
-#                             # col_editais.update_one(
-#                             #     {"codigo_edital": edital_selecionado_beneficio},
-#                             #     {"$set": {"tipos_beneficio": novos}}
-#                             # )
-
-#                             # st.success("Tipo de benefício removido com sucesso!")
-#                             # time.sleep(3)
-#                             # st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # ==========================================================
-# ABA DIREÇÕES ESTRATÉGICAS
+# ABA DIREÇÕES ESTRATÉGICAS (POR EDITAL)
 # ==========================================================
 
 with aba_direcoes:
 
+    # ------------------------------------------------------
+    # TÍTULO DA ABA
+    # ------------------------------------------------------
     st.subheader("Direções Estratégicas")
-    st.write('')
+    st.write("")
 
-    # 1) Carrega documentos da coleção (ordenados)
-    dados_direcoes = list(
-        col_direcoes.find({}, {"tema": 1}).sort("tema", 1)
+    # ------------------------------------------------------
+    # SELEÇÃO DO EDITAL
+    # ------------------------------------------------------
+
+    lista_editais = df_editais["codigo_edital"].unique().tolist()
+
+    edital_selecionado_direcoes = st.selectbox(
+        "Selecione o Edital:",
+        options=[""] + lista_editais,
+        index=0,
+        key="edital_selecionado_direcoes",
+        width=300
     )
 
-    df_direcoes = pd.DataFrame(dados_direcoes)
+    # Caso nenhum edital seja selecionado
+    if not edital_selecionado_direcoes:
+        st.caption("Selecione um edital para continuar.")
 
-    # Converte ObjectId para string
-    if "_id" in df_direcoes.columns:
-        df_direcoes["_id"] = df_direcoes["_id"].astype(str)
     else:
-        df_direcoes["_id"] = ""
 
-    editar_direcoes = st.toggle("Editar", key="editar_direcoes")
-    st.write('')
+        st.write("")
 
-    # -------------------------
-    # MODO VISUALIZAÇÃO
-    # -------------------------
-    if not editar_direcoes:
-        if df_direcoes.empty:
-            st.caption("Nenhuma direção estratégica cadastrada.")
-        else:
+        # ------------------------------------------------------
+        # BUSCA DO EDITAL NO BANCO
+        # ------------------------------------------------------
 
-            df_tabela = (
-                df_direcoes[["tema"]]
-                .sort_values("tema")
-                .reset_index(drop=True)
-                .rename(columns={"tema": "Direções estratégicas"})
-            )
-
-            ui.table(df_tabela)
-
-
-
-    # -------------------------
-    # MODO EDIÇÃO
-    # -------------------------
-    else:
-        st.write("Edite, adicione e exclua linhas.")
-
-        if df_direcoes.empty:
-            st.warning(
-                "Ainda não há direções estratégicas cadastradas. "
-                "Você pode adicionar novas abaixo."
-            )
-
-            df_editor = pd.DataFrame(
-                {"tema": pd.Series(dtype="str")}
-            )
-        else:
-            df_editor = df_direcoes[["tema"]].copy()
-            df_editor["tema"] = df_editor["tema"].astype(str)
-
-        df_editado = st.data_editor(
-            df_editor,
-            num_rows="dynamic",
-            hide_index=True,
-            key="editor_direcoes",
-            # width=500
+        edital_direcoes = col_editais.find_one(
+            {"codigo_edital": edital_selecionado_direcoes}
         )
 
-        if st.button("Salvar alterações", icon=":material/save:", type="primary", key="salvar_direcoes"):
+        direcoes = sorted(
+            edital_direcoes.get("direcoes_estrategicas", []),
+            key=lambda x: x.get("tema", "")
+        )
 
-            if "tema" not in df_editado.columns:
-                st.error("Nenhum dado válido para salvar.")
-                st.stop()
+        # ======================================================
+        # ABAS INTERNAS
+        # ======================================================
 
-            # Normaliza e remove vazios
-            df_editado["tema"] = df_editado["tema"].astype(str).str.strip()
-            df_editado = df_editado[df_editado["tema"] != ""]
+        aba_visualizar_direcoes, aba_nova_direcao, aba_editar_direcao = st.tabs([
+            "Direções cadastradas",
+            "Nova direção estratégica",
+            "Editar / Excluir"
+        ])
 
-            if df_editado.empty:
-                st.warning("Nenhuma direção estratégica informada.")
-                st.stop()
+        # ======================================================
+        # ABA 1 — VISUALIZAR
+        # ======================================================
 
-            df_editado = df_editado.sort_values("tema")
+        with aba_visualizar_direcoes:
 
-            # ===========================
-            # VERIFICAÇÃO DE DUPLICADOS
-            # ===========================
-            lista_editada = df_editado["tema"].tolist()
-            duplicados_local = {
-                x for x in lista_editada if lista_editada.count(x) > 1
-            }
+            if not direcoes:
+                st.caption("Nenhuma direção estratégica cadastrada.")
+            else:
+                for idx, direcao in enumerate(direcoes, start=1):
+                    st.markdown(f"**{idx}. {direcao.get('tema')}**")
 
-            if duplicados_local:
-                st.error(
-                    f"Existem valores duplicados na lista: {', '.join(duplicados_local)}"
+        # ======================================================
+        # ABA 2 — NOVA DIREÇÃO
+        # ======================================================
+
+        with aba_nova_direcao:
+
+            with st.form("form_nova_direcao", border=False, clear_on_submit=True):
+
+                # --------------------------------------------------
+                # CAMPO: TEMA DA DIREÇÃO
+                # --------------------------------------------------
+
+                tema_direcao = st.text_input(
+                    "Direção estratégica"
                 )
-                st.stop()
 
-            valores_orig = (
-                set(df_direcoes["tema"])
-                if "tema" in df_direcoes.columns
-                else set()
-            )
-            valores_editados = set(lista_editada)
+                st.write("")
 
-            # 1) Removidos
-            for tema in valores_orig - valores_editados:
-                col_direcoes.delete_one({"tema": tema})
+                # --------------------------------------------------
+                # BOTÃO SALVAR
+                # --------------------------------------------------
 
-            # 2) Novos
-            for tema in valores_editados - valores_orig:
-                if col_direcoes.find_one({"tema": tema}):
-                    st.error(f"O valor '{tema}' já existe e não será inserido.")
-                    st.stop()
-                col_direcoes.insert_one({"tema": tema})
+                salvar_direcao = st.form_submit_button(
+                    "Adicionar direção estratégica",
+                    type="primary",
+                    icon=":material/save:",
+                    key="btn_salvar_direcao"
+                )
 
-            st.success("Direções Estratégicas atualizadas com sucesso!")
-            time.sleep(3)
-            st.rerun()
+                # --------------------------------------------------
+                # AÇÃO AO SALVAR
+                # --------------------------------------------------
+
+                if salvar_direcao:
+
+                    if not tema_direcao.strip():
+                        st.warning("A direção estratégica não pode ficar vazia.")
+                    else:
+
+                        nova_direcao = {
+                            "id": str(ObjectId()),
+                            "tema": tema_direcao.strip()
+                        }
+
+                        col_editais.update_one(
+                            {"codigo_edital": edital_selecionado_direcoes},
+                            {
+                                "$push": {
+                                    "direcoes_estrategicas": nova_direcao
+                                }
+                            }
+                        )
+
+                        st.success("Direção estratégica cadastrada com sucesso!", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+
+        # ======================================================
+        # ABA 3 — EDITAR / EXCLUIR
+        # ======================================================
+
+        with aba_editar_direcao:
+
+            if not direcoes:
+                st.caption("Nenhuma direção estratégica cadastrada.")
+
+            else:
+
+                st.markdown("##### Selecione uma direção para EDITAR ou EXCLUIR")
+
+                # --------------------------------------------------
+                # MAPA DE DIREÇÕES
+                # --------------------------------------------------
+
+                mapa_direcoes = {
+                    d["tema"]: d for d in direcoes
+                }
+
+                selecionada = st.selectbox(
+                    "",
+                    list(mapa_direcoes.keys())
+                )
+
+                direcao_atual = mapa_direcoes[selecionada]
+
+                st.divider()
+
+                # --------------------------------------------------
+                # CAMPOS DE EDIÇÃO
+                # --------------------------------------------------
+
+                novo_tema = st.text_input(
+                    "Direção estratégica",
+                    value=direcao_atual.get("tema", "")
+                )
+
+                st.write("")
+
+                # --------------------------------------------------
+                # BOTÕES DE AÇÃO
+                # --------------------------------------------------
+
+                with st.container(horizontal=True, horizontal_alignment="left"):
+
+                    # -------------------------
+                    # SALVAR ALTERAÇÕES
+                    # -------------------------
+
+                    if st.button(
+                        "Salvar alterações",
+                        type="primary",
+                        icon=":material/save:",
+                        key="btn_editar_direcao"
+                    ):
+
+                        if not novo_tema.strip():
+                            st.warning("A direção estratégica não pode ficar vazia.")
+                        else:
+
+                            direcoes_atualizadas = [
+                                {
+                                    **d,
+                                    "tema": novo_tema.strip()
+                                } if d["id"] == direcao_atual["id"] else d
+                                for d in direcoes
+                            ]
+
+                            col_editais.update_one(
+                                {"codigo_edital": edital_selecionado_direcoes},
+                                {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
+                            )
+
+                            st.success("Direção estratégica atualizada com sucesso!", icon=":material/check:")
+                            time.sleep(3)
+                            st.rerun()
+
+                    # -------------------------
+                    # EXCLUIR DIREÇÃO
+                    # -------------------------
+
+                    if st.button(
+                        "Excluir direção",
+                        icon=":material/delete:",
+                        key="btn_excluir_direcao"
+                    ):
+
+                        direcoes_atualizadas = [
+                            d for d in direcoes
+                            if d["id"] != direcao_atual["id"]
+                        ]
+
+                        col_editais.update_one(
+                            {"codigo_edital": edital_selecionado_direcoes},
+                            {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
+                        )
+
+                        st.success("Direção estratégica excluída com sucesso!", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+
+
+
+
+
+
 
 
 
