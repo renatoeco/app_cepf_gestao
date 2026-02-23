@@ -1200,25 +1200,18 @@ with aba_beneficios:
 
 
 
-
-
-
-
 # ==========================================================
 # ABA DIREÇÕES ESTRATÉGICAS (POR EDITAL)
 # ==========================================================
 
 with aba_direcoes:
 
-    # ------------------------------------------------------
-    # TÍTULO DA ABA
-    # ------------------------------------------------------
     st.subheader("Direções Estratégicas")
     st.write("")
 
-    # ------------------------------------------------------
-    # SELEÇÃO DO EDITAL
-    # ------------------------------------------------------
+    # ======================================================
+    # SELEÇÃO DO EDITAL (PRIMEIRO PASSO)
+    # ======================================================
 
     lista_editais = df_editais["codigo_edital"].unique().tolist()
 
@@ -1230,30 +1223,46 @@ with aba_direcoes:
         width=300
     )
 
-    # Caso nenhum edital seja selecionado
+    # Se nenhum edital for selecionado, para execução
     if not edital_selecionado_direcoes:
         st.caption("Selecione um edital para continuar.")
+        st.stop()
 
-    else:
+    st.write("")
 
-        st.write("")
+    # ======================================================
+    # RADIO DE MODO (APÓS SELECIONAR EDITAL)
+    # ======================================================
 
-        # ------------------------------------------------------
-        # BUSCA DO EDITAL NO BANCO
-        # ------------------------------------------------------
+    modo_gestao = st.radio(
+        "Gerenciar:",
+        options=["Direções estratégicas", "Subcategorias"],
+        horizontal=True,
+        index=0
+    )
 
-        edital_direcoes = col_editais.find_one(
-            {"codigo_edital": edital_selecionado_direcoes}
-        )
+    st.write("")
 
-        direcoes = sorted(
-            edital_direcoes.get("direcoes_estrategicas", []),
-            key=lambda x: x.get("tema", "")
-        )
+    # ======================================================
+    # BUSCA DO EDITAL NO BANCO
+    # ======================================================
 
-        # ======================================================
-        # ABAS INTERNAS
-        # ======================================================
+    edital_direcoes = col_editais.find_one(
+        {"codigo_edital": edital_selecionado_direcoes}
+    )
+
+    direcoes = sorted(
+        edital_direcoes.get("direcoes_estrategicas", []),
+        key=lambda x: x.get("tema", "")
+    )
+
+    # ======================================================
+    # ======================================================
+    # MODO 1 — DIREÇÕES ESTRATÉGICAS
+    # ======================================================
+    # ======================================================
+
+    if modo_gestao == "Direções estratégicas":
 
         aba_visualizar_direcoes, aba_nova_direcao, aba_editar_direcao = st.tabs([
             "Direções cadastradas",
@@ -1261,9 +1270,9 @@ with aba_direcoes:
             "Editar / Excluir"
         ])
 
-        # ======================================================
-        # ABA 1 — VISUALIZAR
-        # ======================================================
+        # -------------------------
+        # VISUALIZAR
+        # -------------------------
 
         with aba_visualizar_direcoes:
 
@@ -1273,38 +1282,23 @@ with aba_direcoes:
                 for idx, direcao in enumerate(direcoes, start=1):
                     st.markdown(f"**{idx}. {direcao.get('tema')}**")
 
-        # ======================================================
-        # ABA 2 — NOVA DIREÇÃO
-        # ======================================================
+        # -------------------------
+        # NOVA DIREÇÃO
+        # -------------------------
 
         with aba_nova_direcao:
 
             with st.form("form_nova_direcao", border=False, clear_on_submit=True):
 
-                # --------------------------------------------------
-                # CAMPO: TEMA DA DIREÇÃO
-                # --------------------------------------------------
-
-                tema_direcao = st.text_input(
-                    "Direção estratégica"
-                )
+                tema_direcao = st.text_input("Direção estratégica")
 
                 st.write("")
-
-                # --------------------------------------------------
-                # BOTÃO SALVAR
-                # --------------------------------------------------
 
                 salvar_direcao = st.form_submit_button(
                     "Adicionar direção estratégica",
                     type="primary",
-                    icon=":material/save:",
-                    key="btn_salvar_direcao"
+                    icon=":material/save:"
                 )
-
-                # --------------------------------------------------
-                # AÇÃO AO SALVAR
-                # --------------------------------------------------
 
                 if salvar_direcao:
 
@@ -1314,55 +1308,37 @@ with aba_direcoes:
 
                         nova_direcao = {
                             "id": str(ObjectId()),
-                            "tema": tema_direcao.strip()
+                            "tema": tema_direcao.strip(),
+                            "subcategorias": []
                         }
 
                         col_editais.update_one(
                             {"codigo_edital": edital_selecionado_direcoes},
-                            {
-                                "$push": {
-                                    "direcoes_estrategicas": nova_direcao
-                                }
-                            }
+                            {"$push": {"direcoes_estrategicas": nova_direcao}}
                         )
 
                         st.success("Direção estratégica cadastrada com sucesso!", icon=":material/check:")
-                        time.sleep(3)
+                        time.sleep(2)
                         st.rerun()
 
-        # ======================================================
-        # ABA 3 — EDITAR / EXCLUIR
-        # ======================================================
+        # -------------------------
+        # EDITAR / EXCLUIR
+        # -------------------------
 
         with aba_editar_direcao:
 
             if not direcoes:
                 st.caption("Nenhuma direção estratégica cadastrada.")
-
             else:
 
-                st.markdown("##### Selecione uma direção para EDITAR ou EXCLUIR")
-
-                # --------------------------------------------------
-                # MAPA DE DIREÇÕES
-                # --------------------------------------------------
-
-                mapa_direcoes = {
-                    d["tema"]: d for d in direcoes
-                }
+                mapa_direcoes = {d["tema"]: d for d in direcoes}
 
                 selecionada = st.selectbox(
-                    "",
+                    "Selecione a direção",
                     list(mapa_direcoes.keys())
                 )
 
                 direcao_atual = mapa_direcoes[selecionada]
-
-                st.divider()
-
-                # --------------------------------------------------
-                # CAMPOS DE EDIÇÃO
-                # --------------------------------------------------
 
                 novo_tema = st.text_input(
                     "Direção estratégica",
@@ -1371,57 +1347,18 @@ with aba_direcoes:
 
                 st.write("")
 
-                # --------------------------------------------------
-                # BOTÕES DE AÇÃO
-                # --------------------------------------------------
+                if st.button("Salvar alterações", type="primary", icon=":material/save:"):
 
-                with st.container(horizontal=True, horizontal_alignment="left"):
-
-                    # -------------------------
-                    # SALVAR ALTERAÇÕES
-                    # -------------------------
-
-                    if st.button(
-                        "Salvar alterações",
-                        type="primary",
-                        icon=":material/save:",
-                        key="btn_editar_direcao"
-                    ):
-
-                        if not novo_tema.strip():
-                            st.warning("A direção estratégica não pode ficar vazia.")
-                        else:
-
-                            direcoes_atualizadas = [
-                                {
-                                    **d,
-                                    "tema": novo_tema.strip()
-                                } if d["id"] == direcao_atual["id"] else d
-                                for d in direcoes
-                            ]
-
-                            col_editais.update_one(
-                                {"codigo_edital": edital_selecionado_direcoes},
-                                {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
-                            )
-
-                            st.success("Direção estratégica atualizada com sucesso!", icon=":material/check:")
-                            time.sleep(3)
-                            st.rerun()
-
-                    # -------------------------
-                    # EXCLUIR DIREÇÃO
-                    # -------------------------
-
-                    if st.button(
-                        "Excluir direção",
-                        icon=":material/delete:",
-                        key="btn_excluir_direcao"
-                    ):
+                    if not novo_tema.strip():
+                        st.warning("A direção estratégica não pode ficar vazia.")
+                    else:
 
                         direcoes_atualizadas = [
-                            d for d in direcoes
-                            if d["id"] != direcao_atual["id"]
+                            {
+                                **d,
+                                "tema": novo_tema.strip()
+                            } if d["id"] == direcao_atual["id"] else d
+                            for d in direcoes
                         ]
 
                         col_editais.update_one(
@@ -1429,9 +1366,126 @@ with aba_direcoes:
                             {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
                         )
 
-                        st.success("Direção estratégica excluída com sucesso!", icon=":material/check:")
-                        time.sleep(3)
+                        st.success("Direção estratégica atualizada com sucesso!", icon=":material/check:")
+                        time.sleep(2)
                         st.rerun()
+
+                if st.button("Excluir direção", icon=":material/delete:"):
+
+                    direcoes_atualizadas = [
+                        d for d in direcoes
+                        if d["id"] != direcao_atual["id"]
+                    ]
+
+                    col_editais.update_one(
+                        {"codigo_edital": edital_selecionado_direcoes},
+                        {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
+                    )
+
+                    st.success("Direção estratégica excluída com sucesso!", icon=":material/check:")
+                    time.sleep(2)
+                    st.rerun()
+
+    # ======================================================
+    # ======================================================
+    # MODO 2 — SUBCATEGORIAS
+    # ======================================================
+    # ======================================================
+
+    if modo_gestao == "Subcategorias":
+
+        if not direcoes:
+            st.warning("Nenhuma direção estratégica cadastrada.")
+            st.stop()
+
+        # --------------------------------------------------
+        # SELECIONAR DIREÇÃO
+        # --------------------------------------------------
+
+        mapa_direcoes = {d["tema"]: d for d in direcoes}
+
+        direcao_selecionada_nome = st.selectbox(
+            "Selecione a Direção Estratégica:",
+            list(mapa_direcoes.keys())
+        )
+
+        direcao_selecionada = mapa_direcoes[direcao_selecionada_nome]
+
+        st.write("")
+
+        # --------------------------------------------------
+        # CARREGAR SUBCATEGORIAS EXISTENTES
+        # --------------------------------------------------
+
+        subcategorias_existentes = direcao_selecionada.get("subcategorias", [])
+
+        if subcategorias_existentes:
+            df_sub = pd.DataFrame(subcategorias_existentes)
+            df_sub = df_sub.rename(columns={
+                "nome_subcategoria": "Subcategorias da direção estratégica"
+            })
+        else:
+            df_sub = pd.DataFrame({
+                "Subcategorias da direção estratégica": pd.Series(dtype="str")
+            })
+
+        # --------------------------------------------------
+        # DATA EDITOR
+        # --------------------------------------------------
+
+        df_editado = st.data_editor(
+            df_sub,
+            num_rows="dynamic",
+            hide_index=True
+        )
+
+        st.write("")
+
+        # --------------------------------------------------
+        # BOTÃO SALVAR
+        # --------------------------------------------------
+
+        if st.button(
+            "Salvar",
+            type="primary",
+            icon=":material/save:",
+            width=200
+        ):
+
+            # Normalização
+            df_editado = df_editado.dropna()
+            df_editado["Subcategorias da direção estratégica"] = (
+                df_editado["Subcategorias da direção estratégica"]
+                .astype(str)
+                .str.strip()
+            )
+
+            df_editado = df_editado[
+                df_editado["Subcategorias da direção estratégica"] != ""
+            ]
+
+            nova_lista_subcategorias = [
+                {"nome_subcategoria": row}
+                for row in df_editado["Subcategorias da direção estratégica"].tolist()
+            ]
+
+            # Atualiza apenas a direção selecionada
+            direcoes_atualizadas = [
+                {
+                    **d,
+                    "subcategorias": nova_lista_subcategorias
+                } if d["id"] == direcao_selecionada["id"] else d
+                for d in direcoes
+            ]
+
+            col_editais.update_one(
+                {"codigo_edital": edital_selecionado_direcoes},
+                {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
+            )
+
+            st.success("Subcategorias atualizadas com sucesso!", icon=":material/check:")
+            time.sleep(3)
+            st.rerun()
 
 
 
