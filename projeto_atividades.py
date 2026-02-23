@@ -354,56 +354,230 @@ with plano_trabalho:
         )
 
 
-        # ===========================================================================================
-        # EDIÇÃO DE COMPONENTES
-        # ===========================================================================================
 
-        if opcao_editar_pt == "Componentes":
+        if opcao_editar_pt == "Atividades":
 
             st.write("")
+            st.write("")
 
-            # Monta DataFrame apenas com nomes
-            df_componentes = pd.DataFrame({
-                "componente": [c.get("componente", "") for c in componentes]
-            })
+            # ============================================================
+            # Carregar plano de trabalho
+            # ============================================================
 
-            df_editado = st.data_editor(
-                df_componentes,
-                num_rows="dynamic",
-                hide_index=True,
-                key="editor_componentes"
+            plano_trabalho = (
+                df_projeto["plano_trabalho"].values[0]
+                if "plano_trabalho" in df_projeto.columns else {}
             )
 
-            salvar = st.button(
-                "Salvar componentes",
-                icon=":material/save:",
-                type="secondary"
-            )
+            componentes = plano_trabalho.get("componentes", [])
 
-            if salvar:
+            if not componentes:
+                st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar atividades.")
+                st.stop()
 
-                # Limpa nomes vazios
-                df_editado["componente"] = df_editado["componente"].astype(str).str.strip()
-                df_editado = df_editado[df_editado["componente"] != ""]
 
-                novos_componentes = []
+            # ============================================================
+            # Montar lista de entregas
+            # ============================================================
 
-                # Cria nova lista com IDs novos
-                for _, row in df_editado.iterrows():
-                    novos_componentes.append({
-                        "id": str(bson.ObjectId()),
-                        "componente": row["componente"],
-                        "entregas": []
+            lista_entregas = []
+
+            for comp in componentes:
+                for ent in comp.get("entregas", []):
+                    lista_entregas.append({
+                        "label": ent["entrega"],
+                        "componente": comp,
+                        "entrega": ent
                     })
 
-                col_projetos.update_one(
+            if not lista_entregas:
+                st.warning("Nenhuma entrega cadastrada. Cadastre entregas antes de adicionar atividades.")
+                st.stop()
+
+            lista_entregas = sorted(lista_entregas, key=lambda x: x["label"].lower())
+
+
+            # ============================================================
+            # Selectbox de entrega
+            # ============================================================
+
+            nome_entrega_sel = st.selectbox(
+                "Selecione a entrega:",
+                [item["label"] for item in lista_entregas],
+                key="select_entrega_ativ"
+            )
+
+            item_sel = next(item for item in lista_entregas if item["label"] == nome_entrega_sel)
+
+            componente_sel = item_sel["componente"]
+            entrega_sel = item_sel["entrega"]
+
+            st.write('')
+
+            # ============================================================
+            # Carregar atividades existentes
+            # ============================================================
+
+            atividades_exist = entrega_sel.get("atividades", [])
+
+            lista_atividades = []
+            for a in atividades_exist:
+                # Agora as datas não serão convertidas aqui.
+                lista_atividades.append({
+                    "atividade": a.get("atividade", ""),
+                    "data_inicio": a.get("data_inicio", ""),  # mantém string
+                    "data_fim": a.get("data_fim", ""),        # mantém string
+                })
+
+            df_atividades = pd.DataFrame(lista_atividades)
+
+            # Se estiver vazio, cria colunas vazias
+            if df_atividades.empty:
+                df_atividades = pd.DataFrame({
+                    "atividade": pd.Series(dtype="str"),
+                    "data_inicio": pd.Series(dtype="str"),
+                    "data_fim": pd.Series(dtype="str"),
+                })
+
+
+            # ============================================================
+            # Data Editor 
+            # ============================================================
+
+            df_editado = st.data_editor(
+                df_atividades,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_atividades",
+                column_config={
+
+                    "atividade": st.column_config.TextColumn(
+                        label="Atividade",
+                        width=700
+                    ),
+
+                    "data_inicio": st.column_config.TextColumn(
+                        label="Data de início",
+                        width=120,
+                        help="Formato obrigatório: DD/MM/YYYY"
+                    ),
+
+                    "data_fim": st.column_config.TextColumn(
+                        label="Data de fim",
+                        width=120,
+                        help="Formato obrigatório: DD/MM/YYYY"
+                    ),
+                }
+            )
+
+
+            # ============================================================
+            # Botão salvar
+            # ============================================================
+
+            salvar_ativ = st.button(
+                "Salvar atividades",
+                icon=":material/save:",
+                type="secondary",
+                key="btn_salvar_atividades"
+            )
+
+
+            # ============================================================
+            # Validação + Salvamento
+            # ============================================================
+
+            if salvar_ativ:
+
+                erros = []
+                atividades_final = []
+
+                def valida_data(valor, linha, campo):
+                    if not valor or str(valor).strip() == "":
+                        erros.append(f"Linha {linha}: {campo} é obrigatória.")
+                        return None
+
+                    try:
+                        datetime.datetime.strptime(valor.strip(), "%d/%m/%Y")
+                        return valor.strip()
+                    except:
+                        erros.append(f"Linha {linha}: data inválida em '{campo}': '{valor}'. Formato correto: DD/MM/YYYY")
+                        return None
+
+                # Validação linha a linha
+                for idx, row in df_editado.iterrows():
+
+                    atividade = str(row["atividade"]).strip()
+                    data_inicio_raw = str(row["data_inicio"]).strip()
+                    data_fim_raw = str(row["data_fim"]).strip()
+
+                    if atividade == "":
+                        erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
+
+                    # valida datas via função
+                    data_inicio = valida_data(data_inicio_raw, idx + 1, "Data de início")
+                    data_fim = valida_data(data_fim_raw, idx + 1, "Data de término")
+
+                    # Se nenhuma validação falhou para esta linha
+                    if data_inicio and data_fim and atividade != "":
+                        atividades_final.append({
+                            "atividade": atividade,
+                            "data_inicio": data_inicio,
+                            "data_fim": data_fim,
+                        })
+
+                # Se houver erros → exibir e parar
+                if erros:
+                    for e in erros:
+                        st.error(e)
+                    st.stop()
+
+                # IDs antigos preservados
+                ids_original = [a["id"] for a in atividades_exist]
+
+                nova_lista = []
+                for idx, a in enumerate(atividades_final):
+
+                    if idx < len(ids_original):
+                        id_usado = ids_original[idx]
+                    else:
+                        id_usado = str(bson.ObjectId())
+
+                    nova_lista.append({
+                        "id": id_usado,
+                        **a
+                    })
+
+                # Atualizar entrega
+                entregas_atualizadas = []
+                for e in componente_sel["entregas"]:
+                    if e["id"] == entrega_sel["id"]:
+                        entregas_atualizadas.append({**e, "atividades": nova_lista})
+                    else:
+                        entregas_atualizadas.append(e)
+
+                # Atualizar apenas o componente correspondente
+                componentes_atualizados = []
+                for c in componentes:
+                    if c["id"] == componente_sel["id"]:
+                        componentes_atualizados.append({**c, "entregas": entregas_atualizadas})
+                    else:
+                        componentes_atualizados.append(c)
+
+                # Salvar no Mongo
+                resultado = col_projetos.update_one(
                     {"codigo": codigo_projeto_atual},
-                    {"$set": {"plano_trabalho.componentes": novos_componentes}}
+                    {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
                 )
 
-                st.success("Componentes atualizados com sucesso!")
-                time.sleep(3)
-                st.rerun()
+                if resultado.matched_count == 1:
+                    st.success("Atividades atualizadas com sucesso!", icon=":material/check:")
+                    time.sleep(3)
+                    st.rerun()
+                else:
+                    st.error("Erro ao atualizar atividades.")
+
+
 
 
 
@@ -494,746 +668,63 @@ with plano_trabalho:
 
 
 
+        # ===========================================================================================
+        # EDIÇÃO DE COMPONENTES
+        # ===========================================================================================
 
+        if opcao_editar_pt == "Componentes":
 
+            st.write("")
 
+            # Monta DataFrame apenas com nomes
+            df_componentes = pd.DataFrame({
+                "componente": [c.get("componente", "") for c in componentes]
+            })
 
+            df_editado = st.data_editor(
+                df_componentes,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_componentes"
+            )
 
+            salvar = st.button(
+                "Salvar componentes",
+                icon=":material/save:",
+                type="secondary"
+            )
 
+            if salvar:
 
+                # Limpa nomes vazios
+                df_editado["componente"] = df_editado["componente"].astype(str).str.strip()
+                df_editado = df_editado[df_editado["componente"] != ""]
 
+                novos_componentes = []
 
-# # ###################################################################################################
-# # PLANO DE TRABALHO
-# # ###################################################################################################
+                # Cria nova lista com IDs novos
+                for _, row in df_editado.iterrows():
+                    novos_componentes.append({
+                        "id": str(bson.ObjectId()),
+                        "componente": row["componente"],
+                        "entregas": []
+                    })
 
+                col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {"$set": {"plano_trabalho.componentes": novos_componentes}}
+                )
 
-# with plano_trabalho:
+                st.success("Componentes atualizados com sucesso!")
+                time.sleep(3)
+                st.rerun()
 
-#     # --------------------------------------------------
-#     # PERMISSÃO
-#     # --------------------------------------------------
-#     usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
-#     # Valor padrão do modo edição
-#     modo_edicao = False
 
-#     # --------------------------------------------------
-#     # TOGGLE DE EDIÇÃO (somente para admin/equipe)
-#     # --------------------------------------------------
-#     if usuario_interno:
-#         with st.container(horizontal=True, horizontal_alignment="right"):
-#             modo_edicao = st.toggle(
-#                 "Modo de edição",
-#                 key="editar_plano_trabalho"
-#             )
 
 
-#     st.write("")
 
-#     # --------------------------------------------------
-#     # RENDERIZAÇÃO CONDICIONAL
-#     # --------------------------------------------------
 
-
-#         # --------------------------------------------------
-#         # MODO VISUALIZAÇÃO
-#         # --------------------------------------------------
-
-#     if not modo_edicao:
-
-
-#         # --------------------------------------------------
-#         # ESTADOS DO DIÁLOGO (inicialização segura, para garantir que o diálogo não abra ao desmarcar um checkbox)
-
-#         if "atividade_selecionada" not in st.session_state:
-#             st.session_state["atividade_selecionada"] = None
-
-#         if "atividade_selecionada_tabela_key" not in st.session_state:
-#             st.session_state["atividade_selecionada_tabela_key"] = None
-
-#         if "abrir_dialogo_atividade" not in st.session_state:
-#             st.session_state["abrir_dialogo_atividade"] = False
-
-
-
-#         # --------------------------------------------------
-#         # CONTEÚDO DO MODO VISUALIZAÇÃO
-#         # --------------------------------------------------
-
-#         projeto = df_projeto.iloc[0]
-#         plano_trabalho = projeto.get("plano_trabalho", {})
-#         componentes = plano_trabalho.get("componentes", [])
-
-#         if not componentes:
-#             st.caption("Este projeto não possui plano de trabalho cadastrado.")
-#         else:
-
-#             for componente in componentes:
-                
-#                 st.markdown(f"#### {componente.get('componente', 'Componente sem nome')}")
-
-#                 for entrega in componente.get("entregas", []):
-
-#                     st.write("")
-#                     st.markdown(f"##### {entrega.get('entrega', 'Entrega sem nome')}")
-                    
-#                     # st.write(f"**{entrega.get('entrega', 'Entrega sem nome')}**")
-
-#                     atividades = entrega.get("atividades", [])
-
-#                     # Se não houver atividades
-#                     if not atividades:
-#                         st.caption("Nenhuma atividade cadastrada nesta entrega.")
-#                         continue
-
-#                     # Converte lista em DataFrame
-#                     df_atividades = pd.DataFrame(atividades)
-
-#                     # Renomeia colunas
-#                     df_atividades = df_atividades.rename(columns={
-#                         "atividade": "Atividade",
-#                         "data_inicio": "Data de início",
-#                         "data_fim": "Data de fim",
-#                     })
-
-
-#                     # Ordem das colunas
-#                     colunas = ["Atividade", "Data de início", "Data de fim"]
-
-#                     # KEY ÚNICA PARA CADA ENTREGA
-#                     key_df = f"df_vis_atividades_{entrega['id']}"
-
-
-#                     # ============================================================================================
-#                     # FUNÇÃO QUE CRIA O CALLBACK DE SELEÇÃO PARA ESTA TABELA ESPECÍFICA
-#                     # 
-#                     # Por que precisamos disso?
-#                     # - Cada entrega tem sua própria tabela
-#                     # - Cada tabela precisa do seu próprio callback
-#                     # - O Streamlit executa o callback ANTES de saber qual entrega/tabela estamos
-#                     # 
-#                     # Este padrão (closure) "congela" o df_local e a key_local
-#                     # para que o callback saiba exatamente qual tabela chamou.
-#                     # ============================================================================================
-
-
-#                     # FUNÇÃO: criar callback de seleção
-#                     def criar_callback_selecao(dataframe_atividades, chave_tabela):
-#                         """
-#                         Retorna a função handle_selecao() configurada para esta tabela específica.
-#                         """
-
-#                         def handle_selecao():
-
-#                             estado_tabela = st.session_state.get(chave_tabela, {})
-#                             selecao = estado_tabela.get("selection", {})
-#                             linhas = selecao.get("rows", [])
-
-#                             if not linhas:
-#                                 return
-
-#                             idx = linhas[0]
-#                             linha = dataframe_atividades.iloc[idx]
-
-#                             atividade_escolhida = {
-#                                 "id": linha.get("id"),
-#                                 "atividade": linha.get("Atividade", ""),        # Nome da atividade
-#                                 "data_inicio": linha.get("Data de início", ""),
-#                                 "data_fim": linha.get("Data de fim", "")
-#                             }
-
-#                             if not atividade_escolhida["id"]:
-#                                 st.error("Atividade selecionada não possui campo 'id'.")
-#                                 return
-
-#                             # Usada pelo diálogo para exibir o nome
-#                             st.session_state["atividade_selecionada"] = atividade_escolhida
-
-
-#                             # Dispara abertura do diálogo
-#                             st.session_state["abrir_dialogo_atividade"] = True
-
-#                         return handle_selecao
-
-
-
-
-
-
-
-#                     # -------------------------------------------
-#                     # TABELA INTERATIVA
-#                     # -------------------------------------------
-
-#                     # Criar o callback para esta tabela específica
-#                     callback_selecao = criar_callback_selecao(df_atividades, key_df)
-
-
-
-#                     st.dataframe(
-#                         df_atividades,
-#                         column_order=colunas,
-#                         hide_index=True,
-#                         selection_mode="single-row",
-#                         key=key_df,
-#                         on_select=callback_selecao,
-#                         column_config={
-#                             "Atividade": st.column_config.TextColumn(width=1000),
-#                             "Data de início": st.column_config.TextColumn(width=80),
-#                             "Data de fim": st.column_config.TextColumn(width=80),
-#                         }
-#                     )
-
-#                     st.write("")
-
-#                 st.write('')
-
-#         # --------------------------------------------------
-#         # ABRIR O DIÁLOGO SE FOI SOLICITADO
-#         # Limpar estado logo após abrir
-#         # --------------------------------------------------
-
-#         if st.session_state.get("abrir_dialogo_atividade"):
-#             dialog_relatos()
-#             # Só desarma o gatilho
-#             st.session_state["abrir_dialogo_atividade"] = False
-
-
-
-
-#     # -------------------------
-#     # MODO EDIÇÃO - PLANO DE TRABALHO
-#     # -------------------------
-
-
-#     else:
-
-
-
-
-#         # Radio para escolher entre editar Componentes ou Atividades
-#         opcao_editar_pt = st.radio(
-#             "O que deseja editar?",
-#             ["Atividades",
-#             "Entregas", 
-#             "Componentes"],
-#             horizontal=True
-#         )
-
-
-#         if opcao_editar_pt == "Atividades":
-
-#             st.write("")
-#             st.write("")
-
-#             # ============================================================
-#             # Carregar plano de trabalho
-#             # ============================================================
-
-#             plano_trabalho = (
-#                 df_projeto["plano_trabalho"].values[0]
-#                 if "plano_trabalho" in df_projeto.columns else {}
-#             )
-
-#             componentes = plano_trabalho.get("componentes", [])
-
-#             if not componentes:
-#                 st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar atividades.")
-#                 st.stop()
-
-
-#             # ============================================================
-#             # Montar lista de entregas
-#             # ============================================================
-
-#             lista_entregas = []
-
-#             for comp in componentes:
-#                 for ent in comp.get("entregas", []):
-#                     lista_entregas.append({
-#                         "label": ent["entrega"],
-#                         "componente": comp,
-#                         "entrega": ent
-#                     })
-
-#             if not lista_entregas:
-#                 st.warning("Nenhuma entrega cadastrada. Cadastre entregas antes de adicionar atividades.")
-#                 st.stop()
-
-#             lista_entregas = sorted(lista_entregas, key=lambda x: x["label"].lower())
-
-
-#             # ============================================================
-#             # Selectbox de entrega
-#             # ============================================================
-
-#             nome_entrega_sel = st.selectbox(
-#                 "Selecione a entrega:",
-#                 [item["label"] for item in lista_entregas],
-#                 key="select_entrega_ativ"
-#             )
-
-#             item_sel = next(item for item in lista_entregas if item["label"] == nome_entrega_sel)
-
-#             componente_sel = item_sel["componente"]
-#             entrega_sel = item_sel["entrega"]
-
-#             st.write('')
-
-#             # ============================================================
-#             # Carregar atividades existentes
-#             # ============================================================
-
-#             atividades_exist = entrega_sel.get("atividades", [])
-
-#             lista_atividades = []
-#             for a in atividades_exist:
-#                 # Agora as datas não serão convertidas aqui.
-#                 lista_atividades.append({
-#                     "atividade": a.get("atividade", ""),
-#                     "data_inicio": a.get("data_inicio", ""),  # mantém string
-#                     "data_fim": a.get("data_fim", ""),        # mantém string
-#                 })
-
-#             df_atividades = pd.DataFrame(lista_atividades)
-
-#             # Se estiver vazio, cria colunas vazias
-#             if df_atividades.empty:
-#                 df_atividades = pd.DataFrame({
-#                     "atividade": pd.Series(dtype="str"),
-#                     "data_inicio": pd.Series(dtype="str"),
-#                     "data_fim": pd.Series(dtype="str"),
-#                 })
-
-
-#             # ============================================================
-#             # Data Editor 
-#             # ============================================================
-
-#             df_editado = st.data_editor(
-#                 df_atividades,
-#                 num_rows="dynamic",
-#                 hide_index=True,
-#                 key="editor_atividades",
-#                 column_config={
-
-#                     "atividade": st.column_config.TextColumn(
-#                         label="Atividade",
-#                         width=700
-#                     ),
-
-#                     "data_inicio": st.column_config.TextColumn(
-#                         label="Data de início",
-#                         width=120,
-#                         help="Formato obrigatório: DD/MM/YYYY"
-#                     ),
-
-#                     "data_fim": st.column_config.TextColumn(
-#                         label="Data de fim",
-#                         width=120,
-#                         help="Formato obrigatório: DD/MM/YYYY"
-#                     ),
-#                 }
-#             )
-
-
-#             # ============================================================
-#             # Botão salvar
-#             # ============================================================
-
-#             salvar_ativ = st.button(
-#                 "Salvar atividades",
-#                 icon=":material/save:",
-#                 type="secondary",
-#                 key="btn_salvar_atividades"
-#             )
-
-
-#             # ============================================================
-#             # Validação + Salvamento
-#             # ============================================================
-
-#             if salvar_ativ:
-
-#                 erros = []
-#                 atividades_final = []
-
-#                 def valida_data(valor, linha, campo):
-#                     if not valor or str(valor).strip() == "":
-#                         erros.append(f"Linha {linha}: {campo} é obrigatória.")
-#                         return None
-
-#                     try:
-#                         datetime.datetime.strptime(valor.strip(), "%d/%m/%Y")
-#                         return valor.strip()
-#                     except:
-#                         erros.append(f"Linha {linha}: data inválida em '{campo}': '{valor}'. Formato correto: DD/MM/YYYY")
-#                         return None
-
-#                 # Validação linha a linha
-#                 for idx, row in df_editado.iterrows():
-
-#                     atividade = str(row["atividade"]).strip()
-#                     data_inicio_raw = str(row["data_inicio"]).strip()
-#                     data_fim_raw = str(row["data_fim"]).strip()
-
-#                     if atividade == "":
-#                         erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
-
-#                     # valida datas via função
-#                     data_inicio = valida_data(data_inicio_raw, idx + 1, "Data de início")
-#                     data_fim = valida_data(data_fim_raw, idx + 1, "Data de término")
-
-#                     # Se nenhuma validação falhou para esta linha
-#                     if data_inicio and data_fim and atividade != "":
-#                         atividades_final.append({
-#                             "atividade": atividade,
-#                             "data_inicio": data_inicio,
-#                             "data_fim": data_fim,
-#                         })
-
-#                 # Se houver erros → exibir e parar
-#                 if erros:
-#                     for e in erros:
-#                         st.error(e)
-#                     st.stop()
-
-#                 # IDs antigos preservados
-#                 ids_original = [a["id"] for a in atividades_exist]
-
-#                 nova_lista = []
-#                 for idx, a in enumerate(atividades_final):
-
-#                     if idx < len(ids_original):
-#                         id_usado = ids_original[idx]
-#                     else:
-#                         id_usado = str(bson.ObjectId())
-
-#                     nova_lista.append({
-#                         "id": id_usado,
-#                         **a
-#                     })
-
-#                 # Atualizar entrega
-#                 entregas_atualizadas = []
-#                 for e in componente_sel["entregas"]:
-#                     if e["id"] == entrega_sel["id"]:
-#                         entregas_atualizadas.append({**e, "atividades": nova_lista})
-#                     else:
-#                         entregas_atualizadas.append(e)
-
-#                 # Atualizar apenas o componente correspondente
-#                 componentes_atualizados = []
-#                 for c in componentes:
-#                     if c["id"] == componente_sel["id"]:
-#                         componentes_atualizados.append({**c, "entregas": entregas_atualizadas})
-#                     else:
-#                         componentes_atualizados.append(c)
-
-#                 # Salvar no Mongo
-#                 resultado = col_projetos.update_one(
-#                     {"codigo": codigo_projeto_atual},
-#                     {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
-#                 )
-
-#                 if resultado.matched_count == 1:
-#                     st.success("Atividades atualizadas com sucesso!", icon=":material/check:")
-#                     time.sleep(3)
-#                     st.rerun()
-#                 else:
-#                     st.error("Erro ao atualizar atividades.")
-
-
-
-
-
-
-
-
-#         # --------------------------------------------------
-#         # MODO DE EDIÇÃO - ENTREGAS
-#         # --------------------------------------------------
-                      
-        
-#         if opcao_editar_pt == "Entregas":
-
-#             # ------------------------------------------------------------------
-#             # Carrega a lista de indicadores da coleção indicadores
-#             # Esses indicadores serão usados no multiselect do data_editor
-#             # ------------------------------------------------------------------
-#             df_indicadores = pd.DataFrame(list(col_indicadores.find()))
-
-#             # Garante que o campo _id é string
-#             if "_id" in df_indicadores.columns:
-#                 df_indicadores["_id"] = df_indicadores["_id"].astype(str)
-
-#             # Lista de opções que aparecerão no multiselect
-#             # Você pode usar só o texto ou id + texto, aqui usei só o texto
-#             lista_indicadores = df_indicadores["indicador"].tolist()
-
-
-
-#             st.write("")
-#             st.write("")
-
-#             # 1) Carrega o plano de trabalho e componentes
-#             plano_trabalho = (
-#                 df_projeto["plano_trabalho"].values[0]
-#                 if "plano_trabalho" in df_projeto.columns else {}
-#             )
-
-#             componentes = plano_trabalho.get("componentes", [])
-
-#             if not componentes:
-#                 st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar entregas.")
-#                 st.stop()
-
-#             # 2) Usuário escolhe o componente ao qual deseja adicionar/editar entregas
-#             mapa_comp_por_nome = {c["componente"]: c for c in componentes}
-#             nomes_componentes = list(mapa_comp_por_nome.keys())
-
-#             nome_componente_selecionado = st.selectbox(
-#                 "Selecione o componente:",
-#                 nomes_componentes
-#             )
-
-#             componente = mapa_comp_por_nome[nome_componente_selecionado]
-
-#             # 3) Carrega entregas existentes do componente selecionado
-#             entregas_existentes = componente.get("entregas", [])
-
-
-
-#             # ------------------------------------------------------------------
-#             # Cria o DataFrame das entregas incluindo a coluna indicadores
-#             # ------------------------------------------------------------------
-#             if entregas_existentes:
-#                 df_entregas = pd.DataFrame({
-#                     # Nome da entrega
-#                     "entrega": [e.get("entrega", "") for e in entregas_existentes],
-
-#                     # Lista de indicadores já associados à entrega (se existir)
-#                     "Indicadores": [
-#                         e.get("indicadores_doador", []) for e in entregas_existentes
-#                     ]
-#                 })
-#             else:
-#                 df_entregas = pd.DataFrame({
-#                     "entrega": pd.Series(dtype="str"),
-#                     "Indicadores": pd.Series(dtype="object")
-#                 })
-
-
-
-#             # ------------------------------------------------------------------
-#             # Editor de dados com coluna multiselect para indicadores
-#             # ------------------------------------------------------------------
-#             df_editado = st.data_editor(
-#                 df_entregas,
-#                 num_rows="dynamic",
-#                 hide_index=True,
-#                 key="editor_entregas",
-#                 column_config={
-#                     "Indicadores": st.column_config.MultiselectColumn(
-#                         "Indicadores",
-#                         options=lista_indicadores,
-#                         help="Selecione os indicadores do doador associados a esta entrega"
-#                     )
-#                 }
-#             )
-
-
-
-#             # Botão salvar
-#             salvar_entregas = st.button(
-#                 "Salvar entregas",
-#                 icon=":material/save:",
-#                 type="secondary",
-#                 key="btn_salvar_entregas"
-#             )
-
-
-#             if salvar_entregas:
-
-#                 # --------------------------------------------------------------
-#                 # Remove linhas vazias
-#                 # --------------------------------------------------------------
-#                 df_editado["entrega"] = df_editado["entrega"].astype(str).str.strip()
-#                 df_editado = df_editado[df_editado["entrega"] != ""]
-
-#                 # --------------------------------------------------------------
-#                 # VALIDAÇÃO: cada entrega deve ter ao menos um indicador
-#                 # --------------------------------------------------------------
-#                 # erro_validacao = False
-
-#                 # for idx, row in df_editado.iterrows():
-
-#                 #     indicadores_linha = row.get("Indicadores")
-
-#                 #     if not indicadores_linha or not isinstance(indicadores_linha, list):
-#                 #         st.error(
-#                 #             f"A entrega '{row['entrega']}' deve ter pelo menos um indicador associado."
-#                 #         )
-#                 #         erro_validacao = True
-
-
-#                 # --------------------------------------------------------------
-#                 # SE NÃO HOUVER ERRO, CONTINUA O SALVAMENTO
-#                 # --------------------------------------------------------------
-#                 # if not erro_validacao:
-
-#                 # ----------------------------------------------------------
-#                 # IDs originais para manter consistência
-#                 # ----------------------------------------------------------
-#                 ids_original = [e["id"] for e in entregas_existentes]
-
-#                 nova_lista = []
-
-#                 # ----------------------------------------------------------
-#                 # Monta nova lista de entregas SEM PERDER atividades
-#                 # ----------------------------------------------------------
-#                 for idx, row in df_editado.iterrows():
-
-#                     # Mantém ID antigo ou gera novo
-#                     if idx < len(ids_original):
-#                         id_usado = ids_original[idx]
-#                     else:
-#                         id_usado = str(bson.ObjectId())
-
-#                     # Busca a entrega original (se existir)
-#                     entrega_original = next(
-#                         (e for e in entregas_existentes if e["id"] == id_usado),
-#                         {}
-#                     )
-
-#                     # Cria nova entrega copiando tudo da original
-#                     nova_entrega = {
-#                         **entrega_original,   # preserva atividades
-#                         "id": id_usado,
-#                         "entrega": row["entrega"],
-#                         "indicadores_doador": row.get("Indicadores", [])
-#                     }
-
-#                     nova_lista.append(nova_entrega)
-
-#                 # ----------------------------------------------------------
-#                 # Atualiza apenas o componente selecionado
-#                 # ----------------------------------------------------------
-#                 componentes_atualizados = []
-
-#                 for comp in componentes:
-#                     if comp["componente"] == nome_componente_selecionado:
-#                         componentes_atualizados.append({
-#                             **comp,
-#                             "entregas": nova_lista
-#                         })
-#                     else:
-#                         componentes_atualizados.append(comp)
-
-#                 # ----------------------------------------------------------
-#                 # Persistência no MongoDB
-#                 # ----------------------------------------------------------
-#                 resultado = col_projetos.update_one(
-#                     {"codigo": codigo_projeto_atual},
-#                     {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
-#                 )
-
-#                 if resultado.matched_count == 1:
-#                     st.success("Entregas atualizadas com sucesso.", icon=":material/check:")
-#                     time.sleep(3)
-#                     st.rerun()
-#                 else:
-#                     st.error("Erro ao atualizar entregas.")
-
-
-
-
-
-#         # --------------------------------------------------
-#         # EDIÇÃO DE COMPONENTES
-#         # --------------------------------------------------
-#         if opcao_editar_pt == "Componentes":
-
-#             st.write("")
-#             # st.write("**Componentes** - Modo de Edição")
-#             st.write("")
-
-#             # 1) Carrega componentes diretamente do projeto
-#             plano_trabalho = (
-#                 df_projeto["plano_trabalho"].values[0]
-#                 if "plano_trabalho" in df_projeto.columns else {}
-#             )
-
-#             componentes_existentes = plano_trabalho.get("componentes", [])
-
-#             # 2) Criar DataFrame SOMENTE com 'componente'
-#             #    O ID não aparece no editor
-#             if componentes_existentes:
-#                 df_componentes = pd.DataFrame({
-#                     "componente": [c.get("componente", "") for c in componentes_existentes]
-#                 })
-#             else:
-#                 df_componentes = pd.DataFrame({"componente": pd.Series(dtype="str")})
-
-#             # 3) Editor (somente coluna componente)
-#             df_editado = st.data_editor(
-#                 df_componentes,
-#                 num_rows="dynamic",
-#                 hide_index=True,
-#                 key="editor_componentes",
-#             )
-
-#             # -------------------------
-#             # BOTÃO SALVAR
-#             # -------------------------
-#             salvar = st.button(
-#                 "Salvar componentes",
-#                 icon=":material/save:",
-#                 type="secondary",
-#                 key="btn_salvar_componentes"
-#             )
-
-#             # -------------------------
-#             # SALVAMENTO
-#             # -------------------------
-#             if salvar:
-
-#                 # Limpa linhas vazias
-#                 df_editado["componente"] = df_editado["componente"].astype(str).str.strip()
-#                 df_editado = df_editado[df_editado["componente"] != ""]
-
-#                 novos_componentes = []
-#                 existentes_por_nome = {c["componente"]: c for c in componentes_existentes}
-
-#                 for _, row in df_editado.iterrows():
-#                     nome = row["componente"]
-
-#                     if nome in existentes_por_nome:
-#                         # componente já existia → mantém o ID
-#                         novos_componentes.append({
-#                             "id": existentes_por_nome[nome]["id"],
-#                             "componente": nome
-#                         })
-#                     else:
-#                         # novo componente → cria ID novo
-#                         novos_componentes.append({
-#                             "id": str(bson.ObjectId()),
-#                             "componente": nome
-#                         })
-
-#                 # Salva no banco de dados
-#                 resultado = col_projetos.update_one(
-#                     {"codigo": codigo_projeto_atual},
-#                     {"$set": {"plano_trabalho": {"componentes": novos_componentes}}}
-#                 )
-
-#                 if resultado.matched_count == 1:
-#                     st.success("Componentes atualizados com sucesso!")
-#                     time.sleep(3)
-#                     st.rerun()
-#                 else:
-#                     st.error("Erro ao atualizar o Plano de Trabalho.")
 
 
 
@@ -2036,24 +1527,6 @@ with monitoramento:
                             st.rerun()
                         else:
                             st.error("Erro ao salvar indicadores do projeto.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
