@@ -75,12 +75,234 @@ st.logo("images/ieb_logo.svg", size='large')
 # Título da página
 st.header("Gerenciar Ciclos de Investimento")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Ciclos de Investimento", "Editais", "Investidores", "Doadores"])
+tab1, tab2, tab3, tab4 = st.tabs(["Investidores", "Doadores", "Ciclos de Investimento", "Editais"])
+
+
+
+
+
+
+# Aba Investidores ---------------------------------------------------------------------------------------
+
+with tab1:
+
+    st.write("")
+
+    # Escolha da ação
+    opcao_investidores = st.radio("Selecione uma ação:",
+        ["Cadastrar Investidor", "Editar Investidor"],
+        horizontal=True
+    )
+
+    # ----------------------------------------
+    # CADASTRAR INVESTIDOR
+    # ----------------------------------------
+    if opcao_investidores == "Cadastrar Investidor":
+        with st.form(key="investidor_cadastro_form", border=False):
+            st.write("")
+
+            sigla_investidor = st.text_input("Sigla do investidor:")
+            nome_investidor = st.text_input("Nome do investidor:")
+
+            st.write("")
+            submit_cadastro = st.form_submit_button(
+                "Salvar novo investidor", 
+                icon=":material/save:", 
+                type="primary"
+            )
+
+            if submit_cadastro:
+                # Validação
+                if not sigla_investidor or not nome_investidor:
+                    st.error("Todos os campos devem ser preenchidos.")
+                else:
+                    # Verifica se a sigla já existe
+                    sigla_existente = col_investidores.find_one({"sigla_investidor": sigla_investidor})
+                    if sigla_existente:
+                        st.error(f"A sigla '{sigla_investidor}' já está sendo utilizada.")
+                    else:
+                        # Inserir no MongoDB
+                        novo_investidor = {
+                            "sigla_investidor": sigla_investidor,
+                            "nome_investidor": nome_investidor
+                        }
+                        col_investidores.insert_one(novo_investidor)
+                        st.success("Investidor cadastrado com sucesso!")
+                        time.sleep(2)
+                        st.rerun()
+
+    # ----------------------------------------
+    # EDITAR INVESTIDOR
+    # ----------------------------------------
+    elif opcao_investidores == "Editar Investidor":
+        st.write("")
+
+        # Selectbox fora do form — assim o form de edição só existe quando há um investidor selecionado
+        lista_investidores = sorted(col_investidores.distinct("sigla_investidor"))
+        investidor_selecionado = st.selectbox(
+            "Selecione o investidor:",
+            options=[""] + lista_investidores,
+            index=0
+        )
+
+        if investidor_selecionado:
+            # Buscar o investidor no MongoDB
+            investidor = col_investidores.find_one({"sigla_investidor": investidor_selecionado})
+
+            if investidor:
+                # Form somente quando temos o investidor — garante que sempre haverá um botão de submit
+                with st.form(key="investidor_editar_form", border=False):
+                    st.divider()
+
+                    # Sigla não editável
+                    sigla_investidor = st.text_input(
+                        "Sigla do investidor:",
+                        value=investidor.get("sigla_investidor", ""),
+                        disabled=True
+                    )
+                    nome_investidor = st.text_input(
+                        "Nome do investidor:",
+                        value=investidor.get("nome_investidor", "")
+                    )
+
+                    st.write("")
+                    submit_editar = st.form_submit_button(
+                        "Salvar alterações",
+                        icon=":material/save:",
+                        type="primary"
+                    )
+
+                    if submit_editar:
+                        # Validação
+                        if not nome_investidor:
+                            st.error("O campo nome do investidor deve ser preenchido.")
+                        else:
+                            # Atualizar no MongoDB (sem checar duplicidade)
+                            col_investidores.update_one(
+                                {"_id": investidor["_id"]},
+                                {"$set": {
+                                    "nome_investidor": nome_investidor
+                                }}
+                            )
+
+                            st.success("Investidor atualizado com sucesso!")
+                            time.sleep(2)
+                            st.rerun()
+            else:
+                st.warning("Não foi possível localizar o investidor selecionado.")
+
+
+
+
+# Aba Doadores ---------------------------------------------------------------------------------------
+
+with tab2:
+
+    st.write("")
+
+    opcao_doadores = st.radio(
+        "Selecione uma ação:",
+        ["Cadastrar Doador", "Editar Doador"],
+        horizontal=True
+    )
+
+    # ----------------------------------------
+    # CADASTRAR DOADOR
+    # ----------------------------------------
+    if opcao_doadores == "Cadastrar Doador":
+
+        with st.form(key="doador_cadastro_form", border=False):
+            st.write("")
+
+            sigla_doador = st.text_input("Sigla:")
+            nome_doador = st.text_input("Nome do doador:")
+
+            st.write("")
+            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary")
+
+            if submit:
+                # Validação
+                if not sigla_doador or not nome_doador:
+                    st.error("Todos os campos devem ser preenchidos.")
+                else:
+                    # Verifica se a sigla já existe
+                    sigla_existente = col_doadores.find_one({"sigla_doador": sigla_doador})
+
+                    if sigla_existente:
+                        st.error(f"A sigla '{sigla_doador}' já está sendo utilizada.")
+                    else:
+                        # Inserir no MongoDB
+                        novo_doador = {
+                            "sigla_doador": sigla_doador,
+                            "nome_doador": nome_doador,
+                        }
+                        col_doadores.insert_one(novo_doador)
+                        st.success("Doador cadastrado com sucesso!")
+                        time.sleep(2)
+                        st.rerun()
+
+    # ----------------------------------------
+    # EDITAR DOADOR
+    # ----------------------------------------
+    elif opcao_doadores == "Editar Doador":
+        st.write("")
+
+        # Selectbox fora do form — evita erro "Missing Submit Button"
+        lista_doadores = sorted(col_doadores.distinct("sigla_doador"))
+        doador_selecionado = st.selectbox(
+            "Selecione o doador:",
+            options=[""] + lista_doadores,
+            index=0
+        )
+
+        if doador_selecionado:
+            # Buscar o doador no MongoDB
+            doador = col_doadores.find_one({"sigla_doador": doador_selecionado})
+
+            if doador:
+                # Form somente quando há um doador válido
+                with st.form(key="doador_editar_form", border=False):
+                    st.divider()
+
+                    sigla_doador = st.text_input(
+                        "Sigla do doador:",
+                        value=doador.get("sigla_doador", ""),
+                        disabled=True
+                    )
+                    nome_doador = st.text_input(
+                        "Nome do doador:",
+                        value=doador.get("nome_doador", "")
+                    )
+
+                    st.write("")
+                    submit_editar = st.form_submit_button(
+                        "Salvar alterações",
+                        icon=":material/save:",
+                        type="primary"
+                    )
+
+                    if submit_editar:
+                        # Validação
+                        if not nome_doador:
+                            st.error("O campo nome do doador deve ser preenchido.")
+                        else:
+                            # Atualizar no MongoDB
+                            col_doadores.update_one(
+                                {"_id": doador["_id"]},
+                                {"$set": {"nome_doador": nome_doador}}
+                            )
+
+                            st.success("Doador atualizado com sucesso!")
+                            time.sleep(2)
+                            st.rerun()
+            else:
+                st.warning("Não foi possível localizar o doador selecionado.")
 
 
 
 # Aba Ciclos de Investimento ---------------------------------------------------------------------------------------
-with tab1:
+
+with tab3:
 
     st.write('')
     opcao_ciclos = st.radio("Selecione uma ação", ["Cadastrar Ciclo de Investimento", "Editar Ciclo de Investimento"], key="opcao_ciclos", horizontal=True)
@@ -232,7 +454,8 @@ with tab1:
 
 
 # Aba Editais ---------------------------------------------------------------------------------------
-with tab2:
+
+with tab4:
  
     st.write("")
     opcao_editais = st.radio("Selecione uma ação:", ["Cadastrar Edital", "Editar Edital"], key="opcao_editais", horizontal=True)
@@ -389,227 +612,3 @@ with tab2:
                 st.warning("Não foi possível localizar o edital selecionado.")
 
 
-
-
-
-
-
-# Aba Investidores ---------------------------------------------------------------------------------------
-
-with tab3:
-
-    st.write("")
-
-    # Escolha da ação
-    opcao_investidores = st.radio("Selecione uma ação:",
-        ["Cadastrar Investidor", "Editar Investidor"],
-        horizontal=True
-    )
-
-    # ----------------------------------------
-    # CADASTRAR INVESTIDOR
-    # ----------------------------------------
-    if opcao_investidores == "Cadastrar Investidor":
-        with st.form(key="investidor_cadastro_form", border=False):
-            st.write("")
-
-            sigla_investidor = st.text_input("Sigla do investidor:")
-            nome_investidor = st.text_input("Nome do investidor:")
-
-            st.write("")
-            submit_cadastro = st.form_submit_button(
-                "Salvar novo investidor", 
-                icon=":material/save:", 
-                type="primary"
-            )
-
-            if submit_cadastro:
-                # Validação
-                if not sigla_investidor or not nome_investidor:
-                    st.error("Todos os campos devem ser preenchidos.")
-                else:
-                    # Verifica se a sigla já existe
-                    sigla_existente = col_investidores.find_one({"sigla_investidor": sigla_investidor})
-                    if sigla_existente:
-                        st.error(f"A sigla '{sigla_investidor}' já está sendo utilizada.")
-                    else:
-                        # Inserir no MongoDB
-                        novo_investidor = {
-                            "sigla_investidor": sigla_investidor,
-                            "nome_investidor": nome_investidor
-                        }
-                        col_investidores.insert_one(novo_investidor)
-                        st.success("Investidor cadastrado com sucesso!")
-                        time.sleep(2)
-                        st.rerun()
-
-    # ----------------------------------------
-    # EDITAR INVESTIDOR
-    # ----------------------------------------
-    elif opcao_investidores == "Editar Investidor":
-        st.write("")
-
-        # Selectbox fora do form — assim o form de edição só existe quando há um investidor selecionado
-        lista_investidores = sorted(col_investidores.distinct("sigla_investidor"))
-        investidor_selecionado = st.selectbox(
-            "Selecione o investidor:",
-            options=[""] + lista_investidores,
-            index=0
-        )
-
-        if investidor_selecionado:
-            # Buscar o investidor no MongoDB
-            investidor = col_investidores.find_one({"sigla_investidor": investidor_selecionado})
-
-            if investidor:
-                # Form somente quando temos o investidor — garante que sempre haverá um botão de submit
-                with st.form(key="investidor_editar_form", border=False):
-                    st.divider()
-
-                    # Sigla não editável
-                    sigla_investidor = st.text_input(
-                        "Sigla do investidor:",
-                        value=investidor.get("sigla_investidor", ""),
-                        disabled=True
-                    )
-                    nome_investidor = st.text_input(
-                        "Nome do investidor:",
-                        value=investidor.get("nome_investidor", "")
-                    )
-
-                    st.write("")
-                    submit_editar = st.form_submit_button(
-                        "Salvar alterações",
-                        icon=":material/save:",
-                        type="primary"
-                    )
-
-                    if submit_editar:
-                        # Validação
-                        if not nome_investidor:
-                            st.error("O campo nome do investidor deve ser preenchido.")
-                        else:
-                            # Atualizar no MongoDB (sem checar duplicidade)
-                            col_investidores.update_one(
-                                {"_id": investidor["_id"]},
-                                {"$set": {
-                                    "nome_investidor": nome_investidor
-                                }}
-                            )
-
-                            st.success("Investidor atualizado com sucesso!")
-                            time.sleep(2)
-                            st.rerun()
-            else:
-                st.warning("Não foi possível localizar o investidor selecionado.")
-
-
-
-
-
-
-# ----------------------------------------
-# ABA DOADORES
-# ----------------------------------------
-
-with tab4:
-
-    st.write("")
-
-    opcao_doadores = st.radio(
-        "Selecione uma ação:",
-        ["Cadastrar Doador", "Editar Doador"],
-        horizontal=True
-    )
-
-    # ----------------------------------------
-    # CADASTRAR DOADOR
-    # ----------------------------------------
-    if opcao_doadores == "Cadastrar Doador":
-
-        with st.form(key="doador_cadastro_form", border=False):
-            st.write("")
-
-            sigla_doador = st.text_input("Sigla:")
-            nome_doador = st.text_input("Nome do doador:")
-
-            st.write("")
-            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary")
-
-            if submit:
-                # Validação
-                if not sigla_doador or not nome_doador:
-                    st.error("Todos os campos devem ser preenchidos.")
-                else:
-                    # Verifica se a sigla já existe
-                    sigla_existente = col_doadores.find_one({"sigla_doador": sigla_doador})
-
-                    if sigla_existente:
-                        st.error(f"A sigla '{sigla_doador}' já está sendo utilizada.")
-                    else:
-                        # Inserir no MongoDB
-                        novo_doador = {
-                            "sigla_doador": sigla_doador,
-                            "nome_doador": nome_doador,
-                        }
-                        col_doadores.insert_one(novo_doador)
-                        st.success("Doador cadastrado com sucesso!")
-                        time.sleep(2)
-                        st.rerun()
-
-    # ----------------------------------------
-    # EDITAR DOADOR
-    # ----------------------------------------
-    elif opcao_doadores == "Editar Doador":
-        st.write("")
-
-        # Selectbox fora do form — evita erro "Missing Submit Button"
-        lista_doadores = sorted(col_doadores.distinct("sigla_doador"))
-        doador_selecionado = st.selectbox(
-            "Selecione o doador:",
-            options=[""] + lista_doadores,
-            index=0
-        )
-
-        if doador_selecionado:
-            # Buscar o doador no MongoDB
-            doador = col_doadores.find_one({"sigla_doador": doador_selecionado})
-
-            if doador:
-                # Form somente quando há um doador válido
-                with st.form(key="doador_editar_form", border=False):
-                    st.divider()
-
-                    sigla_doador = st.text_input(
-                        "Sigla do doador:",
-                        value=doador.get("sigla_doador", ""),
-                        disabled=True
-                    )
-                    nome_doador = st.text_input(
-                        "Nome do doador:",
-                        value=doador.get("nome_doador", "")
-                    )
-
-                    st.write("")
-                    submit_editar = st.form_submit_button(
-                        "Salvar alterações",
-                        icon=":material/save:",
-                        type="primary"
-                    )
-
-                    if submit_editar:
-                        # Validação
-                        if not nome_doador:
-                            st.error("O campo nome do doador deve ser preenchido.")
-                        else:
-                            # Atualizar no MongoDB
-                            col_doadores.update_one(
-                                {"_id": doador["_id"]},
-                                {"$set": {"nome_doador": nome_doador}}
-                            )
-
-                            st.success("Doador atualizado com sucesso!")
-                            time.sleep(2)
-                            st.rerun()
-            else:
-                st.warning("Não foi possível localizar o doador selecionado.")
