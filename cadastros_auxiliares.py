@@ -295,14 +295,14 @@ st.write('')
 
 
 
-aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_beneficios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
+aba_perguntas, aba_pesquisas, aba_direcoes, aba_indicadores, aba_beneficiarios, aba_beneficios, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
 # aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
     'Perguntas do Relatório',
     'Pesquisas',
+    'Direções Estratégicas',
+    'Indicadores de portifólio',
     'Beneficiários',
     'Benefícios',
-    'Direções Estratégicas',
-    'Indicadores',
     'Categorias de despesa',
     'Corredores',
     'KBAs',
@@ -935,269 +935,6 @@ with aba_pesquisas:
 
 
 
-# ==========================================================
-# ABA BENEFICIÁRIOS
-# ==========================================================
-
-
-with aba_beneficiarios:
-
-    st.subheader("Beneficiários")
-    st.write('')
-
-    # 1) Carrega documentos da coleção (ordenados)
-    dados_publicos = list(
-        col_publicos.find({}, {"publico": 1}).sort("publico", 1)
-    )
-
-    df_publicos = pd.DataFrame(dados_publicos)
-
-    # Converte ObjectId para string
-    if "_id" in df_publicos.columns:
-        df_publicos["_id"] = df_publicos["_id"].astype(str)
-    else:
-        df_publicos["_id"] = ""
-
-    editar_publicos = st.toggle("Editar", key="editar_publicos")
-    st.write('')
-
-    # -------------------------
-    # MODO VISUALIZAÇÃO
-    # -------------------------
-    if not editar_publicos:
-        if df_publicos.empty:
-            st.caption("Nenhum tipo de beneficiário cadastrado.")
-        else:
-            st.dataframe(
-                df_publicos[["publico"]].sort_values("publico"),
-                hide_index=True,
-                width=500
-            )
-
-
-    # -------------------------
-    # MODO EDIÇÃO
-    # -------------------------
-    else:
-        st.write("Edite, adicione e exclua linhas.")
-
-        if df_publicos.empty:
-            st.warning("Ainda não há tipos de beneficiário cadastrados. Você pode adicionar novos abaixo.")
-
-            df_editor = pd.DataFrame(
-                {"publico": pd.Series(dtype="str")}
-            )
-        else:
-            df_editor = df_publicos[["publico"]].copy()
-            df_editor["publico"] = df_editor["publico"].astype(str)
-
-        df_editado = st.data_editor(
-            df_editor,
-            num_rows="dynamic",
-            hide_index=True,
-            key="editor_publicos",
-            width=500
-        )
-
-        if st.button("Salvar alterações", icon=":material/save:", type="primary"):
-
-            if "publico" not in df_editado.columns:
-                st.error("Nenhum dado válido para salvar.")
-                st.stop()
-
-            # Normaliza e remove vazios
-            df_editado["publico"] = df_editado["publico"].astype(str).str.strip()
-            df_editado = df_editado[df_editado["publico"] != ""]
-
-            if df_editado.empty:
-                st.warning("Nenhum público informado.")
-                st.stop()
-
-            df_editado = df_editado.sort_values("publico")
-
-            # ===========================
-            # VERIFICAÇÃO DE DUPLICADOS
-            # ===========================
-            lista_editada = df_editado["publico"].tolist()
-            duplicados_local = {
-                x for x in lista_editada if lista_editada.count(x) > 1
-            }
-
-            if duplicados_local:
-                st.error(
-                    f"Existem valores duplicados na lista: {', '.join(duplicados_local)}"
-                )
-                st.stop()
-
-            valores_orig = (
-                set(df_publicos["publico"])
-                if "publico" in df_publicos.columns
-                else set()
-            )
-            valores_editados = set(lista_editada)
-
-            # 1) Removidos
-            for publico in valores_orig - valores_editados:
-                col_publicos.delete_one({"publico": publico})
-
-            # 2) Novos
-            for publico in valores_editados - valores_orig:
-                if col_publicos.find_one({"publico": publico}):
-                    st.error(f"O valor '{publico}' já existe e não será inserido.")
-                    st.stop()
-                col_publicos.insert_one({"publico": publico})
-
-            st.success("Beneficiários atualizados com sucesso!")
-            time.sleep(3)
-            st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-# ==========================================================
-# ABA TIPOS DE BENEFÍCIO
-# ==========================================================
-
-
-with aba_beneficios:
-
-    st.subheader("Tipos de benefício")
-    st.write('')
-
-    # 1) Carrega documentos da coleção (ordenados)
-    dados_beneficios = list(
-        col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
-    )
-
-    df_beneficios = pd.DataFrame(dados_beneficios)
-
-    # Converte ObjectId para string
-    if "_id" in df_beneficios.columns:
-        df_beneficios["_id"] = df_beneficios["_id"].astype(str)
-    else:
-        df_beneficios["_id"] = ""
-
-    editar_beneficios = st.toggle("Editar", key="editar_beneficios")
-    st.write('')
-
-    # -------------------------
-    # MODO VISUALIZAÇÃO
-    # -------------------------
-    if not editar_beneficios:
-        if df_beneficios.empty:
-            st.caption("Nenhum tipo de benefício cadastrado.")
-        else:
-            st.dataframe(
-                df_beneficios[["beneficio"]].sort_values("beneficio"),
-                hide_index=True,
-                width=500
-            )
-
-    # -------------------------
-    # MODO EDIÇÃO
-    # -------------------------
-    else:
-        st.write("Edite, adicione e exclua linhas.")
-
-        if df_beneficios.empty:
-            
-            df_editor = pd.DataFrame(
-                {"beneficio": pd.Series(dtype="str")}
-            )
-        else:
-            df_editor = df_beneficios[["beneficio"]].copy()
-            df_editor["beneficio"] = df_editor["beneficio"].astype(str)
-
-        df_editado = st.data_editor(
-            df_editor,
-            num_rows="dynamic",
-            hide_index=True,
-            key="editor_beneficios",
-            width=500
-        )
-
-        if st.button("Salvar alterações", icon=":material/save:", type="primary"):
-
-            if "beneficio" not in df_editado.columns:
-                st.error("Nenhum dado válido para salvar.")
-                st.stop()
-
-            # -------------------------
-            # NORMALIZAÇÃO
-            # -------------------------
-            df_editado["beneficio"] = (
-                df_editado["beneficio"]
-                .astype(str)
-                .str.strip()
-            )
-            df_editado = df_editado[df_editado["beneficio"] != ""]
-
-            if df_editado.empty:
-                st.warning("Nenhum tipo de benefício informado.")
-                st.stop()
-
-            df_editado = df_editado.sort_values("beneficio")
-
-            # -------------------------
-            # VERIFICA DUPLICADOS
-            # -------------------------
-            lista_editada = df_editado["beneficio"].tolist()
-            duplicados_local = {
-                x for x in lista_editada if lista_editada.count(x) > 1
-            }
-
-            if duplicados_local:
-                st.error(
-                    f"Existem valores duplicados na lista: "
-                    f"{', '.join(duplicados_local)}"
-                )
-                st.stop()
-
-            valores_orig = (
-                set(df_beneficios["beneficio"])
-                if "beneficio" in df_beneficios.columns
-                else set()
-            )
-            valores_editados = set(lista_editada)
-
-            # -------------------------
-            # REMOVIDOS
-            # -------------------------
-            for beneficio in valores_orig - valores_editados:
-                col_beneficios.delete_one({"beneficio": beneficio})
-
-            # -------------------------
-            # NOVOS
-            # -------------------------
-            for beneficio in valores_editados - valores_orig:
-                if col_beneficios.find_one({"beneficio": beneficio}):
-                    st.error(
-                        f"O valor '{beneficio}' já existe "
-                        "e não será inserido."
-                    )
-                    st.stop()
-
-                col_beneficios.insert_one({"beneficio": beneficio})
-
-            st.success("Tipos de benefício atualizados com sucesso!")
-            time.sleep(3)
-            st.rerun()
-
-
-
-
-
-
-
-
-
 
 
 # ==========================================================
@@ -1621,50 +1358,216 @@ with aba_direcoes:
 
 
 
-
-
-
 # ==========================================================
-# ABA INDICADORES
+# ABA INDICADORES (POR EDITAL)
 # ==========================================================
 
 with aba_indicadores:
 
-    st.subheader("Indicadores")
+    st.subheader("Indicadores de portifólio")
+    st.write("")
+
+    # ======================================================
+    # SELEÇÃO DO EDITAL
+    # ======================================================
+
+    lista_editais = df_editais["codigo_edital"].unique().tolist()
+
+    edital_selecionado_indicadores = st.selectbox(
+        "Selecione o Edital:",
+        options=[""] + lista_editais,
+        index=0,
+        key="edital_selecionado_indicadores",
+        width=300
+    )
+
+    if not edital_selecionado_indicadores:
+        st.caption("Selecione um edital para continuar.")
+
+    else:
+
+        st.write("")
+
+        # ======================================================
+        # BUSCA DO EDITAL
+        # ======================================================
+
+        edital_doc = col_editais.find_one(
+            {"codigo_edital": edital_selecionado_indicadores}
+        )
+
+        indicadores = sorted(
+            edital_doc.get("indicadores", []),
+            key=lambda x: x.get("indicador", "")
+        )
+
+        # Converte para DataFrame
+        df_indicadores = pd.DataFrame(indicadores)
+
+        if "_id" in df_indicadores.columns:
+            df_indicadores["_id"] = df_indicadores["_id"].astype(str)
+
+        editar_indicadores = st.toggle("Editar", key="editar_indicadores_por_edital")
+        st.write("")
+
+        # ======================================================
+        # MODO VISUALIZAÇÃO
+        # ======================================================
+
+        if not editar_indicadores:
+
+            if df_indicadores.empty:
+                st.caption("Nenhum indicador cadastrado para este edital.")
+            else:
+
+                df_tabela = (
+                    df_indicadores[["indicador"]]
+                    .sort_values("indicador")
+                    .reset_index(drop=True)
+                    .rename(columns={"indicador": "Indicadores"})
+                )
+
+                ui.table(df_tabela)
+
+        # ======================================================
+        # MODO EDIÇÃO
+        # ======================================================
+
+        else:
+
+            st.write("Edite, adicione e exclua linhas.")
+
+            if df_indicadores.empty:
+                df_editor = pd.DataFrame(
+                    {"indicador": pd.Series(dtype="str")}
+                )
+            else:
+                df_editor = df_indicadores[["indicador"]].copy()
+                df_editor["indicador"] = df_editor["indicador"].astype(str)
+
+            df_editado = st.data_editor(
+                df_editor,
+                num_rows="dynamic",
+                hide_index=True,
+                key="editor_indicadores_por_edital",
+            )
+
+            if st.button(
+                "Salvar alterações",
+                icon=":material/save:",
+                type="primary",
+                key="salvar_indicadores_por_edital"
+            ):
+
+                if "indicador" not in df_editado.columns:
+                    st.error("Nenhum dado válido para salvar.")
+                    st.stop()
+
+                # --------------------------------------------------
+                # NORMALIZA E REMOVE VAZIOS
+                # --------------------------------------------------
+
+                df_editado["indicador"] = (
+                    df_editado["indicador"]
+                    .astype(str)
+                    .str.strip()
+                )
+
+                df_editado = df_editado[df_editado["indicador"] != ""]
+
+                if df_editado.empty:
+                    st.warning("Nenhum indicador informado.")
+                    st.stop()
+
+                df_editado = df_editado.sort_values("indicador")
+
+                # --------------------------------------------------
+                # VERIFICA DUPLICADOS
+                # --------------------------------------------------
+
+                lista_editada = df_editado["indicador"].tolist()
+
+                duplicados = {
+                    x for x in lista_editada if lista_editada.count(x) > 1
+                }
+
+                if duplicados:
+                    st.error(
+                        f"Existem valores duplicados: {', '.join(duplicados)}"
+                    )
+                    st.stop()
+
+                # --------------------------------------------------
+                # MONTA ESTRUTURA FINAL
+                # --------------------------------------------------
+
+                estrutura_final = [
+                    {
+                        "id": str(ObjectId()),
+                        "indicador": indicador
+                    }
+                    for indicador in lista_editada
+                ]
+
+                # --------------------------------------------------
+                # ATUALIZA EDITAL
+                # --------------------------------------------------
+
+                col_editais.update_one(
+                    {"codigo_edital": edital_selecionado_indicadores},
+                    {"$set": {"indicadores": estrutura_final}}
+                )
+
+                st.success("Indicadores atualizados com sucesso!", icon=":material/check:")
+                time.sleep(3)
+                st.rerun()
+
+
+
+
+
+
+
+
+# ==========================================================
+# ABA BENEFICIÁRIOS
+# ==========================================================
+
+
+with aba_beneficiarios:
+
+    st.subheader("Beneficiários")
     st.write('')
 
     # 1) Carrega documentos da coleção (ordenados)
-    dados_indicadores = list(
-        col_indicadores.find({}, {"indicador": 1}).sort("indicador", 1)
+    dados_publicos = list(
+        col_publicos.find({}, {"publico": 1}).sort("publico", 1)
     )
 
-    df_indicadores = pd.DataFrame(dados_indicadores)
+    df_publicos = pd.DataFrame(dados_publicos)
 
     # Converte ObjectId para string
-    if "_id" in df_indicadores.columns:
-        df_indicadores["_id"] = df_indicadores["_id"].astype(str)
+    if "_id" in df_publicos.columns:
+        df_publicos["_id"] = df_publicos["_id"].astype(str)
     else:
-        df_indicadores["_id"] = ""
+        df_publicos["_id"] = ""
 
-    editar_indicadores = st.toggle("Editar", key="editar_indicadores")
+    editar_publicos = st.toggle("Editar", key="editar_publicos")
     st.write('')
 
     # -------------------------
     # MODO VISUALIZAÇÃO
     # -------------------------
-    if not editar_indicadores:
-        if df_indicadores.empty:
-            st.caption("Nenhum indicador cadastrado.")
+    if not editar_publicos:
+        if df_publicos.empty:
+            st.caption("Nenhum tipo de beneficiário cadastrado.")
         else:
-
-            df_tabela = (
-                df_indicadores[["indicador"]]
-                .sort_values("indicador")
-                .reset_index(drop=True)
-                .rename(columns={"indicador": "Indicadores"})
+            st.dataframe(
+                df_publicos[["publico"]].sort_values("publico"),
+                hide_index=True,
+                width=500
             )
 
-            ui.table(df_tabela)
 
     # -------------------------
     # MODO EDIÇÃO
@@ -1672,51 +1575,174 @@ with aba_indicadores:
     else:
         st.write("Edite, adicione e exclua linhas.")
 
-        if df_indicadores.empty:
-            st.warning(
-                "Ainda não há indicadores cadastrados. "
-                "Você pode adicionar novos abaixo."
-            )
+        if df_publicos.empty:
+            st.warning("Ainda não há tipos de beneficiário cadastrados. Você pode adicionar novos abaixo.")
 
             df_editor = pd.DataFrame(
-                {"indicador": pd.Series(dtype="str")}
+                {"publico": pd.Series(dtype="str")}
             )
         else:
-            df_editor = df_indicadores[["indicador"]].copy()
-            df_editor["indicador"] = df_editor["indicador"].astype(str)
+            df_editor = df_publicos[["publico"]].copy()
+            df_editor["publico"] = df_editor["publico"].astype(str)
 
         df_editado = st.data_editor(
             df_editor,
             num_rows="dynamic",
             hide_index=True,
-            key="editor_indicadores",
-            # width=500
+            key="editor_publicos",
+            width=500
         )
 
-        if st.button("Salvar alterações", icon=":material/save:", type="primary", key="salvar_indicadores"):
+        if st.button("Salvar alterações", icon=":material/save:", type="primary"):
 
-            if "indicador" not in df_editado.columns:
+            if "publico" not in df_editado.columns:
                 st.error("Nenhum dado válido para salvar.")
                 st.stop()
 
             # Normaliza e remove vazios
-            df_editado["indicador"] = (
-                df_editado["indicador"]
-                .astype(str)
-                .str.strip()
-            )
-            df_editado = df_editado[df_editado["indicador"] != ""]
+            df_editado["publico"] = df_editado["publico"].astype(str).str.strip()
+            df_editado = df_editado[df_editado["publico"] != ""]
 
             if df_editado.empty:
-                st.warning("Nenhum indicador informado.")
+                st.warning("Nenhum público informado.")
                 st.stop()
 
-            df_editado = df_editado.sort_values("indicador")
+            df_editado = df_editado.sort_values("publico")
 
             # ===========================
             # VERIFICAÇÃO DE DUPLICADOS
             # ===========================
-            lista_editada = df_editado["indicador"].tolist()
+            lista_editada = df_editado["publico"].tolist()
+            duplicados_local = {
+                x for x in lista_editada if lista_editada.count(x) > 1
+            }
+
+            if duplicados_local:
+                st.error(
+                    f"Existem valores duplicados na lista: {', '.join(duplicados_local)}"
+                )
+                st.stop()
+
+            valores_orig = (
+                set(df_publicos["publico"])
+                if "publico" in df_publicos.columns
+                else set()
+            )
+            valores_editados = set(lista_editada)
+
+            # 1) Removidos
+            for publico in valores_orig - valores_editados:
+                col_publicos.delete_one({"publico": publico})
+
+            # 2) Novos
+            for publico in valores_editados - valores_orig:
+                if col_publicos.find_one({"publico": publico}):
+                    st.error(f"O valor '{publico}' já existe e não será inserido.")
+                    st.stop()
+                col_publicos.insert_one({"publico": publico})
+
+            st.success("Beneficiários atualizados com sucesso!")
+            time.sleep(3)
+            st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+# ==========================================================
+# ABA TIPOS DE BENEFÍCIO
+# ==========================================================
+
+
+with aba_beneficios:
+
+    st.subheader("Tipos de benefício")
+    st.write('')
+
+    # 1) Carrega documentos da coleção (ordenados)
+    dados_beneficios = list(
+        col_beneficios.find({}, {"beneficio": 1}).sort("beneficio", 1)
+    )
+
+    df_beneficios = pd.DataFrame(dados_beneficios)
+
+    # Converte ObjectId para string
+    if "_id" in df_beneficios.columns:
+        df_beneficios["_id"] = df_beneficios["_id"].astype(str)
+    else:
+        df_beneficios["_id"] = ""
+
+    editar_beneficios = st.toggle("Editar", key="editar_beneficios")
+    st.write('')
+
+    # -------------------------
+    # MODO VISUALIZAÇÃO
+    # -------------------------
+    if not editar_beneficios:
+        if df_beneficios.empty:
+            st.caption("Nenhum tipo de benefício cadastrado.")
+        else:
+            st.dataframe(
+                df_beneficios[["beneficio"]].sort_values("beneficio"),
+                hide_index=True,
+                width=500
+            )
+
+    # -------------------------
+    # MODO EDIÇÃO
+    # -------------------------
+    else:
+        st.write("Edite, adicione e exclua linhas.")
+
+        if df_beneficios.empty:
+            
+            df_editor = pd.DataFrame(
+                {"beneficio": pd.Series(dtype="str")}
+            )
+        else:
+            df_editor = df_beneficios[["beneficio"]].copy()
+            df_editor["beneficio"] = df_editor["beneficio"].astype(str)
+
+        df_editado = st.data_editor(
+            df_editor,
+            num_rows="dynamic",
+            hide_index=True,
+            key="editor_beneficios",
+            width=500
+        )
+
+        if st.button("Salvar alterações", icon=":material/save:", type="primary"):
+
+            if "beneficio" not in df_editado.columns:
+                st.error("Nenhum dado válido para salvar.")
+                st.stop()
+
+            # -------------------------
+            # NORMALIZAÇÃO
+            # -------------------------
+            df_editado["beneficio"] = (
+                df_editado["beneficio"]
+                .astype(str)
+                .str.strip()
+            )
+            df_editado = df_editado[df_editado["beneficio"] != ""]
+
+            if df_editado.empty:
+                st.warning("Nenhum tipo de benefício informado.")
+                st.stop()
+
+            df_editado = df_editado.sort_values("beneficio")
+
+            # -------------------------
+            # VERIFICA DUPLICADOS
+            # -------------------------
+            lista_editada = df_editado["beneficio"].tolist()
             duplicados_local = {
                 x for x in lista_editada if lista_editada.count(x) > 1
             }
@@ -1729,28 +1755,36 @@ with aba_indicadores:
                 st.stop()
 
             valores_orig = (
-                set(df_indicadores["indicador"])
-                if "indicador" in df_indicadores.columns
+                set(df_beneficios["beneficio"])
+                if "beneficio" in df_beneficios.columns
                 else set()
             )
             valores_editados = set(lista_editada)
 
-            # 1) Removidos
-            for indicador in valores_orig - valores_editados:
-                col_indicadores.delete_one({"indicador": indicador})
+            # -------------------------
+            # REMOVIDOS
+            # -------------------------
+            for beneficio in valores_orig - valores_editados:
+                col_beneficios.delete_one({"beneficio": beneficio})
 
-            # 2) Novos
-            for indicador in valores_editados - valores_orig:
-                if col_indicadores.find_one({"indicador": indicador}):
+            # -------------------------
+            # NOVOS
+            # -------------------------
+            for beneficio in valores_editados - valores_orig:
+                if col_beneficios.find_one({"beneficio": beneficio}):
                     st.error(
-                        f"O valor '{indicador}' já existe e não será inserido."
+                        f"O valor '{beneficio}' já existe "
+                        "e não será inserido."
                     )
                     st.stop()
-                col_indicadores.insert_one({"indicador": indicador})
 
-            st.success("Indicadores atualizados com sucesso!")
+                col_beneficios.insert_one({"beneficio": beneficio})
+
+            st.success("Tipos de benefício atualizados com sucesso!")
             time.sleep(3)
             st.rerun()
+
+
 
 
 
@@ -1796,7 +1830,9 @@ with aba_categorias_despesa:
                 .rename(columns={"categoria": "Categoria de despesa"})
             )
 
-            ui.table(df_tabela)
+            st.dataframe(df_tabela,
+                         hide_index=True,
+                         width=500)
 
     # -------------------------
     # MODO EDIÇÃO
@@ -1957,7 +1993,9 @@ with aba_corredores:
                 })
             )
 
-            ui.table(df_tabela)
+            st.dataframe(df_tabela,
+                         hide_index=True, 
+                         )
 
     # ==================================================
     # MODO EDIÇÃO
@@ -2064,7 +2102,7 @@ with aba_corredores:
                 df_salvar.to_dict(orient="records")
             )
 
-            st.success("Corredores atualizados com sucesso!")
+            st.success("Corredores atualizados com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -2130,7 +2168,10 @@ with aba_kbas:
                 })
             )
 
-            ui.table(df_tabela)
+            st.dataframe(
+                df_tabela,
+                hide_index=True
+            )
 
     # ==================================================
     # MODO EDIÇÃO
