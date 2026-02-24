@@ -1358,13 +1358,175 @@ with aba_direcoes:
 
 
 
+# # ==========================================================
+# # ABA INDICADORES (POR EDITAL)
+# # ==========================================================
+
+# with aba_indicadores:
+
+#     st.subheader("Indicadores de portifólio")
+#     st.write("")
+
+#     # ======================================================
+#     # SELEÇÃO DO EDITAL
+#     # ======================================================
+
+#     lista_editais = df_editais["codigo_edital"].unique().tolist()
+
+#     edital_selecionado_indicadores = st.selectbox(
+#         "Selecione o Edital:",
+#         options=[""] + lista_editais,
+#         index=0,
+#         key="edital_selecionado_indicadores",
+#         width=300
+#     )
+
+#     if not edital_selecionado_indicadores:
+#         st.caption("Selecione um edital para continuar.")
+
+#     else:
+
+#         st.write("")
+
+#         # ======================================================
+#         # BUSCA DO EDITAL
+#         # ======================================================
+
+#         edital_doc = col_editais.find_one(
+#             {"codigo_edital": edital_selecionado_indicadores}
+#         )
+
+#         indicadores = sorted(
+#             edital_doc.get("indicadores", []),
+#             key=lambda x: x.get("indicador", "")
+#         )
+
+#         # Converte para DataFrame
+#         df_indicadores = pd.DataFrame(indicadores)
+
+#         if "_id" in df_indicadores.columns:
+#             df_indicadores["_id"] = df_indicadores["_id"].astype(str)
+
+#         editar_indicadores = st.toggle("Editar", key="editar_indicadores_por_edital")
+#         st.write("")
+
+#         # ======================================================
+#         # MODO VISUALIZAÇÃO
+#         # ======================================================
+
+#         if not editar_indicadores:
+
+#             if df_indicadores.empty:
+#                 st.caption("Nenhum indicador cadastrado para este edital.")
+#             else:
+
+#                 df_tabela = (
+#                     df_indicadores[["indicador"]]
+#                     .sort_values("indicador")
+#                     .reset_index(drop=True)
+#                     .rename(columns={"indicador": "Indicadores"})
+#                 )
+
+#                 ui.table(df_tabela)
+
+#         # ======================================================
+#         # MODO EDIÇÃO
+#         # ======================================================
+
+#         else:
+
+#             st.write("Edite, adicione e exclua linhas.")
+
+#             if df_indicadores.empty:
+#                 df_editor = pd.DataFrame(
+#                     {"indicador": pd.Series(dtype="str")}
+#                 )
+#             else:
+#                 df_editor = df_indicadores[["indicador"]].copy()
+#                 df_editor["indicador"] = df_editor["indicador"].astype(str)
+
+#             df_editado = st.data_editor(
+#                 df_editor,
+#                 num_rows="dynamic",
+#                 hide_index=True,
+#                 key="editor_indicadores_por_edital",
+#             )
+
+#             if st.button(
+#                 "Salvar alterações",
+#                 icon=":material/save:",
+#                 type="primary",
+#                 key="salvar_indicadores_por_edital"
+#             ):
+
+#                 if "indicador" not in df_editado.columns:
+#                     st.error("Nenhum dado válido para salvar.")
+#                     st.stop()
+
+#                 # --------------------------------------------------
+#                 # NORMALIZA E REMOVE VAZIOS
+#                 # --------------------------------------------------
+
+#                 df_editado["indicador"] = (
+#                     df_editado["indicador"]
+#                     .astype(str)
+#                     .str.strip()
+#                 )
+
+#                 df_editado = df_editado[df_editado["indicador"] != ""]
+
+#                 if df_editado.empty:
+#                     st.warning("Nenhum indicador informado.")
+#                     st.stop()
+
+#                 df_editado = df_editado.sort_values("indicador")
+
+#                 # --------------------------------------------------
+#                 # VERIFICA DUPLICADOS
+#                 # --------------------------------------------------
+
+#                 lista_editada = df_editado["indicador"].tolist()
+
+#                 duplicados = {
+#                     x for x in lista_editada if lista_editada.count(x) > 1
+#                 }
+
+#                 if duplicados:
+#                     st.error(
+#                         f"Existem valores duplicados: {', '.join(duplicados)}"
+#                     )
+#                     st.stop()
+
+#                 # --------------------------------------------------
+#                 # MONTA ESTRUTURA FINAL
+#                 # --------------------------------------------------
+
+#                 estrutura_final = [
+#                     {
+#                         "id": str(ObjectId()),
+#                         "indicador": indicador
+#                     }
+#                     for indicador in lista_editada
+#                 ]
+
+#                 # --------------------------------------------------
+#                 # ATUALIZA EDITAL
+#                 # --------------------------------------------------
+
+#                 col_editais.update_one(
+#                     {"codigo_edital": edital_selecionado_indicadores},
+#                     {"$set": {"indicadores": estrutura_final}}
+#                 )
+
+
+
 # ==========================================================
 # ABA INDICADORES (POR EDITAL)
 # ==========================================================
 
 with aba_indicadores:
 
-    st.subheader("Indicadores de portifólio")
+    st.subheader("Indicadores")
     st.write("")
 
     # ======================================================
@@ -1398,16 +1560,16 @@ with aba_indicadores:
 
         indicadores = sorted(
             edital_doc.get("indicadores", []),
-            key=lambda x: x.get("indicador", "")
+            key=lambda x: x.get("codigo_indicador", "")
         )
 
-        # Converte para DataFrame
         df_indicadores = pd.DataFrame(indicadores)
 
-        if "_id" in df_indicadores.columns:
-            df_indicadores["_id"] = df_indicadores["_id"].astype(str)
+        editar_indicadores = st.toggle(
+            "Editar",
+            key="editar_indicadores_por_edital"
+        )
 
-        editar_indicadores = st.toggle("Editar", key="editar_indicadores_por_edital")
         st.write("")
 
         # ======================================================
@@ -1420,14 +1582,28 @@ with aba_indicadores:
                 st.caption("Nenhum indicador cadastrado para este edital.")
             else:
 
-                df_tabela = (
-                    df_indicadores[["indicador"]]
-                    .sort_values("indicador")
+                df_visualizacao = (
+                    df_indicadores[["codigo_indicador", "indicador"]]
+                    .rename(columns={
+                        "codigo_indicador": "Código",
+                        "indicador": "Indicador"
+                    })
+                    .sort_values("Código")
                     .reset_index(drop=True)
-                    .rename(columns={"indicador": "Indicadores"})
                 )
 
-                ui.table(df_tabela)
+                st.dataframe(
+                    df_visualizacao,
+                    hide_index=True,
+                    column_config={
+                        "Código": st.column_config.Column(
+                            width=1  
+                        ),
+                        "Indicador": st.column_config.Column(
+                            width=1000
+                        )
+                    }
+                )                
 
         # ======================================================
         # MODO EDIÇÃO
@@ -1439,11 +1615,15 @@ with aba_indicadores:
 
             if df_indicadores.empty:
                 df_editor = pd.DataFrame(
-                    {"indicador": pd.Series(dtype="str")}
+                    {
+                        "codigo_indicador": pd.Series(dtype="str"),
+                        "indicador": pd.Series(dtype="str"),
+                    }
                 )
             else:
-                df_editor = df_indicadores[["indicador"]].copy()
-                df_editor["indicador"] = df_editor["indicador"].astype(str)
+                df_editor = df_indicadores[
+                    ["codigo_indicador", "indicador"]
+                ].copy()
 
             df_editado = st.data_editor(
                 df_editor,
@@ -1459,13 +1639,22 @@ with aba_indicadores:
                 key="salvar_indicadores_por_edital"
             ):
 
-                if "indicador" not in df_editado.columns:
-                    st.error("Nenhum dado válido para salvar.")
+                if (
+                    "codigo_indicador" not in df_editado.columns or
+                    "indicador" not in df_editado.columns
+                ):
+                    st.error("Dados inválidos.")
                     st.stop()
 
                 # --------------------------------------------------
-                # NORMALIZA E REMOVE VAZIOS
+                # NORMALIZA
                 # --------------------------------------------------
+
+                df_editado["codigo_indicador"] = (
+                    df_editado["codigo_indicador"]
+                    .astype(str)
+                    .str.strip()
+                )
 
                 df_editado["indicador"] = (
                     df_editado["indicador"]
@@ -1473,41 +1662,40 @@ with aba_indicadores:
                     .str.strip()
                 )
 
-                df_editado = df_editado[df_editado["indicador"] != ""]
+                # Remove linhas vazias
+                df_editado = df_editado[
+                    (df_editado["codigo_indicador"] != "") &
+                    (df_editado["indicador"] != "")
+                ]
 
                 if df_editado.empty:
                     st.warning("Nenhum indicador informado.")
                     st.stop()
 
-                df_editado = df_editado.sort_values("indicador")
-
                 # --------------------------------------------------
-                # VERIFICA DUPLICADOS
+                # VALIDA DUPLICIDADE DE CÓDIGO
                 # --------------------------------------------------
 
-                lista_editada = df_editado["indicador"].tolist()
+                lista_codigos = df_editado["codigo_indicador"].tolist()
 
                 duplicados = {
-                    x for x in lista_editada if lista_editada.count(x) > 1
+                    x for x in lista_codigos if lista_codigos.count(x) > 1
                 }
 
                 if duplicados:
                     st.error(
-                        f"Existem valores duplicados: {', '.join(duplicados)}"
+                        f"Existem códigos duplicados: {', '.join(duplicados)}"
                     )
                     st.stop()
+
+                # Ordena por código
+                df_editado = df_editado.sort_values("codigo_indicador")
 
                 # --------------------------------------------------
                 # MONTA ESTRUTURA FINAL
                 # --------------------------------------------------
 
-                estrutura_final = [
-                    {
-                        "id": str(ObjectId()),
-                        "indicador": indicador
-                    }
-                    for indicador in lista_editada
-                ]
+                estrutura_final = df_editado.to_dict(orient="records")
 
                 # --------------------------------------------------
                 # ATUALIZA EDITAL
