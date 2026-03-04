@@ -48,6 +48,9 @@ col_projetos = db["projetos"]
 # Indicadores
 col_indicadores = db["indicadores"]
 
+# Editais
+col_editais = db["editais"]
+
 
 
 
@@ -210,16 +213,34 @@ if "_id" in df_projeto.columns:
 
 
 
-df_indicadores = pd.DataFrame(
-    list(
-        col_indicadores.find()
-    )
-)
+# CARREGAR INDICADORES DO EDITAL VINCULADO AO PROJETO
 
-# Transformar o id em string
-df_indicadores = df_indicadores.copy()
-if "_id" in df_indicadores.columns:
-    df_indicadores["_id"] = df_indicadores["_id"].astype(str)
+# Obtém o nome do edital vinculado ao projeto
+nome_edital_projeto = df_projeto["edital"].values[0]
+
+# Busca o edital correspondente
+edital_doc = col_editais.find_one({"codigo_edital": nome_edital_projeto})
+
+# Verifica se encontrou o edital
+if not edital_doc:
+    st.error("Edital vinculado ao projeto não encontrado.")
+    lista_indicadores_edital = []
+else:
+    # Extrai indicadores do edital
+    indicadores_edital = edital_doc.get("indicadores", [])
+
+    # Lista apenas os nomes dos indicadores
+    lista_indicadores_edital = [
+        ind.get("indicador") for ind in indicadores_edital
+    ]
+
+# Extrai indicadores do edital
+indicadores_edital = edital_doc.get("indicadores", [])
+
+# Lista apenas os nomes dos indicadores
+lista_indicadores_edital = [
+    ind.get("indicador") for ind in indicadores_edital
+]
 
 
 
@@ -374,7 +395,7 @@ with plano_trabalho:
             componentes = plano_trabalho.get("componentes", [])
 
             if not componentes:
-                st.warning("Nenhum componente cadastrado. Cadastre componentes antes de adicionar atividades.")
+                st.caption("Nenhum componente cadastrado. Cadastre componentes antes de adicionar atividades.")
                 st.stop()
 
 
@@ -446,6 +467,22 @@ with plano_trabalho:
             # Data Editor 
             # ============================================================
 
+            # Converte para datetime (se houver valores)
+            if not df_atividades.empty:
+
+                df_atividades["data_inicio"] = pd.to_datetime(
+                    df_atividades["data_inicio"],
+                    format="%d/%m/%Y",
+                    errors="coerce"
+                )
+
+                df_atividades["data_fim"] = pd.to_datetime(
+                    df_atividades["data_fim"],
+                    format="%d/%m/%Y",
+                    errors="coerce"
+                )
+
+
             df_editado = st.data_editor(
                 df_atividades,
                 num_rows="dynamic",
@@ -458,19 +495,21 @@ with plano_trabalho:
                         width=700
                     ),
 
-                    "data_inicio": st.column_config.TextColumn(
+                    "data_inicio": st.column_config.DateColumn(
                         label="Data de início",
                         width=120,
-                        help="Formato obrigatório: DD/MM/YYYY"
+                        format="DD/MM/YYYY"
                     ),
 
-                    "data_fim": st.column_config.TextColumn(
+                    "data_fim": st.column_config.DateColumn(
                         label="Data de fim",
                         width=120,
-                        help="Formato obrigatório: DD/MM/YYYY"
+                        format="DD/MM/YYYY"
                     ),
                 }
             )
+
+
 
 
             # ============================================================
@@ -485,6 +524,15 @@ with plano_trabalho:
             )
 
 
+
+
+
+
+
+
+
+
+
             # ============================================================
             # Validação + Salvamento
             # ============================================================
@@ -494,19 +542,22 @@ with plano_trabalho:
                 erros = []
                 atividades_final = []
 
+                # ----------------------------------------------------------
+                # Função de validação de data
+                # ----------------------------------------------------------
                 def valida_data(valor, linha, campo):
-                    if not valor or str(valor).strip() == "":
+
+                    if pd.isna(valor):
                         erros.append(f"Linha {linha}: {campo} é obrigatória.")
                         return None
 
-                    try:
-                        datetime.datetime.strptime(valor.strip(), "%d/%m/%Y")
-                        return valor.strip()
-                    except:
-                        erros.append(f"Linha {linha}: data inválida em '{campo}': '{valor}'. Formato correto: DD/MM/YYYY")
-                        return None
+                    return valor
 
+
+
+                # ----------------------------------------------------------
                 # Validação linha a linha
+                # ----------------------------------------------------------
                 for idx, row in df_editado.iterrows():
 
                     atividade = str(row["atividade"]).strip()
@@ -516,68 +567,89 @@ with plano_trabalho:
                     if atividade == "":
                         erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
 
-                    # valida datas via função
                     data_inicio = valida_data(data_inicio_raw, idx + 1, "Data de início")
                     data_fim = valida_data(data_fim_raw, idx + 1, "Data de término")
 
-                    # Se nenhuma validação falhou para esta linha
                     if data_inicio and data_fim and atividade != "":
                         atividades_final.append({
                             "atividade": atividade,
-                            "data_inicio": data_inicio,
-                            "data_fim": data_fim,
+                            "data_inicio": pd.to_datetime(data_inicio).strftime("%d/%m/%Y"),
+                            "data_fim": pd.to_datetime(data_fim).strftime("%d/%m/%Y"),
                         })
+                    
 
-                # Se houver erros → exibir e parar
+
+                # ----------------------------------------------------------
+                # Se houver erros → apenas exibe
+                # ----------------------------------------------------------
                 if erros:
+
                     for e in erros:
                         st.error(e)
-                    st.stop()
 
-                # IDs antigos preservados
-                ids_original = [a["id"] for a in atividades_exist]
-
-                nova_lista = []
-                for idx, a in enumerate(atividades_final):
-
-                    if idx < len(ids_original):
-                        id_usado = ids_original[idx]
-                    else:
-                        id_usado = str(bson.ObjectId())
-
-                    nova_lista.append({
-                        "id": id_usado,
-                        **a
-                    })
-
-                # Atualizar entrega
-                entregas_atualizadas = []
-                for e in componente_sel["entregas"]:
-                    if e["id"] == entrega_sel["id"]:
-                        entregas_atualizadas.append({**e, "atividades": nova_lista})
-                    else:
-                        entregas_atualizadas.append(e)
-
-                # Atualizar apenas o componente correspondente
-                componentes_atualizados = []
-                for c in componentes:
-                    if c["id"] == componente_sel["id"]:
-                        componentes_atualizados.append({**c, "entregas": entregas_atualizadas})
-                    else:
-                        componentes_atualizados.append(c)
-
-                # Salvar no Mongo
-                resultado = col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
-                )
-
-                if resultado.matched_count == 1:
-                    st.success("Atividades atualizadas com sucesso!", icon=":material/check:")
-                    time.sleep(3)
-                    st.rerun()
                 else:
-                    st.error("Erro ao atualizar atividades.")
+
+                    # ------------------------------------------------------
+                    # Cria nova lista de atividades (sempre novos IDs)
+                    # ------------------------------------------------------
+                    nova_lista = []
+
+                    for a in atividades_final:
+
+                        nova_lista.append({
+                            "id": str(bson.ObjectId()),
+                            "atividade": a["atividade"],
+                            "data_inicio": a["data_inicio"],
+                            "data_fim": a["data_fim"],
+
+                            # Campos padrão
+                            "status_atividade": "prevista",
+                            "porcentagem_atv": 0
+                        })
+
+                    # ------------------------------------------------------
+                    # Atualiza apenas a entrega selecionada
+                    # ------------------------------------------------------
+                    entregas_atualizadas = []
+
+                    for e in componente_sel["entregas"]:
+                        if e["id"] == entrega_sel["id"]:
+                            entregas_atualizadas.append({
+                                **e,
+                                "atividades": nova_lista
+                            })
+                        else:
+                            entregas_atualizadas.append(e)
+
+                    # ------------------------------------------------------
+                    # Atualiza apenas o componente correspondente
+                    # ------------------------------------------------------
+                    componentes_atualizados = []
+
+                    for c in componentes:
+                        if c["id"] == componente_sel["id"]:
+                            componentes_atualizados.append({
+                                **c,
+                                "entregas": entregas_atualizadas
+                            })
+                        else:
+                            componentes_atualizados.append(c)
+
+                    # ------------------------------------------------------
+                    # Persistência no MongoDB
+                    # ------------------------------------------------------
+                    resultado = col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
+                        {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+                    )
+
+                    if resultado.matched_count == 1:
+                        st.success("Atividades atualizadas com sucesso!", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+                    else:
+                        st.error("Erro ao atualizar atividades.")
+
 
 
 
@@ -601,17 +673,40 @@ with plano_trabalho:
 
             entregas_existentes = componente.get("entregas", [])
 
+
+            # --------------------------------------------------
             # DataFrame para edição
-            df_entregas = pd.DataFrame({
-                "entrega": [e.get("entrega", "") for e in entregas_existentes],
-                "Indicadores": [e.get("indicadores_doador", []) for e in entregas_existentes]
-            })
+            # --------------------------------------------------
+            if entregas_existentes:
+
+                df_entregas = pd.DataFrame({
+                    "entrega": [e.get("entrega", "") for e in entregas_existentes],
+                    "Indicadores": [e.get("indicadores_doador", []) for e in entregas_existentes]
+                })
+
+            else:
+
+                df_entregas = pd.DataFrame({
+                    "entrega": pd.Series(dtype="str"),
+                    "Indicadores": pd.Series(dtype="object")  # precisa ser object para lista
+                })
+
+
+
+
 
             df_editado = st.data_editor(
                 df_entregas,
                 num_rows="dynamic",
-                hide_index=True
+                hide_index=True,
+                column_config={
+                    "Indicadores": st.column_config.MultiselectColumn(
+                        "Indicadores",
+                        options=lista_indicadores_edital
+                    )
+                }
             )
+
 
             salvar = st.button(
                 "Salvar entregas",
@@ -643,8 +738,7 @@ with plano_trabalho:
                     nova_lista.append({
                         "id": str(bson.ObjectId()),
                         "entrega": nome_entrega,
-                        "indicadores_doador": indicadores_linha,
-                        "atividades": []
+                        "indicadores_doador": indicadores_linha
                     })
 
                 # --------------------------------------------------
@@ -661,7 +755,7 @@ with plano_trabalho:
                         {"$set": {"plano_trabalho.componentes": componentes}}
                     )
 
-                    st.success("Entregas atualizadas com sucesso!")
+                    st.success("Entregas atualizadas com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
 
@@ -679,9 +773,22 @@ with plano_trabalho:
             st.write("")
 
             # Monta DataFrame apenas com nomes
-            df_componentes = pd.DataFrame({
-                "componente": [c.get("componente", "") for c in componentes]
-            })
+
+
+
+            if componentes:
+                df_componentes = pd.DataFrame({
+                    "componente": [c.get("componente", "") for c in componentes]
+                })
+            else:
+                # Força tipo string quando não houver componentes
+                df_componentes = pd.DataFrame({
+                    "componente": pd.Series(dtype="str")
+                })
+
+            # Garante que a coluna seja string
+            df_componentes["componente"] = df_componentes["componente"].astype(str)
+
 
             df_editado = st.data_editor(
                 df_componentes,
@@ -919,11 +1026,6 @@ with impactos:
 
 
 
-# ###################################################################################################
-# INDICADORES
-# ###################################################################################################
-
-
 
 ###########################################################################################################
 # ABA INDICADORES
@@ -960,11 +1062,13 @@ with indicadores:
         if not indicadores_projeto:
             st.caption("Nenhum indicador associado a este projeto.")
         else:
-            # Mapeia id do indicador para o nome
+
+            # Mapeia codigo_indicador para nome do indicador
             mapa_indicadores = {
-                row["_id"]: row["indicador"]
-                for _, row in df_indicadores.iterrows()
+                ind["codigo_indicador"]: ind["indicador"]
+                for ind in indicadores_edital
             }
+
 
             dados_tabela = []
 
@@ -1034,9 +1138,14 @@ with indicadores:
         # --------------------------------------------------
         # GARANTIA DE DADOS
         # --------------------------------------------------
-        if df_indicadores.empty:
-            st.caption("Não há indicadores cadastrados.")
+
+        if not indicadores_edital:
+            st.caption("Não há indicadores cadastrados neste edital.")
         else:
+            
+        # if df_indicadores.empty:
+        #     st.caption("Não há indicadores cadastrados.")
+        # else:
 
 
             # CONFIGURAÇÃO ÚNICA DAS COLUNAS
@@ -1062,10 +1171,17 @@ with indicadores:
             # --------------------------------------------------
             # LISTAGEM DOS INDICADORES
             # --------------------------------------------------
-            for _, row in df_indicadores.sort_values("indicador").iterrows():
 
-                id_indicador = row["_id"]
-                nome_indicador = row["indicador"]
+            for ind in sorted(indicadores_edital, key=lambda x: x["indicador"]):
+
+                id_indicador = ind["codigo_indicador"]
+                nome_indicador = ind["indicador"]
+
+
+            # for _, row in df_indicadores.sort_values("indicador").iterrows():
+
+            #     id_indicador = row["_id"]
+            #     nome_indicador = row["indicador"]
 
                 dados_atual = st.session_state.valores_indicadores.get(
                     id_indicador,
@@ -1165,14 +1281,19 @@ with indicadores:
                 type="primary"
             )
 
+
+
+
             # --------------------------------------------------
             # VALIDAÇÃO + SALVAMENTO
             # --------------------------------------------------
             if salvar:
 
+                erro_validacao = False
+
                 if not st.session_state.valores_indicadores:
                     st.warning("Selecione pelo menos um indicador.")
-                    st.stop()
+                    erro_validacao = True
 
                 for dados in st.session_state.valores_indicadores.values():
 
@@ -1180,43 +1301,43 @@ with indicadores:
                         st.error(
                             "Todos os valores dos indicadores devem ser maiores que zero."
                         )
-                        st.stop()
+                        erro_validacao = True
 
                     if not dados["descricao"].strip():
                         st.error(
                             "A descrição da contribuição esperada não pode estar vazia."
                         )
-                        st.stop()
+                        erro_validacao = True
 
+                # Só salva se não houver erro
+                if not erro_validacao:
 
-                indicadores_para_salvar = [
-                    {
-                        "id_indicador": id_indicador,
-                        "valor": dados["valor"],
-                        "descricao_contribuicao": dados["descricao"].strip(),
-                        "resultado_intermediario": dados["resultado_intermediario"],
-                        "resultado_final": dados["resultado_final"]
-                    }
-                    for id_indicador, dados in st.session_state.valores_indicadores.items()
-                ]
-
-
-                resultado = col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {
-                        "$set": {
-                            "indicadores": indicadores_para_salvar
+                    indicadores_para_salvar = [
+                        {
+                            "id_indicador": id_indicador,  # agora é codigo_indicador
+                            "valor": dados["valor"],
+                            "descricao_contribuicao": dados["descricao"].strip(),
+                            "resultado_intermediario": dados["resultado_intermediario"],
+                            "resultado_final": dados["resultado_final"]
                         }
-                    }
-                )
+                        for id_indicador, dados in st.session_state.valores_indicadores.items()
+                    ]
 
-                if resultado.matched_count == 1:
-                    st.success("Indicadores atualizados com sucesso!", icon=":material/check:")
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.error("Erro ao salvar indicadores.")
+                    resultado = col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
+                        {
+                            "$set": {
+                                "indicadores": indicadores_para_salvar
+                            }
+                        }
+                    )
 
+                    if resultado.matched_count == 1:
+                        st.success("Indicadores atualizados com sucesso!", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+                    else:
+                        st.error("Erro ao salvar indicadores.")
 
 
 
