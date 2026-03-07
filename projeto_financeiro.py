@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import time
 import datetime
+import os
+
 
 import streamlit_shadcn_ui as ui
 
@@ -1166,8 +1168,18 @@ def gerar_recibo_docx(
     # ============================
     # SALVAR
     # ============================
+
+    os.makedirs(os.path.dirname(caminho_arquivo), exist_ok=True)
+
     doc.save(caminho_arquivo)
     return True
+
+
+    # # ============================
+    # # SALVAR
+    # # ============================
+    # doc.save(caminho_arquivo)
+    # return True
 
 
 
@@ -1763,7 +1775,7 @@ with cron_desemb:
                 atualizar_datas_relatorios(col_projetos, codigo_projeto_atual)
 
 
-                st.success("Parcelas salvas com sucesso!")
+                st.success("Parcelas salvas com sucesso!", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
 
@@ -1932,7 +1944,7 @@ with cron_desemb:
                         }
                     )
 
-                    st.success("Relatórios salvos com sucesso!")
+                    st.success("Relatórios salvos com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
 
@@ -2525,7 +2537,7 @@ with orcamento:
                 }
             )
 
-            st.success("Orçamento salvo com sucesso!")
+            st.success("Orçamento salvo com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 

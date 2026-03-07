@@ -1109,8 +1109,8 @@ if not editar_cadastro:
                 )
 
                 if resultado.modified_count == 1:
-                    st.success("Contato cadastrado com sucesso!")
-                    time.sleep(2)
+                    st.success("Contato cadastrado com sucesso!", icon=":material/check:")
+                    time.sleep(3)
                     st.rerun()
                 else:
                     st.error("Erro ao salvar contato.")
