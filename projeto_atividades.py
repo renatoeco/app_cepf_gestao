@@ -824,7 +824,7 @@ with plano_trabalho:
                     {"$set": {"plano_trabalho.componentes": novos_componentes}}
                 )
 
-                st.success("Componentes atualizados com sucesso!")
+                st.success("Componentes atualizados com sucesso!", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
 
@@ -938,7 +938,7 @@ with impactos:
                         })
 
                 if salvar_impactos("impactos_longo_prazo", impactos_salvar, st.session_state.projeto_atual):
-                    st.success("Impactos de longo prazo salvos com sucesso!")
+                    st.success("Impactos de longo prazo salvos com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
                 else:
@@ -1013,7 +1013,7 @@ with impactos:
                         })
 
                 if salvar_impactos("impactos_curto_prazo", impactos_salvar, st.session_state.projeto_atual):
-                    st.success("Impactos de curto prazo salvos com sucesso!")
+                    st.success("Impactos de curto prazo salvos com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
                 else:
