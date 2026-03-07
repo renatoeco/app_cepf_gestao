@@ -324,7 +324,7 @@ def dialog_editar_municipios():
 
 
 
-@st.dialog("Localidades", width="medium")
+@st.dialog("Localidades e Comunidades", width="medium")
 def dialog_editar_localidades():
 
     abas = st.tabs(["Cadastrar", "Excluir"])
@@ -349,7 +349,7 @@ def dialog_editar_localidades():
         # CAMPOS BÁSICOS
         # --------------------------------------------------
         nome_localidade = st.text_input(
-            "Nome da localidade",
+            "Nome da localidade ou comunidade",
             placeholder="Ex: Comunidade Novo Horizonte"
         )
 
@@ -465,7 +465,7 @@ def dialog_editar_localidades():
                 }
             )
 
-            st.success("Localidade cadastrada com sucesso!", icon=":material/check:")
+            st.success("Localidade / Comunidade cadastrada com sucesso!", icon=":material/check:")
             time.sleep(2)
             st.rerun()
 
