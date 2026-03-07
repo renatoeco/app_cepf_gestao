@@ -599,31 +599,6 @@ elif opcao_cadastro == "Convite em massa":
 
 
 
-
-                # with st.spinner("Enviando e-mails... Aguarde..."):
-
-                #     for i, pessoa in enumerate(registros):
-
-                #         nome = pessoa["nome_completo"]
-                #         email = pessoa["e_mail"]
-                #         codigo = pessoa["codigo_convite"]
-
-                #         try:
-                #             enviar_email_convite(
-                #                 nome_completo=nome,
-                #                 email_destino=email,
-                #                 codigo=codigo
-                #             )
-
-                #         except Exception as e:
-                #             falhas.append((email, str(e)))   # salva a falha
-                #             status_text.error(f":material/error: Falha ao enviar e-mail para {email}. Erro: {e}")
-
-                #         # Atualiza barra de progresso
-                #         progress_bar.progress((i + 1) / total)
-
-                #         time.sleep(3)
-
                 # --- Relatório final ---
 
                 sucessos = total - len(falhas)

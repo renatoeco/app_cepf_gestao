@@ -1,10 +1,7 @@
 import streamlit as st
 from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos
-# from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, notificar
-import plotly.express as px
+# import plotly.express as px
 import pandas as pd
-# import datetime
-# import locale
 
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
@@ -44,70 +41,70 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 # TRATAMENTO DE DADOS   
 ###########################################################################################################
 
-# Inclulir o status no dataframe de projetos
-df_projetos = calcular_status_projetos(df_projetos)
+if not df_projetos.empty:
+    
+    # Inclulir o status no dataframe de projetos
+    df_projetos = calcular_status_projetos(df_projetos)
 
 
-# Converter object_id para string
-df_pessoas['_id'] = df_pessoas['_id'].astype(str)
-df_projetos['_id'] = df_projetos['_id'].astype(str)
+    # Converter object_id para string
+    df_pessoas['_id'] = df_pessoas['_id'].astype(str)
+    df_projetos['_id'] = df_projetos['_id'].astype(str)
 
-# Convertendo datas de string para datetime
-df_projetos['data_inicio_contrato_dtime'] = pd.to_datetime(
-    df_projetos['data_inicio_contrato'], 
-    format="%d/%m/%Y", 
-    dayfirst=True, 
-    errors="coerce"
-)
+    # Convertendo datas de string para datetime
+    df_projetos['data_inicio_contrato_dtime'] = pd.to_datetime(
+        df_projetos['data_inicio_contrato'], 
+        format="%d/%m/%Y", 
+        dayfirst=True, 
+        errors="coerce"
+    )
 
-df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
-    df_projetos['data_fim_contrato'], 
-    format="%d/%m/%Y", 
-    dayfirst=True, 
-    errors="coerce"
-)
+    df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
+        df_projetos['data_fim_contrato'], 
+        format="%d/%m/%Y", 
+        dayfirst=True, 
+        errors="coerce"
+    )
 
-# Filtar somente tipos de usuário admin e equipe em df_pessoas
-df_pessoas = df_pessoas[(df_pessoas["tipo_usuario"] == "admin") | (df_pessoas["tipo_usuario"] == "equipe")]
+    # Filtar somente tipos de usuário admin e equipe em df_pessoas
+    df_pessoas = df_pessoas[(df_pessoas["tipo_usuario"] == "admin") | (df_pessoas["tipo_usuario"] == "equipe")]
 
-# Incluir padrinho no dataframe de projetos
-# Fazendo um dataframe auxiliar de relacionamento
-# Seleciona apenas colunas necessárias
-df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
+    # Incluir padrinho no dataframe de projetos
+    # Fazendo um dataframe auxiliar de relacionamento
+    # Seleciona apenas colunas necessárias
+    df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
 
-# Garante que "projetos" seja sempre lista
-df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
-    lambda x: x if isinstance(x, list) else []
-)
+    # Garante que "projetos" seja sempre lista
+    df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
+        lambda x: x if isinstance(x, list) else []
+    )
 
-# Explode: uma linha por projeto
-df_pessoas_proj = df_pessoas_proj.explode("projetos")
+    # Explode: uma linha por projeto
+    df_pessoas_proj = df_pessoas_proj.explode("projetos")
 
-# Remove linhas sem código de projeto
-df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
+    # Remove linhas sem código de projeto
+    df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
 
-# Renomeia para facilitar o merge
-df_pessoas_proj = df_pessoas_proj.rename(columns={
-    "projetos": "codigo",
-    "nome_completo": "padrinho"
-})
+    # Renomeia para facilitar o merge
+    df_pessoas_proj = df_pessoas_proj.rename(columns={
+        "projetos": "codigo",
+        "nome_completo": "padrinho"
+    })
 
-# Agrupar (caso haja mais de um padrinho por projeto)
-df_padrinhos = (
-    df_pessoas_proj
-    .groupby("codigo")["padrinho"]
-    .apply(lambda nomes: ", ".join(sorted(set(nomes))))
-    .reset_index()
-)
+    # Agrupar (caso haja mais de um padrinho por projeto)
+    df_padrinhos = (
+        df_pessoas_proj
+        .groupby("codigo")["padrinho"]
+        .apply(lambda nomes: ", ".join(sorted(set(nomes))))
+        .reset_index()
+    )
 
-# Fazer o merge
-df_projetos = df_projetos.merge(
-    df_padrinhos,
-    on="codigo",
-    how="left"
-)
-
-
+    # Fazer o merge
+    df_projetos = df_projetos.merge(
+        df_padrinhos,
+        on="codigo",
+        how="left"
+    )
 
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
