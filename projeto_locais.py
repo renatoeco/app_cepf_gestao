@@ -250,7 +250,7 @@ def dialog_editar_estados():
             }
         )
 
-        st.success("Estados atualizados com sucesso!")
+        st.success("Estados atualizados com sucesso!", icon=":material/check:")
         time.sleep(3)
         st.rerun()
 
@@ -318,7 +318,7 @@ def dialog_editar_municipios():
             }
         )
 
-        st.success("Municípios atualizados com sucesso!")
+        st.success("Municípios atualizados com sucesso!", icon=":material/check:")
         time.sleep(2)
         st.rerun()
 
@@ -465,7 +465,7 @@ def dialog_editar_localidades():
                 }
             )
 
-            st.success("Localidade cadastrada com sucesso!")
+            st.success("Localidade cadastrada com sucesso!", icon=":material/check:")
             time.sleep(2)
             st.rerun()
 
@@ -519,7 +519,7 @@ def dialog_editar_localidades():
                 }
             )
 
-            st.success("Localidade excluída com sucesso!")
+            st.success("Localidade excluída com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -605,7 +605,7 @@ def dialog_editar_areas_protegidas():
                 }
             )
 
-            st.success("Área protegida cadastrada com sucesso!")
+            st.success("Área protegida cadastrada com sucesso!", icon=":material/check:")
             time.sleep(2)
             st.rerun()
 
@@ -659,7 +659,7 @@ def dialog_editar_areas_protegidas():
                 }
             )
 
-            st.success("Área protegida excluída com sucesso!")
+            st.success("Área protegida excluída com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -725,7 +725,7 @@ def dialog_editar_corredores():
             }
         )
 
-        st.success("Corredores atualizados com sucesso!")
+        st.success("Corredores atualizados com sucesso!", icon=":material/check:")
         time.sleep(3)
         st.rerun()
 
@@ -786,7 +786,7 @@ def dialog_editar_kbas():
             }
         )
 
-        st.success("KBAs atualizadas com sucesso!")
+        st.success("KBAs atualizadas com sucesso!", icon=":material/check:")
         time.sleep(3)
         st.rerun()
 
@@ -909,7 +909,7 @@ def dialog_mapas():
                     }
                 )
 
-            st.success("Arquivo removido com sucesso!")
+            st.success("Arquivo removido com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
