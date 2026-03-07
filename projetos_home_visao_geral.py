@@ -74,88 +74,90 @@ if "notificacoes" not in st.session_state:
 # TRATAMENTO DE DADOS
 ###########################################################################################################
 
-# ------------------------------------------------------------------------------
-# 1. Limpa notificações anteriores
-# ------------------------------------------------------------------------------
-st.session_state.notificacoes = []
+if not df_projetos.empty:
+
+    # ------------------------------------------------------------------------------
+    # 1. Limpa notificações anteriores
+    # ------------------------------------------------------------------------------
+    st.session_state.notificacoes = []
 
 
-# ------------------------------------------------------------------------------
-# 2. Calcula status dos projetos (status, dias_atraso, próximo evento, etc.)
-# ------------------------------------------------------------------------------
-df_projetos = calcular_status_projetos(df_projetos)
+    # ------------------------------------------------------------------------------
+    # 2. Calcula status dos projetos (status, dias_atraso, próximo evento, etc.)
+    # ------------------------------------------------------------------------------
+    df_projetos = calcular_status_projetos(df_projetos)
 
 
-# ------------------------------------------------------------------------------
-# 3. Filtra usuários relevantes (admin e equipe)
-# ------------------------------------------------------------------------------
-df_pessoas = df_pessoas[
-    df_pessoas["tipo_usuario"].isin(["admin", "equipe"])
-]
+    # ------------------------------------------------------------------------------
+    # 3. Filtra usuários relevantes (admin e equipe)
+    # ------------------------------------------------------------------------------
+    df_pessoas = df_pessoas[
+        df_pessoas["tipo_usuario"].isin(["admin", "equipe"])
+    ]
 
 
-# ------------------------------------------------------------------------------
-# 4. Relaciona projetos aos padrinhos
-# ------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+    # 4. Relaciona projetos aos padrinhos
+    # ------------------------------------------------------------------------------
 
-# Seleciona apenas colunas necessárias
-df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
+    # Seleciona apenas colunas necessárias
+    df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
 
-# Garante que "projetos" seja sempre uma lista
-df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
-    lambda x: x if isinstance(x, list) else []
-)
+    # Garante que "projetos" seja sempre uma lista
+    df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
+        lambda x: x if isinstance(x, list) else []
+    )
 
-# Cria uma linha por projeto (explode)
-df_pessoas_proj = df_pessoas_proj.explode("projetos")
+    # Cria uma linha por projeto (explode)
+    df_pessoas_proj = df_pessoas_proj.explode("projetos")
 
-# Remove registros sem código de projeto
-df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
+    # Remove registros sem código de projeto
+    df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
 
-# Renomeia colunas para facilitar o merge
-df_pessoas_proj = df_pessoas_proj.rename(columns={
-    "projetos": "codigo",
-    "nome_completo": "padrinho"
-})
+    # Renomeia colunas para facilitar o merge
+    df_pessoas_proj = df_pessoas_proj.rename(columns={
+        "projetos": "codigo",
+        "nome_completo": "padrinho"
+    })
 
-# Agrupa padrinhos por projeto (caso haja mais de um)
-df_padrinhos = (
-    df_pessoas_proj
-    .groupby("codigo")["padrinho"]
-    .apply(lambda nomes: ", ".join(sorted(set(nomes))))
-    .reset_index()
-)
+    # Agrupa padrinhos por projeto (caso haja mais de um)
+    df_padrinhos = (
+        df_pessoas_proj
+        .groupby("codigo")["padrinho"]
+        .apply(lambda nomes: ", ".join(sorted(set(nomes))))
+        .reset_index()
+    )
 
-# Junta padrinhos ao dataframe de projetos
-df_projetos = df_projetos.merge(
-    df_padrinhos,
-    on="codigo",
-    how="left"
-)
+    # Junta padrinhos ao dataframe de projetos
+    df_projetos = df_projetos.merge(
+        df_padrinhos,
+        on="codigo",
+        how="left"
+    )
 
 
-# ------------------------------------------------------------------------------
-# 5. Ajustes de tipos (IDs e datas)
-# ------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+    # 5. Ajustes de tipos (IDs e datas)
+    # ------------------------------------------------------------------------------
 
-# Converte ObjectId para string (evita problemas com Streamlit)
-df_pessoas["_id"] = df_pessoas["_id"].astype(str)
-df_projetos["_id"] = df_projetos["_id"].astype(str)
+    # Converte ObjectId para string (evita problemas com Streamlit)
+    df_pessoas["_id"] = df_pessoas["_id"].astype(str)
+    df_projetos["_id"] = df_projetos["_id"].astype(str)
 
-# Converte datas do contrato para datetime
-df_projetos["data_inicio_contrato_dtime"] = pd.to_datetime(
-    df_projetos["data_inicio_contrato"],
-    format="%d/%m/%Y",
-    dayfirst=True,
-    errors="coerce"
-)
+    # Converte datas do contrato para datetime
+    df_projetos["data_inicio_contrato_dtime"] = pd.to_datetime(
+        df_projetos["data_inicio_contrato"],
+        format="%d/%m/%Y",
+        dayfirst=True,
+        errors="coerce"
+    )
 
-df_projetos["data_fim_contrato_dtime"] = pd.to_datetime(
-    df_projetos["data_fim_contrato"],
-    format="%d/%m/%Y",
-    dayfirst=True,
-    errors="coerce"
-)
+    df_projetos["data_fim_contrato_dtime"] = pd.to_datetime(
+        df_projetos["data_fim_contrato"],
+        format="%d/%m/%Y",
+        dayfirst=True,
+        errors="coerce"
+    )
 
 
 
