@@ -269,7 +269,7 @@ with col_identificacao:
 
 
 
-plano_trabalho, impactos, indicadores, monitoramento = st.tabs(["Plano de trabalho", "Impactos", "Indicadores", "Plano de Monitoramento"])
+plano_trabalho, impactos, indicadores, monitoramento = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Doador", "Plano de Monitoramento"])
 
 
 
