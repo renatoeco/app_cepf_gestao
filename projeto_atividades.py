@@ -1717,6 +1717,20 @@ with monitoramento:
 
 with salvaguardas:
 
+
+    # ===============================================================================================
+    # PERMISSÃO - SALVAGUARDAS
+    # -----------------------------------------------------------------------------------------------
+    # Apenas admin/equipe podem editar. Usuários externos apenas visualizam.
+    # ===============================================================================================
+
+    usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
+
+    # Usuários internos podem editar, externos apenas visualizar
+    modo_edicao = usuario_interno
+
+    st.write("")
+
     st.subheader("Avaliação de risco")
     st.write('')
 
@@ -1921,7 +1935,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_2_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     # Coluna 3 — pergunta de avaliação de risco e campo para detalhes
@@ -1930,7 +1945,8 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_2_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     # Coluna 4 — categoria de risco
@@ -1938,7 +1954,8 @@ with salvaguardas:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_2_categoria_risco"
+            key="salv_2_categoria_risco",
+            disabled=not modo_edicao
         )
 
     # Coluna 5 — observação explicativa
@@ -1969,7 +1986,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_3_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     # Coluna 3 — perguntas de avaliação de risco com campos de detalhe
@@ -1980,7 +1998,8 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_3_pesticidas_detalhes",
-            height=100
+            height=100,
+            disabled=not modo_edicao
         )
 
         st.write("O projeto proposto apresenta riscos significativos relacionados ao uso insustentável de recursos e/ou formas de poluição que não sejam pesticidas?")
@@ -1988,7 +2007,8 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_3_poluicao_detalhes",
-            height=100
+            height=100,
+            disabled=not modo_edicao
         )
 
     # Coluna 4 — categoria de risco
@@ -1996,7 +2016,8 @@ with salvaguardas:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_3_categoria_risco"
+            key="salv_3_categoria_risco",
+            disabled=not modo_edicao
         )
 
     # Coluna 5 — observações explicativas
@@ -2032,7 +2053,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_4_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     # Coluna 3 — pergunta de avaliação de risco com campo para detalhes
@@ -2046,7 +2068,8 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_4_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     # Coluna 4 — categoria de risco
@@ -2054,7 +2077,8 @@ with salvaguardas:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_4_categoria_risco"
+            key="salv_4_categoria_risco",
+            disabled=not modo_edicao
         )
 
     # Coluna 5 — observações explicativas
@@ -2115,7 +2139,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_5_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     with col3:
@@ -2127,14 +2152,16 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_5_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     with col4:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_5_categoria_risco"
+            key="salv_5_categoria_risco",
+            disabled=not modo_edicao
         )
 
     with col5:
@@ -2157,7 +2184,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_6_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     with col3:
@@ -2169,14 +2197,16 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_6_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     with col4:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_6_categoria_risco"
+            key="salv_6_categoria_risco",
+            disabled=not modo_edicao
         )
 
     with col5:
@@ -2222,7 +2252,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_7_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     with col3:
@@ -2234,14 +2265,16 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_7_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     with col4:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_7_categoria_risco"
+            key="salv_7_categoria_risco",
+            disabled=not modo_edicao
         )
 
     with col5:
@@ -2277,7 +2310,8 @@ with salvaguardas:
             "Aplicável?",
             ["Sim", "Não"],
             key="salv_8_aplicavel",
-            horizontal=True
+            horizontal=True,
+            disabled=not modo_edicao
         )
 
     with col3:
@@ -2289,14 +2323,16 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_8_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     with col4:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_8_categoria_risco"
+            key="salv_8_categoria_risco",
+            disabled=not modo_edicao
         )
 
     with col5:
@@ -2339,14 +2375,16 @@ with salvaguardas:
         st.text_area(
             "Detalhes:",
             key="salv_9_detalhes",
-            height=120
+            height=120,
+            disabled=not modo_edicao
         )
 
     with col4:
         st.radio(
             "Categoria de risco",
             ["Categoria A", "Categoria B", "Categoria C"],
-            key="salv_9_categoria_risco"
+            key="salv_9_categoria_risco",
+            disabled=not modo_edicao
         )
 
     with col5:
