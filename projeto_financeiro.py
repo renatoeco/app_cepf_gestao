@@ -3469,7 +3469,6 @@ with remanejamentos:
     # --------------------------------------------------
 
 
-    # st.write(st.session_state)
 
 
     st.write("")
