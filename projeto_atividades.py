@@ -269,7 +269,7 @@ with col_identificacao:
 
 
 
-plano_trabalho, impactos, indicadores, monitoramento, salvaguardas = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Doador", "Plano de Monitoramento", "Salvaguardas"])
+plano_trabalho, impactos, indicadores, monitoramento, salvaguardas, remanejamentos = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Doador", "Plano de Monitoramento", "Salvaguardas", "Remanejamentos"])
 
 
 
@@ -1718,6 +1718,7 @@ with monitoramento:
 with salvaguardas:
 
 
+
     # ===============================================================================================
     # PERMISSÃO - SALVAGUARDAS
     # -----------------------------------------------------------------------------------------------
@@ -1729,7 +1730,6 @@ with salvaguardas:
     # Usuários internos podem editar, externos apenas visualizar
     modo_edicao = usuario_interno
 
-    st.write("")
 
     st.subheader("Avaliação de risco")
     st.write('')
@@ -1851,7 +1851,14 @@ with salvaguardas:
     nome_avaliador = st.session_state.get("nome")
 
     # Mostra o nome na tela
-    col1.write(f"**Nome da pessoa que completa a avaliação de risco:** {nome_avaliador}")
+
+    # Recupera o nome da pessoa que fez a última avaliação
+    nome_avaliador = salvaguardas_doc.get("nome_avaliador_risco")
+
+    # Mostra apenas se existir informação no banco
+    if nome_avaliador:
+        col1.write(f"**Nome da pessoa que completa a avaliação de risco:** {nome_avaliador}")
+
 
 
 
@@ -2567,3 +2574,20 @@ with salvaguardas:
             st.success("Respostas salvas com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
+
+
+
+
+
+
+# ###################################################################################################
+# REMANEJAMENTOS
+# ###################################################################################################
+
+
+with remanejamentos:
+
+    st.subheader("Remanejamentos")
+
+    st.write('')
+    
