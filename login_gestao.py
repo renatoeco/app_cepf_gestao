@@ -429,6 +429,8 @@ else:
                 st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
                 st.Page("relatorio_acessos.py", title="Relatório de acessos", icon=":material/bar_chart:"),
                 st.Page("relatorio_armazenamento.py", title="Armazenamento", icon=":material/home_storage:"),
+                st.Page("relatorios_admin.py", title="Relatórios", icon=":material/assignment:"),
+
             ],
         },
 
@@ -599,85 +601,6 @@ else:
         elif st.session_state.pagina_atual == "ben_selec_projeto":
             pages = pags_por_tipo["ben_selec_projeto"]
 
-
-
-
-
-
-
-
-    # # ROTEAMENTO DO BENEFICIÁRIO ---------------------------------
-    # elif tipo_usuario == "beneficiario":
-
-    #     projetos = st.session_state.get("projetos", [])
-
-    #     # Primeira execução: 
-    #     # se pagina_atual == None, a pagina atual dependerá se o beneficiário tem mais de um projeto
-    #     if st.session_state.pagina_atual is None:
-
-            
-    #         # Verifica quantos projetos o beneficiário tem
-            
-    #         if len(projetos) == 1:
-    #             st.session_state.pagina_atual = "ver_projeto"
-
-    #         else:
-    #             st.session_state.pagina_atual = "ben_selec_projeto"
-
-
-    #     # Demais execuções
-    #     # Beneficiário tem apenas um projeto
-
-    #     if st.session_state.pagina_atual == "ver_projeto":
-    #         # Só define o projeto atual se ainda não tiver sido escolhido
-    #         if not st.session_state.get("projeto_atual"):
-    #             st.session_state.projeto_atual = projetos[0]
-
-    #         pages = pags_por_tipo["ver_projeto"]
-
-
-    #     # Beneficiário tem mais de um projeto
-    #     elif st.session_state.pagina_atual == "ben_selec_projeto":
-    #         pages = pags_por_tipo["ben_selec_projeto"]
-
-
-
-
-
-
-    # # ROTEAMENTO DO VISITANTE ---------------------------------
-    # elif tipo_usuario == "visitante":
-
-    #     projetos = st.session_state.get("projetos", [])
-
-    #     # Primeira execução: 
-    #     # se pagina_atual == None, a pagina atual dependerá se o visitante tem mais de um projeto
-    #     if st.session_state.pagina_atual is None:
-
-            
-    #         # Verifica quantos projetos o visitante tem
-            
-    #         if len(projetos) == 1:
-    #             st.session_state.pagina_atual = "ver_projeto"
-
-    #         else:
-    #             st.session_state.pagina_atual = "ben_selec_projeto"
-
-
-    #     # Demais execuções
-    #     # visitante tem apenas um projeto
-
-    #     if st.session_state.pagina_atual == "ver_projeto":
-    #         # Só define o projeto atual se ainda não tiver sido escolhido
-    #         if not st.session_state.get("projeto_atual"):
-    #             st.session_state.projeto_atual = projetos[0]
-
-    #         pages = pags_por_tipo["ver_projeto"]
-
-
-    #     # visitante tem mais de um projeto
-    #     elif st.session_state.pagina_atual == "ben_selec_projeto":
-    #         pages = pags_por_tipo["ben_selec_projeto"]
 
 
 
