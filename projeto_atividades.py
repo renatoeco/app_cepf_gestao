@@ -1483,7 +1483,7 @@ def enviar_email_remocao_atividade_solicitada(
     nome_projeto = projeto.get("nome_do_projeto")
     organizacao = projeto.get("organizacao")
 
-    assunto = "Nova solicitação de remoção de atividade"
+    assunto = f"Nova solicitação de remoção de atividade - {codigo}"
 
     logo = logo_cepf
 
