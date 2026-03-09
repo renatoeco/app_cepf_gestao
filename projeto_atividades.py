@@ -2184,7 +2184,7 @@ with col_identificacao:
 
 
 
-plano_trabalho, impactos, indicadores, monitoramento, salvaguardas, remanejamentos = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Doador", "Plano de Monitoramento", "Salvaguardas", "Remanejamentos"])
+plano_trabalho, impactos, indicadores, monitoramento, salvaguardas, remanejamentos = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Portifólio", "Plano de Monitoramento", "Salvaguardas", "Remanejamentos"])
 
 
 
@@ -2979,7 +2979,7 @@ with indicadores:
                 key="editar_indicadores"
             )
 
-    st.subheader("Indicadores")
+    st.subheader("Indicadores de Portifólio")
 
     #######################################################################################################
     # MODO VISUALIZAÇÃO
