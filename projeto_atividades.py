@@ -394,7 +394,7 @@ def renderizar_card_del(item, idx):
     atividade = item.get("del_atividade")
     justificativa = item.get("justificativa")
 
-    st.markdown("##### Remover atividade")
+    st.markdown("##### :material/cancel: Remover atividade")
 
     esquerda, direita = st.columns([4,1])
 
@@ -466,7 +466,7 @@ def renderizar_card_add(item):
     justificativa = item.get("justificativa")
 
 
-    st.markdown("##### Adicionar atividade")
+    st.markdown("##### :material/add: Adicionar atividade")
 
 
     # Frame principal com duas colunas
@@ -551,7 +551,7 @@ def renderizar_card_alteracao(
 
     dist_colunas = [2,2,1]
 
-    st.markdown("##### Alterar atividade")
+    st.markdown("##### :material/compare_arrows: Alterar atividade")
 
     col1, col2, col3 = st.columns(dist_colunas)
 
