@@ -3753,7 +3753,8 @@ with salvaguardas:
     if "salv_9_categoria_risco" not in st.session_state:
         st.session_state["salv_9_categoria_risco"] = pol9.get("categoria")
     
-    
+    if "salv_fortalecimento_capacidades" not in st.session_state:
+        st.session_state["salv_fortalecimento_capacidades"] = salvaguardas_doc.get("fortalecimento_capacidades")
     
     
     
@@ -4402,6 +4403,43 @@ with salvaguardas:
     st.divider()
 
 
+
+    # FORTALECIMENTO DE CAPACIDADE ---------------------------------------------------------------------------
+
+    largura_colunas = [2, 2, 3, 2, 3]
+
+    col1, col2 = st.columns([2, 11], gap="medium")
+
+
+    col1.write("**FORTALECIMENTO DE CAPACIDADE**")
+
+    col2.write("O solicitante necessita de fortalecimento de capacidade para gerenciar os riscos ambientais e sociais identificados aqui?")
+
+    col2.write("Se sim, descreva as atividades de fortalecimento de capacidade que precisam ser integradas ao desenho do projeto:")
+
+    col2.text_area(
+        "Detalhes:",
+        key="salv_fortalecimento_capacidades",
+        height=120,
+        disabled=not modo_edicao
+    )
+
+    st.divider()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     st.write("")
 
 
@@ -4470,7 +4508,9 @@ with salvaguardas:
                     "aplicavel": st.session_state.get("salv_9_aplicavel"),
                     "detalhes": st.session_state.get("salv_9_detalhes"),
                     "categoria": st.session_state.get("salv_9_categoria_risco")
-                }
+                },
+
+                "fortalecimento_capacidades": st.session_state.get("salv_fortalecimento_capacidades"),
             }
 
             # Atualiza o documento do projeto no MongoDB
