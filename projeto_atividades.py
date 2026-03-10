@@ -280,58 +280,57 @@ def renderizar_acoes_remanejamento(item, idx):
 
                 else:
 
-                    with st.spinner("Salvando e enviando e-mail..."):
 
-                        nome = st.session_state.get("nome", "Usuário")
-                        data = datetime.datetime.now().strftime("%d/%m/%Y")
+                    nome = st.session_state.get("nome", "Usuário")
+                    data = datetime.datetime.now().strftime("%d/%m/%Y")
 
-                        log_recusa = f"Recusado por {nome} em {data}"
+                    log_recusa = f"Recusado por {nome} em {data}"
 
-                        col_projetos.update_one(
-                            {"codigo": codigo_projeto_atual},
-                            {
-                                "$set": {
-                                    f"plano_trabalho.remanejamentos_atividades.{idx}.status_remanejamento": "recusado",
-                                    f"plano_trabalho.remanejamentos_atividades.{idx}.motivo_recusa": motivo.strip(),
-                                    f"plano_trabalho.remanejamentos_atividades.{idx}.log_recusa": log_recusa
-                                }
+                    col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
+                        {
+                            "$set": {
+                                f"plano_trabalho.remanejamentos_atividades.{idx}.status_remanejamento": "recusado",
+                                f"plano_trabalho.remanejamentos_atividades.{idx}.motivo_recusa": motivo.strip(),
+                                f"plano_trabalho.remanejamentos_atividades.{idx}.log_recusa": log_recusa
                             }
+                        }
+                    )
+
+                    projeto_atualizado = col_projetos.find_one(
+                        {"codigo": codigo_projeto_atual}
+                    )
+
+                    item_atualizado = projeto_atualizado["plano_trabalho"]["remanejamentos_atividades"][idx]
+
+                    # ==================================================
+                    # Enviar e-mail conforme tipo de remanejamento
+                    # ==================================================
+
+                    if "add_atividade" in item_atualizado:
+
+                        enviar_email_nova_atividade_recusada(
+                            projeto_atualizado,
+                            item_atualizado
                         )
 
-                        projeto_atualizado = col_projetos.find_one(
-                            {"codigo": codigo_projeto_atual}
+                    elif "antes" in item_atualizado:
+
+                        enviar_email_remanejamento_atividade_recusado(
+                            projeto_atualizado,
+                            item_atualizado
                         )
 
-                        item_atualizado = projeto_atualizado["plano_trabalho"]["remanejamentos_atividades"][idx]
+                    # (preparado para quando existir remoção)
+                    elif "del_atividade" in item_atualizado:
 
-                        # ==================================================
-                        # Enviar e-mail conforme tipo de remanejamento
-                        # ==================================================
+                        enviar_email_remocao_atividade_recusada(
+                            projeto_atualizado,
+                            item_atualizado
+                        )
 
-                        if "add_atividade" in item_atualizado:
-
-                            enviar_email_nova_atividade_recusada(
-                                projeto_atualizado,
-                                item_atualizado
-                            )
-
-                        elif "antes" in item_atualizado:
-
-                            enviar_email_remanejamento_atividade_recusado(
-                                projeto_atualizado,
-                                item_atualizado
-                            )
-
-                        # (preparado para quando existir remoção)
-                        elif "del_atividade" in item_atualizado:
-
-                            enviar_email_remocao_atividade_recusada(
-                                projeto_atualizado,
-                                item_atualizado
-                            )
-
-                        st.session_state[recusar_key] = False
-                        st.rerun()
+                    st.session_state[recusar_key] = False
+                    st.rerun()
 
 
 
@@ -446,6 +445,9 @@ def renderizar_card_del(item, idx):
             if item.get("motivo_recusa"):
                 st.caption(f"Motivo: {item['motivo_recusa']}")
 
+
+
+
 # ==================================================
 # Renderiza card de remanejamento do tipo "adicionar atividade"
 # ==================================================
@@ -527,11 +529,6 @@ def renderizar_card_add(item):
             if item.get("motivo_recusa"):
                 st.caption(f"Motivo: {item['motivo_recusa']}")
     
-
-
-
-
-
 
 
 
@@ -678,133 +675,8 @@ def renderizar_card_alteracao(
 
 
 
-
-
-
 # ==================================================
-# Envia e-mail quando há nova solicitação de nova atividade
-# ==================================================
-
-def enviar_email_nova_atividade(
-    codigo_projeto,
-    projeto,
-):
-
-
-    pessoas = list(
-        col_pessoas.find(
-            {
-                "status": "ativo",
-                "projetos": codigo_projeto,
-                "tipo_usuario": {"$in": ["admin", "equipe"]}
-            }
-        )
-    )
-
-    destinatarios = [
-        p.get("e_mail")
-        for p in pessoas
-        if p.get("e_mail")
-    ]
-
-
-
-    if not destinatarios:
-        return
-
-    nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
-
-    logo = logo_cepf
-
-    assunto = f"Solicitação de nova atividade - {codigo_projeto}"
-
-    corpo_html = f"""
-    <html>
-    <head>
-    <style>
-
-    body {{
-        font-family: Arial;
-        background:#f5f5f5;
-    }}
-
-    .container {{
-        max-width:760px;
-        margin:auto;
-        background:white;
-        border-top:6px solid #28A745;
-        padding:30px;
-    }}
-
-    .logo {{
-        text-align:center;
-        margin-bottom:20px;
-    }}
-
-    </style>
-    </head>
-
-    <body>
-
-    <div class="container">
-
-        <div class="logo">
-            <img src="{logo}" height="60">
-        </div>
-
-        <p>
-        Foi recebida uma solicitação de
-        <strong>nova atividade</strong>
-        no projeto
-        <strong>{codigo_projeto} - {nome_projeto}</strong>
-        da organização
-        <strong>{organizacao}</strong>.
-        </p>
-
-        <br>
-
-        <p>
-        <strong>AÇÃO NECESSÁRIA:</strong><br>
-        Acesse a aba de <strong>Remanejamentos</strong>
-        na página de <strong>Atividades</strong>
-        para ver os detalhes desta solicitação.
-        </p>
-
-        <br>
-
-        <p>Sistema de Gestão de Projetos</p>
-
-    </div>
-
-    </body>
-    </html>
-    """
-
-    enviar_email(corpo_html, destinatarios, assunto)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ==================================================
-# Envia e-mail quando há nova solicitação de remanejamento de atividade
+# Envia e-mail quando há nova solicitação de remanejamento de alteração de atividade
 # ==================================================
 def enviar_email_remanejamento_atividade(
     projeto,
@@ -971,8 +843,173 @@ def enviar_email_remanejamento_atividade(
 
 
 
+
+
 # ==================================================
-# Envia e-mail quando remanejamento de atividade é recusado
+# Envia e-mail quando remanejamento de alteração de atividade é aprovado
+# ==================================================
+def enviar_email_remanejamento_atividade_aprovado(
+    projeto,
+    item_remanejamento
+):
+    """
+    Envia e-mail para todos os contatos cadastrados
+    na chave 'contatos' do projeto quando o
+    remanejamento de atividade for aprovado.
+    """
+
+    contatos = projeto.get("contatos", [])
+
+    # --------------------------------------------------
+    # Coletar e-mails
+    # --------------------------------------------------
+    destinatarios = [
+        c.get("email")
+        for c in contatos
+        if c.get("email")
+    ]
+
+    if not destinatarios:
+        return
+
+    codigo = projeto.get("codigo")
+    nome_projeto = projeto.get("nome_do_projeto")
+    organizacao = projeto.get("organizacao")
+
+    justificativa = item_remanejamento.get("justificativa", "")
+
+    antes = item_remanejamento.get("antes", {})
+    depois = item_remanejamento.get("depois", {})
+
+    atividade_nome = item_remanejamento.get("atividade_nome", "Atividade")
+
+    # --------------------------------------------------
+    # Montar tabela de alterações
+    # --------------------------------------------------
+
+    linhas_alteracoes = ""
+
+    campos = set(list(antes.keys()) + list(depois.keys()))
+
+    for campo in campos:
+
+        valor_antes = antes.get(campo, "-")
+        valor_depois = depois.get(campo, "-")
+
+        nomes_campos = {
+            "atividade": "Descrição da atividade",
+            "data_inicio": "Data de início",
+            "data_fim": "Data de fim"
+        }
+
+        campo_legivel = nomes_campos.get(campo, campo)
+
+        linhas_alteracoes += f"""
+        <tr>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{campo_legivel}</td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{valor_antes}</td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{valor_depois}</td>
+        </tr>
+        """
+
+    assunto = "Remanejamento de atividade aprovado"
+
+    logo = logo_cepf
+
+    corpo_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <style>
+
+    body {{
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #f5f5f5;
+    }}
+
+    .container {{
+        max-width: 760px;
+        margin: 0 auto;
+        background: white;
+        border-top: 6px solid #28A745;
+        padding: 30px;
+    }}
+
+    .logo {{
+        text-align: center;
+        margin-bottom: 20px;
+    }}
+
+    .highlight {{
+        color: #28A745;
+        font-weight: bold;
+    }}
+
+    table {{
+        border-collapse: collapse;
+        font-size: 14px;
+    }}
+
+    </style>
+    </head>
+
+    <body>
+
+    <div class="container">
+
+        <div class="logo">
+            <img src="{logo}" height="60">
+        </div>
+
+        <p>
+        Foi <span class="highlight"><strong>aprovada</strong></span>
+        uma solicitação de remanejamento de atividade
+        no projeto
+        <span class="highlight">{codigo} - {nome_projeto}</span>
+        da organização
+        <span class="highlight">{organizacao}</span>.
+        </p>
+
+        <br>
+
+        <p><strong>Alterações aprovadas:</strong></p>
+
+        <table width="100%">
+        <tr style="background:#f5f5f5;">
+            <th style="padding:6px 10px; border:1px solid #ddd;">Campo</th>
+            <th style="padding:6px 10px; border:1px solid #ddd;">Antes</th>
+            <th style="padding:6px 10px; border:1px solid #ddd;">Depois</th>
+        </tr>
+
+        {linhas_alteracoes}
+
+        </table>
+
+        <br>
+
+        <p><strong>Justificativa original:</strong></p>
+        <p>{justificativa}</p>
+
+        <br>
+        <p>Sistema de Gestão de Projetos</p>
+
+    </div>
+
+    </body>
+    </html>
+    """
+
+    enviar_email(corpo_html, destinatarios, assunto)
+
+
+
+
+
+
+
+# ==================================================
+# Envia e-mail quando remanejamento de alteração de atividade é recusado
 # ==================================================
 def enviar_email_remanejamento_atividade_recusado(
     projeto,
@@ -1100,10 +1137,6 @@ def enviar_email_remanejamento_atividade_recusado(
 
         <br>
 
-        <p><strong>Atividade:</strong> {atividade_nome}</p>
-
-        <br>
-
         <p><strong>Alterações solicitadas:</strong></p>
 
         <table width="100%">
@@ -1142,18 +1175,123 @@ def enviar_email_remanejamento_atividade_recusado(
 
 
 
+# ==================================================
+# Envia e-mail quando há nova solicitação de nova atividade
+# ==================================================
+
+def enviar_email_nova_atividade(
+    codigo_projeto,
+    projeto,
+):
+
+
+    pessoas = list(
+        col_pessoas.find(
+            {
+                "status": "ativo",
+                "projetos": codigo_projeto,
+                "tipo_usuario": {"$in": ["admin", "equipe"]}
+            }
+        )
+    )
+
+    destinatarios = [
+        p.get("e_mail")
+        for p in pessoas
+        if p.get("e_mail")
+    ]
+
+
+
+    if not destinatarios:
+        return
+
+    nome_projeto = projeto.get("nome_do_projeto")
+    organizacao = projeto.get("organizacao")
+
+    logo = logo_cepf
+
+    assunto = f"Solicitação de nova atividade - {codigo_projeto}"
+
+    corpo_html = f"""
+    <html>
+    <head>
+    <style>
+
+    body {{
+        font-family: Arial;
+        background:#f5f5f5;
+    }}
+
+    .container {{
+        max-width:760px;
+        margin:auto;
+        background:white;
+        border-top:6px solid #28A745;
+        padding:30px;
+    }}
+
+    .logo {{
+        text-align:center;
+        margin-bottom:20px;
+    }}
+
+    </style>
+    </head>
+
+    <body>
+
+    <div class="container">
+
+        <div class="logo">
+            <img src="{logo}" height="60">
+        </div>
+
+        <p>
+        Foi recebida uma solicitação de
+        <strong>nova atividade</strong>
+        no projeto
+        <strong>{codigo_projeto} - {nome_projeto}</strong>
+        da organização
+        <strong>{organizacao}</strong>.
+        </p>
+
+        <br>
+
+        <p>
+        <strong>AÇÃO NECESSÁRIA:</strong><br>
+        Acesse a aba de <strong>Remanejamentos</strong>
+        na página de <strong>Atividades</strong>
+        para ver os detalhes desta solicitação.
+        </p>
+
+        <br>
+
+        <p>Sistema de Gestão de Projetos</p>
+
+    </div>
+
+    </body>
+    </html>
+    """
+
+    enviar_email(corpo_html, destinatarios, assunto)
+
+
+
+
 
 # ==================================================
-# Envia e-mail quando remanejamento de atividade é aprovado
+# Envia e-mail quando solicitação de NOVA atividade é aprovada
 # ==================================================
-def enviar_email_remanejamento_atividade_aprovado(
+def enviar_email_nova_atividade_aprovada(
     projeto,
     item_remanejamento
 ):
     """
     Envia e-mail para todos os contatos cadastrados
-    na chave 'contatos' do projeto quando o
-    remanejamento de atividade for aprovado.
+    na chave 'contatos' do projeto quando uma
+    solicitação de nova atividade for aprovada.
     """
 
     contatos = projeto.get("contatos", [])
@@ -1170,49 +1308,24 @@ def enviar_email_remanejamento_atividade_aprovado(
     if not destinatarios:
         return
 
+
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
     organizacao = projeto.get("organizacao")
 
+    componente = item_remanejamento.get("componente")
+    entrega = item_remanejamento.get("entrega")
+
+    atividade = item_remanejamento.get("add_atividade")
+    data_inicio = item_remanejamento.get("data_inicio")
+    data_fim = item_remanejamento.get("data_fim")
+
     justificativa = item_remanejamento.get("justificativa", "")
 
-    antes = item_remanejamento.get("antes", {})
-    depois = item_remanejamento.get("depois", {})
-
-    atividade_nome = item_remanejamento.get("atividade_nome", "Atividade")
-
-    # --------------------------------------------------
-    # Montar tabela de alterações
-    # --------------------------------------------------
-
-    linhas_alteracoes = ""
-
-    campos = set(list(antes.keys()) + list(depois.keys()))
-
-    for campo in campos:
-
-        valor_antes = antes.get(campo, "-")
-        valor_depois = depois.get(campo, "-")
-
-        nomes_campos = {
-            "atividade": "Descrição da atividade",
-            "data_inicio": "Data de início",
-            "data_fim": "Data de fim"
-        }
-
-        campo_legivel = nomes_campos.get(campo, campo)
-
-        linhas_alteracoes += f"""
-        <tr>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{campo_legivel}</td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{valor_antes}</td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{valor_depois}</td>
-        </tr>
-        """
-
-    assunto = "Remanejamento de atividade aprovado"
+    assunto = "Nova atividade aprovada"
 
     logo = logo_cepf
+
 
     corpo_html = f"""
     <!DOCTYPE html>
@@ -1262,7 +1375,7 @@ def enviar_email_remanejamento_atividade_aprovado(
 
         <p>
         Foi <span class="highlight"><strong>aprovada</strong></span>
-        uma solicitação de remanejamento de atividade
+        uma solicitação de <strong>nova atividade</strong>
         no projeto
         <span class="highlight">{codigo} - {nome_projeto}</span>
         da organização
@@ -1271,29 +1384,44 @@ def enviar_email_remanejamento_atividade_aprovado(
 
         <br>
 
-        <p><strong>Atividade:</strong> {atividade_nome}</p>
-
-        <br>
-
-        <p><strong>Alterações aprovadas:</strong></p>
+        <p><strong>Atividade criada:</strong></p>
 
         <table width="100%">
-        <tr style="background:#f5f5f5;">
-            <th style="padding:6px 10px; border:1px solid #ddd;">Campo</th>
-            <th style="padding:6px 10px; border:1px solid #ddd;">Antes</th>
-            <th style="padding:6px 10px; border:1px solid #ddd;">Depois</th>
+
+        <tr>
+            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Componente</strong></td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{componente}</td>
         </tr>
 
-        {linhas_alteracoes}
+        <tr>
+            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Entrega</strong></td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{entrega}</td>
+        </tr>
+
+        <tr>
+            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Descrição da atividade</strong></td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{atividade}</td>
+        </tr>
+
+        <tr>
+            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Data de início</strong></td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{data_inicio}</td>
+        </tr>
+
+        <tr>
+            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Data de fim</strong></td>
+            <td style="padding:6px 10px; border:1px solid #ddd;">{data_fim}</td>
+        </tr>
 
         </table>
 
         <br>
 
-        <p><strong>Justificativa original:</strong></p>
+        <p><strong>Justificativa apresentada:</strong></p>
         <p>{justificativa}</p>
 
         <br>
+
         <p>Sistema de Gestão de Projetos</p>
 
     </div>
@@ -1303,6 +1431,7 @@ def enviar_email_remanejamento_atividade_aprovado(
     """
 
     enviar_email(corpo_html, destinatarios, assunto)
+
 
 
 
@@ -1562,24 +1691,19 @@ def enviar_email_remocao_atividade_solicitada(
 
 
 
+
+
 # ==================================================
-# Envia e-mail quando solicitação de NOVA atividade é aprovada
+# Envia e-mail quando remoção de atividade é aprovada
 # ==================================================
-def enviar_email_nova_atividade_aprovada(
+
+def enviar_email_remocao_atividade_aprovada(
     projeto,
     item_remanejamento
 ):
-    """
-    Envia e-mail para todos os contatos cadastrados
-    na chave 'contatos' do projeto quando uma
-    solicitação de nova atividade for aprovada.
-    """
 
     contatos = projeto.get("contatos", [])
 
-    # --------------------------------------------------
-    # Coletar e-mails
-    # --------------------------------------------------
     destinatarios = [
         c.get("email")
         for c in contatos
@@ -1594,16 +1718,15 @@ def enviar_email_nova_atividade_aprovada(
     nome_projeto = projeto.get("nome_do_projeto")
     organizacao = projeto.get("organizacao")
 
-    componente = item_remanejamento.get("componente")
-    entrega = item_remanejamento.get("entrega")
-
-    atividade = item_remanejamento.get("add_atividade")
+    atividade = item_remanejamento.get("del_atividade")
     data_inicio = item_remanejamento.get("data_inicio")
     data_fim = item_remanejamento.get("data_fim")
 
     justificativa = item_remanejamento.get("justificativa", "")
+    autor = item_remanejamento.get("autor", "-")
+    data_aprov = item_remanejamento.get("data_aprov_remanej", "-")
 
-    assunto = "Nova atividade aprovada"
+    assunto = "Remoção de atividade aprovada"
 
     logo = logo_cepf
 
@@ -1638,11 +1761,6 @@ def enviar_email_nova_atividade_aprovada(
         font-weight: bold;
     }}
 
-    table {{
-        border-collapse: collapse;
-        font-size: 14px;
-    }}
-
     </style>
     </head>
 
@@ -1656,7 +1774,7 @@ def enviar_email_nova_atividade_aprovada(
 
         <p>
         Foi <span class="highlight"><strong>aprovada</strong></span>
-        uma solicitação de <strong>nova atividade</strong>
+        uma solicitação de <strong>remoção de atividade</strong>
         no projeto
         <span class="highlight">{codigo} - {nome_projeto}</span>
         da organização
@@ -1665,40 +1783,16 @@ def enviar_email_nova_atividade_aprovada(
 
         <br>
 
-        <p><strong>Atividade criada:</strong></p>
 
-        <table width="100%">
+        <p><strong>Atividade removida:</strong></p>
 
-        <tr>
-            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Componente</strong></td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{componente}</td>
-        </tr>
-
-        <tr>
-            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Entrega</strong></td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{entrega}</td>
-        </tr>
-
-        <tr>
-            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Descrição da atividade</strong></td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{atividade}</td>
-        </tr>
-
-        <tr>
-            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Data de início</strong></td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{data_inicio}</td>
-        </tr>
-
-        <tr>
-            <td style="padding:6px 10px; border:1px solid #ddd;"><strong>Data de fim</strong></td>
-            <td style="padding:6px 10px; border:1px solid #ddd;">{data_fim}</td>
-        </tr>
-
-        </table>
+        <p>
+        {atividade}
+        </p>
 
         <br>
 
-        <p><strong>Justificativa apresentada:</strong></p>
+        <p><strong>Justificativa da solicitação:</strong></p>
         <p>{justificativa}</p>
 
         <br>
@@ -1823,132 +1917,6 @@ def enviar_email_remocao_atividade_recusada(
 
         <p><strong>Motivo da recusa:</strong></p>
         <p>{motivo_recusa}</p>
-
-        <br>
-
-        <p>Sistema de Gestão de Projetos</p>
-
-    </div>
-
-    </body>
-    </html>
-    """
-
-    enviar_email(corpo_html, destinatarios, assunto)
-
-
-
-
-
-# ==================================================
-# Envia e-mail quando remoção de atividade é aprovada
-# ==================================================
-
-def enviar_email_remocao_atividade_aprovada(
-    projeto,
-    item_remanejamento
-):
-
-    contatos = projeto.get("contatos", [])
-
-    destinatarios = [
-        c.get("email")
-        for c in contatos
-        if c.get("email")
-    ]
-
-    if not destinatarios:
-        return
-
-
-    codigo = projeto.get("codigo")
-    nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
-
-    atividade = item_remanejamento.get("del_atividade")
-    data_inicio = item_remanejamento.get("data_inicio")
-    data_fim = item_remanejamento.get("data_fim")
-
-    justificativa = item_remanejamento.get("justificativa", "")
-    autor = item_remanejamento.get("autor", "-")
-    data_aprov = item_remanejamento.get("data_aprov_remanej", "-")
-
-    assunto = "Remoção de atividade aprovada"
-
-    logo = logo_cepf
-
-
-    corpo_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <style>
-
-    body {{
-        font-family: Arial, Helvetica, sans-serif;
-        background-color: #f5f5f5;
-    }}
-
-    .container {{
-        max-width: 760px;
-        margin: 0 auto;
-        background: white;
-        border-top: 6px solid #28A745;
-        padding: 30px;
-    }}
-
-    .logo {{
-        text-align: center;
-        margin-bottom: 20px;
-    }}
-
-    .highlight {{
-        color: #28A745;
-        font-weight: bold;
-    }}
-
-    </style>
-    </head>
-
-    <body>
-
-    <div class="container">
-
-        <div class="logo">
-            <img src="{logo}" height="60">
-        </div>
-
-        <p>
-        Foi <span class="highlight"><strong>aprovada</strong></span>
-        uma solicitação de <strong>remoção de atividade</strong>
-        no projeto
-        <span class="highlight">{codigo} - {nome_projeto}</span>
-        da organização
-        <span class="highlight">{organizacao}</span>.
-        </p>
-
-        <br>
-
-        <p>
-        <strong>Solicitado por:</strong> {autor}<br>
-        <strong>Data da aprovação:</strong> {data_aprov}
-        </p>
-
-        <br>
-
-        <p><strong>Atividade removida:</strong></p>
-
-        <p>
-        <strong>Descrição:</strong> {atividade}<br>
-        <strong>Data de início:</strong> {data_inicio}<br>
-        <strong>Data de fim:</strong> {data_fim}
-        </p>
-
-        <br>
-
-        <p><strong>Justificativa da solicitação:</strong></p>
-        <p>{justificativa}</p>
 
         <br>
 
@@ -4990,78 +4958,80 @@ with remanejamentos:
                             type="primary"
                         ):
 
-                            # --------------------------------------------------
-                            # Validações
-                            # --------------------------------------------------
+                            with st.spinner("Enviando solicitação..."):
 
-                            if not descricao.strip():
-                                st.warning("Informe a descrição da atividade.")
-                                st.stop()
+                                # --------------------------------------------------
+                                # Validações
+                                # --------------------------------------------------
 
-                            if not justificativa.strip():
-                                st.warning("Informe a justificativa.")
-                                st.stop()
+                                if not descricao.strip():
+                                    st.warning("Informe a descrição da atividade.")
+                                    st.stop()
 
-                            if data_inicio > data_fim:
-                                st.warning("Data de início não pode ser maior que a data de fim.")
-                                st.stop()
+                                if not justificativa.strip():
+                                    st.warning("Informe a justificativa.")
+                                    st.stop()
 
-                            # --------------------------------------------------
-                            # Criar objeto de solicitação
-                            # --------------------------------------------------
+                                if data_inicio > data_fim:
+                                    st.warning("Data de início não pode ser maior que a data de fim.")
+                                    st.stop()
 
-                            nova_solicitacao = {
+                                # --------------------------------------------------
+                                # Criar objeto de solicitação
+                                # --------------------------------------------------
 
-                                "tipo_remanejamento": "adicionar_atividade",
+                                nova_solicitacao = {
 
-                                "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
+                                    "tipo_remanejamento": "adicionar_atividade",
 
-                                "status_remanejamento": "em_analise",
+                                    "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
 
-                                "componente": componente_sel,
+                                    "status_remanejamento": "em_analise",
 
-                                "entrega": entrega_sel,
+                                    "componente": componente_sel,
 
-                                "add_atividade": descricao,
+                                    "entrega": entrega_sel,
 
-                                "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+                                    "add_atividade": descricao,
 
-                                "data_fim": data_fim.strftime("%d/%m/%Y"),
+                                    "data_inicio": data_inicio.strftime("%d/%m/%Y"),
 
-                                "justificativa": justificativa,
+                                    "data_fim": data_fim.strftime("%d/%m/%Y"),
 
-                                "autor": st.session_state.get("nome")
-                            }
+                                    "justificativa": justificativa,
 
-                            # --------------------------------------------------
-                            # Salvar no Mongo
-                            # --------------------------------------------------
-
-                            col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
-                                {
-                                    "$push": {
-                                        "plano_trabalho.remanejamentos_atividades": nova_solicitacao
-                                    }
+                                    "autor": st.session_state.get("nome")
                                 }
-                            )
 
-                            # --------------------------------------------------
-                            # Enviar email
-                            # --------------------------------------------------
+                                # --------------------------------------------------
+                                # Salvar no Mongo
+                                # --------------------------------------------------
 
-                            enviar_email_nova_atividade(
-                                codigo_projeto_atual,
-                                projeto_dict,
-                            )
+                                col_projetos.update_one(
+                                    {"codigo": codigo_projeto_atual},
+                                    {
+                                        "$push": {
+                                            "plano_trabalho.remanejamentos_atividades": nova_solicitacao
+                                        }
+                                    }
+                                )
 
-                            st.success("Solicitação enviada com sucesso!", icon=":material/check:")
+                                # --------------------------------------------------
+                                # Enviar email
+                                # --------------------------------------------------
 
-                            st.session_state["mostrar_remanejamento"] = False
+                                enviar_email_nova_atividade(
+                                    codigo_projeto_atual,
+                                    projeto_dict,
+                                )
 
-                            time.sleep(3)
+                                st.success("Solicitação enviada com sucesso!", icon=":material/check:")
 
-                            st.rerun()
+                                st.session_state["mostrar_remanejamento"] = False
+
+                                time.sleep(3)
+
+                                st.rerun()
 
 
 
@@ -5206,72 +5176,74 @@ with remanejamentos:
                             type="primary",
                         ):
 
-                            if not justificativa.strip():
+                            with st.spinner("Enviando solicitação..."):
 
-                                st.warning("Informe a justificativa.")
-                                st.stop()
+                                if not justificativa.strip():
 
-
-
-                            nova_solicitacao = {
-
-                                "tipo_remanejamento": "remover_atividade",
-
-                                "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
-
-                                "status_remanejamento": "em_analise",
-
-                                "componente": componente_sel,
-
-                                "entrega": entrega_sel,
-
-                                "atividade_id": atividade_obj.get("id"),
-
-                                "del_atividade": atividade_sel,
-
-                                "justificativa": justificativa,
-
-                                "autor": st.session_state.get("nome")
-                            }
+                                    st.warning("Informe a justificativa.")
+                                    st.stop()
 
 
 
-                            col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
-                                {
-                                    "$push": {
-                                        "plano_trabalho.remanejamentos_atividades": nova_solicitacao
-                                    }
+                                nova_solicitacao = {
+
+                                    "tipo_remanejamento": "remover_atividade",
+
+                                    "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
+
+                                    "status_remanejamento": "em_analise",
+
+                                    "componente": componente_sel,
+
+                                    "entrega": entrega_sel,
+
+                                    "atividade_id": atividade_obj.get("id"),
+
+                                    "del_atividade": atividade_sel,
+
+                                    "justificativa": justificativa,
+
+                                    "autor": st.session_state.get("nome")
                                 }
-                            )
 
 
 
-                            # --------------------------------------------------
-                            # Enviar email
-                            # --------------------------------------------------
-
-                            projeto_atualizado = col_projetos.find_one(
-                                {"codigo": codigo_projeto_atual}
-                            )
-
-                            enviar_email_remocao_atividade_solicitada(
-                                codigo_projeto_atual,
-                                projeto_atualizado
-                            )
+                                col_projetos.update_one(
+                                    {"codigo": codigo_projeto_atual},
+                                    {
+                                        "$push": {
+                                            "plano_trabalho.remanejamentos_atividades": nova_solicitacao
+                                        }
+                                    }
+                                )
 
 
 
-                            st.success(
-                                "Solicitação enviada com sucesso!",
-                                icon=":material/check:"
-                            )
+                                # --------------------------------------------------
+                                # Enviar email
+                                # --------------------------------------------------
 
-                            st.session_state["mostrar_remanejamento"] = False
+                                projeto_atualizado = col_projetos.find_one(
+                                    {"codigo": codigo_projeto_atual}
+                                )
 
-                            time.sleep(3)
+                                enviar_email_remocao_atividade_solicitada(
+                                    codigo_projeto_atual,
+                                    projeto_atualizado
+                                )
 
-                            st.rerun()
+
+
+                                st.success(
+                                    "Solicitação enviada com sucesso!",
+                                    icon=":material/check:"
+                                )
+
+                                st.session_state["mostrar_remanejamento"] = False
+
+                                time.sleep(3)
+
+                                st.rerun()
 
 
 
