@@ -2267,11 +2267,14 @@ with plano_trabalho:
                                 width=20
                             ),
 
-                            "Porcentagem": st.column_config.NumberColumn(
+                            "Porcentagem": st.column_config.ProgressColumn(
                                 "Porcentagem",
+                                min_value=0,
+                                max_value=100,
                                 format="%d%%",
                                 width=20
                             )
+
                         }
                     )
 
