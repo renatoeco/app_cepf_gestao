@@ -2631,15 +2631,16 @@ with plano_trabalho:
                 type="secondary"
             )
 
+
+
             if salvar:
 
                 nova_lista = []
                 erro_validacao = False
 
-                # --------------------------------------------------
-                # VALIDAÇÃO + MONTAGEM
-                # --------------------------------------------------
-                for _, row in df_editado.iterrows():
+                entregas_existentes = componente.get("entregas", [])
+
+                for idx, row in df_editado.iterrows():
 
                     nome_entrega = str(row["entrega"]).strip()
                     indicadores_linha = row.get("Indicadores") or []
@@ -2652,15 +2653,28 @@ with plano_trabalho:
                         erro_validacao = True
                         continue
 
-                    nova_lista.append({
-                        "id": str(bson.ObjectId()),
-                        "entrega": nome_entrega,
-                        "indicadores_doador": indicadores_linha
-                    })
+                    # --------------------------------------------------
+                    # Preserva entrega existente se existir
+                    # --------------------------------------------------
+                    if idx < len(entregas_existentes):
+                        entrega_antiga = entregas_existentes[idx]
 
-                # --------------------------------------------------
-                # SÓ SALVA SE NÃO HOUVER ERRO
-                # --------------------------------------------------
+                        nova_lista.append({
+                            **entrega_antiga,
+                            "entrega": nome_entrega,
+                            "indicadores_doador": indicadores_linha
+                        })
+
+                    else:
+                        # Nova entrega criada
+                        nova_lista.append({
+                            "id": str(bson.ObjectId()),
+                            "entrega": nome_entrega,
+                            "indicadores_doador": indicadores_linha,
+                            "atividades": [],
+                            "indicadores_projeto": []
+                        })
+
                 if not erro_validacao:
 
                     for c in componentes:
@@ -2675,8 +2689,6 @@ with plano_trabalho:
                     st.success("Entregas atualizadas com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
-
-
 
 
 
@@ -2720,6 +2732,7 @@ with plano_trabalho:
                 type="secondary"
             )
 
+
             if salvar:
 
                 # Limpa nomes vazios
@@ -2728,13 +2741,34 @@ with plano_trabalho:
 
                 novos_componentes = []
 
-                # Cria nova lista com IDs novos
-                for _, row in df_editado.iterrows():
-                    novos_componentes.append({
-                        "id": str(bson.ObjectId()),
-                        "componente": row["componente"],
-                        "entregas": []
-                    })
+                componentes_existentes = componentes
+
+                for idx, row in df_editado.iterrows():
+
+                    nome_componente = row["componente"]
+
+                    # --------------------------------------------------
+                    # Se já existia componente → preserva entregas
+                    # --------------------------------------------------
+                    if idx < len(componentes_existentes):
+
+                        comp_antigo = componentes_existentes[idx]
+
+                        novos_componentes.append({
+                            **comp_antigo,
+                            "componente": nome_componente
+                        })
+
+                    # --------------------------------------------------
+                    # Novo componente
+                    # --------------------------------------------------
+                    else:
+
+                        novos_componentes.append({
+                            "id": str(bson.ObjectId()),
+                            "componente": nome_componente,
+                            "entregas": []
+                        })
 
                 col_projetos.update_one(
                     {"codigo": codigo_projeto_atual},
