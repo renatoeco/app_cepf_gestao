@@ -715,10 +715,13 @@ def salvar_relato():
     # 1. CAMPOS DO FORMULÁRIO
     # --------------------------------------------------
     texto_relato = st.session_state.get("campo_relato", "")
-    quando = st.session_state.get("campo_quando", "")
-    onde = st.session_state.get("campo_onde", "")
+    data_inicio = st.session_state.get("campo_data_inicio")
+    data_fim = st.session_state.get("campo_data_fim")
+    # quando = st.session_state.get("campo_quando", "")
+    # onde = st.session_state.get("campo_onde", "")
     anexos = st.session_state.get("campo_anexos", [])
     fotos = st.session_state.get("fotos_relato", [])
+    porcentagem_atividade = st.session_state.get("campo_porcentagem_atividade", 0)
 
     # --------------------------------------------------
     # 2. VALIDAÇÕES
@@ -726,8 +729,17 @@ def salvar_relato():
     erros = []
     if not texto_relato.strip():
         erros.append("O campo Relato é obrigatório.")
-    if not quando.strip():
-        erros.append("O campo Quando é obrigatório.")
+    # --------------------------------------------------
+    # VALIDAÇÃO DAS DATAS
+    # --------------------------------------------------
+
+    if not data_inicio:
+        erros.append("O campo Data de início é obrigatório.")
+
+    if not data_fim:
+        erros.append("O campo Data de fim é obrigatório.")
+    # if not quando.strip():
+    #     erros.append("O campo Quando é obrigatório.")
 
     if erros:
         for e in erros:
@@ -779,7 +791,7 @@ def salvar_relato():
         st.error("Atividade não encontrada no banco de dados.")
         return
 
-
+   
     # --------------------------------------------------
     # GERA ID DE RELATO GLOBALMENTE ÚNICO
     # --------------------------------------------------
@@ -911,15 +923,30 @@ def salvar_relato():
     # --------------------------------------------------
     # 9. OBJETO FINAL DO RELATO
     # --------------------------------------------------
+    
+    # CONVERSÃO DAS DATAS PARA STRING
+    # Converte os objetos datetime.date para string
+    # no formato brasileiro dd/mm/yyyy.
+
+    data_inicio_str = data_inicio.strftime("%d/%m/%Y") if data_inicio else None
+    data_fim_str = data_fim.strftime("%d/%m/%Y") if data_fim else None    
+    
+
     novo_relato = {
         "id_relato": id_relato,
-        "status_relato": "aberto",  # status inicial do relato
+        "status_relato": "aberto",
         "relatorio_numero": st.session_state.get("relatorio_numero"),
         "relato": texto_relato.strip(),
-        "quando": quando.strip(),
-        "onde": onde.strip(),
+
+        "data_inicio": data_inicio_str,
+        "data_fim": data_fim_str,
+
+        "porc_ativ_relato": int(porcentagem_atividade),
+
         "autor": st.session_state.get("nome", "Usuário")
     }
+
+
 
     if lista_anexos:
         novo_relato["anexos"] = lista_anexos
@@ -941,13 +968,16 @@ def salvar_relato():
     # --------------------------------------------------
     # 10. LIMPEZA DO SESSION_STATE (CRÍTICO)
     # --------------------------------------------------
+
     for chave in [
         "campo_relato",
-        "campo_quando",
-        "campo_onde",
+        "campo_data_inicio",
+        "campo_data_fim",
+        "campo_porcentagem_atividade",
         "campo_anexos",
         "fotos_relato"
     ]:
+
         if chave in st.session_state:
             del st.session_state[chave]
 
@@ -1038,6 +1068,47 @@ def dialog_relatos():
         key="atividade_select_dialog"
     )
 
+    # SELECTBOX DE PORCENTAGEM DE EXECUÇÃO DA ATIVIDADE
+
+    # opções de porcentagem
+    porcentagens = list(range(0, 101, 10))
+
+    porcentagem_atual = 0
+
+    # busca a porcentagem atual da atividade selecionada
+    if atividade_selecionada and atividade_selecionada.get("id"):
+
+        atividade_mongo = obter_atividade_mongo(
+            projeto,
+            atividade_selecionada["id"]
+        )
+
+        if atividade_mongo:
+            porcentagem_atual = atividade_mongo.get("porcentagem_atv", 0)
+
+    # garante que esteja dentro das opções
+    if porcentagem_atual not in porcentagens:
+        porcentagem_atual = 0
+
+    # sincroniza o session_state quando a atividade muda
+    if (
+        "campo_porcentagem_atividade" not in st.session_state
+        or st.session_state.get("atividade_porcentagem_ref") != atividade_selecionada.get("id")
+    ):
+        st.session_state["campo_porcentagem_atividade"] = porcentagem_atual
+        st.session_state["atividade_porcentagem_ref"] = atividade_selecionada.get("id")
+
+    # selectbox de porcentagem
+    porcentagem_escolhida = st.selectbox(
+        "Porcentagem de execução da atividade",
+        options=porcentagens,
+        format_func=lambda x: f"{x}%",
+        key="campo_porcentagem_atividade",
+        width=300
+    )
+
+
+
     # Salva no session_state (mesmo vazia, para validação)
     st.session_state["atividade_selecionada"] = atividade_selecionada
     st.session_state["atividade_selecionada_drive"] = atividade_selecionada
@@ -1057,17 +1128,28 @@ def dialog_relatos():
             key="campo_relato"
         )
 
-        col1, col2 = st.columns([1, 2])
 
-        col1.text_input(
-            "Quando?",
-            key="campo_quando"
+        # --------------------------------------------------
+        # CAMPOS DE DATA DO RELATO
+        # --------------------------------------------------
+        # Substitui os campos "Quando" e "Onde" por
+        # "Data de início" e "Data de fim".
+        # Utiliza st.date_input para garantir formato válido.
+
+        col1, col2 = st.columns(2)
+
+        col1.date_input(
+            "Data de início",
+            key="campo_data_inicio",
+            format="DD/MM/YYYY"
         )
 
-        col2.text_input(
-            "Onde?",
-            key="campo_onde"
+        col2.date_input(
+            "Data de fim",
+            key="campo_data_fim",
+            format="DD/MM/YYYY"
         )
+
 
         st.divider()
 
@@ -1178,11 +1260,18 @@ def dialog_relatos():
             if not st.session_state.get("campo_relato", "").strip():
                 erros.append("O campo Relato é obrigatório.")
 
-            if not st.session_state.get("campo_quando", "").strip():
-                erros.append("O campo Quando é obrigatório.")
+            # VALIDAÇÃO DAS DATAS
+            # Verifica se ambas as datas foram informadas.
 
-            if not st.session_state.get("campo_onde", "").strip():
-                erros.append("O campo Onde é obrigatório.")
+            data_inicio = st.session_state.get("campo_data_inicio")
+            data_fim = st.session_state.get("campo_data_fim")
+
+            if not data_inicio:
+                erros.append("O campo Data de início é obrigatório.")
+
+            if not data_fim:
+                erros.append("O campo Data de fim é obrigatório.")
+
 
             # Mostra erros (mesma funcionalidade de antes)
             if erros:
@@ -1946,8 +2035,15 @@ if step_selecionado == "Atividades":
                             st.write(f"**{id_relato.upper()}:** {relato.get("relato")}")
 
                             col1, col2 = st.columns([2, 3])
-                            col1.write(f"**Quando:** {relato.get('quando')}")
-                            col2.write(f"**Onde:** {relato.get('onde')}")
+
+                            col1.write(f"**Data de início:** {relato.get('data_inicio')}")
+                            col2.write(f"**Data de fim:** {relato.get('data_fim')}")
+
+                            if relato.get("porc_ativ_relato") is not None:
+                                st.write(f"**Progresso da atividade informado:** {relato.get('porc_ativ_relato')}%")
+
+                            # col1.write(f"**Quando:** {relato.get('quando')}")
+                            # col2.write(f"**Onde:** {relato.get('onde')}")
 
                             # --------------------------------------------------
                             # ANEXOS (links do Drive)
@@ -2115,6 +2211,19 @@ if step_selecionado == "Atividades":
                                         relato.pop("devolutiva", None)
                                         relato["status_aprovacao"] = f"Verificado por {nome} em {data}"
 
+                                        # Atualiza progresso da atividade com base no relato aprovado
+                                        if "porc_ativ_relato" in relato:
+
+                                            atividade_id = atividade["id"]
+                                            porcentagem_relato = int(relato["porc_ativ_relato"])
+
+                                            atividade_mongo = obter_atividade_mongo(projeto, atividade_id)
+
+                                            if atividade_mongo:
+                                                atividade_mongo["porcentagem_atv"] = porcentagem_relato
+
+
+
                                     elif novo_status_db == "em_analise":
                                         relato.pop("status_aprovacao", None)
 
@@ -2219,19 +2328,53 @@ if step_selecionado == "Atividades":
                                 key=f"edit_relato_{id_relato}"
                             )
 
+
+                            # --------------------------------------------------
+                            # CAMPOS DE DATA NA EDIÇÃO DO RELATO
+                            # --------------------------------------------------
+                            # Converte as datas armazenadas como string
+                            # (dd/mm/yyyy) para objeto datetime.date
+                            # necessário para o st.date_input.
+
+                            from datetime import datetime
+
+                            data_inicio_str = relato.get("data_inicio")
+                            data_fim_str = relato.get("data_fim")
+
+                            # Conversão segura para datetime.date
+                            data_inicio_valor = None
+                            data_fim_valor = None
+
+                            if data_inicio_str:
+                                try:
+                                    data_inicio_valor = datetime.strptime(data_inicio_str, "%d/%m/%Y").date()
+                                except Exception:
+                                    pass
+
+                            if data_fim_str:
+                                try:
+                                    data_fim_valor = datetime.strptime(data_fim_str, "%d/%m/%Y").date()
+                                except Exception:
+                                    pass
+
+
+                            # Interface de edição das datas
                             col1, col2 = st.columns(2)
 
-                            quando = col1.text_input(
-                                "Quando?",
-                                value=relato.get("quando", ""),
-                                key=f"edit_quando_{id_relato}"
+                            data_inicio = col1.date_input(
+                                "Data de início",
+                                value=data_inicio_valor,
+                                key=f"edit_data_inicio_{id_relato}",
+                                format="DD/MM/YYYY"
                             )
 
-                            onde = col2.text_input(
-                                "Onde?",
-                                value=relato.get("onde", ""),
-                                key=f"edit_onde_{id_relato}"
+                            data_fim = col2.date_input(
+                                "Data de fim",
+                                value=data_fim_valor,
+                                key=f"edit_data_fim_{id_relato}",
+                                format="DD/MM/YYYY"
                             )
+
 
                             st.divider()
 
@@ -2352,11 +2495,23 @@ if step_selecionado == "Atividades":
                                     with st.spinner("Salvando alterações. Aguarde..."):
 
                                         # ==================================================
-                                        # ATUALIZA TEXTO
+                                        # ATUALIZA TEXTO E DATAS DO RELATO
                                         # ==================================================
+
+                                        # Converte as datas selecionadas para string
+                                        # no formato dd/mm/yyyy antes de salvar.
+
                                         relato["relato"] = relato_texto
-                                        relato["quando"] = quando
-                                        relato["onde"] = onde
+
+                                        relato["data_inicio"] = (
+                                            data_inicio.strftime("%d/%m/%Y") if data_inicio else None
+                                        )
+
+                                        relato["data_fim"] = (
+                                            data_fim.strftime("%d/%m/%Y") if data_fim else None
+                                        )
+
+
 
                                         # ==================================================
                                         # REMOVE ITENS MARCADOS
@@ -3773,34 +3928,6 @@ if step_selecionado == "Beneficiários":
 
             st.write("**Tipos de Beneficiários e Benefícios:**")
 
-            # # =====================================================
-            # # MODO VISUALIZAÇÃO COM LISTA EM TÓPICOS - Para demostração de segunda opção !!!!!!!!!!!!!!!!!!!!!!!!!
-            # # =====================================================
-            # if modo_visualizacao_benef:
-
-            #     if not beneficiarios_bd:
-            #         st.write("Nenhum beneficiário cadastrado.")
-            #     else:
-            #         for b in beneficiarios_bd:
-
-            #             tipo = b.get("tipo_beneficiario")
-            #             beneficios = b.get("beneficios") or []
-
-            #             with st.container():
-            #                 st.write("")
-
-            #                 # Título: tipo de beneficiário
-            #                 st.markdown(f"**{tipo}**")
-
-            #                 # Lista de benefícios
-            #                 if beneficios:
-            #                     for beneficio in beneficios:
-            #                         st.markdown(f"- {beneficio}")
-            #                 else:
-            #                     st.markdown("_Nenhum benefício informado._")
-
-
-            # st.write('///////////////////////////')
 
 
             # =====================================================
