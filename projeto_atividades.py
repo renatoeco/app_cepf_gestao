@@ -4368,95 +4368,92 @@ with salvaguardas:
     st.divider()
 
 
-
-
-
-
-
-
     st.write("")
 
 
+    # Botão somente para equipe e adimn
 
+    if st.session_state.get("tipo_usuario") in ["equipe", "admin"]:
+        
 
-    # Botão para salvar as respostas no banco
-    if st.button("Salvar", icon=":material/save:", width=200, type="primary"):
+        # Botão para salvar as respostas no banco
+        if st.button("Salvar", icon=":material/save:", width=200, type="primary"):
 
-        # Data da avaliação
-        data_avaliacao = datetime.datetime.today().strftime("%d/%m/%Y")
+            # Data da avaliação
+            data_avaliacao = datetime.datetime.today().strftime("%d/%m/%Y")
 
-        # Estrutura organizada das respostas de salvaguardas
-        dados_salvaguardas = {
+            # Estrutura organizada das respostas de salvaguardas
+            dados_salvaguardas = {
 
-            "nome_avaliador_risco": nome_avaliador,
-            "data_aval_risco": data_avaliacao,
-            "categoria_geral_risco": categoria_geral,
+                "nome_avaliador_risco": nome_avaliador,
+                "data_aval_risco": data_avaliacao,
+                "categoria_geral_risco": categoria_geral,
 
-            "pol_2_trabalho": {
-                "aplicavel": st.session_state.get("salv_2_aplicavel"),
-                "detalhes": st.session_state.get("salv_2_detalhes"),
-                "categoria": st.session_state.get("salv_2_categoria_risco")
-            },
+                "pol_2_trabalho": {
+                    "aplicavel": st.session_state.get("salv_2_aplicavel"),
+                    "detalhes": st.session_state.get("salv_2_detalhes"),
+                    "categoria": st.session_state.get("salv_2_categoria_risco")
+                },
 
-            "pol_3_poluicao": {
-                "aplicavel": st.session_state.get("salv_3_aplicavel"),
-                "detalhes_pesticidas": st.session_state.get("salv_3_pesticidas_detalhes"),
-                "detalhes_poluicao": st.session_state.get("salv_3_poluicao_detalhes"),
-                "categoria": st.session_state.get("salv_3_categoria_risco")
-            },
+                "pol_3_poluicao": {
+                    "aplicavel": st.session_state.get("salv_3_aplicavel"),
+                    "detalhes_pesticidas": st.session_state.get("salv_3_pesticidas_detalhes"),
+                    "detalhes_poluicao": st.session_state.get("salv_3_poluicao_detalhes"),
+                    "categoria": st.session_state.get("salv_3_categoria_risco")
+                },
 
-            "pol_4_comunidade": {
-                "aplicavel": st.session_state.get("salv_4_aplicavel"),
-                "detalhes": st.session_state.get("salv_4_detalhes"),
-                "categoria": st.session_state.get("salv_4_categoria_risco")
-            },
+                "pol_4_comunidade": {
+                    "aplicavel": st.session_state.get("salv_4_aplicavel"),
+                    "detalhes": st.session_state.get("salv_4_detalhes"),
+                    "categoria": st.session_state.get("salv_4_categoria_risco")
+                },
 
-            "pol_5_reassentamento": {
-                "aplicavel": st.session_state.get("salv_5_aplicavel"),
-                "detalhes": st.session_state.get("salv_5_detalhes"),
-                "categoria": st.session_state.get("salv_5_categoria_risco")
-            },
+                "pol_5_reassentamento": {
+                    "aplicavel": st.session_state.get("salv_5_aplicavel"),
+                    "detalhes": st.session_state.get("salv_5_detalhes"),
+                    "categoria": st.session_state.get("salv_5_categoria_risco")
+                },
 
-            "pol_6_biodiversidade": {
-                "aplicavel": st.session_state.get("salv_6_aplicavel"),
-                "detalhes": st.session_state.get("salv_6_detalhes"),
-                "categoria": st.session_state.get("salv_6_categoria_risco")
-            },
+                "pol_6_biodiversidade": {
+                    "aplicavel": st.session_state.get("salv_6_aplicavel"),
+                    "detalhes": st.session_state.get("salv_6_detalhes"),
+                    "categoria": st.session_state.get("salv_6_categoria_risco")
+                },
 
-            "pol_7_indigenas": {
-                "aplicavel": st.session_state.get("salv_7_aplicavel"),
-                "detalhes": st.session_state.get("salv_7_detalhes"),
-                "categoria": st.session_state.get("salv_7_categoria_risco")
-            },
+                "pol_7_indigenas": {
+                    "aplicavel": st.session_state.get("salv_7_aplicavel"),
+                    "detalhes": st.session_state.get("salv_7_detalhes"),
+                    "categoria": st.session_state.get("salv_7_categoria_risco")
+                },
 
-            "pol_8_patrimonio": {
-                "aplicavel": st.session_state.get("salv_8_aplicavel"),
-                "detalhes": st.session_state.get("salv_8_detalhes"),
-                "categoria": st.session_state.get("salv_8_categoria_risco")
-            },
+                "pol_8_patrimonio": {
+                    "aplicavel": st.session_state.get("salv_8_aplicavel"),
+                    "detalhes": st.session_state.get("salv_8_detalhes"),
+                    "categoria": st.session_state.get("salv_8_categoria_risco")
+                },
 
-            "pol_9_genero": {
-                "aplicavel": st.session_state.get("salv_9_aplicavel"),
-                "detalhes": st.session_state.get("salv_9_detalhes"),
-                "categoria": st.session_state.get("salv_9_categoria_risco")
-            }
-        }
-
-        # Atualiza o documento do projeto no MongoDB
-        resultado = col_projetos.update_one(
-            {"codigo": codigo_projeto_atual},
-            {
-                "$set": {
-                    "salvaguardas": dados_salvaguardas
+                "pol_9_genero": {
+                    "aplicavel": st.session_state.get("salv_9_aplicavel"),
+                    "detalhes": st.session_state.get("salv_9_detalhes"),
+                    "categoria": st.session_state.get("salv_9_categoria_risco")
                 }
             }
-        )
 
-        # Mostra mensagem de sucesso
-        if resultado.modified_count >= 0:
-            st.success("Respostas salvas com sucesso!", icon=":material/check:")
-            time.sleep(3)
-            st.rerun()
+            # Atualiza o documento do projeto no MongoDB
+            resultado = col_projetos.update_one(
+                {"codigo": codigo_projeto_atual},
+                {
+                    "$set": {
+                        "salvaguardas": dados_salvaguardas
+                    }
+                }
+            )
+
+            # Mostra mensagem de sucesso
+            if resultado.modified_count >= 0:
+                st.success("Respostas salvas com sucesso!", icon=":material/check:")
+                time.sleep(3)
+                st.rerun()
 
 
 
