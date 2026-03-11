@@ -4436,13 +4436,6 @@ with salvaguardas:
 
 
 
-
-
-
-
-
-
-
     st.write("")
 
 
@@ -4785,39 +4778,6 @@ with remanejamentos:
                             )
 
 
-
-
-
-
-
-
-
-                        # with st.spinner("Salvando alterações..."):
-                        #     novo_remanejamento = {
-
-                        #         "data_solicit_remanej": datetime.datetime.today().strftime("%d/%m/%Y"),
-
-                        #         "status_remanejamento": "em_analise",
-
-                        #         "justificativa": justificativa,
-
-                        #         "atividade_id": atividade.get("id"),
-
-                        #         "antes": antes,
-
-                        #         "depois": depois
-                        #     }
-
-                        #     col_projetos.update_one(
-
-                        #         {"codigo": codigo_projeto_atual},
-
-                        #         {
-                        #             "$push": {
-                        #                 "plano_trabalho.remanejamentos_atividades": novo_remanejamento
-                        #             }
-                        #         }
-                        #     )
 
                             # Enviando email para os padrinhos
                             projeto_atualizado = col_projetos.find_one({"codigo": codigo_projeto_atual})
@@ -5416,13 +5376,15 @@ with remanejamentos:
 
             with st.container(border=True):
 
-                if "antes" in item:
+                tipo_rem = item.get("tipo_remanejamento")
+
+                if tipo_rem == "alterar_atividade":
                     renderizar_card_alteracao(item, idx, plano_trabalho_dict)
 
-                elif "add_atividade" in item:
+                elif tipo_rem == "adicionar_atividade":
                     renderizar_card_add(item)
 
-                elif "del_atividade" in item:
+                elif tipo_rem == "remover_atividade":
                     renderizar_card_del(item, idx)
 
 
