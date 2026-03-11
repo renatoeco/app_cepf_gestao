@@ -4753,32 +4753,71 @@ with remanejamentos:
                     # --------------------------------------------------
 
                     if depois:
+
                         with st.spinner("Salvando alterações..."):
+
                             novo_remanejamento = {
+
+                                "tipo_remanejamento": "alterar_atividade",
 
                                 "data_solicit_remanej": datetime.datetime.today().strftime("%d/%m/%Y"),
 
                                 "status_remanejamento": "em_analise",
 
-                                "justificativa": justificativa,
-
                                 "atividade_id": atividade.get("id"),
 
                                 "antes": antes,
 
-                                "depois": depois
+                                "depois": depois,
+
+                                "justificativa": justificativa,
+
+                                "autor": st.session_state.get("nome")
                             }
 
                             col_projetos.update_one(
-
                                 {"codigo": codigo_projeto_atual},
-
                                 {
                                     "$push": {
                                         "plano_trabalho.remanejamentos_atividades": novo_remanejamento
                                     }
                                 }
                             )
+
+
+
+
+
+
+
+
+
+                        # with st.spinner("Salvando alterações..."):
+                        #     novo_remanejamento = {
+
+                        #         "data_solicit_remanej": datetime.datetime.today().strftime("%d/%m/%Y"),
+
+                        #         "status_remanejamento": "em_analise",
+
+                        #         "justificativa": justificativa,
+
+                        #         "atividade_id": atividade.get("id"),
+
+                        #         "antes": antes,
+
+                        #         "depois": depois
+                        #     }
+
+                        #     col_projetos.update_one(
+
+                        #         {"codigo": codigo_projeto_atual},
+
+                        #         {
+                        #             "$push": {
+                        #                 "plano_trabalho.remanejamentos_atividades": novo_remanejamento
+                        #             }
+                        #         }
+                        #     )
 
                             # Enviando email para os padrinhos
                             projeto_atualizado = col_projetos.find_one({"codigo": codigo_projeto_atual})
@@ -4923,7 +4962,6 @@ with remanejamentos:
             # ADICIONAR ATIVIDADE
             # ------------------------------------------------------------------
 
-
             elif tipo_remanejamento == "Adicionar atividade":
 
                 # -----------------------------------------------------------------------------------
@@ -5062,10 +5100,6 @@ with remanejamentos:
 
                                     "status_remanejamento": "em_analise",
 
-                                    "componente": componente_sel,
-
-                                    "entrega": entrega_sel,
-
                                     "add_atividade": descricao,
 
                                     "data_inicio": data_inicio.strftime("%d/%m/%Y"),
@@ -5109,14 +5143,9 @@ with remanejamentos:
 
 
 
-
-
-
             # ------------------------------------------------------------------
             # REMOVER ATIVIDADE
             # ------------------------------------------------------------------
-
-
 
             elif tipo_remanejamento == "Remover atividade":
 
@@ -5266,10 +5295,6 @@ with remanejamentos:
                                     "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
 
                                     "status_remanejamento": "em_analise",
-
-                                    "componente": componente_sel,
-
-                                    "entrega": entrega_sel,
 
                                     "atividade_id": atividade_obj.get("id"),
 
