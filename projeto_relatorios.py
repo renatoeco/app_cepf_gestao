@@ -1068,6 +1068,37 @@ def dialog_relatos():
         key="atividade_select_dialog"
     )
 
+
+
+
+    # recupera datas da atividade selecionada
+    data_inicio_atv = None
+    data_fim_atv = None
+
+    if atividade_selecionada and atividade_selecionada.get("id"):
+
+        atividade_mongo = obter_atividade_mongo(
+            projeto,
+            atividade_selecionada["id"]
+        )
+
+        if atividade_mongo:
+            data_inicio_atv = atividade_mongo.get("data_inicio")
+            data_fim_atv = atividade_mongo.get("data_fim")
+
+    # mostra período programado da atividade
+    if data_inicio_atv and data_fim_atv:
+        st.write(
+            f"Atividade programada para iniciar em **{data_inicio_atv}** e terminar em **{data_fim_atv}**."
+        )
+
+
+
+
+
+
+
+
     # SELECTBOX DE PORCENTAGEM DE EXECUÇÃO DA ATIVIDADE
 
     # opções de porcentagem
@@ -1100,7 +1131,7 @@ def dialog_relatos():
 
     # selectbox de porcentagem
     porcentagem_escolhida = st.selectbox(
-        "Porcentagem de execução da atividade",
+        "Atualize a porcentagem de execução da atividade",
         options=porcentagens,
         format_func=lambda x: f"{x}%",
         key="campo_porcentagem_atividade",
@@ -1109,15 +1140,24 @@ def dialog_relatos():
 
 
 
+
+
+
     # Salva no session_state (mesmo vazia, para validação)
     st.session_state["atividade_selecionada"] = atividade_selecionada
     st.session_state["atividade_selecionada_drive"] = atividade_selecionada
+
+
+
+    
 
     # ==================================================
     # 3. FORMULÁRIO DO RELATO
     # ==================================================
     @st.fragment
     def corpo_formulario():
+
+        st.divider()
 
         # -----------------------------
         # CAMPOS BÁSICOS
