@@ -2236,7 +2236,8 @@ with orcamento:
 
 
         # --------------------------------------------------
-        # CALLBACK (mantido como está)
+        # CALLBACK - Seleção de despesa
+
         # --------------------------------------------------
         def criar_callback_selecao_orcamento(dataframe_orc, chave_tabela):
 
@@ -2361,6 +2362,14 @@ with orcamento:
 
 
 
+
+
+
+
+
+
+
+
     # ==================================================
     # MODO EDIÇÃO — CRUD DO ORÇAMENTO
     # ==================================================
@@ -2405,7 +2414,9 @@ with orcamento:
                 ]
             )
 
-        # Garantir colunas
+        # -----------------------------------
+        # Garantir existência das colunas
+        # -----------------------------------
         for col in [
             "categoria",
             "nome_despesa",
@@ -2418,15 +2429,44 @@ with orcamento:
                 df_orcamento[col] = None
 
         # -----------------------------------
-        # Calcular valores
+        # Preencher valores nulos
         # -----------------------------------
         df_orcamento["quantidade"] = df_orcamento["quantidade"].fillna(0)
         df_orcamento["valor_unitario"] = df_orcamento["valor_unitario"].fillna(0)
 
+        # -----------------------------------
+        # Calcular valor total
+        # -----------------------------------
         df_orcamento["valor_total"] = (
             df_orcamento["quantidade"] * df_orcamento["valor_unitario"]
         )
 
+
+        # -----------------------------------
+        # Função para formatar decimal com vírgula
+        # Mostra casas decimais apenas quando existirem
+        # -----------------------------------
+        def format_decimal(valor):
+
+            # Retornar vazio se for nulo
+            if pd.isna(valor):
+                return ""
+
+            # Converter para float
+            valor = float(valor)
+
+            # Se for inteiro, remover casas decimais
+            if valor.is_integer():
+                return str(int(valor))
+
+            # Caso contrário manter decimal e trocar ponto por vírgula
+            return str(valor).replace(".", ",")
+
+
+        # -----------------------------------
+        # Aplicar formatação
+        # -----------------------------------
+        df_orcamento["quantidade_fmt"] = df_orcamento["quantidade"].apply(format_decimal)
 
         df_orcamento["valor_unitario_fmt"] = df_orcamento["valor_unitario"].apply(format_brl)
         df_orcamento["valor_total_fmt"] = df_orcamento["valor_total"].apply(format_brl)
@@ -2434,8 +2474,6 @@ with orcamento:
         # -----------------------------------
         # Editor
         # -----------------------------------
-        
-
         df_editado = st.data_editor(
             df_orcamento[
                 [
@@ -2443,7 +2481,7 @@ with orcamento:
                     "nome_despesa",
                     "descricao_despesa",
                     "unidade",
-                    "quantidade",
+                    "quantidade_fmt",
                     "valor_unitario_fmt",
                     "valor_total_fmt",
                 ]
@@ -2466,10 +2504,8 @@ with orcamento:
                 "unidade": st.column_config.TextColumn(
                     "Unidade"
                 ),
-                "quantidade": st.column_config.NumberColumn(
-                    "Quantidade",
-                    min_value=0,
-                    step=1
+                "quantidade_fmt": st.column_config.TextColumn(
+                    "Quantidade"
                 ),
                 "valor_unitario_fmt": st.column_config.TextColumn(
                     "Valor unitário (R$)"
@@ -2482,9 +2518,34 @@ with orcamento:
             key="editor_orcamento",
         )
 
-
-
         st.write("")
+
+        # -----------------------------------
+        # Função para converter BRL → float
+        # -----------------------------------
+        def parse_brl(valor):
+            if not valor:
+                return 0.0
+            return float(
+                valor.replace("R$", "")
+                .replace(".", "")
+                .replace(",", ".")
+                .strip()
+            )
+
+        # -----------------------------------
+        # Função para converter decimal com vírgula
+        # -----------------------------------
+        def parse_decimal(valor):
+            if not valor:
+                return 0.0
+
+            return float(
+                str(valor)
+                .replace(".", "")
+                .replace(",", ".")
+                .strip()
+            )
 
         # -----------------------------------
         # Salvar
@@ -2496,19 +2557,19 @@ with orcamento:
                 how="any"
             ).copy()
 
-            # Converter string → float
-            def parse_brl(valor):
-                if not valor:
-                    return 0.0
-                return float(
-                    valor.replace("R$", "")
-                    .replace(".", "")
-                    .replace(",", ".")
-                    .strip()
-                )
+            # -----------------------------------
+            # Converter quantidade com vírgula → float
+            # -----------------------------------
+            df_salvar["quantidade"] = df_salvar["quantidade_fmt"].apply(parse_decimal)
 
-            df_salvar["quantidade"] = df_salvar["quantidade"].fillna(0)
+            # -----------------------------------
+            # Converter valor unitário
+            # -----------------------------------
             df_salvar["valor_unitario"] = df_salvar["valor_unitario_fmt"].apply(parse_brl)
+
+            # -----------------------------------
+            # Recalcular valor total
+            # -----------------------------------
             df_salvar["valor_total"] = (
                 df_salvar["quantidade"] * df_salvar["valor_unitario"]
             )
@@ -2528,6 +2589,9 @@ with orcamento:
                     }
                 )
 
+            # -----------------------------------
+            # Atualizar orçamento no projeto
+            # -----------------------------------
             col_projetos.update_one(
                 {"codigo": codigo_projeto_atual},
                 {
