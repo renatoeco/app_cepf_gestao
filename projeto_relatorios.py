@@ -1196,9 +1196,13 @@ def dialog_relatos():
         # -----------------------------
         # ANEXOS
         # -----------------------------
-        st.markdown("Anexos")
+        st.write("**Anexos**")
+        st.write("Adicione aqui todos os anexos relevantes para esse relato: listas de presença, relatórios, publicações, etc.")
+        st.write("Você pode adicionar vários arquivos de uma só vez. **Não inclua fotos aqui**.")
+        st.write("")
+        
         st.file_uploader(
-            "Selecione todos os arquivos relevantes para esse relato: listas de presença, relatórios, publicações, etc.",
+            "Selecione um ou vários arquivos.",
             type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
             accept_multiple_files=True,
             key="campo_anexos"
@@ -1210,7 +1214,11 @@ def dialog_relatos():
         # -----------------------------
         # FOTOGRAFIAS
         # -----------------------------
-        st.write("Fotografias")
+        st.write("**Fotografias**")
+
+        st.write("Selecione aqui todas as **fotografias** relevantes para esse relato.")
+        st.write("Você pode adicionar várias fotografias, mas uma de cada vez. Clique no botão **'Adicionar fotografia'** sempre que quiser adicionar mais uma.")
+
 
         if "fotos_relato" not in st.session_state:
             st.session_state["fotos_relato"] = []
