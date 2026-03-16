@@ -295,13 +295,13 @@ st.write('')
 
 
 
-aba_perguntas, aba_pesquisas, aba_direcoes, aba_indicadores, aba_beneficiarios, aba_beneficios, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
+aba_perguntas, aba_pesquisas, aba_direcoes, aba_indicadores, aba_publicos, aba_beneficios, aba_categorias_despesa, aba_corredores, aba_kbas = st.tabs([
 # aba_perguntas, aba_pesquisas, aba_beneficiarios, aba_direcoes, aba_indicadores, aba_categorias_despesa, aba_corredores, aba_kbas, aba_tipos_manejo = st.tabs([
     'Perguntas do Relatório',
     'Pesquisas',
     'Direções Estratégicas',
     'Indicadores de portifólio',
-    'Beneficiários',
+    'Públicos',
     'Benefícios',
     'Categorias de despesa',
     'Corredores',
@@ -1563,9 +1563,9 @@ with aba_indicadores:
 # ==========================================================
 
 
-with aba_beneficiarios:
+with aba_publicos:
 
-    st.subheader("Beneficiários")
+    st.subheader("Públicos")
     st.write('')
 
     # 1) Carrega documentos da coleção (ordenados)
@@ -1581,6 +1581,10 @@ with aba_beneficiarios:
     else:
         df_publicos["_id"] = ""
 
+    
+
+
+
     editar_publicos = st.toggle("Editar", key="editar_publicos")
     st.write('')
 
@@ -1594,7 +1598,8 @@ with aba_beneficiarios:
             st.dataframe(
                 df_publicos[["publico"]].sort_values("publico"),
                 hide_index=True,
-                width=500
+                width=500,
+                column_config={"publico": st.column_config.TextColumn("Público")},
             )
 
 
@@ -1619,7 +1624,10 @@ with aba_beneficiarios:
             num_rows="dynamic",
             hide_index=True,
             key="editor_publicos",
-            width=500
+            width=500,
+            column_config={
+                "publico": st.column_config.TextColumn("Público")
+            }
         )
 
         if st.button("Salvar alterações", icon=":material/save:", type="primary"):
