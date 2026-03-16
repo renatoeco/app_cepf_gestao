@@ -3903,6 +3903,10 @@ if step_selecionado == "Beneficiários":
             "Registre aqui os tipos de **Beneficiários** e **Benefícios** do projeto para cada comunidade."
         )
 
+        st.write(
+            "Se precisar, cadastre novas comunidades na opção **Locais** no menu lateral"
+        )
+
     st.write("")
     st.write("")
 
