@@ -1,5 +1,6 @@
+
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao # Funções personalizadas
+from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Funções personalizadas
 import pandas as pd
 import locale
 import re
@@ -36,35 +37,27 @@ df_publicos = pd.DataFrame(list(col_publicos.find()))
 # CONFIGURAÇÃO DE LOCALE
 ###########################################################################################################
 
-
-# CONFIGURAÇÃO DE LOCALIDADE PARA PORTUGUÊS (Ajuste conforme seu SO)
 try:
-    # Tenta a configuração comum em sistemas Linux/macOS
     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
 except locale.Error:
     try:
-        # Tenta a configuração comum em alguns sistemas Windows
         locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
     except locale.Error:
-        # Se falhar, usa a configuração padrão (geralmente inglês)
         print("Aviso: Não foi possível definir a localidade para Português. Usando a localidade padrão.")
 
-
-
-
-
 ###########################################################################################################
-# FUNÇÕES
+# FUNÇÕES AUXILIARES
 ###########################################################################################################
 
 def validar_cnpj(cnpj_str):
     """
+    Valida apenas o formato do CNPJ.
+
     Aceita:
     - 99.999.999/9999-99
     - 99999999999999
-    
-    Rejeita qualquer outra formatação.
     """
+
     cnpj_str = str(cnpj_str).strip()
 
     padrao_mascarado = re.compile(r"^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$")
@@ -74,13 +67,20 @@ def validar_cnpj(cnpj_str):
 
 
 def formatar_cnpj(cnpj_str):
-    """Converte qualquer formato válido para 99.999.999/9999-99."""
+    """
+    Converte qualquer CNPJ válido para o formato padrão.
+    """
+
     cnpj_limpo = re.sub(r"\D", "", str(cnpj_str))
+
     return f"{cnpj_limpo[0:2]}.{cnpj_limpo[2:5]}.{cnpj_limpo[5:8]}/{cnpj_limpo[8:12]}-{cnpj_limpo[12:14]}"
 
 
-
 def df_index1(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Ajusta o índice do dataframe para iniciar em 1.
+    """
+
     df2 = df.copy()
     df2.index = range(1, len(df2) + 1)
     return df2
@@ -89,33 +89,22 @@ def df_index1(df: pd.DataFrame) -> pd.DataFrame:
 
 
 ###########################################################################################################
-# TRATAMENTO DE DADOS   
+# CONTROLE DE LIMPEZA DO FORMULÁRIO
 ###########################################################################################################
 
+# Inicializa flag de limpeza do formulário
+if "limpar_form_organizacao" not in st.session_state:
+    st.session_state.limpar_form_organizacao = False
 
-# # Inclulir o status no dataframe de projetos
-# df_projetos['status'] = 'Em dia'
+# Caso a flag esteja ativa, limpa os campos antes dos widgets serem renderizados
+if st.session_state.limpar_form_organizacao:
 
-# # Converter object_id para string
-# # df_pessoas['_id'] = df_pessoas['_id'].astype(str)
-# df_projetos['_id'] = df_projetos['_id'].astype(str)
+    st.session_state.sigla_organizacao_input = ""
+    st.session_state.nome_organizacao_input = ""
+    st.session_state.cnpj_input = ""
 
-# # Convertendo datas de string para datetime
-# df_projetos['data_inicio_contrato_dtime'] = pd.to_datetime(
-#     df_projetos['data_inicio_contrato'], 
-#     format="%d/%m/%Y", 
-#     dayfirst=True, 
-#     errors="coerce"
-# )
-
-# df_projetos['data_fim_contrato_dtime'] = pd.to_datetime(
-#     df_projetos['data_fim_contrato'], 
-#     format="%d/%m/%Y", 
-#     dayfirst=True, 
-#     errors="coerce"
-# )
-
-
+    # Desativa a flag após limpar
+    st.session_state.limpar_form_organizacao = False
 
 
 
@@ -124,65 +113,140 @@ def df_index1(df: pd.DataFrame) -> pd.DataFrame:
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
-
 # Logo do sidebar
 st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página
 st.header("Nova Organização")
 
+# Seleção do tipo de cadastro
+opcao_cadastro = st.radio(
+    "",
+    ["Cadastro individual", "Cadastro em massa"],
+    key="opcao_cadastro",
+    horizontal=True
+)
 
-opcao_cadastro = st.radio("", ["Cadastro individual", "Cadastro em massa"], key="opcao_cadastro", horizontal=True)
+st.write("")
 
-st.write('')
-
+###########################################################################################################
+# CADASTRO INDIVIDUAL
+###########################################################################################################
 
 if opcao_cadastro == "Cadastro individual":
 
+    # Criação do formulário
+    with st.form(key="organizacao_form", border=False):
 
-    with st.form(key="organizacao_form", border=False, clear_on_submit=True):
+        # Campos de entrada com keys para controle via session_state
+        sigla_organizacao = st.text_input(
+            "Sigla da Organização",
+            key="sigla_organizacao_input"
+        )
 
-        # Regex para CNPJ no formato XX.XXX.XXX/XXXX-XX
-        CNPJ_REGEX = r"^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$"
+        nome_organizacao = st.text_input(
+            "Nome da Organização",
+            key="nome_organizacao_input"
+        )
 
-        sigla_organizacao = st.text_input("Sigla da Organização")
-        nome_organizacao = st.text_input("Nome da Organização")
-        cnpj = st.text_input("CNPJ", placeholder="00.000.000/0000-00")
+        cnpj = st.text_input(
+            "CNPJ",
+            placeholder="00.000.000/0000-00",
+            key="cnpj_input"
+        )
 
-        st.write('')
-        submit_button = st.form_submit_button("Salvar", icon=":material/save:", type="primary")
+        st.write("")
+
+        # Botão de envio
+        submit_button = st.form_submit_button(
+            "Salvar",
+            icon=":material/save:",
+            type="primary"
+        )
+
+
+        ###################################################################################################
+        # PROCESSAMENTO DO FORMULÁRIO
+        ###################################################################################################
 
         if submit_button:
 
-            # Verifica campos vazios
-            if not sigla_organizacao or not nome_organizacao or not cnpj:
-                st.error("Todos os campos devem ser preenchidos.")
-            
-            # Verifica formato do CNPJ usando regex
-            elif not re.match(CNPJ_REGEX, cnpj):
-                st.error("CNPJ inválido! Use o formato 00.000.000/0000-00")
-            
-            else:
-                # Verifica duplicidade no banco
-                sigla_existente = col_organizacoes.find_one({"sigla_organizacao": sigla_organizacao})
-                cnpj_existente = col_organizacoes.find_one({"cnpj": cnpj})
+            # Obtém valores atuais do formulário a partir do session_state
+            sigla_organizacao = st.session_state.sigla_organizacao_input.strip()
+            nome_organizacao = st.session_state.nome_organizacao_input.strip()
+            cnpj = st.session_state.cnpj_input.strip()
 
+            # Verifica se todos os campos foram preenchidos
+            if not sigla_organizacao or not nome_organizacao or not cnpj:
+
+                st.error("Todos os campos devem ser preenchidos.")
+
+            # Validação do formato do CNPJ
+            elif not validar_cnpj(cnpj):
+
+                st.error("CNPJ inválido. Utilize o formato **00.000.000/0000-00** ou apenas  14 números **00000000000000**.")
+
+            else:
+
+                # Padroniza o CNPJ para o formato oficial antes de consultar e salvar
+                cnpj = formatar_cnpj(cnpj)
+
+                # Verifica se já existe organização com a mesma sigla
+                sigla_existente = col_organizacoes.find_one({
+                    "sigla_organizacao": sigla_organizacao
+                })
+
+                # Verifica se já existe organização com o mesmo CNPJ
+                cnpj_existente = col_organizacoes.find_one({
+                    "cnpj": cnpj
+                })
+
+                # Tratamento de duplicidade de sigla
                 if sigla_existente:
-                    st.error(f"A sigla '{sigla_organizacao}' já está cadastrada em outra Organização.")
+
+                    st.error(
+                        f"A sigla '{sigla_organizacao}' já está cadastrada em outra Organização."
+                    )
+
+                # Tratamento de duplicidade de CNPJ
                 elif cnpj_existente:
-                    st.error(f"O CNPJ '{cnpj}' já está cadastrado em outra organização.")
+
+                    st.error(
+                        f"O CNPJ '{cnpj}' já está cadastrado em outra organização."
+                    )
+
                 else:
-                    # Inserção no banco
+
+                    ###########################################################################
+                    # INSERÇÃO NO BANCO
+                    ###########################################################################
+
+                    # Documento a ser inserido
                     novo_doc = {
                         "sigla_organizacao": sigla_organizacao,
                         "nome_organizacao": nome_organizacao,
                         "cnpj": cnpj
                     }
+
+                    # Insere o documento no MongoDB
                     col_organizacoes.insert_one(novo_doc)
-                    st.success("Organização cadastrada com sucesso!")
-                    
+
+                    ###########################################################################
+                    # FEEDBACK E LIMPEZA DO FORMULÁRIO
+                    ###########################################################################
+
+                    # Mensagem de sucesso
+                    st.success("Organização cadastrada com sucesso!", icon=":material/check:")
+
+                    # Ativa flag para limpar o formulário no próximo ciclo da aplicação
+                    st.session_state.limpar_form_organizacao = True
+
+                    # Pequena pausa para exibir a mensagem de sucesso ao usuário
                     time.sleep(3)
+
+                    # Recarrega a página
                     st.rerun()
+
 
                 
 
