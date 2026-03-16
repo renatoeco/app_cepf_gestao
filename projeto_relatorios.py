@@ -3474,6 +3474,25 @@ if step_selecionado == "Resultados":
                         salvar = False
 
                     # ======================================================
+                    # Mostra data da última coleta, se existir
+                    # ======================================================
+
+                    data_coleta = indicador.get("data_coleta")
+
+                    if data_coleta:
+
+                        with st.container(horizontal=True, horizontal_alignment="right"):
+
+                            if isinstance(data_coleta, datetime.datetime):
+                                data_str = data_coleta.strftime("%d/%m/%Y %H:%M")
+                            else:
+                                data_str = str(data_coleta)
+
+                            st.caption(f"Último registro em {data_str}")
+
+
+
+                    # ======================================================
                     # AÇÃO DE SALVAMENTO
                     # ======================================================
 

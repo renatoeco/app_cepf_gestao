@@ -3619,7 +3619,7 @@ with monitoramento:
                         # --------------------------------------------------
                         if resultado.matched_count == 1:
                             st.success("Indicadores do projeto salvos com sucesso.", icon=":material/check:")
-                            time.sleep(1)
+                            time.sleep(3)
                             st.rerun()
                         else:
                             st.error("Erro ao salvar indicadores do projeto.")
