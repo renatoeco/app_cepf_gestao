@@ -1062,7 +1062,7 @@ def dialog_relatos():
     )
 
     atividade_selecionada = st.selectbox(
-        "Selecione a atividade",
+        "Selecione a atividade *",
         atividades_com_placeholder,
         format_func=lambda x: x["atividade"],
         key="atividade_select_dialog"
@@ -1131,7 +1131,7 @@ def dialog_relatos():
 
     # selectbox de porcentagem
     porcentagem_escolhida = st.selectbox(
-        "Atualize a porcentagem de execução da atividade",
+        "Atualize a porcentagem de execução da atividade *",
         options=porcentagens,
         format_func=lambda x: f"{x}%",
         key="campo_porcentagem_atividade",
@@ -1163,7 +1163,7 @@ def dialog_relatos():
         # CAMPOS BÁSICOS
         # -----------------------------
         st.text_area(
-            "Relato",
+            "Relato *",
             placeholder="Descreva o que foi feito",
             key="campo_relato"
         )
@@ -1179,13 +1179,13 @@ def dialog_relatos():
         col1, col2 = st.columns(2)
 
         col1.date_input(
-            "Data de início",
+            "Data de início *",
             key="campo_data_inicio",
             format="DD/MM/YYYY"
         )
 
         col2.date_input(
-            "Data de fim",
+            "Data de fim *",
             key="campo_data_fim",
             format="DD/MM/YYYY"
         )
