@@ -2875,7 +2875,7 @@ if usuario_interno:
                     # --------------------------------------------------
                     arquivo = st.file_uploader(
                         "Selecione o arquivo do recibo:",
-                        type=["pdf", "png", "jpg", "jpeg"],
+                        type=["pdf", "png", "jpg", "jpeg", "docx", "doc"],
                         key=f"uploader_recibo_{numero}"
                     )
 
