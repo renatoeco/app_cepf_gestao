@@ -299,8 +299,8 @@ def login():
     # CSS para centralizar e estilizar
     st.markdown(
         """
-        <h2 style='text-align: center; color: slategray;'>
-            Plataforma de Gestão de Projetos do IEB
+        <h2 style='text-align: center; color: slategray; font-size: 3rem'>
+            Veredas - Gestão de Projetos
         </h2>
         """,
         unsafe_allow_html=True
