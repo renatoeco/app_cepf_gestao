@@ -39,7 +39,7 @@ if "form_projeto" not in st.session_state:
         "data_inicio": None,
         "data_fim": None,
         "responsavel": [],
-        "direcoes": [],
+        # "direcoes": [],
         "publicos": [],
         "objetivo": ""
     }
@@ -106,9 +106,9 @@ edital = st.selectbox(
 edital_doc = next((e for e in editais if e["codigo_edital"] == edital), {})
 
 
-direcoes_edital = [
-    d["tema"] for d in edital_doc.get("direcoes_estrategicas", [])
-]
+# direcoes_edital = [
+#     d["tema"] for d in edital_doc.get("direcoes_estrategicas", [])
+# ]
 
 
 
@@ -169,18 +169,18 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
         format_func=lambda x: "" if x is None else mapa_id_nome[x]
     )
 
-    #######################################################################################################
-    # DIREÇÕES ESTRATÉGICAS
-    #######################################################################################################
+    # #######################################################################################################
+    # # DIREÇÕES ESTRATÉGICAS
+    # #######################################################################################################
 
-    direcoes = st.multiselect(
-        "Direções estratégicas",
-        direcoes_edital,
-        default=[
-            d for d in st.session_state.form_projeto["direcoes"]
-            if d in direcoes_edital
-        ]
-    )
+    # direcoes = st.multiselect(
+    #     "Direções estratégicas",
+    #     direcoes_edital,
+    #     default=[
+    #         d for d in st.session_state.form_projeto["direcoes"]
+    #         if d in direcoes_edital
+    #     ]
+    # )
 
     #######################################################################################################
 
@@ -226,7 +226,7 @@ if submit:
         "data_inicio": data_inicio,
         "data_fim": data_fim,
         "responsavel": responsaveis_ids,  # lista de _id
-        "direcoes": direcoes,
+        # "direcoes": direcoes,
         "publicos": publicos,
         "objetivo": objetivo
     })
@@ -244,7 +244,7 @@ if submit:
         "Objetivo": objetivo,
         "Data início": data_inicio,
         "Data fim": data_fim,
-        "Direções": direcoes,
+        # "Direções": direcoes,
         "Públicos": publicos
     }
 
@@ -276,7 +276,7 @@ if submit:
             "duracao": duracao,
             "data_inicio_contrato": data_inicio.strftime("%d/%m/%Y"),
             "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
-            "direcoes_estrategicas": direcoes,
+            # "direcoes_estrategicas": direcoes,
             "publicos": publicos,
             "status": "Em dia"
         })
@@ -314,7 +314,7 @@ if submit:
             "data_inicio": None,
             "data_fim": None,
             "responsavel": [],
-            "direcoes": [],
+            # "direcoes": [],
             "publicos": [],
             "objetivo": ""
         }
