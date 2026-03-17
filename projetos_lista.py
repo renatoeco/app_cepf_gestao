@@ -24,7 +24,9 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
 
-
+# Organizações
+col_organizacoes = db["organizacoes"]
+df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 
 
 ###########################################################################################################

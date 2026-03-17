@@ -31,7 +31,7 @@ if "form_key" not in st.session_state:
 if "form_projeto" not in st.session_state:
     st.session_state.form_projeto = {
         "edital": "",
-        "organizacao": "",
+        "id_organizacao": "",
         "codigo": "",
         "sigla": "",
         "nome": "",
@@ -88,6 +88,27 @@ lista_ids = list(mapa_id_nome.keys())
 
 
 
+
+###########################################################################################################
+# DADOS AUXILIARES (ORGANIZAÇÕES)
+###########################################################################################################
+
+orgs = list(col_organizacoes.find().sort("nome_organizacao", 1))
+
+# mapa id -> nome da organização (para exibição no selectbox)
+mapa_org_id_nome = {
+    org["_id"]: org["nome_organizacao"]
+    for org in orgs
+}
+
+# lista de ids das organizações (será usada no selectbox)
+lista_org_ids = list(mapa_org_id_nome.keys())
+
+
+
+
+
+
 ###########################################################################################################
 # EDITAL (FORA DO FORM)
 ###########################################################################################################
@@ -118,15 +139,31 @@ edital_doc = next((e for e in editais if e["codigo_edital"] == edital), {})
 
 with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False):
 
-    orgs = list(col_organizacoes.find().sort("nome_organizacao", 1))
-    lista_orgs = [o["nome_organizacao"] for o in orgs]
 
-    organizacao = st.selectbox(
+
+    ###########################################################################################################
+    # SELECTBOX ORGANIZAÇÃO
+    # mostra o nome da organização, mas retorna o _id
+    ###########################################################################################################
+
+    organizacao_id = st.selectbox(
         "Organização",
-        lista_orgs,
-        index=lista_orgs.index(st.session_state.form_projeto["organizacao"])
-        if st.session_state.form_projeto["organizacao"] in lista_orgs else 0
+        lista_org_ids,
+        index=0,
+        format_func=lambda x: mapa_org_id_nome[x],  # exibe nome da organização
     )
+
+
+
+    # orgs = list(col_organizacoes.find().sort("nome_organizacao", 1))
+    # lista_orgs = [o["nome_organizacao"] for o in orgs]
+
+    # organizacao = st.selectbox(
+    #     "Organização",
+    #     lista_orgs,
+    #     index=lista_orgs.index(st.session_state.form_projeto["organizacao"])
+    #     if st.session_state.form_projeto["organizacao"] in lista_orgs else 0
+    # )
 
     codigo_projeto = st.text_input(
         "Código do Projeto",
@@ -218,7 +255,7 @@ if submit:
 
     st.session_state.form_projeto.update({
         "edital": edital,
-        "organizacao": organizacao,
+        "organizacao": organizacao_id,
         "codigo": codigo_projeto,
         "sigla": sigla_projeto,
         "nome": nome_projeto,
@@ -262,7 +299,7 @@ if submit:
     else:
 
         ###################################################################################################
-        # INSERE PROJETO (SEM RESPONSÁVEL)
+        # INSERE PROJETO
         ###################################################################################################
 
         col_projetos.insert_one({
@@ -270,7 +307,7 @@ if submit:
             "edital": edital,
             "codigo": codigo_projeto,
             "sigla": sigla_projeto,
-            "organizacao": organizacao,
+            "organizacao": organizacao_id,
             "nome_do_projeto": nome_projeto,
             "objetivo_geral": objetivo,
             "duracao": duracao,
@@ -306,7 +343,7 @@ if submit:
 
         st.session_state.form_projeto = {
             "edital": "",
-            "organizacao": "",
+            "id_organizacao": None,
             "codigo": "",
             "sigla": "",
             "nome": "",
