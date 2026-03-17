@@ -2300,8 +2300,6 @@ with plano_trabalho:
 
         if opcao_editar_pt == "Atividades":
 
-            st.write("")
-            st.write("")
 
             # ============================================================
             # Carregar plano de trabalho
@@ -2593,6 +2591,7 @@ with plano_trabalho:
 
             entregas_existentes = componente.get("entregas", [])
 
+            st.write('')
 
             # --------------------------------------------------
             # DataFrame para edição
