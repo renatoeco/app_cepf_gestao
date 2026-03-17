@@ -149,6 +149,18 @@ projeto = df_projeto.iloc[0]
 financeiro = projeto.get("financeiro", {})
 
 
+# Organizações
+
+df_organizacoes = pd.DataFrame(
+    list(
+        col_organizacoes.find()
+    )
+)
+
+mapa_org_id_nome = {
+    row["_id"]: row["nome_organizacao"]
+    for _, row in df_organizacoes.iterrows()
+}
 
 ###########################################################################################################
 # FUNÇÕES
@@ -2752,13 +2764,18 @@ if usuario_interno:
                                 )
 
                             else:
+
                                 # --------------------------------------------------
                                 # 3. Buscar organização (CNPJ)
                                 # --------------------------------------------------
+
+                                # Busca a organização diretamente pelo _id armazenado no projeto
                                 organizacao_doc = col_organizacoes.find_one(
-                                    {"nome_organizacao": projeto["organizacao"]},
+                                    {"_id": projeto["id_organizacao"]},
                                     {"cnpj": 1}
                                 )
+
+
 
                                 if not organizacao_doc:
                                     st.error(
@@ -2768,9 +2785,14 @@ if usuario_interno:
                                 else:
                                     cnpj_organizacao = organizacao_doc.get("cnpj")
 
+
                                     # --------------------------------------------------
                                     # 4. Gerar recibo DOCX
                                     # --------------------------------------------------
+
+                                    # Recupera nome da organização via mapa
+                                    nome_organizacao = mapa_org_id_nome.get(projeto["id_organizacao"], "")
+
                                     sucesso = gerar_recibo_docx(
                                         caminho_arquivo=caminho,
                                         valor_parcela=parcela.get("valor", 0),
@@ -2778,11 +2800,12 @@ if usuario_interno:
                                         nome_projeto=projeto["nome_do_projeto"],
                                         data_assinatura_contrato=projeto.get("contrato_data_assinatura"),
                                         contatos=contatos_assinam,
-                                        nome_organizacao=projeto["organizacao"],
+                                        nome_organizacao=nome_organizacao,
                                         cnpj_organizacao=cnpj_organizacao,
                                         contrato_nome=projeto.get("contrato_nome"),
                                         nome_investidor=nome_investidor
                                     )
+
 
                                     # --------------------------------------------------
                                     # 5. Pós-geração
