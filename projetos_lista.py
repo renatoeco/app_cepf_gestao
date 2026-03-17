@@ -130,18 +130,71 @@ st.header("Projetos")
 
 st.write('')
 
-# ============================================
-# SELEÇÃO DO EDITAL
-# ============================================
 
-# Lista de editais disponíveis
-lista_editais = sorted(df_editais['codigo_edital'].unique().tolist())
+col1, col2, col3, col4 = st.columns(4)
 
-# Adiciona "Todos" no início
-lista_editais = ["Todos"] + lista_editais
 
-# Selectbox de edital
-edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
+with col1:
+
+    # ============================================
+    # SELEÇÃO DO EDITAL
+    # ============================================
+
+    # Lista de editais disponíveis
+    lista_editais = sorted(df_editais['codigo_edital'].unique().tolist())
+
+    # Adiciona "Todos" no início
+    lista_editais = ["Todos"] + lista_editais
+
+    # Selectbox de edital
+    edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
+
+
+
+
+
+
+with col2:
+
+    # ============================================
+    # SELEÇÃO DA ORGANIZAÇÃO
+    # ============================================
+
+    # Cria coluna concatenada "SIGLA - Nome"
+    df_organizacoes["org_label"] = (
+        df_organizacoes["sigla_organizacao"] + " - " + df_organizacoes["nome_organizacao"]
+    )
+
+    # Ordena para melhor visualização
+    df_organizacoes = df_organizacoes.sort_values("org_label")
+
+    # Cria lista de opções
+    lista_orgs = df_organizacoes["org_label"].tolist()
+
+    # Adiciona opção "Todas"
+    lista_orgs = ["Todas"] + lista_orgs
+
+    # Cria mapa label -> id da organização
+    mapa_org_label_id = {
+        row["org_label"]: row["_id"]
+        for _, row in df_organizacoes.iterrows()
+    }
+
+    # Selectbox de organização
+    org_selecionada = st.selectbox(
+        "Selecione a organização",
+        lista_orgs,
+        width=300
+    )
+
+st.write('')
+
+
+
+
+
+
+
 
 st.write('')
 
@@ -153,7 +206,7 @@ col_titulo, col_toggle = st.columns([4, 1])
 # --- TÍTULO ---
 with col_titulo:
     if edital_selecionado == "Todos":
-        st.subheader("Todos os editais")
+        st.subheader("Todos")
 
         # Contagem de projetos
         total_projetos = len(df_projetos)
@@ -184,13 +237,18 @@ with col_toggle:
 
 
 # ============================================
-# FILTRO PRINCIPAL
+# FILTROS
 # ============================================
+
 
 df_filtrado = df_projetos.copy()
 
+col1, col2, col3, col4 = st.columns(4, gap="large")
 
-# Filtrar pelo edital selecionado
+# ###########################################################################################################
+# Filtrar pelo EDITAL
+# ###########################################################################################################
+
 if edital_selecionado != "Todos":
     df_filtrado = df_filtrado[df_filtrado["edital"] == edital_selecionado]
 
@@ -231,6 +289,37 @@ if ver_meus_projetos:
         st.stop()
 
     df_filtrado = df_meus
+
+
+
+# ###############################################################################
+# Filtrar pela ORGANIZAÇÃO
+# ###############################################################################
+
+
+if org_selecionada != "Todas":
+
+    # Recupera o id da organização selecionada
+    id_org = mapa_org_label_id.get(org_selecionada)
+
+    # Aplica filtro
+    df_filtrado = df_filtrado[
+        df_filtrado["id_organizacao"] == id_org
+    ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Se nenhum projeto encontrado
@@ -296,20 +385,6 @@ for index, projeto in df_filtrado.iterrows():
 
 
 
-    # cols[3].write(projeto.get('padrinho', '—'))
-
-
-    # # Próxima parcela
-    # prox_parcela = ""
-    # parcelas = projeto.get("parcelas", [])
-    # if isinstance(parcelas, list) and parcelas:
-    #     parcelas_ordenadas = sorted(parcelas, key=lambda x: x.get("parcela", 0))
-    #     for p in parcelas_ordenadas:
-    #         if "data_parcela_realizada" not in p:
-    #             prox_parcela = p.get("parcela")
-    #             break
-
-    # cols[4].write(str(prox_parcela))
 
     # Status
     status = projeto.get("status", "")
