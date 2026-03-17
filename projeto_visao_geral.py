@@ -83,6 +83,7 @@ col_projetos = db["projetos"]
 col_editais = db["editais"]
 # col_direcoes_estrategicas = db["direcoes_estrategicas"]
 col_publicos = db["publicos"]
+col_organizacoes = db["organizacoes"]   
 
 
 
@@ -255,15 +256,6 @@ def gerar_link_drive(id_arquivo):
 
 
 
-
-
-
-
-
-
-
-
-
 ###########################################################################################################
 # CONTEXTO DO USUÁRIO
 ###########################################################################################################
@@ -276,6 +268,7 @@ usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 ###########################################################################################################
 # CARREGAMENTO DOS DADOS
 ###########################################################################################################
+
 
 # Projeto
 
@@ -311,7 +304,21 @@ df_editais = pd.DataFrame(list(col_editais.find()))
 df_publicos = pd.DataFrame(list(col_publicos.find()))
 
 # Organizações
-df_organizacoes = pd.DataFrame(list(db["organizacoes"].find()))
+df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
+
+
+
+###########################################################################################################
+# MAPA ID -> NOME DA ORGANIZAÇÃO
+###########################################################################################################
+
+# cria um dicionário para acessar rapidamente o nome da organização pelo _id
+mapa_org_id_nome = {
+    row["_id"]: row["nome_organizacao"]
+    for _, row in df_organizacoes.iterrows()
+}
+
+
 
 
 ###########################################################################################################
@@ -410,11 +417,29 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 
 
 
+###########################################################################################################
+# RECUPERA NOME DA ORGANIZAÇÃO DO PROJETO
+###########################################################################################################
+
+# pega o id da organização armazenado no projeto
+id_org = df_projeto["id_organizacao"].values[0]
+
+# busca o nome da organização usando o mapa
+nome_org = mapa_org_id_nome.get(id_org, "")
+
+
+
 # MODO DE VISUALIZAÇÃO
 if not editar_cadastro:
 
+
+
+    ###########################################################################################################
+    # EXIBIÇÃO DOS DADOS DO PROJETO
+    ###########################################################################################################
+
     st.write(f"**Edital:** {df_projeto['edital'].values[0]}")
-    st.write(f"**Organização:** {df_projeto['organizacao'].values[0]}")
+    st.write(f"**Organização:** {nome_org}")
     st.write(f"**Nome do projeto:** {df_projeto['nome_do_projeto'].values[0]}")
     st.write(f"**Objetivo geral:** {df_projeto['objetivo_geral'].values[0]}")
     st.write(f"**Duração:** {df_projeto['duracao'].values[0]} meses")
@@ -1280,6 +1305,9 @@ else:
 
     with aba_info:
 
+        # lista de ids das organizações (usada no selectbox)
+        lista_org_ids = list(mapa_org_id_nome.keys())
+
         with st.form("form_editar_projeto", border=False):
 
             col1, col2, col3 = st.columns(3)
@@ -1309,20 +1337,44 @@ else:
 
 
             # ---------- ORGANIZAÇÃO ----------
-            lista_organizacoes = df_organizacoes["nome_organizacao"].tolist()
+            ###########################################################################################################
+            # SELECTBOX ORGANIZAÇÃO
+            # mostra nome da organização, mas retorna o _id
+            ###########################################################################################################
 
-            # Garante que o valor atual exista na lista
-            organizacao_atual = projeto.get("organizacao")
-            if organizacao_atual in lista_organizacoes:
-                index_organizacao = lista_organizacoes.index(organizacao_atual)
+            # id atual armazenado no projeto
+            id_organizacao_atual = projeto.get("id_organizacao")
+
+            # define o index correto
+            if id_organizacao_atual in lista_org_ids:
+                index_organizacao = lista_org_ids.index(id_organizacao_atual)
             else:
-                index_organizacao = 0  
+                index_organizacao = 0
 
-            organizacao = st.selectbox(    # Coluna 1
+            id_organizacao = st.selectbox(
                 "Organização",
-                options=lista_organizacoes,
-                index=index_organizacao
+                options=lista_org_ids,
+                index=index_organizacao,
+                format_func=lambda x: mapa_org_id_nome[x]  # exibe nome da organização
             )
+
+
+
+            # # ---------- ORGANIZAÇÃO ----------
+            # lista_organizacoes = df_organizacoes["nome_organizacao"].tolist()
+
+            # # Garante que o valor atual exista na lista
+            # organizacao_atual = projeto.get("organizacao")
+            # if organizacao_atual in lista_organizacoes:
+            #     index_organizacao = lista_organizacoes.index(organizacao_atual)
+            # else:
+            #     index_organizacao = 0  
+
+            # organizacao = st.selectbox(    # Coluna 1
+            #     "Organização",
+            #     options=lista_organizacoes,
+            #     index=index_organizacao
+            # )
 
 
             # ---------- NOME DO PROJETO ----------
@@ -1452,7 +1504,7 @@ else:
                     "Edital": edital,
                     "Código do Projeto": codigo,
                     "Sigla do Projeto": sigla,
-                    "Organização": organizacao,
+                    "Organização": id_organizacao,
                     "Nome do Projeto": nome,
                     "Objetivo Geral": objetivo,
                     "Duração do Projeto": duracao,
@@ -1505,7 +1557,7 @@ else:
                                         "edital": edital,
                                         "codigo": codigo,
                                         "sigla": sigla,
-                                        "organizacao": organizacao,
+                                        "id_organizacao": id_organizacao,
                                         "nome_do_projeto": nome,
                                         "objetivo_geral": objetivo,
                                         "duracao": duracao,
