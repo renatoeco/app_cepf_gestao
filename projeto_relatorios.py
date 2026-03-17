@@ -5129,6 +5129,37 @@ if step_selecionado == "Avaliação":
             key=f"chk_despesas_{relatorio_numero}"
         )
 
+
+
+
+        # -----------------------------
+        # RESULTADOS
+        # -----------------------------
+        res_key = f"chk_res_{relatorio_numero}"
+
+        st.checkbox(
+            "Resultados",
+            value="res_verif_por" in relatorio_db,
+            key=res_key,
+            on_change=atualizar_verificacao_relatorio,
+            args=(
+                projeto_codigo,
+                relatorio_numero,
+                "res_verif_por",
+                res_key
+            )
+        )
+
+        if relatorio_db.get("res_verif_por"):
+            st.caption(relatorio_db["res_verif_por"])
+
+
+
+
+
+
+
+
         # -----------------------------
         # BENEFICIÁRIOS
         # -----------------------------
@@ -5411,10 +5442,13 @@ if step_selecionado == "Avaliação":
         pode_aprovar = all([
             relatos_ok,
             despesas_ok,
+            "res_verif_por" in relatorio_db,
             "benef_verif_por" in relatorio_db,
             "pesq_verif_por" in relatorio_db,
             "form_verif_por" in relatorio_db
         ])
+
+
 
         # --------------------------------------------------
         # BOTÃO DE APROVAÇÃO

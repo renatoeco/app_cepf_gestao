@@ -3,6 +3,8 @@ from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personaliz
 import pandas as pd
 from bson import ObjectId
 import time
+from io import BytesIO
+
 
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
@@ -151,13 +153,117 @@ st.logo("images/ieb_logo.svg", size='large')
 
 st.header('Beneficiários(as)')
 
-st.divider()
-
-
 # Separando só os beneficiários
 df_benef = df_pessoas[
     df_pessoas["Tipo de usuário"] == "beneficiario"
 ]
+
+
+
+
+
+
+
+
+
+###########################################################################################################
+# EXPORTAÇÃO DE PESSOAS
+###########################################################################################################
+
+st.write('')
+
+# Inicializa variáveis de estado caso ainda não existam
+if "xlsx_pessoas" not in st.session_state:
+    st.session_state.xlsx_pessoas = None
+
+if "tabela_gerada" not in st.session_state:
+    st.session_state.tabela_gerada = False
+
+with st.container(horizontal=True, horizontal_alignment="right"):
+
+    # Popover para download da tabela
+    with st.popover("Baixar tabela", width=200):
+
+        # Fragment para isolar a renderização dos botões
+        @st.fragment
+        def fragment_exportacao():
+
+            # BOTÃO PARA GERAR A TABELA ------------------------------------------------
+            if st.button("Gerar tabela", icon=":material/settings:", width="stretch"):
+
+                # Filtra apenas usuários do tipo beneficiario
+                df_export = df_pessoas[
+                    df_pessoas["Tipo de usuário"] == "beneficiario"
+                ].copy()
+
+                # Mantém apenas as colunas necessárias
+                df_export = df_export[[
+                    "Nome",
+                    "E-mail",
+                    "Telefone",
+                    "Status",
+                    "Projetos"
+                ]]
+
+                # Renomeia coluna Nome para Nome completo
+                df_export = df_export.rename(columns={
+                    "Nome": "Nome completo"
+                })
+
+                # Converte lista de projetos em string separada por vírgula
+                def tratar_projetos(valor):
+                    if isinstance(valor, list):
+                        return ", ".join(valor)
+                    if isinstance(valor, str):
+                        return valor
+                    return ""
+
+                df_export["Projetos"] = df_export["Projetos"].apply(tratar_projetos)
+
+                # Cria arquivo XLSX em memória
+                buffer = BytesIO()
+
+                # Salva dataframe no Excel
+                with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                    df_export.to_excel(writer, index=False, sheet_name="Pessoas")
+
+                # Move o cursor do buffer para o início
+                buffer.seek(0)
+
+                # Armazena o arquivo em memória
+                st.session_state.xlsx_pessoas = buffer
+
+                # Marca que a tabela foi gerada
+                st.session_state.tabela_gerada = True
+
+
+
+            # BOTÃO DE DOWNLOAD -------------------------------------------------------
+            if st.session_state.tabela_gerada:
+
+                st.caption("Tabela gerada! Clique para baixar.")
+
+                st.download_button(
+                    label="Baixar tabela",
+                    data=st.session_state.xlsx_pessoas,
+                    file_name="beneficiarios.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    icon=":material/download:",
+                    type="primary",
+                    width="stretch"
+                )
+
+        # Executa o fragment
+        fragment_exportacao()
+
+
+
+
+
+
+st.divider()
+
+
 
 st.write('')
 
