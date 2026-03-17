@@ -1569,7 +1569,7 @@ with cron_desemb:
                 )
 
                 st.write('')
-                salvar = st.form_submit_button("Salvar", icon=":material/save:")
+                salvar = st.form_submit_button("Salvar", icon=":material/save:", width=150, type="primary")
 
                 if salvar:
                     col_projetos.update_one(
@@ -1581,7 +1581,7 @@ with cron_desemb:
                         }
                     )
 
-                    st.success("Valor total do projeto salvo com sucesso!")
+                    st.success("Valor total do projeto salvo com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
 
@@ -1718,7 +1718,6 @@ with cron_desemb:
             )
 
 
-
             # -----------------------------------
             # Total das porcentagens
             # -----------------------------------
@@ -1737,7 +1736,7 @@ with cron_desemb:
 
                 if df_salvar["percentual"].sum() != 100:
                     st.error(
-                        "A soma das porcentagens deve ser 100%. Os dados não foram salvos.",
+                        "Erro: Verifique se a soma das porcentagens é igual a 100%. Preencha todas as Datas previstas.",
                         icon=":material/error:"
                     )
                     st.stop()
