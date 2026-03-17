@@ -307,7 +307,7 @@ if submit:
             "edital": edital,
             "codigo": codigo_projeto,
             "sigla": sigla_projeto,
-            "organizacao": organizacao_id,
+            "id_organizacao": organizacao_id,
             "nome_do_projeto": nome_projeto,
             "objetivo_geral": objetivo,
             "duracao": duracao,

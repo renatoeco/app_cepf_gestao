@@ -34,7 +34,15 @@ df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 ###########################################################################################################
 
 
+###########################################################################################################
+# MAPA ID -> NOME DA ORGANIZAÇÃO
+###########################################################################################################
 
+# cria um dicionário para acessar rapidamente o nome da organização pelo _id
+mapa_org_id_nome = {
+    row["_id"]: row["nome_organizacao"]
+    for _, row in df_organizacoes.iterrows()
+}
 
 
 
@@ -264,7 +272,16 @@ for index, projeto in df_filtrado.iterrows():
 
     cols[0].write(projeto['codigo'])
     cols[1].write(projeto['sigla'])
-    cols[2].write(projeto['organizacao'])
+
+    # NOME DA ORGANIZAÇÃO
+    # recupera o nome da organização usando o id armazenado no projeto
+    nome_org = mapa_org_id_nome.get(projeto["id_organizacao"], "")
+
+    cols[2].write(nome_org)
+
+
+
+    # cols[2].write(projeto['organizacao'])
 
     # Padrinho
     valor = projeto.get("padrinho")
