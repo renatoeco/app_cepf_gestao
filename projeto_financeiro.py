@@ -2643,7 +2643,7 @@ if usuario_interno:
     with recibos:
 
         st.markdown("### Recibos")
-        st.caption("É necessário informar as **datas de pagamento** para a evolução do cronograma do projeto.")
+        st.caption("Ao **guardar o recibo**, é necessário informar a **data de pagamento** (para a evolução do cronograma do projeto).")
         st.write("")
 
         # --------------------------------------------------

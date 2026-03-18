@@ -1223,6 +1223,7 @@ def dialog_relatos():
         if "fotos_relato" not in st.session_state:
             st.session_state["fotos_relato"] = []
 
+        st.write('')
         # Botão para adicionar
         if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
             # Usamos um ID único para cada foto em vez de apenas o índice
@@ -1284,6 +1285,7 @@ def dialog_relatos():
         # --------------------------------------------------
         # AÇÕES FINAIS: BOTÕES + VALIDAÇÃO + SPINNER
         # --------------------------------------------------
+        st.write('')
         with st.container(horizontal=True):
 
             # Botão salvar
@@ -2058,7 +2060,10 @@ if step_selecionado == "Atividades":
                             # --------------------------------------------------
                             # BADGE VISUAL
                             # --------------------------------------------------
-                            st.markdown(
+                            
+                            col1, col2 = st.columns([9, 1])
+                            
+                            col2.markdown(
                                 f"""
                                 <div style="margin-bottom:6px;">
                                     <span style="

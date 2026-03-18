@@ -64,6 +64,80 @@ col_pessoas = db["pessoas"]
 
 
 
+# Função para calcuar o status da atividade
+
+def calcular_status_atividade(atividade):
+
+    hoje = pd.Timestamp.today().normalize()
+
+    data_inicio = pd.to_datetime(
+        atividade.get("data_inicio"),
+        format="%d/%m/%Y",
+        errors="coerce"
+    )
+
+    data_fim = pd.to_datetime(
+        atividade.get("data_fim"),
+        format="%d/%m/%Y",
+        errors="coerce"
+    )
+
+    porcentagem = atividade.get("porcentagem_atv", 0)
+
+    # Segurança
+    if pd.isna(data_inicio) or pd.isna(data_fim):
+        return "sem_data"
+
+    # Regra 1 — concluída
+    if porcentagem == 100:
+        return "concluída"
+
+    # Marcos de tempo
+    inicio_mais_30 = data_inicio + pd.Timedelta(days=30)
+    fim_menos_30 = data_fim - pd.Timedelta(days=30)
+
+    # Regra 2 — porcentagem == 0
+    if porcentagem == 0:
+
+        if hoje < inicio_mais_30:
+            return "prevista"
+
+        elif inicio_mais_30 <= hoje < fim_menos_30:
+            return "atrasada"
+
+        elif fim_menos_30 <= hoje <= data_fim:
+            return "próximo ao prazo"
+
+        elif hoje > data_fim:
+            return "atrasada"
+
+    # Regra 3 — em andamento
+    if 0 < porcentagem < 100:
+
+        if hoje < fim_menos_30:
+            return "em andamento"
+
+        elif fim_menos_30 <= hoje <= data_fim:
+            return "próximo ao prazo"
+
+        elif hoje > data_fim:
+            return "atrasada"
+
+    return "indefinido"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # ==================================================
 # Função para renderizar a interface de ações da equipe, no modo análise da solicitação de remanejamento
@@ -142,7 +216,7 @@ def renderizar_acoes_remanejamento(item, idx):
                     "atividade": descricao,
                     "data_inicio": data_inicio,
                     "data_fim": data_fim,
-                    "status_atividade": "prevista",
+                    # "status_atividade": "prevista",
                     "porcentagem_atv": 0
                 }
 
@@ -2229,16 +2303,35 @@ with plano_trabalho:
                         continue
 
                     # Converte para DataFrame
-                    df_atividades = pd.DataFrame(atividades)
+
+                    # Calcular o status das atividades
+                    atividades_processadas = []
+
+                    for a in atividades:
+
+                        status = calcular_status_atividade(a)
+
+                        atividades_processadas.append({
+                            "Atividade": a.get("atividade"),
+                            "Data de início": a.get("data_inicio"),
+                            "Data de fim": a.get("data_fim"),
+                            "Status": status,
+                            "Porcentagem": a.get("porcentagem_atv", 0)
+                        })
+
+                    df_atividades = pd.DataFrame(atividades_processadas)
 
 
-                    df_atividades = df_atividades.rename(columns={
-                        "atividade": "Atividade",
-                        "data_inicio": "Data de início",
-                        "data_fim": "Data de fim",
-                        "status_atividade": "Status",
-                        "porcentagem_atv": "Porcentagem"
-                    })
+                    # df_atividades = pd.DataFrame(atividades)
+
+
+                    # df_atividades = df_atividades.rename(columns={
+                    #     "atividade": "Atividade",
+                    #     "data_inicio": "Data de início",
+                    #     "data_fim": "Data de fim",
+                    #     "status_atividade": "Status",
+                    #     "porcentagem_atv": "Porcentagem"
+                    # })
 
                     st.dataframe(
                         df_atividades[
@@ -2521,7 +2614,7 @@ with plano_trabalho:
                             "data_fim": a["data_fim"],
 
                             # Campos padrão
-                            "status_atividade": "prevista",
+                            # "status_atividade": "prevista",
                             "porcentagem_atv": 0
                         })
 

@@ -342,7 +342,7 @@ st.divider()
 # col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
 
 larguras_colunas = [2, 2, 5, 2, 2, 2]
-col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Status", "Botão"]
+col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Status", "Abrir"]
 
 # Cabeçalhos
 cols = st.columns(larguras_colunas)
