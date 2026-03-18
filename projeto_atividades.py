@@ -2322,16 +2322,6 @@ with plano_trabalho:
                     df_atividades = pd.DataFrame(atividades_processadas)
 
 
-                    # df_atividades = pd.DataFrame(atividades)
-
-
-                    # df_atividades = df_atividades.rename(columns={
-                    #     "atividade": "Atividade",
-                    #     "data_inicio": "Data de início",
-                    #     "data_fim": "Data de fim",
-                    #     "status_atividade": "Status",
-                    #     "porcentagem_atv": "Porcentagem"
-                    # })
 
                     st.dataframe(
                         df_atividades[
@@ -2600,23 +2590,47 @@ with plano_trabalho:
 
                 else:
 
+                    atividades_antigas = {
+                        a["atividade"]: a for a in atividades_exist
+                    }
+
                     # ------------------------------------------------------
                     # Cria nova lista de atividades (sempre novos IDs)
                     # ------------------------------------------------------
+
                     nova_lista = []
 
                     for a in atividades_final:
 
-                        nova_lista.append({
-                            "id": str(bson.ObjectId()),
-                            "atividade": a["atividade"],
-                            "data_inicio": a["data_inicio"],
-                            "data_fim": a["data_fim"],
+                        atividade_antiga = atividades_antigas.get(a["atividade"])
 
-                            # Campos padrão
-                            # "status_atividade": "prevista",
-                            "porcentagem_atv": 0
-                        })
+                        if atividade_antiga:
+                            # Já existia → preserva dados
+                            nova_lista.append({
+                                "id": atividade_antiga.get("id"),
+                                "atividade": a["atividade"],
+                                "data_inicio": a["data_inicio"],
+                                "data_fim": a["data_fim"],
+
+                                # preservados
+                                "porcentagem_atv": atividade_antiga.get("porcentagem_atv", 0),
+                                "status_atividade": atividade_antiga.get("status_atividade"),
+                                "relatos": atividade_antiga.get("relatos", [])
+                            })
+
+                        else:
+                            # Nova atividade
+                            nova_lista.append({
+                                "id": str(bson.ObjectId()),
+                                "atividade": a["atividade"],
+                                "data_inicio": a["data_inicio"],
+                                "data_fim": a["data_fim"],
+
+                                # padrão inicial
+                                "porcentagem_atv": 0,
+                                "relatos": []
+                            })
+
 
                     # ------------------------------------------------------
                     # Atualiza apenas a entrega selecionada
