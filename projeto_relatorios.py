@@ -511,7 +511,7 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     ], key=lambda x: x.lower())
 
     escolha = st.selectbox(
-        "Categoria / Despesa",
+        "Categoria / Despesa *",
         options=opcoes
     )
 
@@ -524,10 +524,9 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     # Gera id sequencial
     id_despesa = gerar_id_lanc_despesa(projeto)
 
-    # col1, col2 = st.columns(2)
 
     data_despesa = st.date_input(
-        "Data da despesa",
+        "Data da despesa *",
         format="DD/MM/YYYY"
     )
 
@@ -541,7 +540,7 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     with col1:
 
         quantidade = st.number_input(
-            "Quantidade",
+            "Quantidade *",
             min_value=0,
             # value=1
         )
@@ -549,7 +548,7 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     with col2:
 
         valor_unitario = st.number_input(
-            "Valor unitário (R$)",
+            "Valor unitário (reais) *",
             min_value=0.0,
             format="%.2f"
         )
@@ -558,24 +557,37 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     with col3:
 
         valor = st.number_input(
-            "Valor total (R$)",
+            "Valor total (reais) *",
             min_value=0.0,
             format="%.2f"
         )
 
 
-    descricao = st.text_area("Descrição da despesa")
+    descricao = st.text_area("Descrição da despesa *")
 
     col1, col2 = st.columns([2, 1])
 
-    fornecedor = col1.text_input("Fornecedor")
-    cpf_cnpj = col2.text_input("CPF / CNPJ")
+    fornecedor = col1.text_input("Fornecedor *")
+    cpf_cnpj = col2.text_input("CPF / CNPJ *")
 
+
+    # ==================================================
+    # LABEL DINÂMICO DOS ANEXOS - se a despesa for do tipo taxa bancária, então o anexo não é obrigatório, não coloca * no label. 
+    # ==================================================
+
+    categoria_lower = categoria.lower()
+
+    # Verifica se é taxa bancária
+    is_taxa_bancaria = "taxas bancárias" in categoria_lower
+
+    # Define label dinamicamente
+    label_anexos = "Anexos" if is_taxa_bancaria else "Anexos *"
 
     anexos = st.file_uploader(
-        "Anexos",
+        label_anexos,
         accept_multiple_files=True
     )
+
 
     # ==================================================
     # AÇÕES
@@ -610,10 +622,10 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
                 erros_campos.append("Quantidade")
 
             if valor_unitario <= 0:
-                erros_campos.append("Valor unitário (R$)")
+                erros_campos.append("Valor unitário (reais)")
 
             if not valor or valor <= 0:
-                erros_campos.append("Valor total (R$)")
+                erros_campos.append("Valor total (reais)")
 
 
             # ==================================================
@@ -3137,45 +3149,41 @@ if step_selecionado == "Despesas":
                         # --------------------------------------------------
                         # CAMPOS PRINCIPAIS
                         # --------------------------------------------------
-                        col1, col2 = st.columns(2)
+                        col1, col2, col3, col4 = st.columns(4)
 
 
 
                         # --------------------------------------------------
                         # DATA
                         # --------------------------------------------------
-                        data = st.date_input(
-                            "Data da despesa",
+                        data = col1.date_input(
+                            "Data da despesa *",
                             value=pd.to_datetime(lanc["data_despesa"], dayfirst=True).date(),
                             format="DD/MM/YYYY",
                             key=f"edit_data_{id_despesa}"
                         )
 
-                        # --------------------------------------------------
-                        # LINHA DE VALORES (QUANTIDADE / UNITÁRIO / TOTAL)
-                        # --------------------------------------------------
-                        col1, col2, col3 = st.columns(3)
 
-                        with col1:
+                        with col2:
                             quantidade = st.number_input(
-                                "Quantidade",
+                                "Quantidade *",
                                 min_value=0,
                                 value=int(lanc.get("quantidade", 0)),
                                 key=f"edit_qtd_{id_despesa}"
                             )
 
-                        with col2:
+                        with col3:
                             valor_unitario = st.number_input(
-                                "Valor unitário (R$)",
+                                "Valor unitário (R$) *",
                                 min_value=0.0,
                                 value=float(lanc.get("valor_unitario", 0)),
                                 format="%.2f",
                                 key=f"edit_vunit_{id_despesa}"
                             )
 
-                        with col3:
+                        with col4:
                             valor = st.number_input(
-                                "Valor total (R$)",
+                                "Valor total (R$) *",
                                 min_value=0.0,
                                 value=float(lanc.get("valor_despesa", 0)),
                                 format="%.2f",
@@ -3185,7 +3193,7 @@ if step_selecionado == "Despesas":
 
 
                         descricao = st.text_area(
-                            "Descrição da despesa",
+                            "Descrição da despesa *",
                             value=lanc.get("descricao_despesa", ""),
                             key=f"edit_desc_{id_despesa}"
                         )
@@ -3193,13 +3201,13 @@ if step_selecionado == "Despesas":
                         col1, col2 = st.columns([2, 1])
 
                         fornecedor = col1.text_input(
-                            "Fornecedor",
+                            "Fornecedor *",
                             value=lanc.get("fornecedor", ""),
                             key=f"edit_forn_{id_despesa}"
                         )
 
                         cpf_cnpj = col2.text_input(
-                            "CPF/CNPJ",
+                            "CPF/CNPJ *",
                             value=lanc.get("cpf_cnpj", ""),
                             key=f"edit_doc_{id_despesa}"
                         )
@@ -3239,6 +3247,11 @@ if step_selecionado == "Despesas":
 
 
 
+                        # # ==================================================
+                        # # ÁREA DE MENSAGENS (ERROS / WARNINGS)
+                        # # ==================================================
+                        # container_erros = st.container()
+
 
                         # --------------------------------------------------
                         # AÇÕES
@@ -3247,6 +3260,15 @@ if step_selecionado == "Despesas":
 
 
                             with st.container(horizontal=True):
+
+
+                                if st.button(
+                                    "Cancelar",
+                                    key=f"btn_cancel_desp_{id_despesa}"
+                                ):
+                                    st.session_state["despesa_editando_id"] = None
+                                    st.rerun()
+
 
 
                                 if st.button(
@@ -3301,6 +3323,36 @@ if step_selecionado == "Despesas":
                                             erro_consistencia = (
                                                 f"Valor total deve ser igual a Quantidade × Valor unitário"
                                             )
+
+
+
+                                    # ==================================================
+                                    # VALIDAÇÃO DE ANEXOS (COM REMOÇÃO + NOVOS)
+                                    # ==================================================
+
+                                    # Regra:
+                                    # - Se NÃO for taxa bancária → precisa ter pelo menos 1 anexo no final
+
+                                    categoria_lower = categoria.lower()
+                                    is_taxa_bancaria = "taxas bancárias" in categoria_lower
+
+                                    if not is_taxa_bancaria:
+
+                                        anexos_existentes = lanc.get("anexos", [])
+
+                                        # Quantos permanecem após remoção
+                                        qtd_restantes = len(anexos_existentes) - len(anexos_remover)
+
+                                        # Quantos novos serão adicionados
+                                        qtd_novos = len(novos_anexos) if novos_anexos else 0
+
+                                        total_final = qtd_restantes + qtd_novos
+
+                                        if total_final <= 0:
+                                            erros_campos.append("Anexos (mínimo de 1 arquivo)")
+
+
+
 
                                     # ==================================================
                                     # EXIBE ERROS
@@ -3370,13 +3422,6 @@ if step_selecionado == "Despesas":
                                     st.session_state["despesa_editando_id"] = None
                                     st.success("Despesa atualizada com sucesso!", icon=":material/check:")
                                     time.sleep(3)
-                                    st.rerun()
-
-                                if st.button(
-                                    "Cancelar",
-                                    key=f"btn_cancel_desp_{id_despesa}"
-                                ):
-                                    st.session_state["despesa_editando_id"] = None
                                     st.rerun()
 
                         
