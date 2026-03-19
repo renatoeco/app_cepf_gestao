@@ -79,19 +79,32 @@ def editar_organizacao_dialog():
     # SELECTBOX PARA ESCOLHER A ORGANIZAÇÃO
     # ----------------------------------------------------------------------------------------------------
 
-    # Cria lista de opções concatenando sigla e nome
-    opcoes = (
+
+    # Cria coluna concatenada
+    df_organizacoes["org_label"] = (
         df_organizacoes["sigla_organizacao"]
         + " - "
         + df_organizacoes["nome_organizacao"]
-    ).tolist()
+    )
 
+    # Lista de opções
+    opcoes = df_organizacoes["org_label"].tolist()
+
+    # Mapa label -> id
+    mapa_org_label_id = {
+        row["org_label"]: row["_id"]
+        for _, row in df_organizacoes.iterrows()
+    }
+
+    # Selectbox
     escolha = st.selectbox(
         "Selecione a organização",
         options=opcoes,
         index=None,
         placeholder="Escolha uma organização"
     )
+
+
 
     # ----------------------------------------------------------------------------------------------------
     # CARREGAMENTO DOS DADOS DA ORGANIZAÇÃO SELECIONADA
@@ -100,10 +113,17 @@ def editar_organizacao_dialog():
     if escolha:
 
         # Extrai apenas a sigla da organização selecionada
-        sigla = escolha.split(" - ")[0]
+        
+        # Recupera o id da organização selecionada
+        org_id = mapa_org_label_id.get(escolha)
 
-        # Busca o documento correspondente no banco
-        org = col_organizacoes.find_one({"sigla_organizacao": sigla})
+        # Busca no banco pelo _id
+        org = col_organizacoes.find_one({"_id": org_id})
+        
+        
+        
+        # sigla = escolha.split(" - ")[0]
+
 
         if org:
 
@@ -232,22 +252,28 @@ def editar_organizacao_dialog():
 ###########################################################################################################
 
 
+# --------------------------------------------------
+# CONTAGEM DE PROJETOS POR ORGANIZAÇÃO (USANDO ID)
+# --------------------------------------------------
 
-# ---- Contagem de projetos por organização ----
-contagem_projetos = df_projetos["organizacao"].value_counts()
+# Conta projetos agrupando pelo id da organização
+contagem_projetos = df_projetos["id_organizacao"].value_counts()
 
-# ---- Merge para adicionar coluna de contagem ----
+# Merge usando o _id da organização
 df_organizacoes = df_organizacoes.merge(
     contagem_projetos.rename("quantidade_projetos"),
-    left_on="sigla_organizacao",
+    left_on="_id",
     right_index=True,
     how="left"
 )
 
-# ---- Organizações sem projeto ficam com 0 ----
+# Organizações sem projeto ficam com 0
 df_organizacoes["quantidade_projetos"] = (
     df_organizacoes["quantidade_projetos"].fillna(0).astype(int)
 )
+
+
+
 
 
 ###########################################################################################################

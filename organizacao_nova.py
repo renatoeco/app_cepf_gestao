@@ -306,14 +306,6 @@ elif opcao_cadastro == "Cadastro em massa":
 
 
 
-            # df_upload = pd.read_excel(arquivo)
-
-            # st.success("Arquivo carregado com sucesso!")
-
-            # # Exibir com index iniciado em 1
-            # st.dataframe(df_index1(df_upload))
-            # st.write("")
-
             # ==========================================================
             # 1) Validar colunas obrigatórias
             # ==========================================================
