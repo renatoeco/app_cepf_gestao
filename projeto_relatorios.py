@@ -2963,7 +2963,10 @@ if step_selecionado == "Despesas":
                     else:
                         badge = {"label": "Em análise", "bg": "#D1ECF1", "color": "#0C5460"}
 
-                    st.markdown(
+
+                    col1, col2 = st.columns([9, 1])
+
+                    col2.markdown(
                         f"""
                         <div style="margin-bottom:6px;">
                             <span style="
@@ -3136,19 +3139,50 @@ if step_selecionado == "Despesas":
                         # --------------------------------------------------
                         col1, col2 = st.columns(2)
 
-                        data = col1.date_input(
+
+
+                        # --------------------------------------------------
+                        # DATA
+                        # --------------------------------------------------
+                        data = st.date_input(
                             "Data da despesa",
                             value=pd.to_datetime(lanc["data_despesa"], dayfirst=True).date(),
                             format="DD/MM/YYYY",
                             key=f"edit_data_{id_despesa}"
                         )
 
-                        valor = col2.number_input(
-                            "Valor (R$)",
-                            value=float(lanc.get("valor_despesa", 0)),
-                            format="%.2f",
-                            key=f"edit_valor_{id_despesa}"
-                        )
+                        # --------------------------------------------------
+                        # LINHA DE VALORES (QUANTIDADE / UNITÁRIO / TOTAL)
+                        # --------------------------------------------------
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            quantidade = st.number_input(
+                                "Quantidade",
+                                min_value=0,
+                                value=int(lanc.get("quantidade", 0)),
+                                key=f"edit_qtd_{id_despesa}"
+                            )
+
+                        with col2:
+                            valor_unitario = st.number_input(
+                                "Valor unitário (R$)",
+                                min_value=0.0,
+                                value=float(lanc.get("valor_unitario", 0)),
+                                format="%.2f",
+                                key=f"edit_vunit_{id_despesa}"
+                            )
+
+                        with col3:
+                            valor = st.number_input(
+                                "Valor total (R$)",
+                                min_value=0.0,
+                                value=float(lanc.get("valor_despesa", 0)),
+                                format="%.2f",
+                                key=f"edit_valor_{id_despesa}"
+                            )
+
+
 
                         descricao = st.text_area(
                             "Descrição da despesa",
@@ -3221,16 +3255,83 @@ if step_selecionado == "Despesas":
                                     type="primary",
                                     icon=":material/save:"
                                 ):
+
+                                    # ==================================================
+                                    # VALIDAÇÕES
+                                    # ==================================================
+
+                                    erros_campos = []
+                                    erro_consistencia = None
+
+                                    # -------------------------------
+                                    # CAMPOS OBRIGATÓRIOS
+                                    # -------------------------------
+
+                                    if not data:
+                                        erros_campos.append("Data da despesa")
+
+                                    if quantidade <= 0:
+                                        erros_campos.append("Quantidade")
+
+                                    if valor_unitario <= 0:
+                                        erros_campos.append("Valor unitário (R$)")
+
+                                    if not valor or valor <= 0:
+                                        erros_campos.append("Valor total (R$)")
+
+                                    if not descricao or not descricao.strip():
+                                        erros_campos.append("Descrição da despesa")
+
+                                    if not fornecedor or not fornecedor.strip():
+                                        erros_campos.append("Fornecedor")
+
+                                    if not cpf_cnpj or not cpf_cnpj.strip():
+                                        erros_campos.append("CPF / CNPJ")
+
+                                    # -------------------------------
+                                    # CONSISTÊNCIA (CÁLCULO)
+                                    # -------------------------------
+
+                                    if quantidade > 0 and valor_unitario > 0 and valor > 0:
+
+                                        valor_calculado = round(quantidade * valor_unitario, 2)
+                                        valor_informado = round(valor, 2)
+
+                                        if valor_calculado != valor_informado:
+                                            erro_consistencia = (
+                                                f"Valor total deve ser igual a Quantidade × Valor unitário"
+                                            )
+
+                                    # ==================================================
+                                    # EXIBE ERROS
+                                    # ==================================================
+
+                                    if erros_campos:
+                                        campos = ", ".join(erros_campos)
+                                        st.warning(f"Preencha os seguintes campos obrigatórios: {campos}")
+
+                                    if erro_consistencia:
+                                        st.warning(erro_consistencia)
+
+                                    if erros_campos or erro_consistencia:
+                                        st.stop()
+
+                                    # ==================================================
+                                    # SALVAR
+                                    # ==================================================
                                     with st.spinner("Salvando alterações..."):
 
-                                        # Atualiza campos simples
                                         lanc.update({
                                             "data_despesa": data.strftime("%d/%m/%Y"),
                                             "descricao_despesa": descricao,
                                             "fornecedor": fornecedor,
                                             "cpf_cnpj": cpf_cnpj,
+                                            "quantidade": quantidade,
+                                            "valor_unitario": valor_unitario,
                                             "valor_despesa": valor
                                         })
+
+
 
                                         # Remove anexos marcados
                                         if anexos_remover:
