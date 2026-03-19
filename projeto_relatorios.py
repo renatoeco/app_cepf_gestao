@@ -24,9 +24,13 @@ from funcoes_auxiliares import (
 
 # ??????????????????
 
-st.write("datetime.now():", datetime.datetime.now())
-st.write("datetime.utcnow():", datetime.datetime.utcnow())
-st.write("time.tzname:", time.tzname)
+from zoneinfo import ZoneInfo
+
+utc = datetime.now(datetime.timezone.utc)
+sp = utc.astimezone(ZoneInfo("America/Sao_Paulo"))
+
+st.write("UTC:", utc)
+st.write("São Paulo:", sp)
 
 
 ###########################################################################################################
