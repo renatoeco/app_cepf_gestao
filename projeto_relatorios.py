@@ -5,6 +5,7 @@ import time
 import datetime
 from collections import defaultdict
 
+from zoneinfo import ZoneInfo 
 
 
 from funcoes_auxiliares import (
@@ -22,15 +23,6 @@ from funcoes_auxiliares import (
 )
 
 
-# ??????????????????
-
-from zoneinfo import ZoneInfo
-
-utc = datetime.datetime.now(datetime.timezone.utc)
-sp = utc.astimezone(ZoneInfo("America/Sao_Paulo"))
-
-st.write("UTC:", utc)
-st.write("São Paulo:", sp)
 
 
 ###########################################################################################################
@@ -3669,6 +3661,8 @@ if step_selecionado == "Resultados":
                     # Mostra data da última coleta, se existir
                     # ======================================================
 
+
+
                     data_coleta = indicador.get("data_coleta")
 
                     if data_coleta:
@@ -3676,11 +3670,46 @@ if step_selecionado == "Resultados":
                         with st.container(horizontal=True, horizontal_alignment="right"):
 
                             if isinstance(data_coleta, datetime.datetime):
-                                data_str = data_coleta.strftime("%d/%m/%Y %H:%M")
+
+                                # 🔥 CORREÇÃO IMPORTANTE
+                                if data_coleta.tzinfo is None:
+                                    data_coleta = data_coleta.replace(
+                                        tzinfo=datetime.timezone.utc
+                                    )
+
+                                data_local = data_coleta.astimezone(
+                                    ZoneInfo("America/Sao_Paulo")
+                                )
+
+                                data_str = data_local.strftime("%d/%m/%Y %H:%M")
+
                             else:
                                 data_str = str(data_coleta)
 
                             st.caption(f"Último registro em {data_str}")
+
+
+
+
+                    # data_coleta = indicador.get("data_coleta")
+
+                    # if data_coleta:
+
+                    #     with st.container(horizontal=True, horizontal_alignment="right"):
+
+
+                    #         if isinstance(data_coleta, datetime.datetime):
+                    #             data_local = data_coleta.astimezone(
+                    #                 ZoneInfo("America/Sao_Paulo")
+                    #             )
+                    #             data_str = data_local.strftime("%d/%m/%Y %H:%M")
+
+                    #         # if isinstance(data_coleta, datetime.datetime):
+                    #         #     data_str = data_coleta.strftime("%d/%m/%Y %H:%M")
+                    #         else:
+                    #             data_str = str(data_coleta)
+
+                    #         st.caption(f"Último registro em {data_str}")
 
 
 
@@ -3699,8 +3728,10 @@ if step_selecionado == "Resultados":
                             )
                             st.stop()
 
-                        # data_coleta = datetime.datetime.now(tz)
-                        data_coleta = datetime.datetime.now()
+
+
+                        data_coleta = datetime.datetime.now(datetime.timezone.utc)
+                        # data_coleta = datetime.datetime.now()
 
                         observacoes_salvar = observacoes
                         if observacoes_salvar is None or observacoes_salvar == "None":
