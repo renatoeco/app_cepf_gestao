@@ -4,7 +4,8 @@ import streamlit_antd_components as sac
 import time
 import datetime
 from collections import defaultdict
-from zoneinfo import ZoneInfo
+import pytz
+tz = pytz.timezone("America/Sao_Paulo")
 
 
 from funcoes_auxiliares import (
@@ -3690,7 +3691,7 @@ if step_selecionado == "Resultados":
                             )
                             st.stop()
 
-                        data_coleta = datetime.datetime.now(ZoneInfo("America/Sao_Paulo"))
+                        data_coleta = datetime.now(tz)
                         # data_coleta = datetime.datetime.now()
 
                         observacoes_salvar = observacoes
@@ -3721,7 +3722,7 @@ if step_selecionado == "Resultados":
                         indicador["observacoes_coleta"] = observacoes_salvar
                         indicador["data_coleta"] = data_coleta
 
-                        st.success("Indicador salvo com sucessoooo.", icon=":material/check:")
+                        st.success("Indicador salvo com sucesso.", icon=":material/check:")
                         time.sleep(3)
                         st.rerun()
 
