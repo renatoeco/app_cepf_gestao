@@ -471,7 +471,7 @@ def buscar_padrinhos_do_projeto(col_pessoas, codigo_projeto: str):
 
 
 
-def gerar_id_despesa(projeto):
+def gerar_id_lanc_despesa(projeto):
     """
     Gera id sequencial no formato despesa_001, despesa_002...
     """
@@ -480,7 +480,7 @@ def gerar_id_despesa(projeto):
 
     for despesa in projeto.get("financeiro", {}).get("orcamento", []):
         for lanc in despesa.get("lancamentos", []):
-            idd = lanc.get("id_despesa")
+            idd = lanc.get("id_lanc_despesa")
             if idd and idd.startswith("despesa_"):
                 try:
                     numeros.append(int(idd.split("_")[1]))
@@ -519,7 +519,7 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     # ==================================================
 
     # Gera id sequencial
-    id_despesa = gerar_id_despesa(projeto)
+    id_despesa = gerar_id_lanc_despesa(projeto)
 
     col1, col2 = st.columns(2)
 
@@ -625,7 +625,7 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
             with st.spinner("Salvando despesa..."):
 
                 novo_lancamento = {
-                    "id_despesa": id_despesa,
+                    "id_lanc_despesa": id_despesa,
                     "relatorio_numero": relatorio_numero,
                     "data_despesa": data_despesa.strftime("%d/%m/%Y"),
                     "descricao_despesa": descricao,
@@ -637,22 +637,6 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
                 }
 
 
-
-        # if st.button("Salvar", type="primary", icon=":material/save:"):
-
-        #     with st.spinner("Salvando despesa..."):
-
-        #         novo_lancamento = {
-        #             "id_despesa": id_despesa,
-        #             "relatorio_numero": relatorio_numero,
-        #             "data_despesa": data_despesa.strftime("%d/%m/%Y"),
-        #             "descricao_despesa": descricao,
-        #             "fornecedor": fornecedor,
-        #             "cpf_cnpj": cpf_cnpj,
-        #             "valor_despesa": valor,
-        #             "status_despesa": "aberto",
-        #             "anexos": []
-        #         }
 
                 # ==================================================
                 # DRIVE
@@ -2891,7 +2875,7 @@ if step_selecionado == "Despesas":
 
             for lanc in lancamentos:
 
-                id_despesa = lanc["id_despesa"]
+                id_despesa = lanc["id_lanc_despesa"]
 
                 # --------------------------------------------------
                 # CONTROLE DE EDIÇÃO INLINE
@@ -3292,7 +3276,7 @@ if step_selecionado == "Despesas":
                                                             if d["categoria"] == categoria and d["nome_despesa"] == nome_despesa:
                                                                 d["lancamentos"] = [
                                                                     l for l in d.get("lancamentos", [])
-                                                                    if l.get("id_despesa") != id_despesa
+                                                                    if l.get("id_lanc_despesa") != id_despesa
                                                                 ]
                                                                 break
 

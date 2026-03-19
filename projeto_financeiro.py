@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import datetime
 import os
-
+import uuid
 
 import streamlit_shadcn_ui as ui
 
@@ -1319,7 +1319,7 @@ def dialog_relatos_fin():
 
         with st.container(border=True):
 
-            id_despesa = lanc.get("id_despesa", "").upper()
+            id_despesa = lanc.get("id_lanc_despesa", "").upper()
             num_relatorio = lanc.get("relatorio_numero")
 
             st.markdown(f"**{id_despesa}** (R{num_relatorio})")
@@ -2422,6 +2422,7 @@ with orcamento:
                     "unidade",
                     "quantidade",
                     "valor_unitario",
+                    "id_despesa"
                 ]
             )
 
@@ -2435,6 +2436,7 @@ with orcamento:
             "unidade",
             "quantidade",
             "valor_unitario",
+            "id_despesa"
         ]:
             if col not in df_orcamento.columns:
                 df_orcamento[col] = None
@@ -2482,12 +2484,24 @@ with orcamento:
         df_orcamento["valor_unitario_fmt"] = df_orcamento["valor_unitario"].apply(format_brl)
         df_orcamento["valor_total_fmt"] = df_orcamento["valor_total"].apply(format_brl)
 
+
+
+
+        # -----------------------------------
+        # Garantir ID no dataframe (sem sobrescrever dados existentes)
+        # -----------------------------------
+        if "id_despesa" not in df_orcamento.columns:
+            df_orcamento["id_despesa"] = None
+
+
+
         # -----------------------------------
         # Editor
         # -----------------------------------
         df_editado = st.data_editor(
             df_orcamento[
                 [
+                    "id_despesa",
                     "categoria",
                     "nome_despesa",
                     "descricao_despesa",
@@ -2564,6 +2578,8 @@ with orcamento:
 
 
 
+
+
         if st.button("Salvar orçamento", icon=":material/save:"):
 
             # -----------------------------------
@@ -2596,28 +2612,41 @@ with orcamento:
             # -----------------------------------
             orcamento_atual = financeiro.get("orcamento", [])
 
+            # -----------------------------------
+            # MAPA POR ID 
+            # -----------------------------------
+            mapa_antigo = {
+                item.get("id_despesa"): item
+                for item in orcamento_atual
+                if item.get("id_despesa")
+            }
+
             novo_orcamento = []
 
             # -----------------------------------
-            # LOOP PARA MESCLAR (merge)
+            # LOOP PRINCIPAL
             # -----------------------------------
             for _, row in df_salvar.iterrows():
 
-                # Buscar item correspondente no orçamento atual
-                item_existente = next(
-                    (
-                        item for item in orcamento_atual
-                        if item.get("nome_despesa") == row["nome_despesa"]
-                        and item.get("categoria") == row["categoria"]
-                    ),
-                    {}
-                )
+                # -----------------------------------
+                # DEFINIR ID (mantém ou cria novo)
+                # -----------------------------------
+                id_despesa = row.get("id_despesa")
+
+                if not id_despesa or pd.isna(id_despesa):
+                    id_despesa = str(uuid.uuid4())
 
                 # -----------------------------------
-                # Criar item atualizado preservando dados antigos
+                # Buscar item antigo pelo ID
+                # -----------------------------------
+                item_existente = mapa_antigo.get(id_despesa, {})
+
+                # -----------------------------------
+                # Criar item final preservando dados
                 # -----------------------------------
                 item_atualizado = {
-                    # Campos editáveis
+                    "id_despesa": id_despesa,
+
                     "categoria": row["categoria"],
                     "nome_despesa": row["nome_despesa"],
                     "descricao_despesa": row.get("descricao_despesa"),
@@ -2626,14 +2655,20 @@ with orcamento:
                     "valor_unitario": float(row["valor_unitario"]),
                     "valor_total": float(row["valor_total"]),
 
-                    # 🔥 PRESERVAR campos existentes (EX: lancamentos)
+                    # Preservar lançamentos existentes
                     "lancamentos": item_existente.get("lancamentos", [])
                 }
+
+                # -----------------------------------
+                # Garantir consistência: vincular lançamentos ao id_despesa
+                # -----------------------------------
+                for lanc in item_atualizado["lancamentos"]:
+                    lanc["id_despesa"] = id_despesa
 
                 novo_orcamento.append(item_atualizado)
 
             # -----------------------------------
-            # Atualizar no banco
+            # Salvar no banco
             # -----------------------------------
             col_projetos.update_one(
                 {"codigo": codigo_projeto_atual},
@@ -2648,67 +2683,6 @@ with orcamento:
             time.sleep(3)
             st.rerun()
 
-
-
-
-
-
-
-
-        # if st.button("Salvar orçamento", icon=":material/save:"):
-
-        #     df_salvar = df_editado.dropna(
-        #         subset=["categoria", "nome_despesa"],
-        #         how="any"
-        #     ).copy()
-
-        #     # -----------------------------------
-        #     # Converter quantidade com vírgula → float
-        #     # -----------------------------------
-        #     df_salvar["quantidade"] = df_salvar["quantidade_fmt"].apply(parse_decimal)
-
-        #     # -----------------------------------
-        #     # Converter valor unitário
-        #     # -----------------------------------
-        #     df_salvar["valor_unitario"] = df_salvar["valor_unitario_fmt"].apply(parse_brl)
-
-        #     # -----------------------------------
-        #     # Recalcular valor total
-        #     # -----------------------------------
-        #     df_salvar["valor_total"] = (
-        #         df_salvar["quantidade"] * df_salvar["valor_unitario"]
-        #     )
-
-        #     orcamento_salvar = []
-
-        #     for _, row in df_salvar.iterrows():
-        #         orcamento_salvar.append(
-        #             {
-        #                 "categoria": row["categoria"],
-        #                 "nome_despesa": row["nome_despesa"],
-        #                 "descricao_despesa": row.get("descricao_despesa"),
-        #                 "unidade": row.get("unidade"),
-        #                 "quantidade": float(row["quantidade"]),
-        #                 "valor_unitario": float(row["valor_unitario"]),
-        #                 "valor_total": float(row["valor_total"]),
-        #             }
-        #         )
-
-        #     # -----------------------------------
-        #     # Atualizar orçamento no projeto
-        #     # -----------------------------------
-        #     col_projetos.update_one(
-        #         {"codigo": codigo_projeto_atual},
-        #         {
-        #             "$set": {
-        #                 "financeiro.orcamento": orcamento_salvar
-        #             }
-        #         }
-        #     )
-
-        #     st.success("Orçamento salvo com sucesso!", icon=":material/check:")
-        #     time.sleep(3)
-        #     st.rerun()
 
 
 
