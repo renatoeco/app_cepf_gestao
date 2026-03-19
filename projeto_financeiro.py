@@ -2561,15 +2561,21 @@ with orcamento:
         # -----------------------------------
         # Salvar
         # -----------------------------------
+
+
+
         if st.button("Salvar orçamento", icon=":material/save:"):
 
+            # -----------------------------------
+            # Filtrar linhas válidas
+            # -----------------------------------
             df_salvar = df_editado.dropna(
                 subset=["categoria", "nome_despesa"],
                 how="any"
             ).copy()
 
             # -----------------------------------
-            # Converter quantidade com vírgula → float
+            # Converter quantidade
             # -----------------------------------
             df_salvar["quantidade"] = df_salvar["quantidade_fmt"].apply(parse_decimal)
 
@@ -2579,35 +2585,61 @@ with orcamento:
             df_salvar["valor_unitario"] = df_salvar["valor_unitario_fmt"].apply(parse_brl)
 
             # -----------------------------------
-            # Recalcular valor total
+            # Recalcular total
             # -----------------------------------
             df_salvar["valor_total"] = (
                 df_salvar["quantidade"] * df_salvar["valor_unitario"]
             )
 
-            orcamento_salvar = []
+            # -----------------------------------
+            # ORÇAMENTO ATUAL DO BANCO
+            # -----------------------------------
+            orcamento_atual = financeiro.get("orcamento", [])
 
-            for _, row in df_salvar.iterrows():
-                orcamento_salvar.append(
-                    {
-                        "categoria": row["categoria"],
-                        "nome_despesa": row["nome_despesa"],
-                        "descricao_despesa": row.get("descricao_despesa"),
-                        "unidade": row.get("unidade"),
-                        "quantidade": float(row["quantidade"]),
-                        "valor_unitario": float(row["valor_unitario"]),
-                        "valor_total": float(row["valor_total"]),
-                    }
-                )
+            novo_orcamento = []
 
             # -----------------------------------
-            # Atualizar orçamento no projeto
+            # LOOP PARA MESCLAR (merge)
+            # -----------------------------------
+            for _, row in df_salvar.iterrows():
+
+                # Buscar item correspondente no orçamento atual
+                item_existente = next(
+                    (
+                        item for item in orcamento_atual
+                        if item.get("nome_despesa") == row["nome_despesa"]
+                        and item.get("categoria") == row["categoria"]
+                    ),
+                    {}
+                )
+
+                # -----------------------------------
+                # Criar item atualizado preservando dados antigos
+                # -----------------------------------
+                item_atualizado = {
+                    # Campos editáveis
+                    "categoria": row["categoria"],
+                    "nome_despesa": row["nome_despesa"],
+                    "descricao_despesa": row.get("descricao_despesa"),
+                    "unidade": row.get("unidade"),
+                    "quantidade": float(row["quantidade"]),
+                    "valor_unitario": float(row["valor_unitario"]),
+                    "valor_total": float(row["valor_total"]),
+
+                    # 🔥 PRESERVAR campos existentes (EX: lancamentos)
+                    "lancamentos": item_existente.get("lancamentos", [])
+                }
+
+                novo_orcamento.append(item_atualizado)
+
+            # -----------------------------------
+            # Atualizar no banco
             # -----------------------------------
             col_projetos.update_one(
                 {"codigo": codigo_projeto_atual},
                 {
                     "$set": {
-                        "financeiro.orcamento": orcamento_salvar
+                        "financeiro.orcamento": novo_orcamento
                     }
                 }
             )
@@ -2615,6 +2647,68 @@ with orcamento:
             st.success("Orçamento salvo com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
+
+
+
+
+
+
+
+
+        # if st.button("Salvar orçamento", icon=":material/save:"):
+
+        #     df_salvar = df_editado.dropna(
+        #         subset=["categoria", "nome_despesa"],
+        #         how="any"
+        #     ).copy()
+
+        #     # -----------------------------------
+        #     # Converter quantidade com vírgula → float
+        #     # -----------------------------------
+        #     df_salvar["quantidade"] = df_salvar["quantidade_fmt"].apply(parse_decimal)
+
+        #     # -----------------------------------
+        #     # Converter valor unitário
+        #     # -----------------------------------
+        #     df_salvar["valor_unitario"] = df_salvar["valor_unitario_fmt"].apply(parse_brl)
+
+        #     # -----------------------------------
+        #     # Recalcular valor total
+        #     # -----------------------------------
+        #     df_salvar["valor_total"] = (
+        #         df_salvar["quantidade"] * df_salvar["valor_unitario"]
+        #     )
+
+        #     orcamento_salvar = []
+
+        #     for _, row in df_salvar.iterrows():
+        #         orcamento_salvar.append(
+        #             {
+        #                 "categoria": row["categoria"],
+        #                 "nome_despesa": row["nome_despesa"],
+        #                 "descricao_despesa": row.get("descricao_despesa"),
+        #                 "unidade": row.get("unidade"),
+        #                 "quantidade": float(row["quantidade"]),
+        #                 "valor_unitario": float(row["valor_unitario"]),
+        #                 "valor_total": float(row["valor_total"]),
+        #             }
+        #         )
+
+        #     # -----------------------------------
+        #     # Atualizar orçamento no projeto
+        #     # -----------------------------------
+        #     col_projetos.update_one(
+        #         {"codigo": codigo_projeto_atual},
+        #         {
+        #             "$set": {
+        #                 "financeiro.orcamento": orcamento_salvar
+        #             }
+        #         }
+        #     )
+
+        #     st.success("Orçamento salvo com sucesso!", icon=":material/check:")
+        #     time.sleep(3)
+        #     st.rerun()
 
 
 
