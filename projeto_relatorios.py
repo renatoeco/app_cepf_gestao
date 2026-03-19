@@ -26,7 +26,7 @@ from funcoes_auxiliares import (
 
 from zoneinfo import ZoneInfo
 
-utc = datetime.now(datetime.timezone.utc)
+utc = datetime.datetime.now(datetime.timezone.utc)
 sp = utc.astimezone(ZoneInfo("America/Sao_Paulo"))
 
 st.write("UTC:", utc)
