@@ -524,21 +524,45 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
     # Gera id sequencial
     id_despesa = gerar_id_lanc_despesa(projeto)
 
-    col1, col2 = st.columns(2)
+    # col1, col2 = st.columns(2)
 
-    data_despesa = col1.date_input(
+    data_despesa = st.date_input(
         "Data da despesa",
         format="DD/MM/YYYY"
     )
 
-    # data_despesa = col1.date_input("Data da despesa")
 
 
-    valor = col2.number_input(
-        "Valor (R$)",
-        min_value=0.0,
-        format="%.2f"
-    )
+    # Linha de valores
+
+    col1, col2, col3 = st.columns(3)
+
+
+    with col1:
+
+        quantidade = st.number_input(
+            "Quantidade",
+            min_value=0,
+            # value=1
+        )
+
+    with col2:
+
+        valor_unitario = st.number_input(
+            "Valor unitário (R$)",
+            min_value=0.0,
+            format="%.2f"
+        )
+
+
+    with col3:
+
+        valor = st.number_input(
+            "Valor total (R$)",
+            min_value=0.0,
+            format="%.2f"
+        )
+
 
     descricao = st.text_area("Descrição da despesa")
 
@@ -566,27 +590,61 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
             # VALIDAÇÃO DE CAMPOS OBRIGATÓRIOS
             # ==================================================
 
-            erros = []
+            # LISTAS DE ERROS SEPARADAS
+
+            erros_campos = []
+            erro_consistencia = None
+
+
 
             # Validação da data
             if not data_despesa:
-                erros.append("Data da despesa")
+                erros_campos.append("Data da despesa")
 
-            # Validação do valor
+
+            # ==================================================
+            # VALIDAÇÃO DE VALORES
+            # ==================================================
+
+            if quantidade <= 0:
+                erros_campos.append("Quantidade")
+
+            if valor_unitario <= 0:
+                erros_campos.append("Valor unitário (R$)")
+
             if not valor or valor <= 0:
-                erros.append("Valor (R$)")
+                erros_campos.append("Valor total (R$)")
+
+
+            # ==================================================
+            # VALIDAÇÃO DE CONSISTÊNCIA (QUANTIDADE x VALOR UNITÁRIO)
+            # ==================================================
+
+            # Só valida consistência se os três campos foram preenchidos corretamente
+            if quantidade > 0 and valor_unitario > 0 and valor > 0:
+
+                valor_calculado = quantidade * valor_unitario
+
+                # Corrige problema de float
+                valor_calculado = round(valor_calculado, 2)
+                valor_informado = round(valor, 2)
+
+                if valor_informado != valor_calculado:
+                    erro_consistencia = (
+                        f"Valor total deve ser igual a Quantidade × Valor unitário."
+                    )
 
             # Validação da descrição
             if not descricao or not descricao.strip():
-                erros.append("Descrição da despesa")
+                erros_campos.append("Descrição da despesa")
 
             # Validação do fornecedor
             if not fornecedor or not fornecedor.strip():
-                erros.append("Fornecedor")
+                erros_campos.append("Fornecedor")
 
             # Validação do CPF/CNPJ
             if not cpf_cnpj or not cpf_cnpj.strip():
-                erros.append("CPF / CNPJ")
+                erros_campos.append("CPF / CNPJ")
 
 
             # ==================================================
@@ -603,24 +661,29 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
 
             if not is_taxa_bancaria:
                 if not anexos or len(anexos) == 0:
-                    erros.append("Anexos")
+                    erros_campos.append("Anexos")
 
 
-            # # Validação dos anexos (obrigatório pelo menos 1)
-            # if not anexos or len(anexos) == 0:
-            #     erros.append("Anexos")
 
             # ==================================================
             # SE HOUVER ERROS → MOSTRA WARNING E NÃO SALVA
             # ==================================================
-            if erros:
 
-                campos = ", ".join(erros)
+            # EXIBE ERROS SEPARADAMENTE
 
+            if erros_campos:
+                campos = ", ".join(erros_campos)
                 st.warning(f"Preencha os seguintes campos obrigatórios: {campos}")
 
-                # Interrompe execução → não fecha dialog e não limpa formulário
+            if erro_consistencia:
+                st.warning(erro_consistencia)
+
+            # Se houver qualquer erro → bloqueia
+            if erros_campos or erro_consistencia:
                 st.stop()
+
+
+
 
             # ==================================================
             # CONTINUA FLUXO NORMAL (SALVAR)
@@ -634,6 +697,8 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
                     "descricao_despesa": descricao,
                     "fornecedor": fornecedor,
                     "cpf_cnpj": cpf_cnpj,
+                    "quantidade": quantidade,
+                    "valor_unitario": valor_unitario,
                     "valor_despesa": valor,
                     "status_despesa": "aberto",
                     "anexos": []
@@ -786,8 +851,6 @@ def salvar_relato():
     texto_relato = st.session_state.get("campo_relato", "")
     data_inicio = st.session_state.get("campo_data_inicio")
     data_fim = st.session_state.get("campo_data_fim")
-    # quando = st.session_state.get("campo_quando", "")
-    # onde = st.session_state.get("campo_onde", "")
     anexos = st.session_state.get("campo_anexos", [])
     fotos = st.session_state.get("fotos_relato", [])
     porcentagem_atividade = st.session_state.get("campo_porcentagem_atividade", 0)
@@ -807,8 +870,6 @@ def salvar_relato():
 
     if not data_fim:
         erros.append("O campo Data de fim é obrigatório.")
-    # if not quando.strip():
-    #     erros.append("O campo Quando é obrigatório.")
 
     if erros:
         for e in erros:
@@ -993,9 +1054,6 @@ def salvar_relato():
     # 9. OBJETO FINAL DO RELATO
     # --------------------------------------------------
     
-    # CONVERSÃO DAS DATAS PARA STRING
-    # Converte os objetos datetime.date para string
-    # no formato brasileiro dd/mm/yyyy.
 
     data_inicio_str = data_inicio.strftime("%d/%m/%Y") if data_inicio else None
     data_fim_str = data_fim.strftime("%d/%m/%Y") if data_fim else None    
