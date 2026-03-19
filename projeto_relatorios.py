@@ -3691,7 +3691,7 @@ if step_selecionado == "Resultados":
                             )
                             st.stop()
 
-                        data_coleta = datetime.now(tz)
+                        data_coleta = datetime.datetime.now(tz)
                         # data_coleta = datetime.datetime.now()
 
                         observacoes_salvar = observacoes
