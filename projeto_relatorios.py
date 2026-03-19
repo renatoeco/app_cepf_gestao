@@ -4,8 +4,7 @@ import streamlit_antd_components as sac
 import time
 import datetime
 from collections import defaultdict
-import pytz
-tz = pytz.timezone("America/Sao_Paulo")
+
 
 
 from funcoes_auxiliares import (
@@ -23,6 +22,11 @@ from funcoes_auxiliares import (
 )
 
 
+# ??????????????????
+
+st.write("datetime.now():", datetime.datetime.now())
+st.write("datetime.utcnow():", datetime.datetime.utcnow())
+st.write("time.tzname:", time.tzname)
 
 
 ###########################################################################################################
