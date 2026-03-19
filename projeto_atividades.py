@@ -4479,26 +4479,31 @@ with salvaguardas:
 
 
     # Lê as categorias escolhidas nas perguntas 2 a 9
-    categorias_respostas = [
-        st.session_state.get("salv_2_categoria_risco"),
-        st.session_state.get("salv_3_categoria_risco"),
-        st.session_state.get("salv_4_categoria_risco"),
-        st.session_state.get("salv_5_categoria_risco"),
-        st.session_state.get("salv_6_categoria_risco"),
-        st.session_state.get("salv_7_categoria_risco"),
-        st.session_state.get("salv_8_categoria_risco"),
-        st.session_state.get("salv_9_categoria_risco"),
-    ]
+
+    categorias_filtradas = []
+
+    for i in range(2, 10):  # perguntas 2 a 9
+
+        aplicavel = st.session_state.get(f"salv_{i}_aplicavel")
+        categoria = st.session_state.get(f"salv_{i}_categoria_risco")
+
+        if aplicavel == "Sim" and categoria:
+            categorias_filtradas.append(categoria)
+
+
 
 
     # Determina automaticamente a categoria geral
     # prioridade: A > B > C
-    if "Categoria A" in categorias_respostas:
+
+    if "Categoria A" in categorias_filtradas:
         categoria_geral = "Categoria A"
-    elif "Categoria B" in categorias_respostas:
+    elif "Categoria B" in categorias_filtradas:
         categoria_geral = "Categoria B"
-    else:
+    elif "Categoria C" in categorias_filtradas:
         categoria_geral = "Categoria C"
+
+
 
 
     # Coluna 4 — mostra o resultado calculado
