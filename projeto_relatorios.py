@@ -3721,7 +3721,7 @@ if step_selecionado == "Resultados":
                         indicador["observacoes_coleta"] = observacoes_salvar
                         indicador["data_coleta"] = data_coleta
 
-                        st.success("Indicador salvo com sucesso.", icon=":material/check:")
+                        st.success("Indicador salvo com sucessoooo.", icon=":material/check:")
                         time.sleep(3)
                         st.rerun()
 
