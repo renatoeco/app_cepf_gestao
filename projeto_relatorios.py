@@ -4,6 +4,8 @@ import streamlit_antd_components as sac
 import time
 import datetime
 from collections import defaultdict
+from zoneinfo import ZoneInfo
+
 
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
@@ -3688,7 +3690,8 @@ if step_selecionado == "Resultados":
                             )
                             st.stop()
 
-                        data_coleta = datetime.datetime.now()
+                        data_coleta = datetime.datetime.now(ZoneInfo("America/Sao_Paulo"))
+                        # data_coleta = datetime.datetime.now()
 
                         observacoes_salvar = observacoes
                         if observacoes_salvar is None or observacoes_salvar == "None":
