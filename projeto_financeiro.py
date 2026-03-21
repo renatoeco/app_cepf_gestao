@@ -2501,7 +2501,7 @@ with orcamento:
         df_editado = st.data_editor(
             df_orcamento[
                 [
-                    "id_despesa",
+                    # "id_despesa",
                     "categoria",
                     "nome_despesa",
                     "descricao_despesa",
