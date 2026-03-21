@@ -6,7 +6,7 @@ import datetime
 import time
 import bson
 import io
-
+import re
 
 # Google Drive API
 from google.oauth2.service_account import Credentials
@@ -116,6 +116,13 @@ def obter_servico_drive():
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+# Validar email de contatos
+def email_valido(email):
+    padrao = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(padrao, email) is not None
+
 
 
 def obter_ou_criar_pasta(servico, nome_pasta, id_pasta_pai):
@@ -1173,9 +1180,14 @@ if not editar_cadastro:
                 key="salvar_novo_contato"
             ):
 
-                # Validação básica
+                # Validação de campos
                 if not nome.strip() or not funcao.strip():
                     st.warning("Nome e função são obrigatórios.")
+                    return
+
+                # Validação de e-mail
+                if email and not email_valido(email):
+                    st.warning("Digite um e-mail válido.")
                     return
 
                 # Estrutura do contato
