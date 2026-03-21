@@ -133,6 +133,44 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 # FUNÇÕES
 ###########################################################################################################
 
+def calcular_saldo_parcela():
+    # ==================================================
+    # CÁLCULO DO SALDO DA PARCELA
+    # ==================================================
+    # Regra:
+    # - parcela = relatorio_numero
+    # - saldo = valor da parcela - total gasto na parcela
+    # - exibir em porcentagem (%)
+
+    parcela_atual = next(
+        (p for p in projeto.get("financeiro", {}).get("parcelas", [])
+        if p.get("numero") == st.session_state.get("relatorio_numero")),
+        None
+    )
+
+    if parcela_atual:
+
+        valor_parcela = parcela_atual.get("valor", 0)
+
+        # Soma todas as despesas desta parcela
+        total_gasto = 0
+        for despesa in projeto.get("financeiro", {}).get("orcamento", []):
+            for lanc in despesa.get("lancamentos", []):
+                if lanc.get("relatorio_numero") == relatorio_numero:
+                    total_gasto += lanc.get("valor_despesa", 0)
+
+        saldo = valor_parcela - total_gasto
+
+        if valor_parcela > 0:
+            saldo_pct = (saldo / valor_parcela) * 100
+        else:
+            saldo_pct = 0
+
+        # Exibição 
+
+        return saldo_pct
+
+
 
 
 # Texto do status da avaliação de Relatos de Atividades ou de Despesas de relatório
@@ -2916,6 +2954,7 @@ if step_selecionado == "Atividades":
 # ==================================================
 if step_selecionado == "Despesas":
 
+
     st.write("")
     st.write("")
 
@@ -2941,57 +2980,37 @@ if step_selecionado == "Despesas":
     # BOTÃO: REGISTRAR DESPESA
     # ==================================================
     with st.container(horizontal=True, horizontal_alignment="right"):
-        if pode_registrar:
-            if st.button(
-                "+ Registrar despesa",
-                type="primary",
-                icon=":material/add:",
-                width=260
-            ):
-                dialog_lanc_financ(
-                    relatorio_numero=relatorio_numero,
-                    projeto=projeto,
-                    col_projetos=col_projetos
-                )
+       
 
-    # ==================================================
-    # CÁLCULO DO SALDO DA PARCELA
-    # ==================================================
-    # Regra:
-    # - parcela = relatorio_numero
-    # - saldo = valor da parcela - total gasto na parcela
-    # - exibir em porcentagem (%)
+        saldo_parcela = calcular_saldo_parcela()
 
-    parcela_atual = next(
-        (p for p in projeto.get("financeiro", {}).get("parcelas", [])
-         if p.get("numero") == relatorio_numero),
-        None
-    )
+        saldo_formatado = f"{saldo_parcela:.1f}".replace(".", ",")
 
-    if parcela_atual:
 
-        valor_parcela = parcela_atual.get("valor", 0)
-
-        # Soma todas as despesas desta parcela
-        total_gasto = 0
-        for despesa in projeto.get("financeiro", {}).get("orcamento", []):
-            for lanc in despesa.get("lancamentos", []):
-                if lanc.get("relatorio_numero") == relatorio_numero:
-                    total_gasto += lanc.get("valor_despesa", 0)
-
-        saldo = valor_parcela - total_gasto
-
-        if valor_parcela > 0:
-            saldo_pct = (saldo / valor_parcela) * 100
-        else:
-            saldo_pct = 0
-
-        # Exibição amigável
-        st.write(
-            f"**Saldo disponível da parcela:** {saldo_pct:.1f}%"
+        st.markdown(
+            f"Saldo disponível da parcela: "
+            f"<span style='font-size:22px'><b>{saldo_formatado}%</b></span>",
+            unsafe_allow_html=True
         )
 
+
+        if pode_registrar:
+                    if st.button(
+                        "+ Registrar despesa",
+                        type="primary",
+                        icon=":material/add:",
+                        width=260
+                    ):
+                        dialog_lanc_financ(
+                            relatorio_numero=relatorio_numero,
+                            projeto=projeto,
+                            col_projetos=col_projetos
+                        )
+
     st.write("")
+
+
+
 
     # ==================================================
     # AGRUPAMENTO DE DESPESAS (CATEGORIA > NOME)
@@ -5412,12 +5431,43 @@ if step_selecionado == "Enviar":
 
         st.markdown("### Enviar relatório")
 
+        saldo_parcela = calcular_saldo_parcela()
+
+        saldo_formatado = f"{saldo_parcela:.1f}".replace(".", ",")
+
+
+        # Mensagem do saldo 
+        if saldo_parcela > 20:
+
+            st.markdown(
+                f"A parcela atual ainda tem "
+                f"<span style='font-size:22px'><b>{saldo_formatado}%</b></span> de saldo.",
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                "Recomendamos que **envie o relatório** quando o saldo for **menor que 20%**."
+            )
+
+        else:
+            st.markdown(
+                f"A parcela atual tem "
+                f"<span style='font-size:22px'><b>{saldo_formatado}%</b></span> de saldo.",
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                "**O relatório já pode ser enviado.**"
+            )
+
+
+
+        st.divider()
+        
         st.write(
             "Ao enviar o relatório, ele será encaminhado para análise "
             "e não poderá mais ser editado enquanto estiver em análise."
         )
-
-        st.divider()
 
         enviar = st.button(
             "Enviar relatório",
