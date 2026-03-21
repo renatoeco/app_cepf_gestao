@@ -181,6 +181,50 @@ def format_brl(valor):
 
 
 
+# Função para notificar os usuários internos quando os valores das parcelas ficam desatualizados
+# em decorrência do cadastro de aditivo ou devolução, que alteram o valor do projeto.
+def notifica_parcelas_desencontradas():
+
+    # --------------------------------------------------
+    # NOTIFICAÇÃO: valor total + aditivo diferente das parcelas
+    # --------------------------------------------------
+    if usuario_interno:
+
+        valor_total_base = financeiro.get("valor_total") or 0
+        valor_aditivo = financeiro.get("valor_aditivo_devolucao")
+
+        # Só aplica se existir a chave
+        if valor_aditivo is not None:
+
+            valor_total_ajustado = valor_total_base + valor_aditivo
+
+            parcelas = financeiro.get("parcelas", [])
+
+            soma_parcelas = sum(
+                p.get("valor", 0)
+                for p in parcelas
+                if p.get("valor") is not None
+            )
+
+            if round(soma_parcelas, 2) != round(valor_total_ajustado, 2):
+
+                st.warning(
+                    "O valor total das parcelas está diferente do valor total do projeto após o cadastro do Aditivo / Devolução.  \n"
+                    "**Atualize o cronograma de parcelas**.",
+                    icon=":material/warning:"
+                )
+
+
+
+
+
+
+
+
+
+
+
+
 
 # ==================================================
 # Aprova remanejamento manualmente
@@ -1396,10 +1440,10 @@ else:
 
 
 
-# # Abas para o "Cronograma de Desembolsos e Relatórios" e "Orçamento"
-# cron_desemb, orcamento = st.tabs(["Cronograma", "Orçamento"])
 
-
+# ##############################################################
+# ABA CRONOGRAMA
+# ##############################################################
 
 with cron_desemb:
 
@@ -1422,6 +1466,10 @@ with cron_desemb:
 
 
 
+
+
+    
+
     # --------------------------------------------------
     # MODO VISUALIZAÇÃO CRONOGRAMA
     # --------------------------------------------------
@@ -1430,6 +1478,12 @@ with cron_desemb:
         st.markdown('### Cronograma de Parcelas e Relatórios')
 
         st.write("")
+
+        # Notifica se as parcelas estão com valores errados, após cadastro de Aditivo / Devolução de valor
+        notifica_parcelas_desencontradas()
+
+
+
 
 
         # OPÇÃO 1 DE LAYOUT DA TABELA
@@ -1545,10 +1599,15 @@ with cron_desemb:
     else:
 
 
+
+        notifica_parcelas_desencontradas()
+
+
+
         # Radio para escolher o que será editado
         opcao_editar_cron = st.radio(
             "O que deseja editar?",
-            ["Valor total",
+            ["Valor do projeto",
             "Parcelas", 
             "Relatórios"],
             horizontal=True
@@ -1565,43 +1624,89 @@ with cron_desemb:
         # -------------------------------------------------------
         # Editar o valor total do projeto
 
-        if opcao_editar_cron == "Valor total":
+        if opcao_editar_cron == "Valor do projeto":
 
-            st.markdown("#### Valor total do projeto")
 
-            with st.form("form_valor_total", border=False):
+            col1, col2 = st.columns(2)
 
-                valor_total = st.number_input(
-                    "Valor total do projeto (R$)",
-                    min_value=0.0,
-                    step=1000.0,
-                    format="%.2f",
-                    value=float(valor_atual) if valor_atual is not None else 0.0,
-                    width=300
-                )
 
-                st.write('')
-                salvar = st.form_submit_button("Salvar", icon=":material/save:", width=150, type="primary")
+            # Na coluna 1 vão os inputs de valor
+            with col1:
 
-                if salvar:
-                    col_projetos.update_one(
-                        {"codigo": codigo_projeto_atual},
-                        {
-                            "$set": {
-                                "financeiro.valor_total": float(valor_total)
-                            }
-                        }
+                # -----------------------------------
+                # Valor atual do aditivo/devolução
+                # -----------------------------------
+                valor_aditivo_atual = financeiro.get("valor_aditivo_devolucao", 0)
+
+                with st.form("form_valor_total", border=False):
+
+                    st.markdown("#### Valor inicial do projeto")
+
+                    # -----------------------------------
+                    # Input valor total
+                    # -----------------------------------
+                    valor_total = st.number_input(
+                        "Valor total do projeto (R$)",
+                        min_value=0.0,
+                        step=1000.0,
+                        format="%.2f",
+                        value=float(valor_atual) if valor_atual is not None else 0.0,
+                        width=300
                     )
 
-                    st.success("Valor total do projeto salvo com sucesso!", icon=":material/check:")
-                    time.sleep(3)
-                    st.rerun()
+
+                    st.write('')
+                    st.write('')
+                    st.markdown("#### Aditivo / Devolução")
+
+                    # -----------------------------------
+                    # Aditivo / Devolução
+                    # -----------------------------------
+                    valor_aditivo = st.number_input(
+                        "Valor do aditivo ou devolução (valor negativo)",
+                        step=100.0,
+                        format="%.2f",
+                        value=float(valor_aditivo_atual) if valor_aditivo_atual is not None else 0.0,
+                        width=300
+                    )
+
+                    st.write('')
+
+                    salvar = st.form_submit_button(
+                        "Salvar",
+                        icon=":material/save:",
+                        width=150,
+                        type="primary"
+                    )
+
+                    if salvar:
+                        col_projetos.update_one(
+                            {"codigo": codigo_projeto_atual},
+                            {
+                                "$set": {
+                                    "financeiro.valor_total": float(valor_total),
+                                    "financeiro.valor_aditivo_devolucao": float(valor_aditivo)
+                                }
+                            }
+                        )
+
+                        st.success("Valores financeiros salvos com sucesso!", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
 
 
+            with col2:
 
-                    st.success("Valor total do projeto salvo com sucesso!")
-                    time.sleep(3)
-                    st.rerun()
+                if valor_aditivo_atual != 0:
+
+
+                    valor_atualizado = float(valor_total) + float(valor_aditivo)
+
+                    st.metric(
+                        "Valor final com Aditivo / Devolução",
+                        value=format_brl(valor_atualizado),
+                    )
+
 
 
         # -------------------------------------------------------
@@ -1999,7 +2104,16 @@ with orcamento:
 
     if usuario_interno:
 
-        valor_total_projeto = financeiro.get("valor_total")
+
+
+        valor_total_projeto = (
+            (financeiro.get("valor_total")) +
+            (financeiro.get("valor_aditivo_devolucao") or 0)
+        )
+
+          
+        
+        
         orcamento_salvo = financeiro.get("orcamento", [])
 
         if valor_total_projeto and orcamento_salvo:
@@ -2047,7 +2161,17 @@ with orcamento:
         # Métricas financeiras (robusto para projeto vazio)
         # --------------------------------------------------
 
-        valor_total = financeiro.get("valor_total") or 0
+        # Valor total ajustado (com aditivo/devolução)
+        valor_total_base = financeiro.get("valor_total") or 0
+        valor_aditivo = financeiro.get("valor_aditivo_devolucao") or 0
+
+        valor_total = valor_total_base + valor_aditivo
+
+        # valor_total = financeiro.get("valor_total") or 0
+
+
+
+
         orcamento = financeiro.get("orcamento", [])
         parcelas = financeiro.get("parcelas", [])
 
