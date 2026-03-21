@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, gerar_cronograma_financeiro
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, calcular_status_atividade
 import pandas as pd
 import streamlit_shadcn_ui as ui
 import datetime
@@ -654,15 +654,76 @@ if not editar_cadastro:
 
     st.write('')
     st.write('')
-    st.write('')
+
+
+
+
+    ###########################################################################################################
+    # ATIVIDADES ATRASADAS
+    ###########################################################################################################
+
+    # Lista para armazenar atividades críticas
+    atividades_criticas = []
+
+    # Percorre a estrutura do plano de trabalho
+    plano = projeto.get("plano_trabalho", {})
+    componentes = plano.get("componentes", [])
+
+    for comp in componentes:
+        entregas = comp.get("entregas", [])
+
+        for ent in entregas:
+            atividades = ent.get("atividades", [])
+
+            for atv in atividades:
+
+                # Calcula o status da atividade usando sua função
+                status = calcular_status_atividade(atv)
+
+                # Filtra apenas atividades atrasadas
+                if status in ["atrasada"]:
+                    atividades_criticas.append({
+                        "nome": atv.get("atividade", "Sem nome"),
+                        "status": status
+                    })
+
+    # Exibe a seção apenas se houver atividades críticas
+    if atividades_criticas:
+
+
+        # Define singular ou plural automaticamente
+        qtd = len(atividades_criticas)
+        titulo = "atividade atrasada" if qtd == 1 else "atividades atrasadas"
+        st.markdown(f"##### {qtd} {titulo}")
+
+        st.caption("Relate o avanço da atividade ou solicite um **remanejamento de prazos** na página de 'Atividades'.")
+
+        for atv in atividades_criticas:
+
+             # Exibe bolinha laranja maior + nome da atividade
+            st.markdown(
+                f"""
+                <span style="display:flex; align-items:center; gap:8px; padding-bottom:10px">
+                    <span style="
+                        width:10px;
+                        height:10px;
+                        background-color:#E2660C;
+                        border-radius:50%;
+                        display:inline-block;
+                        margin-botto:4px;
+                    "></span>
+                    <span>{atv['nome']}</span>
+                </span>
+                """,
+                unsafe_allow_html=True
+            )
+
+    st.divider()
 
 
 
 
 
-
-
-    # st.divider()
 
     st.markdown('#### Anotações')
 

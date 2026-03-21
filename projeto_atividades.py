@@ -9,7 +9,8 @@ from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao, 
     gerar_link_drive,
     sidebar_projeto,
-    enviar_email
+    enviar_email,
+    calcular_status_atividade
 )
 
 
@@ -66,64 +67,64 @@ col_pessoas = db["pessoas"]
 
 # Função para calcuar o status da atividade
 
-def calcular_status_atividade(atividade):
+# def calcular_status_atividade(atividade):
 
-    hoje = pd.Timestamp.today().normalize()
+#     hoje = pd.Timestamp.today().normalize()
 
-    data_inicio = pd.to_datetime(
-        atividade.get("data_inicio"),
-        format="%d/%m/%Y",
-        errors="coerce"
-    )
+#     data_inicio = pd.to_datetime(
+#         atividade.get("data_inicio"),
+#         format="%d/%m/%Y",
+#         errors="coerce"
+#     )
 
-    data_fim = pd.to_datetime(
-        atividade.get("data_fim"),
-        format="%d/%m/%Y",
-        errors="coerce"
-    )
+#     data_fim = pd.to_datetime(
+#         atividade.get("data_fim"),
+#         format="%d/%m/%Y",
+#         errors="coerce"
+#     )
 
-    porcentagem = atividade.get("porcentagem_atv", 0)
+#     porcentagem = atividade.get("porcentagem_atv", 0)
 
-    # Segurança
-    if pd.isna(data_inicio) or pd.isna(data_fim):
-        return "sem_data"
+#     # Segurança
+#     if pd.isna(data_inicio) or pd.isna(data_fim):
+#         return "sem_data"
 
-    # Regra 1 — concluída
-    if porcentagem == 100:
-        return "concluída"
+#     # Regra 1 — concluída
+#     if porcentagem == 100:
+#         return "concluída"
 
-    # Marcos de tempo
-    inicio_mais_30 = data_inicio + pd.Timedelta(days=30)
-    fim_menos_30 = data_fim - pd.Timedelta(days=30)
+#     # Marcos de tempo
+#     inicio_mais_30 = data_inicio + pd.Timedelta(days=30)
+#     fim_menos_30 = data_fim - pd.Timedelta(days=30)
 
-    # Regra 2 — porcentagem == 0
-    if porcentagem == 0:
+#     # Regra 2 — porcentagem == 0
+#     if porcentagem == 0:
 
-        if hoje < inicio_mais_30:
-            return "prevista"
+#         if hoje < inicio_mais_30:
+#             return "prevista"
 
-        elif inicio_mais_30 <= hoje < fim_menos_30:
-            return "atrasada"
+#         elif inicio_mais_30 <= hoje < fim_menos_30:
+#             return "atrasada"
 
-        elif fim_menos_30 <= hoje <= data_fim:
-            return "próximo ao prazo"
+#         elif fim_menos_30 <= hoje <= data_fim:
+#             return "próximo ao prazo"
 
-        elif hoje > data_fim:
-            return "atrasada"
+#         elif hoje > data_fim:
+#             return "atrasada"
 
-    # Regra 3 — em andamento
-    if 0 < porcentagem < 100:
+#     # Regra 3 — em andamento
+#     if 0 < porcentagem < 100:
 
-        if hoje < fim_menos_30:
-            return "em andamento"
+#         if hoje < fim_menos_30:
+#             return "em andamento"
 
-        elif fim_menos_30 <= hoje <= data_fim:
-            return "próximo ao prazo"
+#         elif fim_menos_30 <= hoje <= data_fim:
+#             return "próximo ao prazo"
 
-        elif hoje > data_fim:
-            return "atrasada"
+#         elif hoje > data_fim:
+#             return "atrasada"
 
-    return "indefinido"
+#     return "indefinido"
 
 
 
