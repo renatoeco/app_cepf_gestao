@@ -2507,16 +2507,63 @@ if step_selecionado == "Atividades":
 
 
                         # ==================================================
-                        # MODO EDIÇÃO INLINE 
+                        # MODO EDIÇÃO INLINE DO RELATO DA ATIVIDADE
                         # ==================================================
                         else:
                             st.markdown(f"**Editando {id_relato.upper()}**")
+
+
+
+                            # -----------------------------
+                            # PORCENTAGEM DA ATIVIDADE (RELATO)
+                            # -----------------------------
+
+                            # opções de 0 a 100 de 10 em 10
+                            porcentagens = list(range(0, 101, 10))
+
+                            # valor atual salvo (se existir)
+                            porc_atual = 0
+
+                            if atividade and atividade.get("id"):
+                                atividade_mongo = obter_atividade_mongo(
+                                    projeto,
+                                    atividade["id"]
+                                )
+
+                                if atividade_mongo:
+                                    porc_atual = atividade_mongo.get("porcentagem_atv", 0)
+
+                            # garante consistência com opções
+                            if porc_atual not in porcentagens:
+                                porc_atual = 0
+
+                            # sincroniza session_state ao trocar atividade
+                            if (
+                                "campo_porcentagem_atividade_relato" not in st.session_state
+                                or st.session_state.get("atividade_porcentagem_relato_ref") != atividade.get("id")
+                            ):
+                                st.session_state["campo_porcentagem_atividade_relato"] = porc_atual
+                                st.session_state["atividade_porcentagem_relato_ref"] = atividade.get("id")
+
+
+                            # selectbox
+                            porc_ativ_relato = st.selectbox(
+                                "Atualize a porcentagem de execução da atividade *",
+                                options=porcentagens,
+                                format_func=lambda x: f"{x}%",
+                                key="campo_porcentagem_atividade_relato",
+                                width=300
+                            )
+
+
+
+
 
                             # --------------------------------------------------
                             # CAMPOS DE TEXTO
                             # --------------------------------------------------
                             relato_texto = st.text_area(
-                                "Relato:",
+                                "Relato *",
                                 value=relato.get("relato", ""),
                                 key=f"edit_relato_{id_relato}"
                             )
@@ -2529,7 +2576,6 @@ if step_selecionado == "Atividades":
                             # (dd/mm/yyyy) para objeto datetime.date
                             # necessário para o st.date_input.
 
-                            from datetime import datetime
 
                             data_inicio_str = relato.get("data_inicio")
                             data_fim_str = relato.get("data_fim")
@@ -2540,13 +2586,13 @@ if step_selecionado == "Atividades":
 
                             if data_inicio_str:
                                 try:
-                                    data_inicio_valor = datetime.strptime(data_inicio_str, "%d/%m/%Y").date()
+                                    data_inicio_valor = datetime.datetime.strptime(data_inicio_str, "%d/%m/%Y").date()
                                 except Exception:
                                     pass
 
                             if data_fim_str:
                                 try:
-                                    data_fim_valor = datetime.strptime(data_fim_str, "%d/%m/%Y").date()
+                                    data_fim_valor = datetime.datetime.strptime(data_fim_str, "%d/%m/%Y").date()
                                 except Exception:
                                     pass
 
@@ -2555,14 +2601,14 @@ if step_selecionado == "Atividades":
                             col1, col2 = st.columns(2)
 
                             data_inicio = col1.date_input(
-                                "Data de início",
+                                "Data de início *",
                                 value=data_inicio_valor,
                                 key=f"edit_data_inicio_{id_relato}",
                                 format="DD/MM/YYYY"
                             )
 
                             data_fim = col2.date_input(
-                                "Data de fim",
+                                "Data de fim *",
                                 value=data_fim_valor,
                                 key=f"edit_data_fim_{id_relato}",
                                 format="DD/MM/YYYY"
@@ -2678,6 +2724,17 @@ if step_selecionado == "Atividades":
 
                             with st.container(horizontal=True, horizontal_alignment="left"):
 
+
+                                if st.button(
+                                    "Cancelar",
+                                    key=f"btn_cancel_{id_relato}"
+                                ):
+                                    st.session_state["relato_editando_id"] = None
+                                    st.session_state.pop(fotos_novas_key, None)
+                                    st.rerun()
+
+
+
                                 if st.button(
                                     "Salvar alterações",
                                     key=f"btn_save_{id_relato}",
@@ -2685,15 +2742,37 @@ if step_selecionado == "Atividades":
                                     icon=":material/save:"
                                 ):
 
+                                    # ==================================================
+                                    # VALIDAÇÃO
+                                    # ==================================================
+                                    erros = []
+
+                                    # Relato obrigatório
+                                    if not relato_texto or not relato_texto.strip():
+                                        erros.append("Relato")
+
+                                    # Datas obrigatórias
+                                    if not data_inicio:
+                                        erros.append("Data de início")
+
+                                    if not data_fim:
+                                        erros.append("Data de fim")
+
+
+                                    # Exibe erros
+                                    if erros:
+                                        campos = ", ".join(erros)
+                                        st.warning(f"Preencha os seguintes campos obrigatórios: {campos}")
+                                        st.stop()
+
+                                    # ==================================================
+                                    # SALVAMENTO
+                                    # ==================================================
                                     with st.spinner("Salvando alterações. Aguarde..."):
 
-                                        # ==================================================
-                                        # ATUALIZA TEXTO E DATAS DO RELATO
-                                        # ==================================================
-
-                                        # Converte as datas selecionadas para string
-                                        # no formato dd/mm/yyyy antes de salvar.
-
+                                        # -----------------------------
+                                        # TEXTO E DATAS
+                                        # -----------------------------
                                         relato["relato"] = relato_texto
 
                                         relato["data_inicio"] = (
@@ -2704,7 +2783,10 @@ if step_selecionado == "Atividades":
                                             data_fim.strftime("%d/%m/%Y") if data_fim else None
                                         )
 
-
+                                        # -----------------------------
+                                        # PORCENTAGEM DO RELATO
+                                        # -----------------------------
+                                        relato["porc_ativ_relato"] = int(porc_ativ_relato)
 
                                         # ==================================================
                                         # REMOVE ITENS MARCADOS
@@ -2722,7 +2804,7 @@ if step_selecionado == "Atividades":
                                             ]
 
                                         # ==================================================
-                                        # GARANTE PASTAS DO DRIVE (ESCOPO LOCAL)
+                                        # DRIVE
                                         # ==================================================
                                         servico = obter_servico_drive()
 
@@ -2744,9 +2826,9 @@ if step_selecionado == "Atividades":
                                             pasta_relatos_id
                                         )
 
-                                        # ==================================================
-                                        # UPLOAD DE NOVOS ANEXOS
-                                        # ==================================================
+                                        # -----------------------------
+                                        # ANEXOS
+                                        # -----------------------------
                                         if novos_anexos:
                                             pasta_anexos_id = obter_ou_criar_pasta(
                                                 servico,
@@ -2764,9 +2846,9 @@ if step_selecionado == "Atividades":
                                                         "id_arquivo": id_drive
                                                     })
 
-                                        # ==================================================
-                                        # UPLOAD DE NOVAS FOTOS
-                                        # ==================================================
+                                        # -----------------------------
+                                        # FOTOS
+                                        # -----------------------------
                                         fotos_validas = [
                                             f for f in st.session_state[fotos_novas_key]
                                             if f.get("arquivo") is not None
@@ -2806,18 +2888,11 @@ if step_selecionado == "Atividades":
                                         st.session_state["relato_editando_id"] = None
                                         st.session_state.pop(fotos_novas_key, None)
 
-                                        # Mensagem de sucesso
                                         st.success("Relato atualizado com sucesso!", icon=":material/check:")
                                         time.sleep(3)
                                         st.rerun()
 
-                                if st.button(
-                                    "Cancelar",
-                                    key=f"btn_cancel_{id_relato}"
-                                ):
-                                    st.session_state["relato_editando_id"] = None
-                                    st.session_state.pop(fotos_novas_key, None)
-                                    st.rerun()
+
 
                     st.write('')
 
