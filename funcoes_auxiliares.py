@@ -878,6 +878,9 @@ def sidebar_projeto():
 
 
 
+    st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com email@email.com")
+
+
     st.sidebar.write(f"*{st.session_state['tipo_usuario']}*")
 
 
