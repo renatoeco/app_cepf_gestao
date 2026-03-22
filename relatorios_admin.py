@@ -3,7 +3,7 @@ from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personaliz
 import pandas as pd
 import io
 import datetime
-
+import time
 
 
 ###########################################################################################################
@@ -32,7 +32,8 @@ def carregar_dados_base():
         "corredores": list(db["corredores"].find()),
         "kbas": list(db["kbas"].find()),
         "editais": list(db["editais"].find()),
-        "ciclos": list(db["ciclos_investimento"].find())
+        "ciclos": list(db["ciclos_investimento"].find()),
+        "organizacoes": list(db["organizacoes"].find())
     }
 
 
@@ -41,6 +42,7 @@ dados_base = carregar_dados_base()
 
 editais = dados_base["editais"]
 ciclos = dados_base["ciclos"]
+organizacoes = dados_base["organizacoes"]
 
 
 
@@ -61,28 +63,46 @@ ciclos = dados_base["ciclos"]
 
 
 
-# FILTRO DE EDITAL
+###########################################################################################################
+# FUNÇÃO DE FILTRO DE EDITAIS
+###########################################################################################################
 
 def filtro_editais():
+    """
+    Cria um selectbox para escolha de edital e retorna os projetos filtrados.
+    """
 
-
-
+    #######################################################################################################
+    # FUNÇÃO INTERNA PARA MONTAR O LABEL DO SELECTBOX
+    #######################################################################################################
     def montar_label_edital(edital):
+        """
+        Monta o texto exibido no selectbox combinando:
+        codigo_edital | nome_edital | doadores | investidores | nome_ciclo
+        """
 
+        # Código e nome do edital
         codigo = edital.get("codigo_edital", "")
         nome = edital.get("nome_edital", "")
+
+        # Código do ciclo associado ao edital
         codigo_ciclo = edital.get("ciclo_investimento")
 
+        # Busca os dados do ciclo no mapa previamente carregado
         ciclo = mapa_ciclos.get(codigo_ciclo, {})
 
+        # Listas de doadores e investidores
         doadores = ciclo.get("doadores", [])
         investidores = ciclo.get("investidores", [])
+
+        # Nome do ciclo
         nome_ciclo = ciclo.get("nome_ciclo", "")
 
+        # Converte listas em string separada por vírgula
         doadores_str = ", ".join(doadores) if doadores else ""
         investidores_str = ", ".join(investidores) if investidores else ""
 
-        # 👇 agora começa com o código
+        # Monta as partes do label
         partes = [codigo, nome]
 
         if doadores_str:
@@ -94,11 +114,13 @@ def filtro_editais():
         if nome_ciclo:
             partes.append(nome_ciclo)
 
+        # Junta tudo com separador
         return " | ".join(partes)
 
 
-
-
+    #######################################################################################################
+    # SELECTBOX DE ESCOLHA DO EDITAL
+    #######################################################################################################
     edital_selecionado_obj = st.selectbox(
         "Selecione o edital",
         options=[None] + editais,
@@ -106,19 +128,32 @@ def filtro_editais():
     )
 
 
+    #######################################################################################################
+    # EXTRAÇÃO DO CÓDIGO DO EDITAL
+    #######################################################################################################
     codigo_edital = None
 
     if edital_selecionado_obj:
         codigo_edital = edital_selecionado_obj.get("codigo_edital")
 
 
+    #######################################################################################################
+    # BUSCA DOS PROJETOS FILTRADOS
+    #######################################################################################################
+    # Caso nenhum edital seja selecionado, retorna lista vazia
+    if not codigo_edital:
+        return []
 
+    # Consulta projetos vinculados ao edital selecionado
     projetos = list(db["projetos"].find({
         "edital": codigo_edital
     }))
 
-    return projetos
 
+    #######################################################################################################
+    # RETORNO DOS PROJETOS FILTRADOS
+    #######################################################################################################
+    return projetos
 
 
 
@@ -139,7 +174,14 @@ mapa_ciclos = {
     for c in ciclos
 }
 
+###########################################################################################################
+# MAPA DE ORGANIZAÇÕES (ACESSO RÁPIDO)
+###########################################################################################################
 
+mapa_organizacoes = {
+    str(org.get("_id")): org.get("nome_organizacao", "")
+    for org in organizacoes
+}
 
 
 
@@ -199,52 +241,92 @@ st.divider()
 
 
 
+# ###########################################################################################################
+# # LÓGICA PARA CADA RELATÓRIO
+# ###########################################################################################################
+
+# if opcao_relatorio == "Relatório de salvaguardas":
+
+#     st.subheader("Relatório de salvaguardas")
+
+#     # Renderiza o filtro de editais 
+#     projetos = filtro_editais()
+
+#     st.write(f"{len(projetos)} projetos")
+
+
+#     # ??????????
+#     # st.write(projetos)
+
+
+
+
+
+
 ###########################################################################################################
-# LÓGICA PARA CADA RELATÓRIO
+# RELATÓRIO DE SALVAGUARDAS
 ###########################################################################################################
+
+# Inicializa session_state
+if "arquivo_salvaguardas" not in st.session_state:
+    st.session_state.arquivo_salvaguardas = None
+
 
 if opcao_relatorio == "Relatório de salvaguardas":
 
     st.subheader("Relatório de salvaguardas")
 
-    # Renderiza o filtro de editais 
+    # Filtro de editais
     projetos = filtro_editais()
 
     st.write(f"{len(projetos)} projetos")
 
-    ###########################################################################################################
-    # RELATÓRIO DE SALVAGUARDAS
-    ###########################################################################################################
+    st.write('')
 
-    if "relatorio_salvaguardas_pronto" not in st.session_state:
-        st.session_state.relatorio_salvaguardas_pronto = False
+    #######################################################################################################
+    # BOTÕES (EM CONTAINER HORIZONTAL)
+    #######################################################################################################
+    with st.container(horizontal=True):
 
-    if "arquivo_salvaguardas" not in st.session_state:
-        st.session_state.arquivo_salvaguardas = None
-
-
-    if opcao_relatorio == "Relatório de salvaguardas":
-
-
-        st.write('')
-
+        ###################################################################################################
         # BOTÃO GERAR
-        if not st.session_state.relatorio_salvaguardas_pronto:
+        ###################################################################################################
+        if st.button("Gerar relatório", icon=":material/list_alt_add:"):
 
-            if st.button("Gerar relatório"):
+            ###################################################################################################
+            # VALIDAÇÃO DE PROJETOS
+            ###################################################################################################
+            if not projetos:
+                st.warning("Nenhum projeto encontrado para o edital selecionado.", icon=":material/warning:")
+                st.session_state.arquivo_salvaguardas = None
+                time.sleep(3)
+
+            else:
 
                 with st.spinner("Gerando relatório..."):
 
-
+                    ###################################################################################################
+                    # MONTAGEM DOS DADOS DO RELATÓRIO
+                    ###################################################################################################
                     dados = []
 
                     for p in projetos:
+
+                        # Recupera o id da organização
+                        id_org = p.get("id_organizacao")
+
+                        # Busca nome no mapa (já cacheado)
+                        nome_org = mapa_organizacoes.get(str(id_org), "") if id_org else ""
+
                         dados.append({
                             "Código do projeto": p.get("codigo"),
-                            "Nome da entidade": p.get("organizacao"),
+                            "Nome da organização": nome_org,
                             "Nome do projeto": p.get("nome_do_projeto")
                         })
 
+                    ###################################################################################################
+                    # CRIAÇÃO DO EXCEL
+                    ###################################################################################################
                     df = pd.DataFrame(dados)
 
                     buffer = io.BytesIO()
@@ -254,26 +336,33 @@ if opcao_relatorio == "Relatório de salvaguardas":
 
                     buffer.seek(0)
 
+                    ###################################################################################################
+                    # SALVAR NO SESSION STATE
+                    ###################################################################################################
                     st.session_state.arquivo_salvaguardas = buffer
-                    st.session_state.relatorio_salvaguardas_pronto = True
 
-                st.rerun()
+                    st.rerun()
 
 
+        ###################################################################################################
         # BOTÃO DOWNLOAD
-        else:
+        ###################################################################################################
+        if st.session_state.arquivo_salvaguardas:
 
             st.download_button(
                 label="Baixar relatório",
+                icon=":material/download:",
                 data=st.session_state.arquivo_salvaguardas,
                 file_name="Relatorio_de_salvaguardas.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
 
-
-
-
+    #######################################################################################################
+    # MENSAGEM ABAIXO DOS BOTÕES
+    #######################################################################################################
+    if st.session_state.arquivo_salvaguardas:
+        st.caption("Relatório gerado. Clique para baixar.")
 
 
 
