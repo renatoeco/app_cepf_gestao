@@ -142,7 +142,7 @@ def filtro_editais():
     #######################################################################################################
     # Caso nenhum edital seja selecionado, retorna lista vazia
     if not codigo_edital:
-        return []
+        return [], None
 
     # Consulta projetos vinculados ao edital selecionado
     projetos = list(db["projetos"].find({
@@ -153,7 +153,7 @@ def filtro_editais():
     #######################################################################################################
     # RETORNO DOS PROJETOS FILTRADOS
     #######################################################################################################
-    return projetos
+    return projetos, edital_selecionado_obj
 
 
 
@@ -240,29 +240,6 @@ st.divider()
 
 
 
-
-# ###########################################################################################################
-# # LÓGICA PARA CADA RELATÓRIO
-# ###########################################################################################################
-
-# if opcao_relatorio == "Relatório de salvaguardas":
-
-#     st.subheader("Relatório de salvaguardas")
-
-#     # Renderiza o filtro de editais 
-#     projetos = filtro_editais()
-
-#     st.write(f"{len(projetos)} projetos")
-
-
-#     # ??????????
-#     # st.write(projetos)
-
-
-
-
-
-
 ###########################################################################################################
 # RELATÓRIO DE SALVAGUARDAS
 ###########################################################################################################
@@ -277,7 +254,8 @@ if opcao_relatorio == "Relatório de salvaguardas":
     st.subheader("Relatório de salvaguardas")
 
     # Filtro de editais
-    projetos = filtro_editais()
+    # projetos = filtro_editais()
+    projetos, edital_selecionado_obj = filtro_editais()
 
     st.write(f"{len(projetos)} projetos")
 
@@ -318,11 +296,77 @@ if opcao_relatorio == "Relatório de salvaguardas":
                         # Busca nome no mapa (já cacheado)
                         nome_org = mapa_organizacoes.get(str(id_org), "") if id_org else ""
 
+
+                        # Recupera dados de salvaguardas
+                        salvaguardas = p.get("salvaguardas", {})
+
+                        # POLÍTICA 2
+                        pol2 = salvaguardas.get("pol_2_trabalho", {})
+                        aplicavel2 = pol2.get("aplicavel", "")
+                        detalhes2 = pol2.get("detalhes", "")
+                        categoria2 = pol2.get("categoria", "")
+
+                        # POLÍTICA 3
+                        pol3 = salvaguardas.get("pol_3_poluicao", {})
+                        aplicavel3 = pol3.get("aplicavel", "")
+                        detalhes_pesticidas = pol3.get("detalhes_pesticidas", "")
+                        detalhes_poluicao = pol3.get("detalhes_poluicao", "")
+                        categoria3 = pol3.get("categoria", "")
+
                         dados.append({
                             "Código do projeto": p.get("codigo"),
                             "Nome da organização": nome_org,
-                            "Nome do projeto": p.get("nome_do_projeto")
+                            "Nome do projeto": p.get("nome_do_projeto"),
+
+                            ###################################################################################################
+                            # POLÍTICA 1
+                            ###################################################################################################
+                            "1. Avaliação Ambiental e Social": "",
+                            "1. Aplicável?": "Sim",
+                            "1. Avaliação de Risco": "N/A",
+                            "1. Categoria de Risco": "N/A",
+
+                            ###################################################################################################
+                            # POLÍTICA 2
+                            ###################################################################################################
+                            "2. Condições de Trabalho e Trabalhistas": "",
+                            "2. Aplicável?": aplicavel2,
+                            "2. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos em relação às condições de trabalho e trabalhistas?\nDetalhes: {detalhes2}" if detalhes2 else "",
+                            "2. Categoria de Risco": categoria2,
+
+                            ###################################################################################################
+                            # POLÍTICA 3
+                            ###################################################################################################
+                            "3. Eficiência de Recursos e Prevenção de Poluição": "",
+                            "3. Aplicável?": aplicavel3,
+                            "3. Avaliação de Risco": (
+                                f"O projeto proposto apresenta riscos significativos relacionados a pesticidas?\n"
+                                f"Detalhes: {detalhes_pesticidas}\n\n"
+                                f"O projeto proposto apresenta riscos significativos relacionados ao uso insustentável de recursos e/ou formas de poluição que não sejam pesticidas?\n"
+                                f"Detalhes: {detalhes_poluicao}"
+                                if detalhes_pesticidas or detalhes_poluicao else ""
+                            ),
+                            "3. Categoria de Risco": categoria3
                         })
+
+
+
+                        # dados.append({
+                        #     "Código do projeto": p.get("codigo"),
+                        #     "Nome da organização": nome_org,
+                        #     "Nome do projeto": p.get("nome_do_projeto"),
+
+                        #     ###################################################################################################
+                        #     # COLUNAS DE SALVAGUARDAS
+                        #     ###################################################################################################
+                        #     "1. Avaliação Ambiental e Social": "",
+                        #     "1. Aplicável?": "Sim",
+                        #     "1. Avaliação de Risco": "N/A",
+                        #     "1. Categoria de Risco": "N/A"
+                        # })
+
+
+
 
                     ###################################################################################################
                     # CRIAÇÃO DO EXCEL
@@ -344,18 +388,24 @@ if opcao_relatorio == "Relatório de salvaguardas":
                     st.rerun()
 
 
+
         ###################################################################################################
         # BOTÃO DOWNLOAD
         ###################################################################################################
         if st.session_state.arquivo_salvaguardas:
 
+            # Nome do edital (seguro para arquivo)
+            nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
+            nome_edital_arquivo = nome_edital.replace(" ", "_")
+
             st.download_button(
                 label="Baixar relatório",
                 icon=":material/download:",
                 data=st.session_state.arquivo_salvaguardas,
-                file_name="Relatorio_de_salvaguardas.xlsx",
+                file_name=f"Relatorio_de_salvaguardas_{nome_edital_arquivo}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
 
 
     #######################################################################################################
@@ -391,7 +441,9 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
     # Renderiza o filtro de editais 
-    projetos = filtro_editais()
+    # projetos = filtro_editais()
+    projetos, edital_selecionado_obj = filtro_editais()
+
 
     st.write(f"{len(projetos)} projetos")
 
@@ -533,7 +585,9 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
 
     
     # Renderiza o filtro de editais 
-    projetos = filtro_editais()
+    # projetos = filtro_editais()
+    projetos, edital_selecionado_obj = filtro_editais()
+
 
     st.write(f"{len(projetos)} projetos")
 
@@ -541,12 +595,23 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
     st.write('')
 
 
+
+
+
+
+
+
+
+
+
 elif opcao_relatorio == "Relatório de acompanhamento completo":
 
     st.subheader("Relatório de acompanhamento completo")
 
     # Renderiza o filtro de editais 
-    projetos = filtro_editais()
+    # projetos = filtro_editais()
+    projetos, edital_selecionado_obj = filtro_editais()
+
 
     st.write(f"{len(projetos)} projetos")
 
