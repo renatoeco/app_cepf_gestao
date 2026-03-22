@@ -18,31 +18,100 @@ import datetime
 # Conecta-se ao banco de dados MongoDB (usa cache automático para melhorar performance)
 db = conectar_mongo_cepf_gestao()
 
-# Importa coleções e cria dataframes
 
-# Beneficiários
-col_publicos = db["publicos"]
 
-# Benefícios
-col_beneficios = db["beneficios"]
 
-# Direções Estratégicas
-# col_direcoes = db["direcoes_estrategicas"]
 
-# Indicadores
-# col_indicadores = db["indicadores"]
 
-# Categorias de despesa
-col_categorias_despesa = db["categorias_despesa"]
 
-# Corredores
-col_corredores = db["corredores"]
 
-# KBAs
-col_kbas = db["kbas"]
 
-# Editais
-col_editais = db["editais"]
+# Carregamento de várias coleções cacheadas
+@st.cache_data(ttl=600)  # 10 minutos
+def carregar_dados_base():
+
+    return {
+        "publicos": list(db["publicos"].find()),
+        "beneficios": list(db["beneficios"].find()),
+        "categorias_despesa": list(db["categorias_despesa"].find()),
+        "corredores": list(db["corredores"].find()),
+        "kbas": list(db["kbas"].find()),
+        "editais": list(db["editais"].find()),
+        "ciclos": list(db["ciclos_investimento"].find())
+    }
+
+
+
+dados_base = carregar_dados_base()
+
+editais = dados_base["editais"]
+ciclos = dados_base["ciclos"]
+
+
+
+
+
+
+
+# # Importa coleções e cria dataframes
+
+# # Beneficiários
+# col_publicos = db["publicos"]
+
+# # Benefícios
+# col_beneficios = db["beneficios"]
+
+# # Direções Estratégicas
+# # col_direcoes = db["direcoes_estrategicas"]
+
+# # Indicadores
+# # col_indicadores = db["indicadores"]
+
+# # Categorias de despesa
+# col_categorias_despesa = db["categorias_despesa"]
+
+# # Corredores
+# col_corredores = db["corredores"]
+
+# # KBAs
+# col_kbas = db["kbas"]
+
+# # Editais
+# col_editais = db["editais"]
+
+# # Ciclos de investimento
+# col_ciclos = db["ciclos_investimento"]
+
+
+
+
+
+
+
+
+
+
+###########################################################################################################
+# TRATAMENTO DE DADOS
+###########################################################################################################
+
+
+# Mapa de ciclos de editais, pra ajudar no join de edital com ciclos_investimento, usado no selectbox do filtro
+# que tem concatenado "nome_edital | doadores | investidores | nome_ciclo" 
+mapa_ciclos = {
+    c.get("codigo_ciclo"): c
+    for c in ciclos
+}
+
+
+# editais = list(col_editais.find())
+
+
+
+
+
+
+
 
 
 
@@ -59,6 +128,67 @@ st.header('Relatórios')
 st.write('')
 
 
+
+
+###########################################################################################################
+# FILTRO DE EDITAL
+###########################################################################################################
+
+
+def montar_label_edital(edital):
+
+    codigo = edital.get("codigo_edital", "")
+    nome = edital.get("nome_edital", "")
+    codigo_ciclo = edital.get("ciclo_investimento")
+
+    ciclo = mapa_ciclos.get(codigo_ciclo, {})
+
+    doadores = ciclo.get("doadores", [])
+    investidores = ciclo.get("investidores", [])
+    nome_ciclo = ciclo.get("nome_ciclo", "")
+
+    doadores_str = ", ".join(doadores) if doadores else ""
+    investidores_str = ", ".join(investidores) if investidores else ""
+
+    # 👇 agora começa com o código
+    partes = [codigo, nome]
+
+    if doadores_str:
+        partes.append(doadores_str)
+
+    if investidores_str:
+        partes.append(investidores_str)
+
+    if nome_ciclo:
+        partes.append(nome_ciclo)
+
+    return " | ".join(partes)
+
+
+
+
+edital_selecionado_obj = st.selectbox(
+    "Selecione o edital",
+    options=[None] + editais,
+    format_func=lambda x: "Selecione..." if x is None else montar_label_edital(x)
+)
+
+
+codigo_edital = None
+
+if edital_selecionado_obj:
+    codigo_edital = edital_selecionado_obj.get("codigo_edital")
+
+
+
+projetos = list(db["projetos"].find({
+    "edital": codigo_edital
+}))
+
+
+# ?????
+st.write(codigo_edital)
+st.write(projetos)
 
 
 ###########################################################################################################
