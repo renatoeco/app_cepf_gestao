@@ -1,18 +1,13 @@
 import streamlit as st
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
 import pandas as pd
-# from bson import ObjectId
-# import time
-# import streamlit_shadcn_ui as ui
-# from streamlit_sortables import sort_items
-# import uuid
 import io
 import datetime
 
 
 
 ###########################################################################################################
-# CONEXÃO COM O BANCO DE DADOS MONGODB
+# CONEXÃO COM O BANCO DE DADOS MONGODB E CARREGAMENTO DE DADOS
 ###########################################################################################################
 
 # Conecta-se ao banco de dados MongoDB (usa cache automático para melhorar performance)
@@ -53,35 +48,76 @@ ciclos = dados_base["ciclos"]
 
 
 
-# # Importa coleções e cria dataframes
 
-# # Beneficiários
-# col_publicos = db["publicos"]
 
-# # Benefícios
-# col_beneficios = db["beneficios"]
 
-# # Direções Estratégicas
-# # col_direcoes = db["direcoes_estrategicas"]
+###########################################################################################################
+# FUNÇÕES
+###########################################################################################################
 
-# # Indicadores
-# # col_indicadores = db["indicadores"]
 
-# # Categorias de despesa
-# col_categorias_despesa = db["categorias_despesa"]
 
-# # Corredores
-# col_corredores = db["corredores"]
 
-# # KBAs
-# col_kbas = db["kbas"]
 
-# # Editais
-# col_editais = db["editais"]
 
-# # Ciclos de investimento
-# col_ciclos = db["ciclos_investimento"]
 
+# FILTRO DE EDITAL
+
+def filtro_editais():
+
+
+
+    def montar_label_edital(edital):
+
+        codigo = edital.get("codigo_edital", "")
+        nome = edital.get("nome_edital", "")
+        codigo_ciclo = edital.get("ciclo_investimento")
+
+        ciclo = mapa_ciclos.get(codigo_ciclo, {})
+
+        doadores = ciclo.get("doadores", [])
+        investidores = ciclo.get("investidores", [])
+        nome_ciclo = ciclo.get("nome_ciclo", "")
+
+        doadores_str = ", ".join(doadores) if doadores else ""
+        investidores_str = ", ".join(investidores) if investidores else ""
+
+        # 👇 agora começa com o código
+        partes = [codigo, nome]
+
+        if doadores_str:
+            partes.append(doadores_str)
+
+        if investidores_str:
+            partes.append(investidores_str)
+
+        if nome_ciclo:
+            partes.append(nome_ciclo)
+
+        return " | ".join(partes)
+
+
+
+
+    edital_selecionado_obj = st.selectbox(
+        "Selecione o edital",
+        options=[None] + editais,
+        format_func=lambda x: "Selecione..." if x is None else montar_label_edital(x)
+    )
+
+
+    codigo_edital = None
+
+    if edital_selecionado_obj:
+        codigo_edital = edital_selecionado_obj.get("codigo_edital")
+
+
+
+    projetos = list(db["projetos"].find({
+        "edital": codigo_edital
+    }))
+
+    return projetos
 
 
 
@@ -103,8 +139,6 @@ mapa_ciclos = {
     for c in ciclos
 }
 
-
-# editais = list(col_editais.find())
 
 
 
@@ -130,72 +164,14 @@ st.write('')
 
 
 
-###########################################################################################################
-# FILTRO DE EDITAL
-###########################################################################################################
 
 
-def montar_label_edital(edital):
-
-    codigo = edital.get("codigo_edital", "")
-    nome = edital.get("nome_edital", "")
-    codigo_ciclo = edital.get("ciclo_investimento")
-
-    ciclo = mapa_ciclos.get(codigo_ciclo, {})
-
-    doadores = ciclo.get("doadores", [])
-    investidores = ciclo.get("investidores", [])
-    nome_ciclo = ciclo.get("nome_ciclo", "")
-
-    doadores_str = ", ".join(doadores) if doadores else ""
-    investidores_str = ", ".join(investidores) if investidores else ""
-
-    # 👇 agora começa com o código
-    partes = [codigo, nome]
-
-    if doadores_str:
-        partes.append(doadores_str)
-
-    if investidores_str:
-        partes.append(investidores_str)
-
-    if nome_ciclo:
-        partes.append(nome_ciclo)
-
-    return " | ".join(partes)
-
-
-
-
-edital_selecionado_obj = st.selectbox(
-    "Selecione o edital",
-    options=[None] + editais,
-    format_func=lambda x: "Selecione..." if x is None else montar_label_edital(x)
-)
-
-
-codigo_edital = None
-
-if edital_selecionado_obj:
-    codigo_edital = edital_selecionado_obj.get("codigo_edital")
-
-
-
-projetos = list(db["projetos"].find({
-    "edital": codigo_edital
-}))
-
-
-# ?????
-st.write(codigo_edital)
-st.write(projetos)
 
 
 ###########################################################################################################
 # ESCOLHA DO RELATÓRIO
 ###########################################################################################################
 
-st.subheader("Escolha o tipo de relatório")
 
 opcao_relatorio = st.radio(
     "Selecione o relatório que deseja gerar:",
@@ -217,16 +193,24 @@ st.divider()
 
 
 
+
+
+
+
+
+
 ###########################################################################################################
 # LÓGICA PARA CADA RELATÓRIO
 ###########################################################################################################
 
 if opcao_relatorio == "Relatório de salvaguardas":
 
+    st.subheader("Relatório de salvaguardas")
 
+    # Renderiza o filtro de editais 
+    projetos = filtro_editais()
 
-
-
+    st.write(f"{len(projetos)} projetos")
 
     ###########################################################################################################
     # RELATÓRIO DE SALVAGUARDAS
@@ -241,6 +225,9 @@ if opcao_relatorio == "Relatório de salvaguardas":
 
     if opcao_relatorio == "Relatório de salvaguardas":
 
+
+        st.write('')
+
         # BOTÃO GERAR
         if not st.session_state.relatorio_salvaguardas_pronto:
 
@@ -248,7 +235,6 @@ if opcao_relatorio == "Relatório de salvaguardas":
 
                 with st.spinner("Gerando relatório..."):
 
-                    projetos = list(db["projetos"].find())
 
                     dados = []
 
@@ -312,6 +298,17 @@ if opcao_relatorio == "Relatório de salvaguardas":
 
 elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
+    st.subheader("Relatório de acompanhamento de desembolsos")
+
+
+    # Renderiza o filtro de editais 
+    projetos = filtro_editais()
+
+    st.write(f"{len(projetos)} projetos")
+
+    st.write('')
+    st.write('')
+
     # ---- INPUTS ----
 
     cotacao_dolar = st.number_input(
@@ -355,7 +352,6 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
             with st.spinner("Gerando relatório..."):
 
-                projetos = list(db["projetos"].find())
 
                 dados = []
 
@@ -443,10 +439,27 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
 elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela":
-    st.write("Gerando relatório de desembolsos por parcela...")
-    # código aqui
+    
+    st.subheader("Relatório de acompanhamento de desembolsos por parcela")
+
+    
+    # Renderiza o filtro de editais 
+    projetos = filtro_editais()
+
+    st.write(f"{len(projetos)} projetos")
+
+    st.write('')
+    st.write('')
 
 
 elif opcao_relatorio == "Relatório de acompanhamento completo":
-    st.write("Gerando relatório completo...")
-    # código aqui
+
+    st.subheader("Relatório de acompanhamento completo")
+
+    # Renderiza o filtro de editais 
+    projetos = filtro_editais()
+
+    st.write(f"{len(projetos)} projetos")
+
+    st.write('')
+    st.write('')
