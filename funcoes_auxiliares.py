@@ -888,30 +888,3 @@ def sidebar_projeto():
 
 
 
-
-
-
-
-# # --- Conversor string brasileira -> float ---
-# def br_to_float(valor_str: str) -> float:
-#     """
-#     Converte string no formato brasileiro (1.234,56) para float (1234.56).
-#     """
-#     if not valor_str or not isinstance(valor_str, str):
-#         return 0.00
-#     # Remove pontos (milhares) e troca vírgula por ponto
-#     valor_str = valor_str.replace(".", "").replace(",", ".")
-#     try:
-#         return round(float(valor_str), 2)
-#     except ValueError:
-#         return 0.00
-
-
-# # --- Conversor float -> string brasileira ---
-# def float_to_br(valor_float: float) -> str:
-#     """
-#     Converte float (1234.56) para string no formato brasileiro (1.234,56).
-#     """
-#     if valor_float is None:
-#         return "0,00"
-#     return f"{valor_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")

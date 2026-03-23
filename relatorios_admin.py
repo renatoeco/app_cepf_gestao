@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos  # Função personalizada para conectar ao MongoDB
 import pandas as pd
 import io
 import datetime
@@ -619,19 +619,12 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
     ###################################################################################################
-    # CONVERTE PARA DICIONÁRIO (MESMO FORMATO ANTIGO)
+    # CONVERTE PARA DICIONÁRIO
     ###################################################################################################
     cambio_meses = {
         row["Mês"]: (row["Cotação"] if pd.notna(row["Cotação"]) else 0)
         for _, row in df_editado.iterrows()
     }
-
-
-
-
-
-
-
 
 
 
@@ -652,12 +645,8 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
 
-
-
-
-
     ###################################################################################################
-    # BOTÕES (PADRÃO IGUAL AO RELATÓRIO DE SALVAGUARDAS)
+    # BOTÕES 
     ###################################################################################################
     st.write('')
 
@@ -693,7 +682,18 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
 
+                    ###################################################################################################
+                    # CALCULAR STATUS DOS PROJETOS
+                    ###################################################################################################
+                    df_projetos = pd.DataFrame(projetos)
 
+                    df_projetos_status = calcular_status_projetos(df_projetos)
+
+                    # cria mapa: codigo -> status
+                    mapa_status = {
+                        row["codigo"]: row.get("status")
+                        for _, row in df_projetos_status.iterrows()
+                    }
 
 
 
@@ -767,6 +767,7 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                         # 2. ESCREVER CABEÇALHO (LINHA 5)
                         ###################################################################################################
 
+
                         # COLUNAS (COM R$ E US$)
                         colunas = [
                             "Código",
@@ -775,9 +776,16 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                             "Valor do contrato (US$)",
                         ]
 
+                        # colunas mensais
                         for mes in meses:
                             colunas.append(f"{mes} R$")
                             colunas.append(f"{mes} US$")
+
+                        colunas.append("Já Pago")
+                        colunas.append("Remanescente a receber")
+                        colunas.append("Data de Encerramento")
+                        colunas.append("Status do projeto")
+
 
 
                         for col_idx, col_nome in enumerate(colunas, start=1):
@@ -802,13 +810,15 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                 "Valor do contrato (US$)": 0  # temporário (sem cotação global)
                             }
 
+
+
                             # inicializar meses
                             for mes in meses:
                                 linha[f"{mes} R$"] = 0
                                 linha[f"{mes} US$"] = ""
 
-                            # for mes in meses:
-                            #     linha[mes] = 0
+                            # inicializa já pago
+                            ja_pago = 0
 
                             # preencher parcelas
                             for parcela in parcelas:
@@ -818,12 +828,65 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                 if not data_realizada:
                                     continue
 
+                                valor_parcela = parcela.get("valor", 0)
+
+                                # soma no já pago (todas com data_realizada)
+                                ja_pago += valor_parcela
+
                                 data = datetime.datetime.strptime(data_realizada, "%Y-%m-%d")
 
                                 if data.year == int(ano_selecionado):
 
                                     mes_nome = meses[data.month - 1]
-                                    linha[f"{mes_nome} R$"] += parcela.get("valor", 0)
+                                    linha[f"{mes_nome} R$"] += valor_parcela
+
+
+                            #  CALCULAR DATA DE ENCERRAMENTO
+                            data_encerramento = ""
+
+                            # verifica se existem parcelas
+                            if parcelas:
+
+                                # pega apenas parcelas com data_realizada
+                                parcelas_com_data = [
+                                    parcela for parcela in parcelas
+                                    if parcela.get("data_realizada")
+                                ]
+
+                                # se TODAS têm data_realizada
+                                if len(parcelas_com_data) == len(parcelas):
+
+                                    # converte datas para datetime
+                                    datas = [
+                                        datetime.datetime.strptime(p["data_realizada"], "%Y-%m-%d")
+                                        for p in parcelas_com_data
+                                    ]
+
+                                    # pega a mais recente
+                                    ultima_data = max(datas)
+
+                                    # formata
+                                    data_encerramento = ultima_data.strftime("%d/%m/%Y")
+
+
+                            ###################################################################################################
+                            # STATUS DO PROJETO
+                            ###################################################################################################
+                            codigo_projeto = p.get("codigo")
+
+                            status_projeto = mapa_status.get(codigo_projeto, "")
+
+                            linha["Status do projeto"] = status_projeto
+
+
+
+
+
+                            # preencher já pago e remanescente a receber
+                            linha["Já Pago"] = ja_pago
+                            linha["Remanescente a receber"] = ""  # será fórmula
+                            linha["Data de Encerramento"] = data_encerramento
+                            linha["Status do projeto"] = status_projeto
 
 
                             # escrever linha no excel
@@ -831,6 +894,27 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                 
                                 
                                 valor = linha.get(col_nome, "")
+
+
+                                # coluna "Remanescente a receber" -> fórmula
+                                if col_nome == "Remanescente a receber":
+
+                                    # coluna C = Valor do contrato (R$)
+                                    celula_contrato = f"C{linha_excel}"
+
+                                    # coluna AC = Já Pago
+                                    celula_ja_pago = f"AC{linha_excel}"
+
+                                    formula = f"={celula_contrato}-{celula_ja_pago}"
+
+                                    worksheet.cell(
+                                        row=linha_excel,
+                                        column=col_idx,
+                                        value=formula
+                                    )
+
+                                    continue
+
 
                                 # se for coluna US$ (dos meses)
                                 if "US$" in col_nome and "Valor do contrato" not in col_nome:
