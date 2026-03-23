@@ -2,10 +2,6 @@ import streamlit as st
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
 import plotly.graph_objects as go
 
-# Google Drive API
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
 
 
 st.set_page_config(page_title="Armazenamento no BD")
