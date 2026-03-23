@@ -474,19 +474,29 @@ if opcao_relatorio == "Relatório de salvaguardas":
         ###################################################################################################
         # BOTÃO DOWNLOAD
         ###################################################################################################
+
+
         if st.session_state.arquivo_salvaguardas:
 
             # Nome do edital (seguro para arquivo)
             nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
             nome_edital_arquivo = nome_edital.replace(" ", "_")
 
-            st.download_button(
+            download_clicado = st.download_button(
                 label="Baixar relatório",
                 icon=":material/download:",
                 data=st.session_state.arquivo_salvaguardas,
                 file_name=f"Relatorio_de_salvaguardas_{nome_edital_arquivo}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
+            ###################################################################################################
+            # SE CLICOU NO DOWNLOAD, LIMPA O ESTADO
+            ###################################################################################################
+            if download_clicado:
+                st.session_state.arquivo_salvaguardas = None
+                st.rerun()
+
 
 
 
@@ -977,13 +987,25 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
         ###################################################################################################
         if st.session_state.arquivo_desembolsos:
 
-            st.download_button(
+            # Nome do edital (seguro para arquivo)
+            nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
+            nome_edital_arquivo = nome_edital.replace(" ", "_")
+
+            download_clicado = st.download_button(
                 label="Baixar relatório",
                 icon=":material/download:",
                 data=st.session_state.arquivo_desembolsos,
-                file_name="Relatorio_acompanhamento_desembolsos.xlsx",
+                file_name=f"Relatorio_acompanhamento_desembolsos_{nome_edital_arquivo}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
+            ###################################################################################################
+            # SE CLICOU NO DOWNLOAD, LIMPA O ESTADO
+            ###################################################################################################
+            if download_clicado:
+                st.session_state.arquivo_desembolsos = None
+                st.rerun()
+
 
 
     ###################################################################################################
