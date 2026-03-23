@@ -876,9 +876,10 @@ def sidebar_projeto():
             st.session_state.projeto_atual = None
             st.rerun()
 
+    tipo_usuario = st.session_state.get("tipo_usuario")
 
-
-    st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com email@email.com")
+    if tipo_usuario == 'beneficiario':
+        st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com email@email.com")
 
 
     st.sidebar.write(f"*{st.session_state['tipo_usuario']}*")

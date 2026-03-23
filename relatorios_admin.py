@@ -59,13 +59,7 @@ organizacoes = dados_base["organizacoes"]
 
 
 
-
-
-
-
-###########################################################################################################
 # FUNÇÃO DE FILTRO DE EDITAIS
-###########################################################################################################
 
 def filtro_editais():
     """
@@ -249,6 +243,7 @@ if "arquivo_salvaguardas" not in st.session_state:
     st.session_state.arquivo_salvaguardas = None
 
 
+
 if opcao_relatorio == "Relatório de salvaguardas":
 
     st.subheader("Relatório de salvaguardas")
@@ -313,6 +308,47 @@ if opcao_relatorio == "Relatório de salvaguardas":
                         detalhes_poluicao = pol3.get("detalhes_poluicao", "")
                         categoria3 = pol3.get("categoria", "")
 
+                        # POLÍTICA 4
+                        pol4 = salvaguardas.get("pol_4_comunidade", {})
+                        aplicavel4 = pol4.get("aplicavel", "")
+                        detalhes4 = pol4.get("detalhes", "")
+                        categoria4 = pol4.get("categoria", "")
+
+                        # POLÍTICA 5
+                        pol5 = salvaguardas.get("pol_5_reassentamento", {})
+                        aplicavel5 = pol5.get("aplicavel", "")
+                        detalhes5 = pol5.get("detalhes", "")
+                        categoria5 = pol5.get("categoria", "")
+
+                        # POLÍTICA 6
+                        pol6 = salvaguardas.get("pol_6_biodiversidade", {})
+                        aplicavel6 = pol6.get("aplicavel", "")
+                        detalhes6 = pol6.get("detalhes", "")
+                        categoria6 = pol6.get("categoria", "")
+
+                        # POLÍTICA 7
+                        pol7 = salvaguardas.get("pol_7_indigenas", {})
+                        aplicavel7 = pol7.get("aplicavel", "")
+                        detalhes7 = pol7.get("detalhes", "")
+                        categoria7 = pol7.get("categoria", "")
+
+                        # POLÍTICA 8
+                        pol8 = salvaguardas.get("pol_8_patrimonio", {})
+                        aplicavel8 = pol8.get("aplicavel", "")
+                        detalhes8 = pol8.get("detalhes", "")
+                        categoria8 = pol8.get("categoria", "")
+
+                        # POLÍTICA 9
+                        pol9 = salvaguardas.get("pol_9_genero", {})
+                        detalhes9 = pol9.get("detalhes", "")
+                        categoria9 = pol9.get("categoria", "")
+
+                        # CAMPOS GERAIS DE SALVAGUARDAS
+                        categoria_geral_risco = salvaguardas.get("categoria_geral_risco", "")
+                        fortalecimento_capacidades = salvaguardas.get("fortalecimento_capacidades", "")
+
+
+                        # Criando as colunas na tabela
                         dados.append({
                             "Código do projeto": p.get("codigo"),
                             "Nome da organização": nome_org,
@@ -346,25 +382,71 @@ if opcao_relatorio == "Relatório de salvaguardas":
                                 f"Detalhes: {detalhes_poluicao}"
                                 if detalhes_pesticidas or detalhes_poluicao else ""
                             ),
-                            "3. Categoria de Risco": categoria3
+                            "3. Categoria de Risco": categoria3,
+
+                            ###################################################################################################
+                            # POLÍTICA 4
+                            ###################################################################################################
+                            "4. Saúde, Segurança e Proteção da Comunidade": "",
+                            "4. Aplicável?": aplicavel4,
+                            "4. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos relacionados à saúde, segurança e proteção da comunidade?\nDetalhes: {detalhes4}" if detalhes4 else "",
+                            "4. Categoria de Risco": categoria4,
+
+                            ###################################################################################################
+                            # POLÍTICA 5
+                            ###################################################################################################
+                            "5. Restrições de Uso da Terra e Reassentamento Involuntário": "",
+                            "5. Aplicável?": aplicavel5,
+                            "5. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos relacionados a restrições de acesso associadas a impactos negativos nos meios de subsistência?\nDetalhes: {detalhes5}" if detalhes5 else "",
+                            "5. Categoria de Risco": categoria5,
+
+                            ###################################################################################################
+                            # POLÍTICA 6
+                            ###################################################################################################
+                            "6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos": "",
+                            "6. Aplicável?": aplicavel6,
+                            "6. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos relacionados à degradação ou perda de habitat crítico ou outros habitats naturais?\nDetalhes: {detalhes6}" if detalhes6 else "",
+                            "6. Categoria de Risco": categoria6,
+
+                            ###################################################################################################
+                            # POLÍTICA 7
+                            ###################################################################################################
+                            "7. Povos Indígenas": "",
+                            "7. Aplicável?": aplicavel7,
+                            "7. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos relacionados aos impactos sobre Povos Indígenas?\nDetalhes: {detalhes7}" if detalhes7 else "",
+                            "7. Categoria de Risco": categoria7,                        
+
+                            ###################################################################################################
+                            # POLÍTICA 8
+                            ###################################################################################################
+                            "8. Patrimônio Cultural": "",
+                            "8. Aplicável?": aplicavel8,
+                            "8. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos relacionados aos impactos sobre o patrimônio cultural tangível e/ou intangível?\nDetalhes: {detalhes8}" if detalhes8 else "",
+                            "8. Categoria de Risco": categoria8,
+
+                            ###################################################################################################
+                            # POLÍTICA 9
+                            ###################################################################################################
+                            "9. Igualdade de Gênero": "",
+                            "9. Aplicável?": "Sim",
+                            "9. Avaliação de Risco": f"O projeto proposto apresenta riscos significativos relacionados a impactos na promoção, proteção e respeito à igualdade de gênero?\nDetalhes: {detalhes9}" if detalhes9 else "",
+                            "9. Categoria de Risco": categoria9,
+
+                            ###################################################################################################
+                            # POLÍTICA 10
+                            ###################################################################################################
+                            "10. Engajamento de Partes Interessadas": "",
+                            "10. Aplicável?": "Sim",
+                            "10. Avaliação de Risco": "N/A",
+                            "10. Categoria de Risco": "N/A",
+
+                            ###################################################################################################
+                            # CAMPOS FINAIS
+                            ###################################################################################################
+                            "CATEGORIA GERAL DE RISCO": categoria_geral_risco,
+                            "FORTALECIMENTO DE CAPACIDADE": fortalecimento_capacidades,
+
                         })
-
-
-
-                        # dados.append({
-                        #     "Código do projeto": p.get("codigo"),
-                        #     "Nome da organização": nome_org,
-                        #     "Nome do projeto": p.get("nome_do_projeto"),
-
-                        #     ###################################################################################################
-                        #     # COLUNAS DE SALVAGUARDAS
-                        #     ###################################################################################################
-                        #     "1. Avaliação Ambiental e Social": "",
-                        #     "1. Aplicável?": "Sim",
-                        #     "1. Avaliação de Risco": "N/A",
-                        #     "1. Categoria de Risco": "N/A"
-                        # })
-
 
 
 
