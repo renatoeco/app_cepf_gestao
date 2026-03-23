@@ -879,7 +879,7 @@ def sidebar_projeto():
     tipo_usuario = st.session_state.get("tipo_usuario")
 
     if tipo_usuario == 'beneficiario':
-        st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com email@email.com")
+        st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com cepfcerrado@iieb.org.br")
 
 
     st.sidebar.write(f"*{st.session_state['tipo_usuario']}*")
