@@ -703,7 +703,7 @@ if not editar_cadastro:
         titulo = "atividade atrasada" if qtd == 1 else "atividades atrasadas"
         st.markdown(f"##### {qtd} {titulo}")
 
-        st.caption("Relate o avanço da atividade ou solicite um **remanejamento de prazos** na página de 'Atividades'.")
+        st.write("Relate o avanço da atividade ou solicite um **remanejamento de prazos** na página de 'Atividades'.")
 
         for atv in atividades_criticas:
 
