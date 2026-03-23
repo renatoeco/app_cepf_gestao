@@ -563,14 +563,16 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
     )
 
 
+
+
     ###################################################################################################
-    # INPUTS DE CÂMBIO POR MÊS
+    # INPUTS DE CÂMBIO POR MÊS (USANDO DATA_EDITOR)
     ###################################################################################################
     st.write('')
 
-    # st.markdown("##### Câmbio R\\$ → US\\$ por mês")
     st.markdown("##### Câmbio US\\$ por mês")
 
+    # lista de meses completa
     meses_completos = [
         "Janeiro", "Fevereiro", "Março",
         "Abril", "Maio", "Junho",
@@ -578,31 +580,58 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
         "Outubro", "Novembro", "Dezembro"
     ]
 
-    # criar 4 colunas
-    col1, col2, col3, col4 = st.columns(4, gap="large")
+    ###################################################################################################
+    # CRIA DATAFRAME BASE (MESES FIXOS + COTAÇÃO VAZIA)
+    ###################################################################################################
+    df_cambio = pd.DataFrame({
+        "Mês": meses_completos,
+        "Cotação": [None] * 12  # inicia vazio
+    })
 
-    cambio_meses = {}
 
-    for i, mes in enumerate(meses_completos):
 
-        # decide em qual coluna vai
-        if i < 3:
-            col = col1
-        elif i < 6:
-            col = col2
-        elif i < 9:
-            col = col3
-        else:
-            col = col4
 
-        with col:
-            cambio_meses[mes] = st.number_input(
-                f"{mes}",
+    ###################################################################################################
+    # DATA EDITOR
+    ###################################################################################################
+    df_editado = st.data_editor(
+        df_cambio,
+        width=400,  # define largura fixa de 400px
+        height="content",
+        hide_index=True,  # esconde o índice
+        num_rows="fixed",  # não permite adicionar/remover linhas
+        column_config={
+            "Mês": st.column_config.TextColumn(
+                "Mês",
+                disabled=True  # usuário não pode alterar
+            ),
+            "Cotação": st.column_config.NumberColumn(
+                "Cotação",
                 min_value=0.0,
-                value=0.0,
                 step=0.01,
-                key=f"cambio_{mes}"
+                format="%.2f"
             )
+        },
+        key="data_editor_cambio"
+    )
+
+
+
+
+    ###################################################################################################
+    # CONVERTE PARA DICIONÁRIO (MESMO FORMATO ANTIGO)
+    ###################################################################################################
+    cambio_meses = {
+        row["Mês"]: (row["Cotação"] if pd.notna(row["Cotação"]) else 0)
+        for _, row in df_editado.iterrows()
+    }
+
+
+
+
+
+
+
 
 
 
@@ -650,7 +679,8 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                 time.sleep(3)
 
             # valida câmbio (pelo menos um mês preenchido)
-            elif not any(valor > 0 for valor in cambio_meses.values()):
+            elif not any(valor and valor > 0 for valor in cambio_meses.values()):
+            # elif not any(valor > 0 for valor in cambio_meses.values()):
                 st.warning("Informe a cotação de pelo menos um mês.")
                 time.sleep(3)
 
