@@ -80,37 +80,6 @@ def coletar_fotos_projeto(projeto):
 
     return fotos
 
-# def coletar_fotos_projeto(projeto):
-#     fotos = []
-
-#     plano = projeto.get("plano_trabalho", {})
-#     componentes = plano.get("componentes", [])
-
-#     for componente in componentes:
-#         nome_componente = componente.get("componente")
-
-#         for entrega in componente.get("entregas", []):
-#             nome_entrega = entrega.get("entrega")
-
-#             for atividade in entrega.get("atividades", []):
-#                 nome_atividade = atividade.get("atividade")
-
-#                 for relato in atividade.get("relatos", []):
-#                     autor_relato = relato.get("autor")
-
-#                     for foto in relato.get("fotos", []):
-#                         fotos.append({
-#                             "descricao": foto.get("descricao", "Sem descrição"),
-#                             "fotografo": foto.get("fotografo", "Não informado"),
-#                             "id_arquivo": foto.get("id_arquivo"),
-#                             "autor_relato": autor_relato,
-#                             "atividade": nome_atividade,
-#                             "entrega": nome_entrega,
-#                             "componente": nome_componente,
-#                         })
-
-#     return fotos
-
 
 ###########################################################################################################
 # CARREGAMENTO DO PROJETO

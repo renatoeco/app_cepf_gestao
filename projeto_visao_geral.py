@@ -577,8 +577,6 @@ if not editar_cadastro:
     # STATUS DO PROJETO
     # #############################################################################################
 
-    # ?????
-    # df_projeto = calcular_status_projetos(df_projeto)
 
 
     status_projeto = df_projeto["status"].values[0]

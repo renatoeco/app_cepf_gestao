@@ -2,6 +2,10 @@ import streamlit as st
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
 import plotly.graph_objects as go
 
+# Google Drive API
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 
 st.set_page_config(page_title="Armazenamento no BD")
@@ -21,9 +25,41 @@ db = conectar_mongo_cepf_gestao()
 
 
 
+
+
+###########################################################################################################
+# CONEXÃO COM GOOGLE DRIVE
+###########################################################################################################
+
+
+# Escopo mínimo necessário para Drive
+ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
+
+@st.cache_resource
+def obter_servico_drive():
+    """
+    Retorna o cliente autenticado do Google Drive,
+    usando as credenciais armazenadas em st.secrets.
+    """
+    credenciais = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=ESCOPO_DRIVE
+    )
+    return build("drive", "v3", credentials=credenciais)
+
+
+
+
+
+
+
+
 ###########################################################################################################
 # INTERFACE
 ###########################################################################################################
+
+
+
 
 
 # Logo do sidebar
