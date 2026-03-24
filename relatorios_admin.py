@@ -173,10 +173,6 @@ mapa_ciclos = {
     for c in ciclos
 }
 
-###########################################################################################################
-# MAPA DE ORGANIZAÇÕES (ACESSO RÁPIDO)
-###########################################################################################################
-
 
 ###########################################################################################################
 # MAPA COMPLETO DE ORGANIZAÇÕES (NOME + SIGLA)
@@ -188,11 +184,6 @@ mapa_organizacoes = {
     }
     for org in organizacoes
 }
-
-# mapa_organizacoes = {
-#     str(org.get("_id")): org.get("nome_organizacao", "")
-#     for org in organizacoes
-# }
 
 
 
@@ -1137,7 +1128,6 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             tema = direcao.get("tema", "")
                             subcategorias = direcao.get("subcategorias", [])
 
-                            # Limpeza dos subtemas (remoção de quebras de linha e espaços extras)
                             subcategorias_limpo = [
                                 sub.strip().replace("\n", " ")
                                 for sub in subcategorias
@@ -1186,27 +1176,88 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         uf_str = ", ".join(nomes_estados)
 
 
+
+
+                        ###################################################################################################
+                        # CONTATOS DO PROJETO
+                        ###################################################################################################
+                        contatos = p.get("contatos", [])
+
+
+                        ###################################################################################################
+                        # RESPONSÁVEIS LEGAIS (ASSINAM DOCUMENTOS)
+                        ###################################################################################################
+                        nomes_responsaveis = [
+                            contato.get("nome", "")
+                            for contato in contatos
+                            if contato.get("assina_docs") is True and contato.get("nome")
+                        ]
+
+                        responsaveis_str = ", ".join(nomes_responsaveis)
+
+
+                        ###################################################################################################
+                        # E-MAIL RESPONSÁVEL LEGAL
+                        ###################################################################################################
+                        emails_responsaveis = [
+                            contato.get("email", "")
+                            for contato in contatos
+                            if contato.get("assina_docs") is True and contato.get("email")
+                        ]
+
+                        emails_responsaveis_str = "; ".join(emails_responsaveis)
+
+
+                        ###################################################################################################
+                        # E-MAILS DA EQUIPE (TODOS OS CONTATOS)
+                        ###################################################################################################
+                        emails_equipe = [
+                            contato.get("email", "")
+                            for contato in contatos
+                            if contato.get("email")
+                        ]
+
+                        emails_equipe_str = "; ".join(emails_equipe)
+
+
+                        ###################################################################################################
+                        # TELEFONES (TODOS OS CONTATOS)
+                        ###################################################################################################
+                        telefones = [
+                            contato.get("telefone", "")
+                            for contato in contatos
+                            if contato.get("telefone")
+                        ]
+
+                        telefones_str = "; ".join(telefones)
+
+
+
+
+
+
                         ###################################################################################################
                         # LINHA DA TABELA
                         ###################################################################################################
+
                         dados.append({
                             "Contrato": contrato_nome,
                             "Direções estratégicas": direcoes_str,
                             "Nome da proposta": nome_projeto,
                             "Organização": nome_organizacao,
                             "Sigla": sigla_organizacao,
-                            "UF": uf_str
+                            "UF": uf_str,
+                            "Nome Responsável Legal (Quem vai assinar o contrato e os recibos)": responsaveis_str,
+                            "E-mail responsável legal": emails_responsaveis_str,
+                            "E-mails da equipe": emails_equipe_str,
+                            "Telefone": telefones_str
                         })
 
-                    # for p in projetos:
 
-                    #     # Recupera o nome do contrato do projeto
-                    #     contrato_nome = p.get("contrato_nome", "")
 
-                    #     # Adiciona linha da tabela
-                    #     dados.append({
-                    #         "Contrato": contrato_nome
-                    #     })
+
+
+
 
 
                     ###################################################################################################
