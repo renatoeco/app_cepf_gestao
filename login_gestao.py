@@ -444,9 +444,6 @@ else:
             "Ciclos de investimento": [
                 st.Page("ciclos_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
                 st.Page("ciclos_gerenciar.py", title="Gerenciar", icon=":material/settings:"),
-                # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
-                # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
-
             ],
             "Organizações": [
                 st.Page("organizacoes_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
@@ -458,6 +455,13 @@ else:
                 st.Page("pessoas_visitantes.py", title="Visitantes", icon=":material/visibility:"),
                 st.Page("pessoas_cadastrar.py", title="Convidar pessoas", icon=":material/person_add:"),
                 st.Page("pessoas_convites.py", title="Convites pendentes", icon=":material/mail:"),
+            ],
+            "Administração": [
+                # st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
+                st.Page("relatorio_acessos.py", title="Relatório de acessos", icon=":material/bar_chart:"),
+                st.Page("relatorio_armazenamento.py", title="Armazenamento", icon=":material/home_storage:"),
+                st.Page("relatorios_admin.py", title="Relatórios", icon=":material/assignment:"),
+
             ],
         },
 
