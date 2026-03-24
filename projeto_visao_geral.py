@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, calcular_status_atividade
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, calcular_status_atividade, registrar_estatistica_sessao
 import pandas as pd
 import streamlit_shadcn_ui as ui
 import datetime
@@ -84,6 +84,17 @@ col_editais = db["editais"]
 # col_direcoes_estrategicas = db["direcoes_estrategicas"]
 col_publicos = db["publicos"]
 col_organizacoes = db["organizacoes"]   
+
+
+
+
+
+# ###########################################################################################################
+# # REGISTRO DE ESTATÍSTICA -  CONTABILIZAÇÃO DE VISITA
+# ###########################################################################################################
+
+registrar_estatistica_sessao(db)
+
 
 
 

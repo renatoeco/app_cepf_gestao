@@ -22,34 +22,6 @@ db = conectar_mongo_cepf_gestao()
 
 
 
-
-###########################################################################################################
-# CONEXÃO COM GOOGLE DRIVE
-###########################################################################################################
-
-
-# Escopo mínimo necessário para Drive
-ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
-
-@st.cache_resource
-def obter_servico_drive():
-    """
-    Retorna o cliente autenticado do Google Drive,
-    usando as credenciais armazenadas em st.secrets.
-    """
-    credenciais = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=ESCOPO_DRIVE
-    )
-    return build("drive", "v3", credentials=credenciais)
-
-
-
-
-
-
-
-
 ###########################################################################################################
 # INTERFACE
 ###########################################################################################################

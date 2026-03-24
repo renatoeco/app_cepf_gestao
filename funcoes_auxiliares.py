@@ -23,6 +23,124 @@ from email.utils import formataddr
 
 
 
+
+
+def registrar_estatistica_sessao(db):
+
+    ###########################################################################################################
+    # CONTROLE DE CONTABILIZAÇÃO DE VISITA
+    ###########################################################################################################
+
+
+
+    # Verifica se a visita já foi contabilizada nesta sessão
+    if "visita_contabilizada" not in st.session_state:
+        st.session_state.visita_contabilizada = False
+
+    # Executa apenas se ainda não foi contabilizado
+    if not st.session_state.visita_contabilizada:
+
+        # --------------------------------------------------------------------------------------------------
+        # PREPARAÇÃO DA DATA ATUAL
+        # --------------------------------------------------------------------------------------------------
+
+        # Obtém a data atual no formato desejado
+        data_hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+
+        # --------------------------------------------------------------------------------------------------
+        # GARANTIA DA EXISTÊNCIA DA COLEÇÃO E DOCUMENTO
+        # --------------------------------------------------------------------------------------------------
+
+        # Acessa a coleção 'estatistica'
+        colecao = db["estatistica"]
+
+        # Tenta encontrar o documento principal
+        doc = colecao.find_one({"_id": "controle_acessos"})
+
+        # Caso o documento não exista, cria com estrutura inicial
+        if not doc:
+            colecao.insert_one({
+                "_id": "controle_acessos",
+                "total_sessoes": []
+            })
+            doc = colecao.find_one({"_id": "controle_acessos"})
+
+        # --------------------------------------------------------------------------------------------------
+        # VERIFICAÇÃO DO REGISTRO DO DIA
+        # --------------------------------------------------------------------------------------------------
+
+        lista_sessoes = doc.get("total_sessoes", [])
+
+        # Procura se já existe registro para a data atual
+        registro_hoje = next((item for item in lista_sessoes if item["data"] == data_hoje), None)
+
+        # Caso não exista, cria um novo registro para o dia
+        if not registro_hoje:
+            novo_registro = {
+                "data": data_hoje,
+                "equipe": 0,
+                "benef": 0,
+                "visit": 0
+            }
+
+            colecao.update_one(
+                {"_id": "controle_acessos"},
+                {"$push": {"total_sessoes": novo_registro}}
+            )
+
+            # Atualiza variável local para uso posterior
+            registro_hoje = novo_registro
+
+        # --------------------------------------------------------------------------------------------------
+        # INCREMENTO DE SESSÕES POR TIPO DE USUÁRIO
+        # --------------------------------------------------------------------------------------------------
+
+        tipo_usuario = st.session_state.get("tipo_usuario", "visitante")
+
+        # Define qual campo será incrementado
+        if tipo_usuario in ["equipe", "admin"]:
+            campo_incremento = "total_sessoes.$.equipe"
+        elif tipo_usuario == "beneficiario":
+            campo_incremento = "total_sessoes.$.benef"
+        else:
+            campo_incremento = "total_sessoes.$.visit"
+
+        # Atualiza o contador diretamente no MongoDB
+        colecao.update_one(
+            {
+                "_id": "controle_acessos",
+                "total_sessoes.data": data_hoje
+            },
+            {
+                "$inc": {campo_incremento: 1}
+            }
+        )
+
+        # --------------------------------------------------------------------------------------------------
+        # FINALIZAÇÃO DO PROCESSO
+        # --------------------------------------------------------------------------------------------------
+
+        # Marca que a visita já foi contabilizada nesta sessão
+        st.session_state.visita_contabilizada = True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def calcular_status_atividade(atividade):
 
     hoje = pd.Timestamp.today().normalize()

@@ -1,9 +1,12 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao
 import plotly.express as px
 import pandas as pd
 import datetime
 # import locale
+
+
+
 
 
 ###########################################################################################################
@@ -26,6 +29,16 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 # Editais
 col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
+
+
+
+
+
+# ###########################################################################################################
+# # REGISTRO DE ESTATÍSTICA -  CONTABILIZAÇÃO DE VISITA
+# ###########################################################################################################
+
+registrar_estatistica_sessao(db)
 
 
 

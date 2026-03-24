@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, registrar_estatistica_sessao
 
 
 ###########################################################################################################
@@ -18,6 +18,16 @@ db = conectar_mongo_cepf_gestao()
 # Projetos
 col_projetos = db["projetos"]
 df_projetos = col_projetos.find()
+
+
+
+
+# ###########################################################################################################
+# # REGISTRO DE ESTATÍSTICA -  CONTABILIZAÇÃO DE VISITA
+# ###########################################################################################################
+
+registrar_estatistica_sessao(db)
+
 
 
 
