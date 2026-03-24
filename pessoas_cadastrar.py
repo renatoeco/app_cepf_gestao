@@ -11,6 +11,12 @@ import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+
+st.set_page_config(page_title="Convidar", page_icon=":material/person_add:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################

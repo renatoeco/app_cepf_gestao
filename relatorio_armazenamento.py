@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 
 
 
-st.set_page_config(page_title="Armazenamento no BD")
+st.set_page_config(page_title="Armazenamento no BD", page_icon=":material/home_storage:")
 
 
 

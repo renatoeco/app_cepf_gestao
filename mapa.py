@@ -4,6 +4,13 @@ import folium
 from streamlit_folium import st_folium
 from funcoes_auxiliares import conectar_mongo_cepf_gestao
 
+
+
+st.set_page_config(page_title="Mapa", page_icon=":material/map:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO
 ###########################################################################################################

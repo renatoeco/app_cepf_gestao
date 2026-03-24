@@ -16,6 +16,7 @@ from funcoes_auxiliares import (
 
 
 
+st.set_page_config(page_title="Atividades", page_icon=":material/assignment:")
 
 
 

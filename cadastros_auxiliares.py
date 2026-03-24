@@ -8,6 +8,9 @@ from streamlit_sortables import sort_items
 # import uuid
 
 
+st.set_page_config(page_title="Cadastros auxiliares", page_icon=":material/tune:")
+
+
 
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB

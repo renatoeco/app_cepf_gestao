@@ -5,6 +5,12 @@ from bson import ObjectId
 import time
 
 
+
+st.set_page_config(page_title="Equipe", page_icon=":material/badge:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################

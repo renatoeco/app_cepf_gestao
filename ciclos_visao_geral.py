@@ -4,6 +4,11 @@ import pandas as pd
 import time
 import datetime
 
+
+st.set_page_config(page_title="Ciclos de Investimento", page_icon=":material/analytics:")
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################

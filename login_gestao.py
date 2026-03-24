@@ -10,7 +10,7 @@ import textwrap
 
 
 # Configurar o streamlit para tela wide
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="Veredas - IEB", page_icon=":material/login:")
 
 
 ##############################################################################################################
@@ -410,9 +410,6 @@ else:
             "Ciclos de investimento": [
                 st.Page("ciclos_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
                 st.Page("ciclos_gerenciar.py", title="Gerenciar", icon=":material/settings:"),
-                # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
-                # st.Page("nova_chamada.py", title="Cadastrar chamada", icon=":material/campaign:"),
-
             ],
             "Organizações": [
                 st.Page("organizacoes_visao_geral.py", title="Visão geral", icon=":material/analytics:"),

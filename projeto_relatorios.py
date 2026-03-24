@@ -24,6 +24,11 @@ from funcoes_auxiliares import (
 
 
 
+st.set_page_config(page_title="Relatórios", page_icon=":material/edit_note:")
+
+
+
+
 
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT

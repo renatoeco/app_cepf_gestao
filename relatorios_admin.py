@@ -6,6 +6,11 @@ import datetime
 import time
 
 
+st.set_page_config(page_title="Relatórios", page_icon=":material/assignment:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB E CARREGAMENTO DE DADOS
 ###########################################################################################################

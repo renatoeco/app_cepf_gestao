@@ -7,6 +7,12 @@ import re
 import time
 import uuid
 
+
+st.set_page_config(page_title="Nova Organização", page_icon=":material/add_business:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################

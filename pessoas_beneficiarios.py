@@ -6,6 +6,12 @@ import time
 from io import BytesIO
 
 
+st.set_page_config(page_title="Beneficiários", page_icon=":material/group:")
+
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################

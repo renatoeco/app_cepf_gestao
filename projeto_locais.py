@@ -20,6 +20,9 @@ from funcoes_auxiliares import (
 )
 
 
+st.set_page_config(page_title="Locais", page_icon=":material/map:")
+
+
 
 
 ###########################################################################################################

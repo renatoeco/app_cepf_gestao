@@ -16,6 +16,12 @@ from googleapiclient.http import MediaIoBaseUpload
 
 
 
+st.set_page_config(page_title="Visão Geral", page_icon=":material/home:")
+
+
+
+
+
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT
 ###########################################################################################################

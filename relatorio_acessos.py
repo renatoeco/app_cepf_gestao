@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 
 
-st.set_page_config(page_title="Relatório de acessos")
+st.set_page_config(page_title="Relatório de acessos", page_icon=":material/bar_chart:")
 
 
 

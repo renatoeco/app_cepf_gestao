@@ -4,6 +4,11 @@ import pandas as pd
 import bson
 import time
 
+
+st.set_page_config(page_title="Novo Projeto", page_icon=":material/add_circle:")
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO
 ###########################################################################################################

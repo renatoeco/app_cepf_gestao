@@ -6,6 +6,8 @@ import datetime
 # import locale
 
 
+st.set_page_config(page_title="Visão Geral", page_icon=":material/analytics:")
+
 
 
 

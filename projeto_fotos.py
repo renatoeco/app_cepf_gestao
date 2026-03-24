@@ -7,6 +7,13 @@ from funcoes_auxiliares import (
     sidebar_projeto,
 )
 
+
+st.set_page_config(page_title="Fotos", page_icon=":material/image:")
+
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS
 ###########################################################################################################

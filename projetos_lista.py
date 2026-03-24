@@ -3,6 +3,12 @@ from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_proje
 # import plotly.express as px
 import pandas as pd
 
+
+st.set_page_config(page_title="Projetos", page_icon=":material/list:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################

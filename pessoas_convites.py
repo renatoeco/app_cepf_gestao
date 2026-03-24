@@ -4,6 +4,13 @@ import pandas as pd
 from bson import ObjectId
 import time
 
+
+
+st.set_page_config(page_title="Convites pendentes", page_icon=":material/mail:")
+
+
+
+
 ###########################################################################################################
 # CONEXÃO COM O BANCO DE DADOS MONGODB
 ###########################################################################################################
