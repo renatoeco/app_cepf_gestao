@@ -177,10 +177,22 @@ mapa_ciclos = {
 # MAPA DE ORGANIZAÇÕES (ACESSO RÁPIDO)
 ###########################################################################################################
 
+
+###########################################################################################################
+# MAPA COMPLETO DE ORGANIZAÇÕES (NOME + SIGLA)
+###########################################################################################################
 mapa_organizacoes = {
-    str(org.get("_id")): org.get("nome_organizacao", "")
+    str(org.get("_id")): {
+        "nome": org.get("nome_organizacao", ""),
+        "sigla": org.get("sigla_organizacao", "")
+    }
     for org in organizacoes
 }
+
+# mapa_organizacoes = {
+#     str(org.get("_id")): org.get("nome_organizacao", "")
+#     for org in organizacoes
+# }
 
 
 
@@ -1067,3 +1079,192 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
     st.write('')
     st.write('')
+
+
+
+    ###################################################################################################
+    # SESSION STATE
+    ###################################################################################################
+    if "arquivo_acompanhamento_completo" not in st.session_state:
+        st.session_state.arquivo_acompanhamento_completo = None
+
+
+    ###################################################################################################
+    # BOTÕES
+    ###################################################################################################
+    with st.container(horizontal=True):
+
+        ###################################################################################################
+        # BOTÃO GERAR RELATÓRIO
+        ###################################################################################################
+        if st.button("Gerar relatório", icon=":material/list_alt_add:"):
+
+            ###################################################################################################
+            # VALIDAÇÃO DE PROJETOS
+            ###################################################################################################
+            if not projetos:
+                st.warning("Nenhum projeto encontrado para o edital selecionado.", icon=":material/warning:")
+                st.session_state.arquivo_acompanhamento_completo = None
+                time.sleep(3)
+
+            else:
+
+                with st.spinner("Gerando relatório..."):
+
+                    ###################################################################################################
+                    # MONTAGEM DOS DADOS
+                    ###################################################################################################
+                    dados = []
+
+
+                    for p in projetos:
+
+                        ###################################################################################################
+                        # CONTRATO
+                        ###################################################################################################
+                        contrato_nome = p.get("contrato_nome", "")
+
+
+                        ###################################################################################################
+                        # DIREÇÕES ESTRATÉGICAS
+                        ###################################################################################################
+                        direcoes = p.get("direcoes_estrategicas", [])
+
+                        lista_direcoes_formatadas = []
+
+                        for direcao in direcoes:
+
+                            tema = direcao.get("tema", "")
+                            subcategorias = direcao.get("subcategorias", [])
+
+                            # Limpeza dos subtemas (remoção de quebras de linha e espaços extras)
+                            subcategorias_limpo = [
+                                sub.strip().replace("\n", " ")
+                                for sub in subcategorias
+                                if sub
+                            ]
+
+                            if subcategorias_limpo:
+                                sub_str = ", ".join(subcategorias_limpo)
+                                direcao_formatada = f"{tema} ({sub_str})"
+                            else:
+                                direcao_formatada = tema
+
+                            lista_direcoes_formatadas.append(direcao_formatada)
+
+                        direcoes_str = ", ".join(lista_direcoes_formatadas)
+
+
+                        ###################################################################################################
+                        # NOME DA PROPOSTA
+                        ###################################################################################################
+                        nome_projeto = p.get("nome_do_projeto", "")
+
+
+                        ###################################################################################################
+                        # ORGANIZAÇÃO (NOME + SIGLA)
+                        ###################################################################################################
+                        id_org = p.get("id_organizacao")
+
+                        org_info = mapa_organizacoes.get(str(id_org), {}) if id_org else {}
+
+                        nome_organizacao = org_info.get("nome", "")
+                        sigla_organizacao = org_info.get("sigla", "")
+
+
+                        ###################################################################################################
+                        # UF (ESTADOS DO PROJETO)
+                        ###################################################################################################
+                        estados = p.get("locais", {}).get("estados", [])
+
+                        nomes_estados = [
+                            estado.get("nome_estado", "")
+                            for estado in estados
+                            if estado.get("nome_estado")
+                        ]
+
+                        uf_str = ", ".join(nomes_estados)
+
+
+                        ###################################################################################################
+                        # LINHA DA TABELA
+                        ###################################################################################################
+                        dados.append({
+                            "Contrato": contrato_nome,
+                            "Direções estratégicas": direcoes_str,
+                            "Nome da proposta": nome_projeto,
+                            "Organização": nome_organizacao,
+                            "Sigla": sigla_organizacao,
+                            "UF": uf_str
+                        })
+
+                    # for p in projetos:
+
+                    #     # Recupera o nome do contrato do projeto
+                    #     contrato_nome = p.get("contrato_nome", "")
+
+                    #     # Adiciona linha da tabela
+                    #     dados.append({
+                    #         "Contrato": contrato_nome
+                    #     })
+
+
+                    ###################################################################################################
+                    # CRIA DATAFRAME
+                    ###################################################################################################
+                    df = pd.DataFrame(dados)
+
+
+                    ###################################################################################################
+                    # CRIAÇÃO DO EXCEL
+                    ###################################################################################################
+                    buffer = io.BytesIO()
+
+                    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                        df.to_excel(
+                            writer,
+                            index=False,
+                            sheet_name="Acompanhamento Completo"
+                        )
+
+                    buffer.seek(0)
+
+
+                    ###################################################################################################
+                    # SALVA NO SESSION STATE
+                    ###################################################################################################
+                    st.session_state.arquivo_acompanhamento_completo = buffer
+
+                    st.rerun()
+
+
+        ###################################################################################################
+        # BOTÃO DOWNLOAD
+        ###################################################################################################
+        if st.session_state.arquivo_acompanhamento_completo:
+
+            # Nome do edital (seguro para arquivo)
+            nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
+            nome_edital_arquivo = nome_edital.replace(" ", "_")
+
+            download_clicado = st.download_button(
+                label="Baixar relatório",
+                icon=":material/download:",
+                data=st.session_state.arquivo_acompanhamento_completo,
+                file_name=f"Relatorio_acompanhamento_completo_{nome_edital_arquivo}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+            ###################################################################################################
+            # LIMPA SESSION STATE APÓS DOWNLOAD
+            ###################################################################################################
+            if download_clicado:
+                st.session_state.arquivo_acompanhamento_completo = None
+                st.rerun()
+
+
+    ###################################################################################################
+    # MENSAGEM FINAL
+    ###################################################################################################
+    if st.session_state.arquivo_acompanhamento_completo:
+        st.caption("Relatório gerado. Clique para baixar.")
