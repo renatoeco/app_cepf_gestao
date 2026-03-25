@@ -606,9 +606,21 @@ if not editar_cadastro:
         "Sem cronograma": "orange"
     }
 
+    # Regras de mensagem
+    if status_projeto == "Em dia":
+        mensagem = "As parcelas e relatórios estão em dia"
+    elif status_projeto == "Atrasado":
+        mensagem = "As parcelas e relatórios estão em atraso"
+    elif status_projeto in ["Concluído", "Cancelado", "Sem cronograma"]:
+        mensagem = f"O projeto está {status_projeto.lower()}"
+    else:
+        mensagem = status_projeto  # fallback
+
+    # Exibição
     st.markdown(
-        f"#### O projeto está :{cores_status.get(status_projeto, 'gray')}[{status_projeto.lower()}]"
+        f"#### :{cores_status.get(status_projeto, 'gray')}[{mensagem}]"
     )
+
 
     # #############################################################################################
     # MENSAGEM DO STATUS
