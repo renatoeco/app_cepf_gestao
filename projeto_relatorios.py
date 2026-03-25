@@ -4,6 +4,8 @@ import streamlit_antd_components as sac
 import time
 import datetime
 from collections import defaultdict
+import uuid
+
 
 from zoneinfo import ZoneInfo 
 
@@ -1081,6 +1083,7 @@ def salvar_relato():
                 pasta_relato_id
             )
 
+
             # DEFINE PERMISSÃO PÚBLICA na pasta de fotos de cada relato
             garantir_permissao_publica_leitura(servico, pasta_fotos_id)
 
@@ -1193,10 +1196,9 @@ def garantir_permissao_publica_leitura(servico, pasta_id):
             },
             supportsAllDrives=True
         ).execute()
-    except Exception:
-        # Silencioso: se já existir ou falhar, não quebra o fluxo
-        pass
-
+    except Exception as e:
+        st.error(f"Erro ao definir permissão: {str(e)}")
+        raise
 
 
 
@@ -1410,7 +1412,7 @@ def dialog_relatos():
         # Botão para adicionar
         if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
             # Usamos um ID único para cada foto em vez de apenas o índice
-            import uuid
+
             st.session_state["fotos_relato"].append({
                 "id": str(uuid.uuid4()), 
                 "arquivo": None,
