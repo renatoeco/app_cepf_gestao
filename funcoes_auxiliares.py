@@ -998,9 +998,6 @@ def sidebar_projeto():
             st.rerun()
 
 
-# ????????????
-
-    st.write(st.session_state)
 
     # Pequeno cabeçalho no sidebar
 
