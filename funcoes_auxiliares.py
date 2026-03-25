@@ -968,6 +968,9 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 # ###################################################################################################
 
 def sidebar_projeto():
+
+    st.sidebar.write('')
+
     # Botão de voltar para a home_interna só para admin, equipe e visitante
     if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
 
@@ -994,13 +997,41 @@ def sidebar_projeto():
             st.session_state.projeto_atual = None
             st.rerun()
 
+
+# ????????????
+
+    st.write(st.session_state)
+
+    # Pequeno cabeçalho no sidebar
+
     tipo_usuario = st.session_state.get("tipo_usuario")
 
+
+    st.sidebar.caption(st.session_state.get("nome"))
+
     if tipo_usuario == 'beneficiario':
+
+        st.sidebar.caption("Tipo: beneficiário(a)")
+
+    elif tipo_usuario == 'admin':
+        st.sidebar.caption("Tipo: administrador(a)")
+
+    elif tipo_usuario == 'equipe':
+        st.sidebar.caption("Tipo: equipe")
+
+    elif tipo_usuario == 'visitante':
+        st.sidebar.caption("Tipo: visitante")
+
+    st.sidebar.caption("Projeto: " + st.session_state.get("projeto_atual", "-"))
+
+
+    st.sidebar.divider()
+
+    if tipo_usuario == 'beneficiario':
+
         st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com cepfcerrado@iieb.org.br")
 
 
-    st.sidebar.write(f"*{st.session_state['tipo_usuario']}*")
 
 
 
