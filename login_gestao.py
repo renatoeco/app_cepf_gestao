@@ -426,7 +426,7 @@ else:
                 st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
                 st.Page("relatorio_acessos.py", title="Relatório de acessos", icon=":material/bar_chart:"),
                 st.Page("relatorio_armazenamento.py", title="Armazenamento", icon=":material/home_storage:"),
-                st.Page("relatorios_admin.py", title="Relatórios", icon=":material/assignment:"),
+                st.Page("relatorios_admin.py", title="Exportar relatórios", icon=":material/assignment:"),
 
             ],
         },
@@ -457,7 +457,7 @@ else:
                 # st.Page("cadastros_auxiliares.py", title="Cadastros auxiliares", icon=":material/tune:"),
                 st.Page("relatorio_acessos.py", title="Relatório de acessos", icon=":material/bar_chart:"),
                 st.Page("relatorio_armazenamento.py", title="Armazenamento", icon=":material/home_storage:"),
-                st.Page("relatorios_admin.py", title="Relatórios", icon=":material/assignment:"),
+                st.Page("relatorios_admin.py", title="Exportar relatórios", icon=":material/assignment:"),
 
             ],
         },
@@ -467,7 +467,7 @@ else:
             st.Page("projeto_atividades.py", title="Atividades", icon=":material/assignment:"),
             st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/payments:"),
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
-            st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
+            st.Page("projeto_relatorios.py", title="Exportar relatórios", icon=":material/edit_note:"),
             st.Page("projeto_fotos.py", title="Fotos", icon=":material/image:"),
         ],
 

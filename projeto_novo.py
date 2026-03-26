@@ -110,7 +110,9 @@ mapa_org_id_nome = {
 lista_org_ids = list(mapa_org_id_nome.keys())
 
 
+st.write('')
 
+col1, col2, col3 = st.columns(3)
 
 
 
@@ -121,20 +123,16 @@ lista_org_ids = list(mapa_org_id_nome.keys())
 editais = list(col_editais.find().sort("data_lancamento", -1))
 lista_editais = [e["codigo_edital"] for e in editais]
 
-edital = st.selectbox(
+edital = col1.selectbox(
     "Edital",
     lista_editais,
     index=lista_editais.index(st.session_state.form_projeto["edital"])
-    if st.session_state.form_projeto["edital"] in lista_editais else 0
+    if st.session_state.form_projeto["edital"] in lista_editais else 0,
 )
 
 # pega o documento do edital selecionado
 edital_doc = next((e for e in editais if e["codigo_edital"] == edital), {})
 
-
-# direcoes_edital = [
-#     d["tema"] for d in edital_doc.get("direcoes_estrategicas", [])
-# ]
 
 
 
@@ -145,11 +143,15 @@ edital_doc = next((e for e in editais if e["codigo_edital"] == edital), {})
 with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False):
 
 
+    codigo_projeto = col2.text_input(
+        "Código do Projeto",
+        value=st.session_state.form_projeto["codigo"]
+    )
 
-    ###########################################################################################################
-    # SELECTBOX ORGANIZAÇÃO
-    # mostra o nome da organização, mas retorna o _id
-    ###########################################################################################################
+    sigla_projeto = col3.text_input(
+        "Sigla do Projeto",
+        value=st.session_state.form_projeto["sigla"]
+    )
 
     organizacao_id = st.selectbox(
         "Organização",
@@ -159,74 +161,45 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
     )
 
 
-
-    # orgs = list(col_organizacoes.find().sort("nome_organizacao", 1))
-    # lista_orgs = [o["nome_organizacao"] for o in orgs]
-
-    # organizacao = st.selectbox(
-    #     "Organização",
-    #     lista_orgs,
-    #     index=lista_orgs.index(st.session_state.form_projeto["organizacao"])
-    #     if st.session_state.form_projeto["organizacao"] in lista_orgs else 0
-    # )
-
-    codigo_projeto = st.text_input(
-        "Código do Projeto",
-        value=st.session_state.form_projeto["codigo"]
-    )
-
-    sigla_projeto = st.text_input(
-        "Sigla do Projeto",
-        value=st.session_state.form_projeto["sigla"]
-    )
-
     nome_projeto = st.text_input(
         "Nome do Projeto",
         value=st.session_state.form_projeto["nome"]
     )
 
-    duracao = st.number_input(
+
+
+    col1, col2, col3 = st.columns(3)
+    
+    duracao = col1.number_input(
         "Duração do Projeto (meses)",
         min_value=1,
         step=1,
         value=st.session_state.form_projeto["duracao"]
     )
 
-    data_inicio = st.date_input(
+    data_inicio = col2.date_input(
         "Data de Início",
         value=st.session_state.form_projeto["data_inicio"],
         format="DD/MM/YYYY"
     )
 
-    data_fim = st.date_input(
+    data_fim = col3.date_input(
         "Data de Fim",
         value=st.session_state.form_projeto["data_fim"],
         format="DD/MM/YYYY"
     )
 
-    responsaveis_ids = st.multiselect(
-        "Responsáveis",
+
+    col1, col2 = st.columns([2, 1])
+
+    responsaveis_ids = col1.multiselect(
+        "Responsáveis pelo projeto",
         lista_ids,
         default=st.session_state.form_projeto["responsavel"],
         format_func=lambda x: "" if x is None else mapa_id_nome[x]
     )
 
-    # #######################################################################################################
-    # # DIREÇÕES ESTRATÉGICAS
-    # #######################################################################################################
-
-    # direcoes = st.multiselect(
-    #     "Direções estratégicas",
-    #     direcoes_edital,
-    #     default=[
-    #         d for d in st.session_state.form_projeto["direcoes"]
-    #         if d in direcoes_edital
-    #     ]
-    # )
-
-    #######################################################################################################
-
-    publicos = st.multiselect(
+    publicos = col2.multiselect(
         "Públicos",
         df_publicos["publico"].tolist(),
         default=st.session_state.form_projeto["publicos"]
