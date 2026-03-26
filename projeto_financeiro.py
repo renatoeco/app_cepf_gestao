@@ -41,11 +41,6 @@ st.set_page_config(page_title="Financeiro", page_icon=":material/payments:")
 
 
 
-
-
-
-
-
 # ###################################################################################################
 # SIDEBAR DA PÁGINA DO PROJETO
 # ###################################################################################################
@@ -223,7 +218,7 @@ def notifica_parcelas_desencontradas():
             if round(soma_parcelas, 2) != round(valor_total_ajustado, 2):
 
                 st.warning(
-                    "O valor total das parcelas está diferente do valor total do projeto após o cadastro do Aditivo / Devolução.  \n"
+                    "O valor total das parcelas está diferente do valor total do projeto após o cadastro do Aditivo / Devolução. "
                     "**Atualize o cronograma de parcelas**.",
                     icon=":material/warning:"
                 )
@@ -1723,18 +1718,30 @@ with cron_desemb:
 
 
 
+
+
+
+
+
+
+
+
         # -------------------------------------------------------
         # Editar Parcelas
+
 
         if opcao_editar_cron == "Parcelas":
 
             st.markdown("#### Parcelas")
 
-            # -----------------------------------
-            # Valor total do projeto
-            # -----------------------------------
-            valor_total = valor_atual if valor_atual is not None else 0.0
 
+            # -----------------------------------
+            # Valor total ajustado (com aditivo/devolução)
+            # -----------------------------------
+            valor_total_base = valor_atual if valor_atual is not None else 0.0
+            valor_aditivo = financeiro.get("valor_aditivo_devolucao") or 0.0
+
+            valor_total = valor_total_base + valor_aditivo
             # -----------------------------------
             # Dados atuais
             # -----------------------------------
@@ -1743,20 +1750,23 @@ with cron_desemb:
             if parcelas:
                 df_parcelas = pd.DataFrame(parcelas)
 
+                # Converter datas
                 df_parcelas["data_prevista"] = pd.to_datetime(
                     df_parcelas["data_prevista"],
                     errors="coerce"
                 )
 
-                if "numero" not in df_parcelas.columns:
-                    df_parcelas["numero"] = None
+                # Garantir colunas essenciais
+                for col in ["numero", "valor"]:
+                    if col not in df_parcelas.columns:
+                        df_parcelas[col] = None
 
             else:
                 df_parcelas = pd.DataFrame(
                     columns=[
                         "numero",
+                        "valor",
                         "data_prevista",
-                        "percentual",
                     ]
                 )
 
@@ -1770,31 +1780,40 @@ with cron_desemb:
                 ).reset_index(drop=True)
 
             # -----------------------------------
-            # Calcular valor
+            # Garantir coluna valor
             # -----------------------------------
-            df_parcelas["valor"] = (
-                df_parcelas["percentual"].fillna(0) / 100 * valor_total
-            )
+            df_parcelas["valor"] = df_parcelas["valor"].fillna(0.0)
 
             # -----------------------------------
-            # Coluna de exibição
+            # Calcular percentual com base no valor
+            # -----------------------------------
+            if valor_total > 0:
+                df_parcelas["percentual"] = (
+                    df_parcelas["valor"] / valor_total * 100
+                )
+            else:
+                df_parcelas["percentual"] = 0.0
+
+            # -----------------------------------
+            # Formatar valor para exibição no editor
             # -----------------------------------
             df_parcelas["valor_fmt"] = df_parcelas["valor"].apply(
                 lambda x: f"R$ {x:,.2f}"
                 .replace(",", "X")
                 .replace(".", ",")
                 .replace("X", ".")
+                if pd.notna(x) else ""
             )
 
             # -----------------------------------
-            # Editor
+            # Editor de parcelas
             # -----------------------------------
             df_editado = st.data_editor(
                 df_parcelas[
                     [
                         "numero",
-                        "percentual",
                         "valor_fmt",
+                        "percentual",
                         "data_prevista",
                     ]
                 ],
@@ -1807,18 +1826,15 @@ with cron_desemb:
                         step=1,
                         width=60
                     ),
+                    "valor_fmt": st.column_config.TextColumn(
+                        "Valor (R$)",
+                        width=150
+                    ),
                     "percentual": st.column_config.NumberColumn(
                         "Percentual (%)",
-                        min_value=0.0,
-                        max_value=100.0,
-                        step=1.0,
-                        format="%.0f%%",
-                        width=100
-                    ),
-                    "valor_fmt": st.column_config.TextColumn(
-                        "Valor (auto)",
+                        format="%.2f%%",
                         disabled=True,
-                        width=150
+                        width=100
                     ),
                     "data_prevista": st.column_config.DateColumn(
                         "Data prevista",
@@ -1832,28 +1848,74 @@ with cron_desemb:
             st.write("")
 
             # -----------------------------------
-            # Reconstruir df_parcelas a partir do editor
+            # Converter valor formatado para float
+            # -----------------------------------
+            def parse_brl(valor):
+                """
+                Converte string no formato monetário brasileiro para float.
+                """
+                if not valor:
+                    return 0.0
+
+                return float(
+                    str(valor)
+                    .replace("R$", "")
+                    .replace(".", "")
+                    .replace(",", ".")
+                    .strip()
+                )
+
+            # -----------------------------------
+            # Reconstruir DataFrame após edição
             # -----------------------------------
             df_parcelas = df_editado.copy()
 
-            # Garantir tipos
+            # Converter tipos
             df_parcelas["numero"] = df_parcelas["numero"].astype("Int64")
-            df_parcelas["percentual"] = df_parcelas["percentual"].astype(float)
             df_parcelas["data_prevista"] = pd.to_datetime(
                 df_parcelas["data_prevista"], errors="coerce"
             )
 
-            # Recalcular valor
-            df_parcelas["valor"] = (
-                df_parcelas["percentual"].fillna(0) / 100 * valor_total
+            # Converter valor digitado
+            df_parcelas["valor"] = df_parcelas["valor_fmt"].apply(parse_brl)
+
+            # -----------------------------------
+            # Recalcular percentual com base no valor
+            # -----------------------------------
+            if valor_total > 0:
+                df_parcelas["percentual"] = (
+                    df_parcelas["valor"] / valor_total * 100
+                )
+            else:
+                df_parcelas["percentual"] = 0.0
+
+            # -----------------------------------
+            # Total dos valores das parcelas
+            # -----------------------------------
+            soma_valores = df_parcelas["valor"].sum()
+
+            # Formatação
+            soma_fmt = (
+                f"R$ {soma_valores:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
             )
 
+            total_fmt = (
+                f"R$ {valor_total:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
 
-            # -----------------------------------
-            # Total das porcentagens
-            # -----------------------------------
-            soma_porcentagens = df_parcelas["percentual"].dropna().sum()
-            st.write(f"**Total: {int(soma_porcentagens)}%**")
+            # Exibir valores (com escape do $)
+            st.write(
+                f"**Total das parcelas:** {soma_fmt.replace('$', '\\$')}"
+            )
+            st.write(
+                f"**Valor total ajustado do projeto:** {total_fmt.replace('$', '\\$')}"
+            )
 
             # -----------------------------------
             # Salvar
@@ -1861,17 +1923,42 @@ with cron_desemb:
             if st.button("Salvar parcelas", icon=":material/save:"):
 
                 df_salvar = df_parcelas.dropna(
-                    subset=["percentual", "data_prevista"],
+                    subset=["valor", "data_prevista"],
                     how="any"
                 ).copy()
 
-                if df_salvar["percentual"].sum() != 100:
+
+                # -----------------------------------
+                # Validar soma dos valores das parcelas
+                # -----------------------------------
+                soma_valores = df_salvar["valor"].sum()
+
+                if round(soma_valores, 2) != round(valor_total, 2):
+
+                    soma_fmt = (
+                        f"R$ {soma_valores:,.2f}"
+                        .replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                    )
+
+                    total_fmt = (
+                        f"R$ {valor_total:,.2f}"
+                        .replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                    )
+
                     st.error(
-                        "Erro: Verifique se a soma das porcentagens é igual a 100%. Preencha todas as Datas previstas.",
+                        f"Erro: A soma das parcelas ({soma_fmt.replace('$', '\\$')}) deve ser igual ao valor total do projeto ({total_fmt.replace('$', '\\$')}).",
+                        # f"Erro: A soma das parcelas ({soma_fmt}) deve ser igual ao valor total do projeto ({total_fmt}).",
                         icon=":material/error:"
                     )
                     st.stop()
 
+
+
+                # Ordenar antes de salvar
                 df_salvar = df_salvar.sort_values(
                     by="data_prevista",
                     ascending=True
@@ -1892,6 +1979,7 @@ with cron_desemb:
                         }
                     )
 
+                # Atualizar banco
                 col_projetos.update_one(
                     {"codigo": codigo_projeto_atual},
                     {
@@ -1901,13 +1989,15 @@ with cron_desemb:
                     }
                 )
 
-                # Atualizar as datas dos relatórios correspondentes na coleção de relatórios. Dataprevista do relatório = data_prevista da parcela + 15 dias
+                # Atualizar relatórios vinculados
                 atualizar_datas_relatorios(col_projetos, codigo_projeto_atual)
-
 
                 st.success("Parcelas salvas com sucesso!", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
+
+
+
 
 
 
