@@ -39,6 +39,56 @@ df_temas = pd.DataFrame(list(col_temas.find()))
 col_publicos = db["publicos"]
 df_publicos = pd.DataFrame(list(col_publicos.find()))
 
+
+
+
+# -------------------------------------------------------------------------------------------------
+# COLEÇÃO UF_MUNICIPIOS - DOCUMENTO DE UFs
+# -------------------------------------------------------------------------------------------------
+
+col_uf_municipios = db["ufs_municipios"]
+
+# Busca especificamente o documento que possui a chave 'ufs'
+doc_ufs = col_uf_municipios.find_one({"ufs": {"$exists": True}})
+
+df_ufs = pd.DataFrame(doc_ufs["ufs"])
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+# COLEÇÃO UF_MUNICIPIOS - DOCUMENTO DE MUNICÍPIOS
+# -------------------------------------------------------------------------------------------------
+
+# Busca especificamente o documento que possui a chave 'municipios'
+doc_municipios = col_uf_municipios.find_one({"municipios": {"$exists": True}})
+
+df_municipios = pd.DataFrame(doc_municipios["municipios"])
+
+
+
+
+
+
+###########################################################################################################
+# TRATAMENTO DOS DADOS
+###########################################################################################################
+
+
+
+# -------------------------------------------------------------------------------------------------
+# PREPARAÇÃO DE LISTAS PARA INTERFACE
+# -------------------------------------------------------------------------------------------------
+
+# Lista de UFs (siglas)
+lista_ufs = sorted(df_ufs["sigla_uf"].tolist())
+
+# Ordena municípios alfabeticamente
+df_municipios = df_municipios.sort_values("nome_municipio")
+
+
+
+
 ###########################################################################################################
 # CONFIGURAÇÃO DE LOCALE
 ###########################################################################################################
@@ -144,22 +194,62 @@ if opcao_cadastro == "Cadastro individual":
     # Criação do formulário
     with st.form(key="organizacao_form", border=False):
 
-        # Campos de entrada com keys para controle via session_state
-        sigla_organizacao = st.text_input(
-            "Sigla da Organização",
-            key="sigla_organizacao_input"
-        )
 
-        nome_organizacao = st.text_input(
-            "Nome da Organização",
-            key="nome_organizacao_input"
-        )
+        with st.container(horizontal=True):
 
-        cnpj = st.text_input(
-            "CNPJ",
-            placeholder="00.000.000/0000-00",
-            key="cnpj_input"
-        )
+            # Campos de entrada com keys para controle via session_state
+            sigla_organizacao = st.text_input(
+                "Sigla da Organização",
+                key="sigla_organizacao_input",
+                width=300
+            )
+
+            nome_organizacao = st.text_input(
+                "Nome da Organização",
+                key="nome_organizacao_input"
+            )
+
+            cnpj = st.text_input(
+                "CNPJ",
+                placeholder="00.000.000/0000-00",
+                key="cnpj_input",
+                width=300
+
+            )
+
+        with st.container(horizontal=True):
+
+
+            # -------------------------------------------------------------------------------------------------
+            # CAMPOS DE LOCALIZAÇÃO
+            # -------------------------------------------------------------------------------------------------
+
+            endereco = st.text_input(
+                "Endereço",
+                key="endereco_input"
+            )
+
+            uf = st.selectbox(
+                "UF",
+                options=lista_ufs,
+                key="uf_input",
+                width=200
+            )
+
+            municipio = st.selectbox(
+                "Município",
+                options=df_municipios["nome_municipio"].tolist(),
+                key="municipio_input",
+                width=400
+            )
+
+            cep = st.text_input(
+                "CEP",
+                placeholder="00000-000",
+                key="cep_input",
+                width=200
+            )
+
 
         st.write("")
 
@@ -182,8 +272,16 @@ if opcao_cadastro == "Cadastro individual":
             nome_organizacao = st.session_state.nome_organizacao_input.strip()
             cnpj = st.session_state.cnpj_input.strip()
 
+            endereco = st.session_state.endereco_input.strip()
+            uf = st.session_state.uf_input
+            municipio_nome = st.session_state.municipio_input
+            cep = st.session_state.cep_input.strip()
+
+
             # Verifica se todos os campos foram preenchidos
-            if not sigla_organizacao or not nome_organizacao or not cnpj:
+
+            if not sigla_organizacao or not nome_organizacao or not cnpj \
+            or not endereco or not uf or not municipio_nome or not cep:
 
                 st.error("Todos os campos devem ser preenchidos.")
 
@@ -227,12 +325,44 @@ if opcao_cadastro == "Cadastro individual":
                     # INSERÇÃO NO BANCO
                     ###########################################################################
 
-                    # Documento a ser inserido
+
+                    # -------------------------------------------------------------------------------------------------
+                    # RECUPERAÇÃO DOS DADOS COMPLETOS PARA SALVAMENTO
+                    # -------------------------------------------------------------------------------------------------
+
+                    # Busca UF selecionada
+                    uf_doc = df_ufs[df_ufs["sigla_uf"] == uf].iloc[0]
+
+                    # Busca município selecionado
+                    municipio_doc = df_municipios[
+                        df_municipios["nome_municipio"] == municipio_nome
+                    ].iloc[0]
+
+
+                    # -------------------------------------------------------------------------------------------------
+                    # DOCUMENTO FINAL PARA INSERÇÃO NO MONGODB
+                    # -------------------------------------------------------------------------------------------------
+
                     novo_doc = {
                         "sigla_organizacao": sigla_organizacao,
                         "nome_organizacao": nome_organizacao,
-                        "cnpj": cnpj
+                        "cnpj": cnpj,
+
+                        # Dados de localização
+                        "endereco": endereco,
+                        "uf": {
+                            "sigla": uf_doc["sigla_uf"],
+                            "nome": uf_doc["nome_uf"],
+                            "codigo_uf": int(uf_doc["codigo_uf"])
+                        },
+                        "municipio": {
+                            "nome": municipio_doc["nome_municipio"],
+                            "codigo_municipio": int(municipio_doc["codigo_municipio"])
+                        },
+                        "cep": cep
                     }
+
+
 
                     # Insere o documento no MongoDB
                     col_organizacoes.insert_one(novo_doc)
