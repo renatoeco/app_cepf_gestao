@@ -344,9 +344,6 @@ df_filtrado = df_filtrado.sort_values(by="sigla", ignore_index=True)
 
 st.divider()
 
-# larguras_colunas = [2, 2, 5, 2, 2, 2, 2]
-# col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Próxima parcela", "Status", "Botão"]
-
 larguras_colunas = [2, 2, 5, 2, 2, 2]
 col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Status", "Abrir"]
 
@@ -391,20 +388,35 @@ for index, projeto in df_filtrado.iterrows():
 
 
 
+    mapa_cores_status = {
+        'Concluído': 'rgba(0, 122, 211)',   # Azul 50%
+        'Em dia': 'rgba(160, 194, 86)',     # Verde 50%
+        'Atrasado': 'rgba(226, 101, 12)',   # Laranja 50%
+        'Cancelado': '#bbb',
+        'Sem cronograma': '#fff099'
+    }
 
-    # Status
     status = projeto.get("status", "")
 
+    cor = mapa_cores_status.get(status, "#ccc")
+
+    # define o estilo especial
+    estilo = ""
+    texto_status = status
+
     if status == "Sem cronograma":
-        cols[4].markdown(
-            "<span style='color:#d97706; font-style:italic;'>sem cronograma</span>",
-            unsafe_allow_html=True
-        )
-    else:
-        cols[4].write(status)
+        estilo = "color:#d97706; font-style:italic;"
+        texto_status = status.lower()
 
+    html = f"""
+    <span style="display:flex; align-items:center; gap:6px;">
+        <span style="width:10px;height:10px;background-color:{cor};border-radius:50%;display:inline-block;"></span>
+        <span style="{estilo}">{texto_status}</span>
+    </span>
+    """
 
-    # cols[4].write(projeto.get("status", ""))
+    cols[4].markdown(html, unsafe_allow_html=True)
+
 
     # Botão “Ver projeto”
     if cols[5].button("Ver projeto", key=f"ver_{projeto['codigo']}"):

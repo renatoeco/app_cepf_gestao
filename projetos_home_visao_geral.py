@@ -274,9 +274,6 @@ if ver_meus_projetos:
 
 
 
-    # df_meus = df_filtrado[
-    #     df_filtrado["padrinho"] == st.session_state.nome
-    # ]
 
     if df_meus.empty:
         st.divider()
@@ -370,15 +367,16 @@ else:
 
     # Gráfico de pizza do status
     with col3:
-        
-        mapa_cores_status = {
-            'Concluído': '#74a7e4',   # Azul
-            'Em dia': '#aedddd',      # Verde
-            'Atrasado': '#ffbfb0',    # Vermelho
-            'Cancelado': '#bbb',        # Cinza,
-            'Sem cronograma': '#fff099'
 
+        mapa_cores_status = {
+            'Concluído': 'rgba(0, 122, 211, 0.4)',   # Azul 50%
+            'Em dia': 'rgba(160, 194, 86, 0.4)',     # Verde 50%
+            'Atrasado': 'rgba(226, 101, 12, 0.4)',   # Laranja 50%
+            'Cancelado': '#bbb',
+            'Sem cronograma': '#fff099'
         }
+
+
 
         contagens = df_filtrado['status'].value_counts(dropna=True)
         status = contagens.index.tolist()
@@ -432,38 +430,6 @@ else:
     )
 
 
-    # fig = px.timeline(
-    #     df_filtrado_sorted,
-    #     x_start='data_inicio_contrato_dtime',
-    #     x_end='data_fim_contrato_dtime',
-    #     y='codigo',
-    #     text='codigo',  # 👈 texto dentro da barra
-    #     color='status',
-    #     color_discrete_map=mapa_cores_status,
-    #     height=altura,
-    #     labels={
-    #         'codigo': 'Projeto',
-    #         'data_inicio_contrato_dtime': 'Início',
-    #         'data_fim_contrato_dtime': 'Fim'
-    #     },
-    # )
-
-
-
-    # fig = px.timeline(
-    #     df_filtrado_sorted,
-    #     x_start='data_inicio_contrato_dtime',
-    #     x_end='data_fim_contrato_dtime',
-    #     y='codigo',
-    #     color='status',
-    #     color_discrete_map=mapa_cores_status,
-    #     height=altura,
-    #     labels={
-    #         'codigo': 'Projeto',
-    #         'data_inicio_contrato_dtime': 'Início',
-    #         'data_fim_contrato_dtime': 'Fim'
-    #     },
-    # )
 
     fig.update_traces(
         hovertemplate=(
