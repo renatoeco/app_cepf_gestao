@@ -1964,30 +1964,80 @@ with cron_desemb:
                     ascending=True
                 ).reset_index(drop=True)
 
-                parcelas_salvar = []
+                # -----------------------------------
+                # MAPA DAS PARCELAS EXISTENTES (por número)
+                # -----------------------------------
+                mapa_existente = {
+                    p.get("numero"): p
+                    for p in parcelas
+                    if p.get("numero") is not None
+                }
+
+                parcelas_final = []
 
                 for _, row in df_salvar.iterrows():
 
-                    parcelas_salvar.append(
-                        {
-                            "numero": int(row["numero"]) if not pd.isna(row["numero"]) else None,
-                            "percentual": float(row["percentual"]),
-                            "valor": float(row["valor"]),
-                            "data_prevista": (
-                                pd.to_datetime(row["data_prevista"]).date().isoformat()
-                            ),
-                        }
-                    )
+                    numero = int(row["numero"]) if not pd.isna(row["numero"]) else None
 
-                # Atualizar banco
+                    parcela_antiga = mapa_existente.get(numero, {})
+
+                    # -----------------------------------
+                    # Merge completo preservando tudo
+                    # -----------------------------------
+                    parcela_atualizada = parcela_antiga.copy()
+
+                    parcela_atualizada.update({
+                        "numero": numero,
+                        "percentual": float(row["percentual"]),
+                        "valor": float(row["valor"]),
+                        "data_prevista": (
+                            pd.to_datetime(row["data_prevista"]).date().isoformat()
+                        ),
+                    })
+
+                    parcelas_final.append(parcela_atualizada)
+
+
+
                 col_projetos.update_one(
                     {"codigo": codigo_projeto_atual},
                     {
                         "$set": {
-                            "financeiro.parcelas": parcelas_salvar
+                            "financeiro.parcelas": parcelas_final
                         }
                     }
                 )
+
+
+
+
+                # parcelas_salvar = []
+
+                # for _, row in df_salvar.iterrows():
+
+                #     parcelas_salvar.append(
+                #         {
+                #             "numero": int(row["numero"]) if not pd.isna(row["numero"]) else None,
+                #             "percentual": float(row["percentual"]),
+                #             "valor": float(row["valor"]),
+                #             "data_prevista": (
+                #                 pd.to_datetime(row["data_prevista"]).date().isoformat()
+                #             ),
+                #         }
+                #     )
+
+                # # Atualizar banco
+                # col_projetos.update_one(
+                #     {"codigo": codigo_projeto_atual},
+                #     {
+                #         "$set": {
+                #             "financeiro.parcelas": parcelas_salvar
+                #         }
+                #     }
+                # )
+
+
+
 
                 # Atualizar relatórios vinculados
                 atualizar_datas_relatorios(col_projetos, codigo_projeto_atual)
