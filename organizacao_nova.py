@@ -30,9 +30,6 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_organizacoes = db["organizacoes"]
 df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 
-# col_ciclos = db["ciclos_investimento"]
-# df_ciclos = pd.DataFrame(list(col_ciclos.find()))
-
 col_temas = db["temas_projetos"]
 df_temas = pd.DataFrame(list(col_temas.find()))
 
@@ -420,193 +417,203 @@ if opcao_cadastro == "Cadastro individual":
                     st.rerun()
 
 
-                
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+# CADASTRO EM MASSA COM DATA_EDITOR
+# -------------------------------------------------------------------------------------------------
 
 elif opcao_cadastro == "Cadastro em massa":
 
-    # Inicializa o 'key' do file_uploader se ele não existir
-    if 'uploader_key' not in st.session_state:
-        st.session_state['uploader_key'] = str(uuid.uuid4())
+    st.write("Preencha os dados diretamente na tabela abaixo:")
 
-    st.write("Baixe aqui o modelo de tabela para cadastro em massa:")
+    # ---------------------------------------------------------------------------------------------
+    # DATAFRAME INICIAL (VAZIO)
+    # ---------------------------------------------------------------------------------------------
+    df_base = pd.DataFrame({
+        "sigla_organizacao": [""],
+        "nome_organizacao": [""],
+        "cnpj": [""],
+        "endereco": [""],
+        "uf": [""],
+        "municipio": [""],
+        "cep": [""]
+    })
 
-    with open("modelos/modelo_cadastro_organizacoes_em_massa.xlsx", "rb") as f:
-        st.download_button(
-            label=":material/download: Baixar modelo XLSX",
-            data=f,
-            file_name="modelo_cadastro_organizacoes_em_massa.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+    # ---------------------------------------------------------------------------------------------
+    # LISTAS PARA SELECTBOX
+    # ---------------------------------------------------------------------------------------------
+    lista_ufs = [""] + sorted(df_ufs["sigla_uf"].tolist())
+    lista_municipios = [""] + df_municipios["nome_municipio"].sort_values().tolist()
 
-    st.divider()
-
-    # ------------------------------
-    # Upload
-    # ------------------------------
-
-    arquivo = st.file_uploader(
-        "Envie um arquivo XLSX preenchido para cadastrar múltiplas organizações:",
-        type=["xlsx"],
-        key=st.session_state['uploader_key'],
-        width=400
+    # ---------------------------------------------------------------------------------------------
+    # DATA EDITOR
+    # ---------------------------------------------------------------------------------------------
+    df_editado = st.data_editor(
+        df_base,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "sigla_organizacao": st.column_config.TextColumn("Sigla", width=1),
+            "nome_organizacao": st.column_config.TextColumn("Nome da Organização", width=200),
+            "cnpj": st.column_config.TextColumn("CNPJ", width=1),
+            "endereco": st.column_config.TextColumn("Endereço", width=200),
+            "uf": st.column_config.SelectboxColumn("UF", options=lista_ufs, width=1),
+            "municipio": st.column_config.SelectboxColumn("Município", options=lista_municipios, width=1),
+            "cep": st.column_config.TextColumn("CEP", width=1),
+        }
     )
-
 
     st.write("")
 
-    if arquivo is not None:
+    # ---------------------------------------------------------------------------------------------
+    # BOTÃO DE SALVAR
+    # ---------------------------------------------------------------------------------------------
+    if st.button(":material/save: Cadastrar organizações", type="primary"):
 
-        try:
+        df = df_editado.copy()
 
-            df_upload = pd.read_excel(arquivo)
+        # Remove linhas completamente vazias
+        df = df.dropna(how="all")
 
-            st.success("Arquivo carregado com sucesso!")
+        # Remove linhas onde todos os campos são vazios
+        df = df[
+            df.astype(str).apply(lambda x: "".join(x).strip() != "", axis=1)
+        ]
 
-            # ==========================================================
-            # 0) Validar se o arquivo está vazio
-            # ==========================================================
-            if df_upload.empty or df_upload.dropna(how="all").empty:
-                st.error(
-                    ":material/error: O arquivo enviado está vazio!\n\n"
-                    "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-                )
-                st.stop()
+        if df.empty:
+            st.error("Nenhum dado válido para cadastro.")
+            st.stop()
 
-            # Exibir com index iniciado em 1
-            st.dataframe(df_index1(df_upload))
-            st.write("")
+        # -----------------------------------------------------------------------------------------
+        # VALIDAÇÕES
+        # -----------------------------------------------------------------------------------------
 
+        registros_validos = []
+        erros = []
 
+        for idx, row in df.iterrows():
 
-            # ==========================================================
-            # 1) Validar colunas obrigatórias
-            # ==========================================================
-            colunas_obrigatorias = ["sigla_organizacao", "nome_organizacao", "cnpj"]
-            faltando = [c for c in colunas_obrigatorias if c not in df_upload.columns]
+            linha_num = idx + 1
 
-            if faltando:
-                st.error(
-                    f":material/error: Faltam colunas obrigatórias no arquivo: {faltando}\n\n"
-                    "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-                )
-                st.stop()
-
-            # ==========================================================
-            # 2) CNPJ — validar formato
-            # ==========================================================
-            invalidos = df_upload[~df_upload["cnpj"].astype(str).apply(validar_cnpj)]
-
-            if not invalidos.empty:
-                st.error(
-                    ":material/error: Existem CNPJs com formato inválido!\n"
-                    "Use **99.999.999/9999-99** ou **99999999999999**.\n\n"
-                    "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-                )
-                st.dataframe(df_index1(invalidos))
-                st.stop()
-
-            # Normalizar todos para máscara final
-            df_upload["cnpj"] = df_upload["cnpj"].astype(str).apply(formatar_cnpj)
-
-            # ==========================================================
-            # 3) Verificar duplicidade interna no arquivo
-            # ==========================================================
-            dup_sigla = df_upload[df_upload.duplicated("sigla_organizacao", keep=False)]
-            dup_nome = df_upload[df_upload.duplicated("nome_organizacao", keep=False)]
-            dup_cnpj = df_upload[df_upload.duplicated("cnpj", keep=False)]
-
-            if not dup_sigla.empty or not dup_nome.empty or not dup_cnpj.empty:
-                st.error(
-                    ":material/error: Existem duplicidades dentro do próprio arquivo.\n\n"
-                    "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-                )
-
-                if not dup_sigla.empty:
-                    st.subheader("Siglas duplicadas")
-                    st.dataframe(df_index1(dup_sigla))
-
-                if not dup_nome.empty:
-                    st.subheader("Nomes duplicados")
-                    st.dataframe(df_index1(dup_nome))
-
-                if not dup_cnpj.empty:
-                    st.subheader("CNPJs duplicados")
-                    st.dataframe(df_index1(dup_cnpj))
-
-                st.stop()
-
-            # ==========================================================
-            # 4) Verificar duplicidades no banco
-            # ==========================================================
-            db = conectar_mongo_cepf_gestao()
-            col_organizacoes = db["organizacoes"]
-
-            existentes = pd.DataFrame(list(col_organizacoes.find(
-                {},
-                {"sigla_organizacao": 1, "nome_organizacao": 1, "cnpj": 1}
-            )))
-
-            conflitos_sigla = []
-            conflitos_nome = []
-            conflitos_cnpj = []
-
-            if not existentes.empty:
-                for _, row in df_upload.iterrows():
-
-                    if row["sigla_organizacao"] in existentes["sigla_organizacao"].values:
-                        conflitos_sigla.append(row.to_dict())
-
-                    if row["nome_organizacao"] in existentes["nome_organizacao"].values:
-                        conflitos_nome.append(row.to_dict())
-
-                    if row["cnpj"] in existentes["cnpj"].values:
-                        conflitos_cnpj.append(row.to_dict())
-
-            if conflitos_sigla or conflitos_nome or conflitos_cnpj:
-                st.error(
-                    ":material/error: Existem conflitos com registros já existentes no banco de dados!\n\n"
-                    "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-                )
-
-                if conflitos_sigla:
-                    st.write("")
-                    st.write("**Siglas já existentes:**")
-                    st.dataframe(df_index1(pd.DataFrame(conflitos_sigla)))
-
-                if conflitos_nome:
-                    st.write("")
-                    st.write("**Nomes já existentes:**")
-                    st.dataframe(df_index1(pd.DataFrame(conflitos_nome)))
-
-                if conflitos_cnpj:
-                    st.write("")
-                    st.write("**CNPJs já existentes:**")
-                    st.dataframe(df_index1(pd.DataFrame(conflitos_cnpj)))
-
-                st.stop()
-
-            # ==========================================================
-            # 5) Inserir no banco
-            # ==========================================================
-            if st.button(":material/save: Cadastrar organizações", type="primary"):
-
-                registros = df_upload.to_dict(orient="records")
-                resultado = col_organizacoes.insert_many(registros)
-
-                st.success(f":material/check: {len(resultado.inserted_ids)} organizações cadastradas com sucesso!")
-
-                # 1. Troca a chave do uploader para forçar o reset no rerun
-                st.session_state['uploader_key'] = str(uuid.uuid4()) 
-                
-                # 2. Rerun
-                time.sleep(2)
-                st.rerun()
+            sigla = str(row["sigla_organizacao"]).strip()
+            nome = str(row["nome_organizacao"]).strip()
+            cnpj = str(row["cnpj"]).strip()
+            endereco = str(row["endereco"]).strip()
+            uf = str(row["uf"]).strip()
+            municipio_nome = str(row["municipio"]).strip()
+            cep_raw = str(row["cep"]).strip()
 
 
-        except Exception as e:
-            st.error(
-                ":material/error: Erro ao processar o arquivo.\n\n"
-                "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-            )
-            st.exception(e)
+
+            # IDENTIFICADOR DA LINHA PARA MENSAGENS DE ERRO (SIGLA → NOME → VAZIO)
+            nome_org = str(row["nome_organizacao"]).strip()
+            identificador_ref = sigla if sigla else nome_org if nome_org else ""
+            identificador = f"Linha {linha_num} ({identificador_ref})"
+
+            # -----------------------------
+            # Validação obrigatórios
+            # -----------------------------
+            if not sigla or not nome or not cnpj or not endereco or not uf or not municipio_nome or not cep_raw:
+                erros.append(f"{identificador}: Campos obrigatórios não preenchidos.")
+                continue
+
+            # -----------------------------
+            # CNPJ
+            # -----------------------------
+            if not validar_cnpj(cnpj):
+                erros.append(f"{identificador}: CNPJ inválido.")
+                continue
+
+            cnpj = formatar_cnpj(cnpj)
+
+            # -----------------------------
+            # CEP
+            # -----------------------------
+            cep_limpo, cep_valido = limpar_e_validar_cep(cep_raw)
+
+            if not cep_valido:
+                erros.append(f"{identificador}: CEP inválido.")
+                continue
+
+            # -----------------------------
+            # UF
+            # -----------------------------
+            uf_match = df_ufs[df_ufs["sigla_uf"] == uf]
+
+            if uf_match.empty:
+                erros.append(f"{identificador}: UF inválida.")
+                continue
+
+            uf_doc = uf_match.iloc[0]
+
+            # -----------------------------
+            # MUNICÍPIO
+            # -----------------------------
+            mun_match = df_municipios[
+                df_municipios["nome_municipio"] == municipio_nome
+            ]
+
+            if mun_match.empty:
+                erros.append(f"{identificador}: Município inválido.")
+                continue
+
+            municipio_doc = mun_match.iloc[0]
+
+            # -----------------------------
+            # DUPLICIDADE NO BANCO
+            # -----------------------------
+            if col_organizacoes.find_one({"sigla_organizacao": sigla}):
+                erros.append(f"{identificador}: Sigla já existe.")
+                continue
+
+            if col_organizacoes.find_one({"cnpj": cnpj}):
+                erros.append(f"{identificador}: CNPJ já existe.")
+                continue
+
+            # -----------------------------
+            # DOCUMENTO FINAL
+            # -----------------------------
+            doc = {
+                "sigla_organizacao": sigla,
+                "nome_organizacao": nome,
+                "cnpj": cnpj,
+                "endereco": endereco,
+                "uf": {
+                    "sigla": uf_doc["sigla_uf"],
+                    "nome": uf_doc["nome_uf"],
+                    "codigo_uf": int(uf_doc["codigo_uf"])
+                },
+                "municipio": {
+                    "nome": municipio_doc["nome_municipio"],
+                    "codigo_municipio": int(municipio_doc["codigo_municipio"])
+                },
+                "cep": cep_limpo
+            }
+
+            registros_validos.append(doc)
+
+        # -----------------------------------------------------------------------------------------
+        # EXIBIÇÃO DE ERROS
+        # -----------------------------------------------------------------------------------------
+        if erros:
+            st.error("Alguns dados estão vazios ou precisam ser corrigidos:")
+            for e in erros:
+                st.write(f"- {e}")
+            st.stop()
+
+        # -----------------------------------------------------------------------------------------
+        # INSERÇÃO EM MASSA
+        # -----------------------------------------------------------------------------------------
+        if registros_validos:
+            resultado = col_organizacoes.insert_many(registros_validos)
+
+            st.success(f"{len(resultado.inserted_ids)} organizações cadastradas com sucesso!", icon=":material/check:")
+
+            time.sleep(3)
+            st.rerun()
+
+
 
