@@ -40,8 +40,6 @@ col_publicos = db["publicos"]
 df_publicos = pd.DataFrame(list(col_publicos.find()))
 
 
-
-
 # -------------------------------------------------------------------------------------------------
 # COLEÇÃO UF_MUNICIPIOS - DOCUMENTO DE UFs
 # -------------------------------------------------------------------------------------------------
@@ -80,11 +78,14 @@ df_municipios = pd.DataFrame(doc_municipios["municipios"])
 # PREPARAÇÃO DE LISTAS PARA INTERFACE
 # -------------------------------------------------------------------------------------------------
 
-# Lista de UFs (siglas)
-lista_ufs = sorted(df_ufs["sigla_uf"].tolist())
+# Lista de UFs com opção vazia no topo
+lista_ufs = [""] + sorted(df_ufs["sigla_uf"].tolist())
 
-# Ordena municípios alfabeticamente
-df_municipios = df_municipios.sort_values("nome_municipio")
+# Lista de municípios com opção vazia
+
+lista_municipios = [""] + sorted(df_municipios["nome_municipio"].tolist())
+
+
 
 
 
@@ -104,6 +105,35 @@ except locale.Error:
 ###########################################################################################################
 # FUNÇÕES AUXILIARES
 ###########################################################################################################
+
+
+# -------------------------------------------------------------------------------------------------
+# VALIDAÇÃO E NORMALIZAÇÃO DE CEP
+# -------------------------------------------------------------------------------------------------
+
+def limpar_e_validar_cep(cep_str):
+    """
+    Remove todos os caracteres não numéricos do CEP e valida se possui exatamente 8 dígitos.
+
+    Parâmetros:
+    cep_str (str): CEP informado pelo usuário (pode conter máscara ou caracteres extras)
+
+    Retorno:
+    tuple:
+        - cep_limpo (str): CEP contendo apenas números
+        - valido (bool): Indica se o CEP possui exatamente 8 dígitos
+    """
+
+    # Remove qualquer caractere que não seja número
+    cep_limpo = re.sub(r"\D", "", str(cep_str))
+
+    # Verifica se possui exatamente 8 dígitos
+    if len(cep_limpo) == 8:
+        return cep_limpo, True
+
+    return cep_limpo, False
+
+
 
 def validar_cnpj(cnpj_str):
     """
@@ -238,14 +268,14 @@ if opcao_cadastro == "Cadastro individual":
 
             municipio = st.selectbox(
                 "Município",
-                options=df_municipios["nome_municipio"].tolist(),
+                options=lista_municipios,
                 key="municipio_input",
                 width=400
             )
 
             cep = st.text_input(
                 "CEP",
-                placeholder="00000-000",
+                placeholder="00.000-000",
                 key="cep_input",
                 width=200
             )
@@ -275,20 +305,26 @@ if opcao_cadastro == "Cadastro individual":
             endereco = st.session_state.endereco_input.strip()
             uf = st.session_state.uf_input
             municipio_nome = st.session_state.municipio_input
-            cep = st.session_state.cep_input.strip()
+            # cep = st.session_state.cep_input.strip()
 
+            # LIMPEZA E VALIDAÇÃO DO CEP
+            cep_raw = st.session_state.cep_input.strip()
+            cep_limpo, cep_valido = limpar_e_validar_cep(cep_raw)
 
-            # Verifica se todos os campos foram preenchidos
 
             if not sigla_organizacao or not nome_organizacao or not cnpj \
-            or not endereco or not uf or not municipio_nome or not cep:
+            or not endereco or not uf or not municipio_nome or not cep_raw:
 
                 st.error("Todos os campos devem ser preenchidos.")
 
-            # Validação do formato do CNPJ
             elif not validar_cnpj(cnpj):
 
-                st.error("CNPJ inválido. Utilize o formato **00.000.000/0000-00** ou apenas  14 números **00000000000000**.")
+                st.error("CNPJ inválido. Utilize o formato **00.000.000/0000-00** ou apenas 14 números.")
+
+            elif not cep_valido:
+
+                st.error("CEP inválido. Informe um CEP com exatamente 8 números.")
+
 
             else:
 
