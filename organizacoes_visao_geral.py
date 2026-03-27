@@ -424,16 +424,7 @@ st.dataframe(df_organizacoes,
                 "cep",
                 "quantidade_projetos"
             ],
-            #  column_order=[
-            #     "sigla_organizacao",
-            #     "nome_organizacao",
-            #     "cnpj",
-            #     "uf_sigla",
-            #     "municipio_nome",
-            #     "cep",
-            #     "quantidade_projetos"
-            # ],
-            #  column_order=["sigla_organizacao", "nome_organizacao", "cnpj", "quantidade_projetos"], 
+
              hide_index=True,
              column_config={
                  "sigla_organizacao": st.column_config.Column(
