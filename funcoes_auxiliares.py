@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import datetime
 import pandas as pd
 import io
+import re
 from num2words import num2words
 
 # Google Drive API
@@ -18,6 +19,35 @@ from email.utils import formataddr
 
 
 
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+# VALIDAÇÃO E NORMALIZAÇÃO DE CEP
+# -------------------------------------------------------------------------------------------------
+
+def limpar_e_validar_cep(cep_str):
+    """
+    Remove todos os caracteres não numéricos do CEP e valida se possui exatamente 8 dígitos.
+
+    Parâmetros:
+    cep_str (str): CEP informado pelo usuário (pode conter máscara ou caracteres extras)
+
+    Retorno:
+    tuple:
+        - cep_limpo (str): CEP contendo apenas números
+        - valido (bool): Indica se o CEP possui exatamente 8 dígitos
+    """
+
+    # Remove qualquer caractere que não seja número
+    cep_limpo = re.sub(r"\D", "", str(cep_str))
+
+    # Verifica se possui exatamente 8 dígitos
+    if len(cep_limpo) == 8:
+        return cep_limpo, True
+
+    return cep_limpo, False
 
 
 

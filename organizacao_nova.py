@@ -1,6 +1,6 @@
 
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Funções personalizadas
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, limpar_e_validar_cep  # Funções personalizadas
 import pandas as pd
 import locale
 import re
@@ -104,31 +104,6 @@ except locale.Error:
 ###########################################################################################################
 
 
-# -------------------------------------------------------------------------------------------------
-# VALIDAÇÃO E NORMALIZAÇÃO DE CEP
-# -------------------------------------------------------------------------------------------------
-
-def limpar_e_validar_cep(cep_str):
-    """
-    Remove todos os caracteres não numéricos do CEP e valida se possui exatamente 8 dígitos.
-
-    Parâmetros:
-    cep_str (str): CEP informado pelo usuário (pode conter máscara ou caracteres extras)
-
-    Retorno:
-    tuple:
-        - cep_limpo (str): CEP contendo apenas números
-        - valido (bool): Indica se o CEP possui exatamente 8 dígitos
-    """
-
-    # Remove qualquer caractere que não seja número
-    cep_limpo = re.sub(r"\D", "", str(cep_str))
-
-    # Verifica se possui exatamente 8 dígitos
-    if len(cep_limpo) == 8:
-        return cep_limpo, True
-
-    return cep_limpo, False
 
 
 

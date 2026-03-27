@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao # Funções personalizadas
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, limpar_e_validar_cep
 import pandas as pd
 import time
 import re
@@ -30,7 +30,21 @@ df_organizacoes = pd.DataFrame(list(col_organizacoes.find()))
 df_organizacoes = df_organizacoes.sort_values(by=["sigla_organizacao"])
 
 
+# CARREGAMENTO DE UFs E MUNICÍPIOS
 
+col_uf_municipios = db["ufs_municipios"]
+
+# Documento de UFs
+doc_ufs = col_uf_municipios.find_one({"ufs": {"$exists": True}})
+df_ufs = pd.DataFrame(doc_ufs["ufs"])
+
+# Documento de municípios
+doc_municipios = col_uf_municipios.find_one({"municipios": {"$exists": True}})
+df_municipios = pd.DataFrame(doc_municipios["municipios"])
+
+# Listas para selectbox
+lista_ufs = [""] + sorted(df_ufs["sigla_uf"].tolist())
+lista_municipios = [""] + df_municipios["nome_municipio"].sort_values().tolist()
 
 
 
@@ -65,12 +79,6 @@ def formatar_cnpj(cnpj_str):
     cnpj_limpo = re.sub(r"\D", "", str(cnpj_str))
 
     return f"{cnpj_limpo[0:2]}.{cnpj_limpo[2:5]}.{cnpj_limpo[5:8]}/{cnpj_limpo[8:12]}-{cnpj_limpo[12:14]}"
-
-
-
-
-
-
 
 
 
@@ -128,9 +136,6 @@ def editar_organizacao_dialog():
         org = col_organizacoes.find_one({"_id": org_id})
         
         
-        
-        # sigla = escolha.split(" - ")[0]
-
 
         if org:
 
@@ -138,12 +143,22 @@ def editar_organizacao_dialog():
             # CAMPOS DE EDIÇÃO
             # ----------------------------------------------------------------------------------------------
 
-            # Campo para edição da sigla
-            st.text_input(
-                "Sigla da organização",
-                value=org.get("sigla_organizacao", ""),
-                key="sigla_organizacao_input"
-            )
+            with st.container(horizontal=True):
+
+                # Campo para edição do CNPJ
+                st.text_input(
+                    "CNPJ",
+                    value=org.get("cnpj", ""),
+                    key="cnpj_input"
+                )
+
+
+                # Campo para edição da sigla
+                st.text_input(
+                    "Sigla da organização",
+                    value=org.get("sigla_organizacao", ""),
+                    key="sigla_organizacao_input"
+                )
 
             # Campo para edição do nome
             st.text_input(
@@ -152,12 +167,48 @@ def editar_organizacao_dialog():
                 key="nome_organizacao_input"
             )
 
-            # Campo para edição do CNPJ
+
+
+            # -------------------------------------------------------------------------------------------------
+            # CAMPOS DE LOCALIZAÇÃO
+            # -------------------------------------------------------------------------------------------------
+
             st.text_input(
-                "CNPJ",
-                value=org.get("cnpj", ""),
-                key="cnpj_input"
+                "Endereço",
+                value=org.get("endereco", ""),
+                key="endereco_input"
             )
+
+            with st.container(horizontal=True):
+
+
+                st.selectbox(
+                    "UF",
+                    options=lista_ufs,
+                    index=lista_ufs.index(org.get("uf", {}).get("sigla", "")) if org.get("uf") else 0,
+                    key="uf_input",
+                    width=150
+                )
+
+                st.selectbox(
+                    "Município",
+                    options=lista_municipios,
+                    index=lista_municipios.index(org.get("municipio", {}).get("nome", "")) if org.get("municipio") else 0,
+                    key="municipio_input",
+                    width="stretch"
+                )
+
+                st.text_input(
+                    "CEP",
+                    value=org.get("cep", ""),
+                    key="cep_input",
+                    width=200
+                )
+
+
+            st.write('')
+
+
 
             # ----------------------------------------------------------------------------------------------
             # BOTÃO DE SALVAR ALTERAÇÕES
@@ -174,17 +225,30 @@ def editar_organizacao_dialog():
                 nome_organizacao = st.session_state.nome_organizacao_input.strip()
                 cnpj = st.session_state.cnpj_input.strip()
 
-                # Verifica se todos os campos foram preenchidos
-                if not sigla_organizacao or not nome_organizacao or not cnpj:
+                endereco = st.session_state.endereco_input.strip()
+                uf = st.session_state.uf_input
+                municipio_nome = st.session_state.municipio_input
+                cep_raw = st.session_state.cep_input.strip()
+
+                cep_limpo, cep_valido = limpar_e_validar_cep(cep_raw)
+
+                # VALIDAÇÕES
+
+
+                if not sigla_organizacao or not nome_organizacao or not cnpj \
+                or not endereco or not uf or not municipio_nome or not cep_raw:
 
                     st.error("Todos os campos devem ser preenchidos.")
 
-                # Validação do formato do CNPJ
                 elif not validar_cnpj(cnpj):
 
-                    st.error(
-                        "CNPJ inválido. Utilize o formato **00.000.000/0000-00** ou apenas 14 números **00000000000000**."
-                    )
+                    st.error("CNPJ inválido.")
+
+                elif not cep_valido:
+
+                    st.error("CEP inválido. Informe um CEP com exatamente 8 números.")
+
+
 
                 else:
 
@@ -227,14 +291,39 @@ def editar_organizacao_dialog():
                         # ATUALIZAÇÃO DO DOCUMENTO NO BANCO
                         ###################################################################################################
 
+                        # -------------------------------------------------------------------------------------------------
+                        # BUSCA DE UF E MUNICÍPIO, POIS ELE SALVA UM UF E MUNICIPIO COM ALGUNS METADADOS
+                        # -------------------------------------------------------------------------------------------------
+
+                        uf_doc = df_ufs[df_ufs["sigla_uf"] == uf].iloc[0]
+
+                        municipio_doc = df_municipios[
+                            df_municipios["nome_municipio"] == municipio_nome
+                        ].iloc[0]
+
+
                         col_organizacoes.update_one(
                             {"_id": org["_id"]},
                             {
+
                                 "$set": {
                                     "sigla_organizacao": sigla_organizacao,
                                     "nome_organizacao": nome_organizacao,
-                                    "cnpj": cnpj
+                                    "cnpj": cnpj,
+                                    "endereco": endereco,
+                                    "uf": {
+                                        "sigla": uf_doc["sigla_uf"],
+                                        "nome": uf_doc["nome_uf"],
+                                        "codigo_uf": int(uf_doc["codigo_uf"])
+                                    },
+                                    "municipio": {
+                                        "nome": municipio_doc["nome_municipio"],
+                                        "codigo_municipio": int(municipio_doc["codigo_municipio"])
+                                    },
+                                    "cep": cep_limpo
                                 }
+
+
                             }
                         )
 
@@ -309,9 +398,42 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 
 st.write('')
 
+# -------------------------------------------------------------------------------------------------
+# PREPARAÇÃO DE CAMPOS DE LOCALIZAÇÃO PARA EXIBIÇÃO
+# -------------------------------------------------------------------------------------------------
+
+df_organizacoes["uf_sigla"] = df_organizacoes["uf"].apply(
+    lambda x: x.get("sigla") if isinstance(x, dict) else ""
+)
+
+df_organizacoes["municipio_nome"] = df_organizacoes["municipio"].apply(
+    lambda x: x.get("nome") if isinstance(x, dict) else ""
+)
+
+
+
 
 st.dataframe(df_organizacoes, 
-             column_order=["sigla_organizacao", "nome_organizacao", "cnpj", "quantidade_projetos"], 
+            column_order=[
+                "sigla_organizacao",
+                "nome_organizacao",
+                "cnpj",
+                "endereco",
+                "uf_sigla",
+                "municipio_nome",
+                "cep",
+                "quantidade_projetos"
+            ],
+            #  column_order=[
+            #     "sigla_organizacao",
+            #     "nome_organizacao",
+            #     "cnpj",
+            #     "uf_sigla",
+            #     "municipio_nome",
+            #     "cep",
+            #     "quantidade_projetos"
+            # ],
+            #  column_order=["sigla_organizacao", "nome_organizacao", "cnpj", "quantidade_projetos"], 
              hide_index=True,
              column_config={
                  "sigla_organizacao": st.column_config.Column(
@@ -320,15 +442,31 @@ st.dataframe(df_organizacoes,
                  ),
                  "nome_organizacao": st.column_config.Column(
                      label="Nome",
-                     width="large" 
+                     width="medium" 
                  ),
                  "cnpj": st.column_config.Column(
                      label="CNPJ", 
-                     width="small" 
+                     width="medium" 
                  ),
                  "quantidade_projetos": st.column_config.Column(
-                     label="Quantidade de Projetos", 
+                     label="Projetos", 
                      width="small" 
-                 )
+                 ),
+                 "endereco": st.column_config.Column(
+                    label="Endereço",
+                    width="medium"
+                ),
+                 "uf_sigla": st.column_config.Column(
+                    label="UF",
+                    width="small"
+                ),
+                "municipio_nome": st.column_config.Column(
+                    label="Município",
+                    width="small"
+                ),
+                "cep": st.column_config.Column(
+                    label="CEP",
+                    width="small"
+                ),
              })
 
