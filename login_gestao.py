@@ -257,7 +257,7 @@ def recuperar_senha_dialog():
                                     st.session_state.pop(key, None)
 
                                 # Inicializa tipo de usuário
-                                tipo_usuario = [x.strip() for x in usuario.get("tipo de usuário", "").split(",")]
+                                tipo_usuario = [x.strip() for x in usuario.get("tipo_usuario", "").split(",")]
                                 st.session_state["tipo_usuario"] = tipo_usuario
 
                                 # Marca usuário como logado e reinicia
