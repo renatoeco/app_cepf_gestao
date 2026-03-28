@@ -1,5 +1,3 @@
-env_cepf_gestao
+env_coruja_2
 .streamlit/secrets.toml
 __pycache__
-temp_dialogo_relatar_atividade.py
-sandbox.py
