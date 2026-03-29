@@ -250,11 +250,55 @@ if opcao_cadastro == "Convite individual":
         # 4) Inserir no banco
         col_pessoas.insert_one(novo_doc)
 
+
+
+
+        # ==========================================================
+        # Atualiza contatos nos projetos (apenas para beneficiários)
+        # ==========================================================
+        if st.session_state["tipo_novo_usuario"] == "beneficiario":
+
+            for codigo_projeto in st.session_state.get("projetos_escolhidos", []):
+
+                # busca o projeto pelo código
+                projeto = col_projetos.find_one({"codigo": codigo_projeto})
+
+                if not projeto:
+                    continue  # projeto não encontrado, ignora
+
+                # garante que a chave 'contatos' exista
+                contatos = projeto.get("contatos", [])
+
+                # verifica se já existe contato com o mesmo e-mail
+                ja_existe = any(
+                    c.get("email", "").lower() == st.session_state["e_mail"].lower()
+                    for c in contatos
+                )
+
+                if not ja_existe:
+
+                    novo_contato = {
+                        "nome": st.session_state["nome_completo_novo"],
+                        "funcao": "Usuário(a) do sistema",
+                        "telefone": st.session_state["telefone"],
+                        "email": st.session_state["e_mail"],
+                        "assina_docs": False
+                    }
+
+                    # adiciona o contato ao projeto
+                    col_projetos.update_one(
+                        {"_id": projeto["_id"]},
+                        {"$push": {"contatos": novo_contato}}
+                    )
+
+
+
+
+
         with st.spinner("Cadastrando pessoa... aguarde..."):
 
-            time.sleep(2)
 
-            st.success(":material/check: Pessoa cadastrada com sucesso no banco de dados!")
+            st.success(":material/check: Pessoa cadastrada com sucesso. E-mail de convite enviado.")
 
             # 5) Envio do e-mail de convite
             enviado = enviar_email_convite(
@@ -267,7 +311,7 @@ if opcao_cadastro == "Convite individual":
 
             # 6) Limpar campos do formulário e rerun
             st.session_state["limpar_form_pessoa"] = True
-            time.sleep(6)
+            time.sleep(4)
             st.rerun()
 
 
@@ -464,60 +508,6 @@ elif opcao_cadastro == "Convite em massa":
 
 
 
-
-
-
-
-
-
-
-
-
-            # # ==========================================================
-            # # 5) Verificar duplicidades no banco
-            # # ==========================================================
-            # existentes = pd.DataFrame(list(col_pessoas.find({}, {"e_mail": 1})))
-            # conflitos_email = []
-            # if not existentes.empty:
-            #     for _, row in df_upload.iterrows():
-            #         if row["e_mail"] in existentes["e_mail"].values:
-            #             conflitos_email.append(row.to_dict())
-            # if conflitos_email:
-            #     st.error(
-            #         ":material/error: Existem e-mails que já estão cadastrados no banco de dados!\n\n"
-            #         "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-            #     )
-            #     st.write("**E-mails já existentes:**")
-            #     st.dataframe(df_index1(pd.DataFrame(conflitos_email)))
-            #     st.stop()
-
-
-            #     # ==========================================================
-            #     # 6) Validar projetos no banco
-            #     # ==========================================================
-
-            #     # Criar lista de códigos válidos a partir do banco
-            #     codigos_validos = df_projetos["codigo"].astype(str).str.strip().unique()
-
-            #     # Transformar a coluna projetos do upload em lista (aceitando vazio)
-            #     df_upload["projetos"] = df_upload["projetos"].apply(
-            #         lambda x:
-            #             [] if pd.isna(x) or str(x).strip() == "" or str(x).strip().lower() == "nan"
-            #             else [p.strip() for p in str(x).split(",") if p.strip()]
-            #     )
-
-            #     # Verificar códigos inválidos
-            #     invalidos_projetos = df_upload[df_upload["projetos"].apply(
-            #         lambda lst: any(codigo not in codigos_validos for codigo in lst)
-            #     )]
-
-            #     if not invalidos_projetos.empty:
-            #         st.error(
-            #             ":material/error: Existem projetos com códigos inválidos ou inexistentes no banco!\n\n"
-            #             "Nenhum cadastro foi realizado. Corrija os dados e carregue novamente."
-            #         )
-            #         st.dataframe(df_index1(invalidos_projetos))
-            #         st.stop()
 
 
 
