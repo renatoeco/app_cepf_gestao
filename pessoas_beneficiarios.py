@@ -141,8 +141,47 @@ def editar_pessoa(_id: str):
         # Atualiza o registro
         col_pessoas.update_one({"_id": ObjectId(_id)}, {"$set": update_data})
 
-        st.success("Pessoa atualizada com sucesso!")
-        time.sleep(2)
+
+        # ==========================================================
+        # Atualiza contatos nos projetos selecionados
+        # ==========================================================
+
+        # percorre todos os projetos do banco
+        for projeto in col_projetos.find():
+
+            codigo_projeto = projeto.get("codigo")
+
+            # só continua se o projeto estiver selecionado no multiselect
+            if codigo_projeto not in projetos:
+                continue
+
+            contatos = projeto.get("contatos", [])
+
+            # verifica se já existe contato com o mesmo e-mail
+            ja_existe = any(
+                c.get("email", "").lower() == email.lower()
+                for c in contatos
+            )
+
+            if not ja_existe:
+
+                novo_contato = {
+                    "nome": nome,
+                    "funcao": "Usuário(a) do sistema",
+                    "telefone": telefone,
+                    "email": email,
+                    "assina_docs": False
+                }
+
+                # adiciona o contato ao projeto
+                col_projetos.update_one(
+                    {"_id": projeto["_id"]},
+                    {"$push": {"contatos": novo_contato}}
+                )
+
+
+        st.success("Pessoa atualizada com sucesso!", icon=":material/check:")
+        time.sleep(3)
         st.rerun()
 
 
@@ -335,12 +374,6 @@ for _, row in df_benef.iterrows():
     col5.write(tipo_exibido)
 
 
-
-    # # TIPO DE USUÁRIO -----------------
-    # tipo_usuario = str(row.get("Tipo de usuário", "")).strip()
-
-    # # Exibição
-    # col5.write(tipo_usuario)
 
 
     # STATUS -----------------       
