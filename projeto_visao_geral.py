@@ -1366,11 +1366,17 @@ if not editar_cadastro:
                 else []
             )
 
-            # Mostra apenas contatos criados pelo usuário
-            contatos_usuario = [
-                c for c in contatos_local
-                if c.get("autor") == st.session_state.nome
-            ]
+            # Se for tipo_usuario beneficiário, ele só pode editar os que ele cadastrou.
+
+            if st.session_state.get("tipo_usuario") == "beneficiario":
+                contatos_usuario = [
+                    c for c in contatos_local
+                    if c.get("autor") == st.session_state.nome
+                ]
+            else:
+                # Outros usuários veem todos
+                contatos_usuario = contatos_local
+
 
             if not contatos_usuario:
                 st.write("Não há contatos cadastrados por você.")
@@ -1416,24 +1422,31 @@ if not editar_cadastro:
                     st.warning("Nome e função são obrigatórios.")
                     return
 
-                # Atualiza o contato específico
+
+                filtro = {
+                    "codigo": st.session_state.projeto_atual,
+                    "contatos.nome": contato_selecionado["nome"],
+                    "contatos.funcao": contato_selecionado["funcao"],
+                }
+
+                # Se for beneficiário, adiciona restrição de autor
+                if st.session_state.get("tipo_usuario") == "beneficiario":
+                    filtro["contatos.autor"] = st.session_state.nome
+
+
                 resultado = col_projetos.update_one(
-                    {
-                        "codigo": st.session_state.projeto_atual,
-                        "contatos.nome": contato_selecionado["nome"],
-                        "contatos.funcao": contato_selecionado["funcao"],
-                        "contatos.autor": st.session_state.nome,
-                    },
+                    filtro,
                     {
                         "$set": {
                             "contatos.$.nome": nome.strip(),
                             "contatos.$.funcao": funcao.strip(),
                             "contatos.$.telefone": telefone.strip(),
                             "contatos.$.email": email.strip(),
-                            "contatos.$.assina_docs": assina_docs,  # 👈 NOVO
+                            "contatos.$.assina_docs": assina_docs,
                         }
                     }
                 )
+
 
                 if resultado.modified_count == 1:
                     st.success("Contato atualizado com sucesso!", icon=":material/check:")
