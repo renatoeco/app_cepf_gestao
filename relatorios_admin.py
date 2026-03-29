@@ -819,7 +819,12 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                             financeiro = p.get("financeiro", {})
                             parcelas = financeiro.get("parcelas", [])
 
-                            valor_total = financeiro.get("valor_total", 0)
+                            # VALOR TOTAL + ADITIVO
+                            valor_total = (
+                                financeiro.get("valor_total", 0) +
+                                financeiro.get("valor_aditivo", 0)
+                            )
+
 
                             linha = {
                                 "Código": p.get("codigo"),
