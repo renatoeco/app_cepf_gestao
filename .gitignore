@@ -1,3 +1,4 @@
 env_cepf_gestao
 .streamlit/secrets.toml
 __pycache__
+temp_pages

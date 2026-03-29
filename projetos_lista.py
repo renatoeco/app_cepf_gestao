@@ -316,18 +316,6 @@ if org_selecionada != "Todas":
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 # Se nenhum projeto encontrado
 if df_filtrado.empty:
     st.divider()
@@ -344,8 +332,9 @@ df_filtrado = df_filtrado.sort_values(by="sigla", ignore_index=True)
 
 st.divider()
 
-larguras_colunas = [2, 2, 5, 2, 2, 2]
-col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Status", "Abrir"]
+larguras_colunas = [2, 2, 5, 2, 2, 2, 2]
+
+col_labels = ["Código", "Sigla", "Organização", "Padrinho/Madrinha", "Último acesso", "Status", "Abrir"]
 
 # Cabeçalhos
 cols = st.columns(larguras_colunas)
@@ -387,11 +376,30 @@ for index, projeto in df_filtrado.iterrows():
         cols[3].write(valor)
 
 
+    # ÚLTIMO ACESSO
+    # tratamento para ausência do campo ou valores vazios
+    ultimo_acesso = projeto.get("ultimo_acesso")
+
+    if (
+        ultimo_acesso is None or
+        (isinstance(ultimo_acesso, float) and pd.isna(ultimo_acesso)) or
+        (isinstance(ultimo_acesso, str) and ultimo_acesso.strip() == "")
+    ):
+        cols[4].markdown(
+            "<span style='color:#d97706; font-style:italic;'>nenhum acesso</span>",
+            unsafe_allow_html=True
+        )
+    else:
+        cols[4].write(ultimo_acesso)
+
+
+
+    # Status
 
     mapa_cores_status = {
-        'Concluído': 'rgba(0, 122, 211)',   # Azul 50%
-        'Em dia': 'rgba(160, 194, 86)',     # Verde 50%
-        'Atrasado': 'rgba(226, 101, 12)',   # Laranja 50%
+        'Concluído': 'rgba(0, 122, 211)',   
+        'Em dia': 'rgba(160, 194, 86)',     
+        'Atrasado': 'rgba(226, 101, 12)',   
         'Cancelado': '#bbb',
         'Sem cronograma': '#fff099'
     }
@@ -415,11 +423,11 @@ for index, projeto in df_filtrado.iterrows():
     </span>
     """
 
-    cols[4].markdown(html, unsafe_allow_html=True)
+    cols[5].markdown(html, unsafe_allow_html=True)
 
 
     # Botão “Ver projeto”
-    if cols[5].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
+    if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
         st.session_state.pagina_atual = "ver_projeto"
         st.session_state.projeto_atual = projeto["codigo"]
         st.rerun()
