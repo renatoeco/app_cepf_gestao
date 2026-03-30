@@ -1286,16 +1286,19 @@ def atualizar_datas_relatorios(col_projetos, codigo_projeto):
 
         # Verifica se existe uma parcela correspondente a esse número
         if numero in mapa_parcelas:
-            # Converte a data prevista da parcela para datetime
+            # Converte string no formato brasileiro (dd/mm/yyyy) para datetime
             data_parcela = pd.to_datetime(
-                mapa_parcelas[numero]["data_prevista"]
+                mapa_parcelas[numero]["data_prevista"],
+                format="%d/%m/%Y",
+                errors="coerce"
             )
 
             # Define a data prevista do relatório como
             # 15 dias após a data prevista da parcela
+            # Calcula a nova data e converte para string no formato brasileiro
             data_relatorio = (
                 data_parcela + datetime.timedelta(days=15)
-            ).date().isoformat()
+            ).strftime("%d/%m/%Y")
         else:
             # Caso não exista parcela correspondente,
             # a data do relatório fica indefinida
