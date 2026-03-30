@@ -1790,9 +1790,10 @@ with cron_desemb:
             if parcelas:
                 df_parcelas = pd.DataFrame(parcelas)
 
-                # Converter datas
+                # Converte string no formato brasileiro (dd/mm/yyyy) para datetime
                 df_parcelas["data_prevista"] = pd.to_datetime(
                     df_parcelas["data_prevista"],
+                    format="%d/%m/%Y",
                     errors="coerce"
                 )
 
@@ -1910,10 +1911,10 @@ with cron_desemb:
             # -----------------------------------
             df_parcelas = df_editado.copy()
 
-            # Converter tipos
-            df_parcelas["numero"] = df_parcelas["numero"].astype("Int64")
+            # Garante conversão consistente após edição no editor
             df_parcelas["data_prevista"] = pd.to_datetime(
-                df_parcelas["data_prevista"], errors="coerce"
+                df_parcelas["data_prevista"],
+                errors="coerce"
             )
 
             # Converter valor digitado
@@ -2031,7 +2032,8 @@ with cron_desemb:
                         "percentual": float(row["percentual"]),
                         "valor": float(row["valor"]),
                         "data_prevista": (
-                            pd.to_datetime(row["data_prevista"]).date().isoformat()
+                            pd.to_datetime(row["data_prevista"])
+                            .strftime("%d/%m/%Y")
                         ),
                     })
 
@@ -3320,9 +3322,6 @@ if usuario_interno:
                             # -----------------------------------
                             # SALVAR NO MONGODB
                             # -----------------------------------
-                            # A data é salva como string no formato ISO
-                            # yyyy-mm-dd (padrão do projeto)
-                            # -----------------------------------
                             col_projetos.update_one(
                                 {
                                     "codigo": codigo_projeto_atual,
@@ -3334,7 +3333,7 @@ if usuario_interno:
                                             "id_recibo": id_arquivo,
                                             "nome_arquivo": arquivo.name
                                         },
-                                        "financeiro.parcelas.$.data_realizada": data_pagamento.strftime("%Y-%m-%d")
+                                        "financeiro.parcelas.$.data_realizada": data_pagamento.strftime("%d/%m/%Y")
                                     }
                                 }
                             )
