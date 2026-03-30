@@ -22,11 +22,6 @@ db = conectar_mongo_cepf_gestao()
 
 
 
-
-
-
-
-# Carregamento de várias coleções cacheadas
 @st.cache_data(ttl=600)  # 10 minutos
 def carregar_dados_base():
 
@@ -38,19 +33,16 @@ def carregar_dados_base():
         "kbas": list(db["kbas"].find()),
         "editais": list(db["editais"].find()),
         "ciclos": list(db["ciclos_investimento"].find()),
-        "organizacoes": list(db["organizacoes"].find())
+        "organizacoes": list(db["organizacoes"].find()),
+        "pessoas": list(db["pessoas"].find()) 
     }
-
-
 
 dados_base = carregar_dados_base()
 
 editais = dados_base["editais"]
 ciclos = dados_base["ciclos"]
 organizacoes = dados_base["organizacoes"]
-
-
-
+pessoas = dados_base["pessoas"] 
 
 
 
@@ -175,18 +167,23 @@ mapa_ciclos = {
 
 
 ###########################################################################################################
-# MAPA COMPLETO DE ORGANIZAÇÕES (NOME + SIGLA)
+# MAPA COMPLETO DE ORGANIZAÇÕES (DADOS GERAIS)
 ###########################################################################################################
 mapa_organizacoes = {
     str(org.get("_id")): {
         "nome": org.get("nome_organizacao", ""),
-        "sigla": org.get("sigla_organizacao", "")
+        "sigla": org.get("sigla_organizacao", ""),
+        "cep": org.get("cep", ""),
+
+        # dados de UF
+        "uf_sigla": org.get("uf", {}).get("sigla", ""),
+        "uf_nome": org.get("uf", {}).get("nome", ""),
+
+        # dados de município
+        "municipio_nome": org.get("municipio", {}).get("nome", "")
     }
     for org in organizacoes
 }
-
-
-
 
 
 
@@ -1113,6 +1110,23 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                     dados = []
 
 
+                    ###################################################################################################
+                    # CALCULAR STATUS DOS PROJETOS (APENAS PROJETOS FILTRADOS DO EDITAL)
+                    ###################################################################################################
+                    df_projetos = pd.DataFrame(projetos)
+
+                    df_projetos_status = calcular_status_projetos(df_projetos)
+
+                    # cria mapa: codigo -> status
+                    mapa_status = {
+                        row["codigo"]: row.get("status")
+                        for _, row in df_projetos_status.iterrows()
+                    }
+
+
+
+
+
                     for p in projetos:
 
                         ###################################################################################################
@@ -1165,6 +1179,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                         nome_organizacao = org_info.get("nome", "")
                         sigla_organizacao = org_info.get("sigla", "")
+
 
 
                         ###################################################################################################
@@ -1239,6 +1254,149 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
 
+                        ###################################################################################################
+                        # RESPONSÁVEIS PELO PROJETO (USUÁRIOS VINCULADOS PELO CÓDIGO)
+                        ###################################################################################################
+                        codigo_projeto = p.get("codigo", "")
+
+                        nomes_responsaveis_projeto = []
+
+                        # percorre todos os usuários do sistema
+                        for pessoa in pessoas:
+
+                            projetos_pessoa = pessoa.get("projetos", [])
+
+                            # verifica se o código do projeto atual está vinculado ao usuário
+                            if codigo_projeto in projetos_pessoa:
+
+                                nome = pessoa.get("nome_completo", "")
+
+                                if nome:
+                                    nomes_responsaveis_projeto.append(nome)
+
+                        # remove duplicidades e ordena para padronização do relatório
+                        nomes_responsaveis_projeto = sorted(set(nomes_responsaveis_projeto))
+
+                        responsaveis_projeto_str = ", ".join(nomes_responsaveis_projeto)
+
+
+
+                        ###################################################################################################
+                        # CEP DA ORGANIZAÇÃO
+                        ###################################################################################################
+                        cep_organizacao = org_info.get("cep", "")
+
+
+
+
+                        ###################################################################################################
+                        # CIDADE(S) DO PROJETO (MUNICÍPIOS)
+                        ###################################################################################################
+                        municipios = p.get("locais", {}).get("municipios", [])
+
+                        nomes_municipios = [
+                            m.get("nome_municipio", "")
+                            for m in municipios
+                            if m.get("nome_municipio")
+                        ]
+
+                        cidades_str = ", ".join(nomes_municipios)
+
+
+
+                        ###################################################################################################
+                        # VALORES FINANCEIROS   (VALOR TOTAL (R$), VALOR TOTAL + ADITIVO e VALOR TOTAL FINAL)
+                        ###################################################################################################
+                        financeiro = p.get("financeiro", {})
+
+                        # valor total previsto do projeto
+                        valor_total = financeiro.get("valor_total", 0)
+
+                        # valor de aditivo (caso exista)
+                        valor_aditivo = financeiro.get("valor_aditivo", 0)
+
+                        # soma valor total + aditivo
+                        valor_total_com_aditivo = valor_total + valor_aditivo
+
+                        ###################################################################################################
+                        # VALOR TOTAL FINAL (SOMA DOS LANÇAMENTOS)
+                        ###################################################################################################
+                        orcamentos = financeiro.get("orcamento", [])
+
+                        valor_total_final = 0
+
+                        # percorre todas as despesas do orçamento
+                        for despesa in orcamentos:
+
+                            lancamentos = despesa.get("lancamentos", [])
+
+                            # soma todos os lançamentos de cada despesa
+                            for lanc in lancamentos:
+
+                                valor = lanc.get("valor_despesa", 0)
+
+                                # garante que apenas valores válidos sejam somados
+                                if isinstance(valor, (int, float)):
+                                    valor_total_final += valor
+
+
+
+                        ###################################################################################################
+                        # STATUS DO PROJETO
+                        ###################################################################################################
+                        codigo_projeto = p.get("codigo", "")
+
+                        status_projeto = mapa_status.get(codigo_projeto, "")
+
+
+
+                        ###################################################################################################
+                        # PARCELA 1 (ENTRADA)
+                        ###################################################################################################
+                        financeiro = p.get("financeiro", {})
+                        parcelas = financeiro.get("parcelas", [])
+
+                        valor_entrada = ""
+                        data_pagto_entrada = ""
+
+                        # busca parcela com numero = 1
+                        for parcela in parcelas:
+
+                            if parcela.get("numero") == 1:
+
+                                valor_entrada = parcela.get("valor", "")
+                                data_pagto_entrada = parcela.get("data_realizada", "")
+
+                                break  # interrompe ao encontrar
+
+
+                        ###################################################################################################
+                        # RELATÓRIO 1
+                        ###################################################################################################
+                        relatorios = p.get("relatorios", [])
+
+                        data_solicitacao_pagto = ""
+                        data_programada_r01 = ""
+
+                        # busca relatório com numero = 1
+                        for rel in relatorios:
+
+                            if rel.get("numero") == 1:
+
+                                data_solicitacao_pagto = rel.get("data_aprovacao", "")
+                                data_programada_r01 = rel.get("data_prevista", "")
+
+                                break  # interrompe ao encontrar
+
+
+
+
+
+
+
+
+
+
 
 
                         ###################################################################################################
@@ -1255,11 +1413,19 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             "Nome Responsável Legal (Quem vai assinar o contrato e os recibos)": responsaveis_str,
                             "E-mail responsável legal": emails_responsaveis_str,
                             "E-mails da equipe": emails_equipe_str,
-                            "Telefone": telefones_str
+                            "Telefone": telefones_str,
+                            "Responsável(is) pelo projeto": responsaveis_projeto_str,
+                            "CEP": cep_organizacao,
+                            "Cidade(s)": cidades_str,
+                            "VALOR TOTAL (R$)": valor_total,
+                            "VALOR TOTAL + ADITIVO": valor_total_com_aditivo,
+                            "VALOR TOTAL FINAL": valor_total_final,
+                            "Status": status_projeto,
+                            "Valor Entrada (25%)": valor_entrada,
+                            "P01_Data da Solicitação_Pagto": data_solicitacao_pagto,
+                            "Data de Pagto_Entrada": data_pagto_entrada,
+                            "Data Programada_R01": data_programada_r01,
                         })
-
-
-
 
 
 
