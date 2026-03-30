@@ -5415,9 +5415,19 @@ if step_selecionado == "Enviar":
 
         # Formata a data para exibição (DD/MM/YYYY)
         if data_envio:
-            data_formatada = datetime.datetime.strptime(
-                data_envio, "%Y-%m-%d"
-            ).strftime("%d/%m/%Y")
+
+            # Converte string no formato brasileiro (dd/mm/yyyy) para datetime
+            data_dt = datetime.datetime.strptime(
+                data_envio, "%d/%m/%Y"
+            )
+
+            # Mantém o mesmo formato para exibição
+            data_formatada = data_dt.strftime("%d/%m/%Y")
+
+
+            # data_formatada = datetime.datetime.strptime(
+            #     data_envio, "%Y-%m-%d"
+            # ).strftime("%d/%m/%Y")
         else:
             data_formatada = "—"
 
@@ -5484,8 +5494,8 @@ if step_selecionado == "Enviar":
 
         if enviar:
 
-            # Gera a data de envio no formato ISO (YYYY-MM-DD)
-            data_envio = datetime.datetime.now().strftime("%Y-%m-%d")
+            # Gera a data de envio
+            data_envio = datetime.datetime.now().strftime("%d/%m/%Y")
 
             with st.spinner("Enviando relatório ..."):
 
@@ -6057,7 +6067,7 @@ if step_selecionado == "Avaliação":
                     icon=":material/check:"
                 )
 
-            time.sleep(5)
+            time.sleep(10)
             st.rerun()
 
         # --------------------------------------------------
