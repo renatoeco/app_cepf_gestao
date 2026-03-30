@@ -1377,31 +1377,71 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                         data_solicitacao_pagto = ""
                         data_programada_r01 = ""
+                        data_entrega_r01 = ""
 
                         # busca relatório com numero = 1
                         for rel in relatorios:
 
                             if rel.get("numero") == 1:
 
-                                data_solicitacao_pagto = rel.get("data_aprovacao", "")
+                                data_solicitacao_pagto = rel.get("data_aprovacao", "")   # ??????????????????????????? está correto?
                                 data_programada_r01 = rel.get("data_prevista", "")
+                                data_entrega_r01 = rel.get("data_envio", "")
 
                                 break  # interrompe ao encontrar
 
 
 
 
+                        ###################################################################################################
+                        # PARCELA 2
+                        ###################################################################################################
+                        valor_parcela_2 = ""
 
+                        # busca parcela com numero = 2
+                        for parcela in parcelas:
 
+                            if parcela.get("numero") == 2:
 
+                                valor_parcela_2 = parcela.get("valor", "")
 
-
-
+                                break  # interrompe ao encontrar
 
 
                         ###################################################################################################
-                        # LINHA DA TABELA
+                        # RELATÓRIOS (REGRAS ESPECÍFICAS)
                         ###################################################################################################
+                        data_solicitacao_pagto_p02 = ""
+                        data_programada_r02 = ""
+                        data_entrega_r02 = ""
+
+                        for rel in relatorios:
+
+                            numero_rel = rel.get("numero")
+
+                            # P02 usa relatório 1
+                            # regra de negócio: P02 usa aprovação do R01, mas datas operacionais do R02
+                            if numero_rel == 1:
+                                data_solicitacao_pagto_p02 = rel.get("data_aprovacao", "")
+
+                            # demais campos usam relatório 2
+                            if numero_rel == 2:
+                                data_programada_r02 = rel.get("data_prevista", "")
+                                data_entrega_r02 = rel.get("data_envio", "")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
                         dados.append({
                             "Contrato": contrato_nome,
@@ -1425,9 +1465,12 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             "P01_Data da Solicitação_Pagto": data_solicitacao_pagto,
                             "Data de Pagto_Entrada": data_pagto_entrada,
                             "Data Programada_R01": data_programada_r01,
+                            "Data de Entrega_R01": data_entrega_r01,
+                            "P02_Data da Solicitação_Pagto": data_solicitacao_pagto_p02,
+                            "Valor (R$)": valor_parcela_2,
+                            "Data Programada_R02": data_programada_r02,
+                            "Data de Entrega_R02": data_entrega_r02,
                         })
-
-
 
 
 

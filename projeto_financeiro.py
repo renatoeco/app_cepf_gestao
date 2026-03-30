@@ -1532,7 +1532,9 @@ with cron_desemb:
                         if valor is not None else ""
                     ),
                     "Data prevista": pd.to_datetime(
-                        data_prevista, errors="coerce"
+                        data_prevista,
+                        format="%d/%m/%Y",  # formato brasileiro
+                        errors="coerce"
                     ),
                     "Data realizada": (
                         pd.to_datetime(data_realizada).strftime("%d/%m/%Y")
@@ -1560,7 +1562,9 @@ with cron_desemb:
                     "Valor R$": "",
                     # "Percentual": "",
                     "Data prevista": pd.to_datetime(
-                        data_prevista, errors="coerce"
+                        data_prevista,
+                        format="%d/%m/%Y",  # garante interpretação no padrão brasileiro
+                        errors="coerce"
                     ),
                     "Data realizada": (
                         pd.to_datetime(data_realizada).strftime("%d/%m/%Y")
