@@ -1304,24 +1304,24 @@ def atualizar_datas_relatorios(col_projetos, codigo_projeto):
             # a data do relatório fica indefinida
             data_relatorio = None
 
+
+
+
         # Monta o novo objeto de relatório
-        novos_relatorios.append(
-            {
-                # Mantém o número do relatório
-                "numero": numero,
 
-                # Mantém as entregas já existentes no banco
-                "entregas": r.get("entregas", []),
+        # Cria uma cópia completa do relatório original
+        relatorio_atualizado = r.copy()
 
-                # Atualiza (ou mantém) a data prevista calculada
-                "data_prevista": data_relatorio,
+        # Atualiza apenas a data prevista
+        relatorio_atualizado["data_prevista"] = data_relatorio
 
-                # Define o status do relatório da seguinte forma:
-                # - Se já existir um status no banco, ele é preservado
-                # - Se NÃO existir, define como "modo_edicao"
-                "status_relatorio": r.get("status_relatorio", "modo_edicao")
-            }
-        )
+        # Garante status apenas se não existir. Se não existir é modo_edicao
+        if "status_relatorio" not in relatorio_atualizado:
+            relatorio_atualizado["status_relatorio"] = "modo_edicao"
+
+        novos_relatorios.append(relatorio_atualizado)
+
+
 
     # Atualiza o documento do projeto no MongoDB
     # Substitui completamente o array de relatórios
