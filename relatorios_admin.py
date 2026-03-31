@@ -489,6 +489,7 @@ if opcao_relatorio == "Relatório de salvaguardas":
 
             download_clicado = st.download_button(
                 label="Baixar relatório",
+                type="primary",
                 icon=":material/download:",
                 data=st.session_state.arquivo_salvaguardas,
                 file_name=f"Relatorio_de_salvaguardas_{nome_edital_arquivo}.xlsx",
@@ -1004,6 +1005,7 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
             download_clicado = st.download_button(
                 label="Baixar relatório",
+                type="primary",
                 icon=":material/download:",
                 data=st.session_state.arquivo_desembolsos,
                 file_name=f"Relatorio_acompanhamento_desembolsos_{nome_edital_arquivo}.xlsx",
@@ -1528,8 +1530,6 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         ###################################################################################################
                         valor_parcela_6 = ""
                         data_solicitacao_pagto_p06 = ""
-                        data_programada_r06 = ""
-                        data_entrega_r06 = ""
 
                         for parcela in parcelas:
                             if parcela.get("numero") == 6:
@@ -1542,9 +1542,6 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             if numero_rel == 5:
                                 data_solicitacao_pagto_p06 = rel.get("data_aprovacao", "")
 
-                            if numero_rel == 6:
-                                data_programada_r06 = rel.get("data_prevista", "")
-                                data_entrega_r06 = rel.get("data_envio", "")
 
 
 
@@ -1561,8 +1558,12 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                         valor_total_desembolsado = 0
 
-                        # soma todas as parcelas do projeto
+                        # soma todas as parcelas pagas do projeto
                         for parcela in parcelas:
+
+                            # considera apenas parcelas que possuem data de pagamento
+                            if not parcela.get("data_realizada"):
+                                continue
 
                             valor = parcela.get("valor", 0)
 
@@ -1572,6 +1573,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
                         dados.append({
+                            "id_CEPF": "",
                             "Contrato": contrato_nome,
                             "Direções estratégicas": direcoes_str,
                             "Nome da proposta": nome_projeto,
@@ -1585,20 +1587,28 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             "Responsável(is) pelo projeto": responsaveis_projeto_str,
                             "CEP": cep_organizacao,
                             "Cidade(s)": cidades_str,
+                            "Verificação de Segurança (CSI Number)": "",
 
                             "VALOR TOTAL (R$)": valor_total,
                             "VALOR TOTAL + ADITIVO": valor_total_com_aditivo,
                             "VALOR TOTAL FINAL": valor_total_final,
+                            "VALOR TOTAL EM US$": "",
+                            "Deobligation": "",
                             "Status": status_projeto,
 
-                            "Valor Entrada (25%)": valor_entrada,
-                            "P01_Data da Solicitação_Pagto": data_solicitacao_pagto,
+                            "RISK ASSESSMENT": "",	
+                            "FINANCIAL RISK ASSESSMENT (Low, Medium, High)": "",
+                            "FINANCIAL RISK ASSESSMENT (NOTA GERAL (/100))": "",
+
+
+                            "Valor Entrada": valor_entrada,
+                            "P01_Data da Solicitação_Pagto": "",
                             "Data de Pagto_Entrada": data_pagto_entrada,
                             "Data Programada_R01": data_programada_r01,
                             "Data de Entrega_R01": data_entrega_r01,
 
                             "P02_Data da Solicitação_Pagto": data_solicitacao_pagto_p02,
-                            "Valor (R$)": valor_parcela_2,
+                            "Valor (R$) P02": valor_parcela_2,
                             "Data Programada_R02": data_programada_r02,
                             "Data de Entrega_R02": data_entrega_r02,
 
@@ -1619,12 +1629,16 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                             "P06_Data da Solicitação_Pagto": data_solicitacao_pagto_p06,
                             "Valor (R$) P06": valor_parcela_6,
-                            "Data Programada_R06": data_programada_r06,
-                            "Data de Entrega_R06": data_entrega_r06,                  
+
+                            "Upload no CG": "",
 
                             "ADITIVOS": valor_aditivo,
                             "Valor Total Desembolsado (soma das parcelas) R$": valor_total_desembolsado,
          
+                            "Valor Total Desembolsado (soma das parcelas)_U$": "",
+
+                            # A última coluna "Valor residual R$" será preenchida posteriormente com fórmula
+
                         })
 
 
@@ -1633,6 +1647,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                     # CRIA DATAFRAME
                     ###################################################################################################
                     df = pd.DataFrame(dados)
+
 
                     ###################################################################################################
                     # COLUNA "Valor residual_R$" COM FÓRMULA 
@@ -1679,6 +1694,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
             download_clicado = st.download_button(
                 label="Baixar relatório",
+                type="primary",
                 icon=":material/download:",
                 data=st.session_state.arquivo_acompanhamento_completo,
                 file_name=f"Relatorio_acompanhamento_completo_{nome_edital_arquivo}.xlsx",
