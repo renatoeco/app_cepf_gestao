@@ -562,7 +562,7 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
             if data_realizada:
                 try:
-                    ano = datetime.datetime.strptime(data_realizada, "%Y-%m-%d").year
+                    ano = datetime.datetime.strptime(data_realizada, "%d/%m/%Y").year
                     anos_set.add(ano)
                 except:
                     pass
@@ -853,7 +853,8 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                 # soma no já pago (todas com data_realizada)
                                 ja_pago += valor_parcela
 
-                                data = datetime.datetime.strptime(data_realizada, "%Y-%m-%d")
+                                data = datetime.datetime.strptime(data_realizada, "%d/%m/%Y")
+                                
 
                                 if data.year == int(ano_selecionado):
 
