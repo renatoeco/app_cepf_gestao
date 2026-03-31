@@ -1257,6 +1257,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
 
+
                         ###################################################################################################
                         # RESPONSÁVEIS PELO PROJETO (USUÁRIOS VINCULADOS PELO CÓDIGO)
                         ###################################################################################################
@@ -1266,6 +1267,12 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                         # percorre todos os usuários do sistema
                         for pessoa in pessoas:
+
+                            ###################################################################################################
+                            # FILTRO: APENAS USUÁRIOS DO TIPO BENEFICIÁRIO
+                            ###################################################################################################
+                            if pessoa.get("tipo_usuario") != "beneficiario":
+                                continue
 
                             projetos_pessoa = pessoa.get("projetos", [])
 
@@ -1281,6 +1288,8 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         nomes_responsaveis_projeto = sorted(set(nomes_responsaveis_projeto))
 
                         responsaveis_projeto_str = ", ".join(nomes_responsaveis_projeto)
+
+
 
 
 
