@@ -294,7 +294,12 @@ if opcao_relatorio == "Relatório de salvaguardas":
                         id_org = p.get("id_organizacao")
 
                         # Busca nome no mapa (já cacheado)
-                        nome_org = mapa_organizacoes.get(str(id_org), "") if id_org else ""
+
+                        org_info = mapa_organizacoes.get(str(id_org), {}) if id_org else {}
+
+                        nome_org = org_info.get("nome", "")
+
+                        # nome_org = mapa_organizacoes.get(str(id_org), "") if id_org else ""
 
 
                         # Recupera dados de salvaguardas
@@ -1037,6 +1042,9 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
 
+
+
+
 elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela":
     
     st.subheader("Relatório de acompanhamento de desembolsos por parcela")
@@ -1047,10 +1055,630 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
     projetos, edital_selecionado_obj = filtro_editais()
 
 
+
+    ###################################################################################################
+    # VALIDAÇÃO DE EDITAL SELECIONADO
+    ###################################################################################################
+    if not edital_selecionado_obj:
+
+        st.caption("Selecione um edital para iniciar a análise.")
+
+        # impede execução do restante do fluxo
+        st.stop()
+
+
     st.write(f"{len(projetos)} projetos")
 
     st.write('')
     st.write('')
+
+
+
+
+
+    ###################################################################################################
+    # SESSION STATE
+    ###################################################################################################
+    if "meses_parcelas" not in st.session_state:
+        st.session_state.meses_parcelas = []
+
+    if "df_cambio_parcelas" not in st.session_state:
+        st.session_state.df_cambio_parcelas = None
+
+    if "mostrar_gerar_relatorio" not in st.session_state:
+        st.session_state.mostrar_gerar_relatorio = False
+
+    if "mostrar_download" not in st.session_state:
+        st.session_state.mostrar_download = False
+
+    if "arquivo_parcelas" not in st.session_state:
+        st.session_state.arquivo_parcelas = None
+
+
+    ###################################################################################################
+    # BOTÕES (RENDERIZAÇÃO CONDICIONAL)
+    ###################################################################################################
+    with st.container(horizontal=True):
+
+        analisar_parcelas = st.button(
+            "Analisar parcelas",
+            icon=":material/search:",
+            type="secondary"
+        )
+
+        gerar_relatorio = False
+        baixar_relatorio = False
+
+        if st.session_state.mostrar_gerar_relatorio:
+            gerar_relatorio = st.button(
+                "Gerar relatório",
+                icon=":material/receipt_long:",
+                type="secondary"
+            )
+
+        if st.session_state.mostrar_download:
+            ###################################################################################################
+            # BOTÃO DOWNLOAD
+            ###################################################################################################
+            download_clicado = st.download_button(
+                label="Baixar relatório",
+                icon=":material/download:",
+                type="primary",
+                data=st.session_state.arquivo_parcelas,
+                file_name=f"Relatorio_de_acompanhamento_de_desembolsos_por_parcela_{edital_selecionado_obj.get('nome_edital','').replace(' ','_')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+
+            ###################################################################################################
+            # RESET DO ESTADO APÓS DOWNLOAD
+            ###################################################################################################
+            if download_clicado:
+
+                # limpa dados do fluxo
+                st.session_state.meses_parcelas = []
+                st.session_state.df_cambio_parcelas = None
+
+                # controla exibição dos botões
+                st.session_state.mostrar_gerar_relatorio = False
+                st.session_state.mostrar_download = False
+
+                # limpa arquivo
+                st.session_state.arquivo_parcelas = None
+
+                # força rerun para voltar ao estado inicial
+                st.rerun()
+
+
+
+    ###################################################################################################
+    # AÇÃO: ANALISAR PARCELAS
+    ###################################################################################################
+    if analisar_parcelas:
+
+        # reseta estados seguintes
+        st.session_state.mostrar_gerar_relatorio = False
+        st.session_state.mostrar_download = False
+        st.session_state.arquivo_parcelas = None
+
+        if not projetos:
+            st.warning("Nenhum projeto no edital selecionado.")
+            time.sleep(3)
+
+        else:
+
+            ###################################################################################################
+            # COLETA E TRATAMENTO DAS DATAS DAS PARCELAS
+            ###################################################################################################
+            datas = []
+
+            for p in projetos:
+
+                financeiro = p.get("financeiro", {})
+                parcelas = financeiro.get("parcelas", [])
+
+                for parcela in parcelas:
+
+                    data_realizada = parcela.get("data_realizada")
+
+                    if data_realizada:
+                        try:
+                            data = datetime.datetime.strptime(data_realizada, "%d/%m/%Y")
+                            datas.append(data)
+                        except:
+                            pass
+
+
+            ###################################################################################################
+            # ORDENAÇÃO DAS DATAS
+            ###################################################################################################
+            datas_ordenadas = sorted(datas)
+
+
+            ###################################################################################################
+            # EXTRAÇÃO DE MÊS/ANO
+            ###################################################################################################
+            meses_ano = [data.strftime("%m/%Y") for data in datas_ordenadas]
+
+
+            ###################################################################################################
+            # REMOÇÃO DE DUPLICADOS
+            ###################################################################################################
+            meses_unicos = list(dict.fromkeys(meses_ano))
+
+
+            ###################################################################################################
+            # DATAFRAME BASE
+            ###################################################################################################
+            df_cambio = pd.DataFrame({
+                "Mês": meses_unicos,
+                "Cotação US$": [None] * len(meses_unicos)
+            })
+
+
+            ###################################################################################################
+            # ARMAZENA NO SESSION STATE
+            ###################################################################################################
+            st.session_state.meses_parcelas = meses_unicos
+            st.session_state.df_cambio_parcelas = df_cambio
+            st.session_state.mostrar_gerar_relatorio = True
+
+            st.rerun()
+
+
+    ###################################################################################################
+    # DATA EDITOR
+    ###################################################################################################
+    if st.session_state.df_cambio_parcelas is not None:
+
+        st.write('')
+        st.markdown("##### Câmbio US$ por mês")
+
+        df_editado_parcelas = st.data_editor(
+            st.session_state.df_cambio_parcelas,
+            width=400,
+            height="content",
+            hide_index=True,
+            num_rows="fixed",
+            column_config={
+                "Mês": st.column_config.TextColumn(
+                    "Mês",
+                    disabled=True
+                ),
+                "Cotação US$": st.column_config.NumberColumn(
+                    "Cotação US$",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f"
+                )
+            },
+            key="data_editor_cambio_parcelas"
+        )
+
+
+    ###################################################################################################
+    # AÇÃO: GERAR RELATÓRIO
+    ###################################################################################################
+
+
+
+    if gerar_relatorio:
+
+        ###################################################################################################
+        # VALIDAÇÃO DAS COTAÇÕES
+        ###################################################################################################
+        valores = df_editado_parcelas["Cotação US$"]
+
+        if valores.isnull().any() or any(v == 0 for v in valores):
+
+            st.warning("Preencha a cotação de todos os meses.")
+            time.sleep(3)
+
+        else:
+
+            ###################################################################################################
+            # CONVERSÃO PARA DICIONÁRIO
+            ###################################################################################################
+            cambio_dict = {
+                row["Mês"]: row["Cotação US$"]
+                for _, row in df_editado_parcelas.iterrows()
+            }
+
+
+            ###################################################################################################
+            # CALCULAR STATUS DOS PROJETOS
+            ###################################################################################################
+            df_projetos = pd.DataFrame(projetos)
+
+            df_projetos_status = calcular_status_projetos(df_projetos)
+
+            # cria mapa: codigo -> status
+            mapa_status = {
+                row["codigo"]: row.get("status")
+                for _, row in df_projetos_status.iterrows()
+            }
+
+
+            ###################################################################################################
+            # CRIAÇÃO DO EXCEL
+            ###################################################################################################
+            buffer = io.BytesIO()
+
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+
+
+
+                workbook = writer.book
+                worksheet = workbook.create_sheet(title="Desembolsos por parcela")
+
+                writer.sheets["Desembolsos por parcela"] = worksheet
+
+
+                ###################################################################################################
+                # TÍTULO DA SEÇÃO DE CÂMBIO
+                ###################################################################################################
+                worksheet.cell(
+                    row=1,
+                    column=1,
+                    value="Taxas de câmbio por mês"
+                )
+
+
+                ###################################################################################################
+                # AGRUPAMENTO DOS MESES DE 3 EM 3
+                ###################################################################################################
+                meses_lista = list(cambio_dict.keys())
+
+                grupos_meses = [
+                    meses_lista[i:i+3]
+                    for i in range(0, len(meses_lista), 3)
+                ]
+
+
+                ###################################################################################################
+                # ESCRITA DOS BLOCOS (MÊS | COTAÇÃO)
+                ###################################################################################################
+                col_offset = 1
+
+                for grupo in grupos_meses:
+
+                    col_mes = col_offset
+                    col_valor = col_offset + 1
+
+                    for i, mes in enumerate(grupo):
+
+                        linha_excel = i + 2  # começa na linha 2
+
+                        # escreve mês
+                        worksheet.cell(
+                            row=linha_excel,
+                            column=col_mes,
+                            value=mes
+                        )
+
+                        # escreve cotação
+                        worksheet.cell(
+                            row=linha_excel,
+                            column=col_valor,
+                            value=cambio_dict.get(mes, "")
+                        )
+
+                    col_offset += 2  # avança para o próximo bloco
+
+
+
+
+
+
+
+
+
+
+
+                ###################################################################################################
+                # CABEÇALHO DA TABELA (LINHA 7)
+                ###################################################################################################
+                colunas = [
+                    "id_cepf",
+                    "UploadCG",
+                    "Beneficiário",
+                    "Valor do Contrato (R$)",
+                    "Valor do Contrato Final",
+                    "Diferença",
+                ]
+
+                # adiciona colunas das parcelas (1 a 6)
+                for i in range(1, 7):
+                    colunas.append(f"PARCELA {i}")
+                    colunas.append(f"PARCELA {str(i).zfill(2)} (USD)")
+
+                # colunas finais
+                colunas.extend([
+                    "ADITIVO (R$)",
+                    "ADITIVO (US$)",
+                    "Já Pago",
+                    "Remanescente a receber",
+                    "Devoluções R$",
+                    "Devoluções US$",
+                    "VALOR FINAL (R$)",
+                    "VALOR FINAL (U$)",
+                    "ADITIVOS",
+                    "Data de Finalização (End Date)",
+                    "Data de Encerramento (Close Date)",
+                    "Status do projeto"
+                ])
+
+
+
+
+
+
+                # escreve cabeçalho
+                for col_idx, col_nome in enumerate(colunas, start=1):
+                    worksheet.cell(row=7, column=col_idx, value=col_nome)
+
+
+                ###################################################################################################
+                # PREENCHIMENTO DAS LINHAS (A PARTIR DA LINHA 8)
+                ###################################################################################################
+                linha_excel = 8
+
+                for p in projetos:
+
+                    ###################################################################################################
+                    # ORGANIZAÇÃO
+                    ###################################################################################################
+                    id_org = p.get("id_organizacao")
+                    org_info = mapa_organizacoes.get(str(id_org), {}) if id_org else {}
+                    nome_organizacao = org_info.get("nome", "")
+
+
+                    ###################################################################################################
+                    # DADOS FINANCEIROS
+                    ###################################################################################################
+                    financeiro = p.get("financeiro", {})
+
+                    valor_total = financeiro.get("valor_total", 0)
+                    valor_aditivo = financeiro.get("valor_aditivo", 0)
+                    valor_total_final = valor_total + valor_aditivo
+
+
+                    ###################################################################################################
+                    # PARCELAS
+                    ###################################################################################################
+                    parcelas = financeiro.get("parcelas", [])
+
+                    # cria mapa de parcelas por número
+                    mapa_parcelas = {
+                        parcela.get("numero"): parcela
+                        for parcela in parcelas
+                    }
+
+                    valores_parcelas = {}
+                    valores_parcelas_usd = {}
+
+                    for i in range(1, 7):
+
+                        parcela = mapa_parcelas.get(i)
+
+                        valor_rs = ""
+                        valor_usd = ""
+
+                        if parcela:
+
+                            valor_rs = parcela.get("valor", "")
+
+                            data_realizada = parcela.get("data_realizada")
+
+                            if data_realizada:
+                                try:
+                                    data = datetime.datetime.strptime(data_realizada, "%d/%m/%Y")
+                                    mes_ano = data.strftime("%m/%Y")
+
+                                    cotacao = cambio_dict.get(mes_ano)
+
+                                    if cotacao and valor_rs:
+                                        valor_usd = valor_rs * cotacao  # ajustar para divisão se necessário
+
+                                except:
+                                    pass
+
+                        valores_parcelas[i] = valor_rs
+                        valores_parcelas_usd[i] = valor_usd
+
+
+                    ###################################################################################################
+                    # JÁ PAGO (SOMA DAS PARCELAS PAGAS)
+                    ###################################################################################################
+                    ja_pago = 0
+
+                    for parcela in parcelas:
+
+                        if not parcela.get("data_realizada"):
+                            continue
+
+                        valor = parcela.get("valor", 0)
+
+                        if isinstance(valor, (int, float)):
+                            ja_pago += valor
+
+
+                    ###################################################################################################
+                    # REMANESCENTE A RECEBER (BASEADO NAS PARCELAS PAGAS)
+                    ###################################################################################################
+
+                    # garante que valor_aditivo seja numérico
+                    valor_aditivo_seguro = valor_aditivo if isinstance(valor_aditivo, (int, float)) else 0
+
+                    # soma das parcelas pagas (já calculado anteriormente como ja_pago)
+                    remanescente = (valor_total + valor_aditivo_seguro) - ja_pago
+
+
+                    ###################################################################################################
+                    # DEVOLUÇÕES
+                    ###################################################################################################
+                    devolucao_rs = financeiro.get("valor_devolucao", "")
+                    devolucao_usd = ""
+
+
+
+
+
+                    ###################################################################################################
+                    # VALOR FINAL (R$) - SOMA DE TODAS AS PARCELAS
+                    ###################################################################################################
+                    valor_final_rs = 0
+
+                    for parcela in parcelas:
+
+                        valor = parcela.get("valor", 0)
+
+                        if isinstance(valor, (int, float)):
+                            valor_final_rs += valor
+
+
+                    ###################################################################################################
+                    # VALOR FINAL (US$) - CONVERSÃO POR DATA DA PARCELA
+                    ###################################################################################################
+                    valor_final_usd = 0
+
+                    for parcela in parcelas:
+
+                        valor = parcela.get("valor", 0)
+                        data_realizada = parcela.get("data_realizada")
+
+                        if not data_realizada:
+                            continue
+
+                        try:
+                            data = datetime.datetime.strptime(data_realizada, "%d/%m/%Y")
+                            mes_ano = data.strftime("%m/%Y")
+
+                            cotacao = cambio_dict.get(mes_ano)
+
+                            if cotacao and isinstance(valor, (int, float)):
+                                valor_final_usd += valor / cotacao  
+
+                        except:
+                            pass
+
+
+                    ###################################################################################################
+                    # ADITIVOS
+                    ###################################################################################################
+                    aditivos = valor_aditivo
+
+
+                    ###################################################################################################
+                    # DATA DE FINALIZAÇÃO (END DATE)
+                    ###################################################################################################
+                    data_finalizacao = p.get("data_fim_contrato", "")
+
+
+                    ###################################################################################################
+                    # DATA DE ENCERRAMENTO (CLOSE DATE)
+                    ###################################################################################################
+                    data_encerramento = ""
+
+                    if parcelas:
+
+                        # filtra parcelas que possuem data_realizada
+                        parcelas_com_data = [
+                            parcela for parcela in parcelas
+                            if parcela.get("data_realizada")
+                        ]
+
+                        if parcelas_com_data:
+
+                            # encontra a parcela com maior número
+                            parcela_final = max(
+                                parcelas_com_data,
+                                key=lambda x: x.get("numero", 0)
+                            )
+
+                            data_encerramento = parcela_final.get("data_realizada", "")
+
+
+                    ###################################################################################################
+                    # STATUS DO PROJETO
+                    ###################################################################################################
+                    codigo_projeto = p.get("codigo")
+                    status_projeto = mapa_status.get(codigo_projeto, "")
+
+
+
+
+
+
+                    ###################################################################################################
+                    # MONTAGEM DA LINHA
+                    ###################################################################################################
+                    linha = {
+                        "id_cepf": "",
+                        "UploadCG": "",
+                        "Beneficiário": nome_organizacao,
+                        "Valor do Contrato (R$)": valor_total,
+                        "Valor do Contrato Final": valor_total_final,
+                        "Diferença": valor_aditivo,
+                    }
+
+                    # adiciona parcelas
+                    for i in range(1, 7):
+                        linha[f"PARCELA {i}"] = valores_parcelas.get(i, "")
+                        linha[f"PARCELA {str(i).zfill(2)} (USD)"] = valores_parcelas_usd.get(i, "")
+
+                    # adiciona colunas finais
+                    linha.update({
+                        "ADITIVO (R$)": valor_aditivo,
+                        "ADITIVO (US$)": "",
+                        "Já Pago": ja_pago,
+                        "Remanescente a receber": remanescente,
+                        "Devoluções R$": devolucao_rs,
+                        "Devoluções US$": devolucao_usd,
+                        "VALOR FINAL (R$)": valor_final_rs,
+                        "VALOR FINAL (U$)": valor_final_usd,
+                        "ADITIVOS": aditivos,
+                        "Data de Finalização (End Date)": data_finalizacao,
+                        "Data de Encerramento (Close Date)": data_encerramento,
+                        "Status do projeto": status_projeto                        
+                    })
+
+
+                    ###################################################################################################
+                    # ESCRITA NA PLANILHA
+                    ###################################################################################################
+                    for col_idx, col_nome in enumerate(colunas, start=1):
+
+                        valor = linha.get(col_nome, "")
+
+                        # substitui zero por vazio
+                        if valor == 0:
+                            valor = ""
+
+                        worksheet.cell(
+                            row=linha_excel,
+                            column=col_idx,
+                            value=valor
+                        )
+
+                    linha_excel += 1
+
+
+
+
+            ###################################################################################################
+            # SALVA NO SESSION STATE
+            ###################################################################################################
+            st.session_state.arquivo_parcelas = buffer
+            st.session_state.mostrar_download = True
+
+            st.rerun()
+
+
+
+
+
+
 
 
 
@@ -1662,10 +2290,10 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                     # COLUNA "Valor residual_R$" COM FÓRMULA 
                     ###################################################################################################
                     # calcula saldo: (VALOR TOTAL + ADITIVO) - VALOR TOTAL FINAL
-                    # colunas O e P
+                    # colunas Q e R
 
                     df["Valor residual R$"] = [
-                        f"=O{idx+2}-P{idx+2}"
+                        f"=Q{idx+2}-R{idx+2}"
                         for idx in range(len(df))
                     ]
 
