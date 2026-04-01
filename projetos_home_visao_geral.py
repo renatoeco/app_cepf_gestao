@@ -185,8 +185,6 @@ if st.session_state.notificacoes:
         for msg in st.session_state.notificacoes:
             st.warning(msg)
 
-st.write('')
-st.write('')
 
 
 

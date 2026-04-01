@@ -411,9 +411,11 @@ df_organizacoes["municipio_nome"] = df_organizacoes["municipio"].apply(
 )
 
 
+df_exibicao = df_organizacoes.drop(columns=["_id"])
 
 
-st.dataframe(df_organizacoes, 
+
+st.dataframe(df_exibicao, 
             column_order=[
                 "sigla_organizacao",
                 "nome_organizacao",
