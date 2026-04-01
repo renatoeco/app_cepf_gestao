@@ -277,13 +277,12 @@ if opcao_cadastro == "Cadastro individual":
             endereco = st.session_state.endereco_input.strip()
             uf = st.session_state.uf_input
             municipio_nome = st.session_state.municipio_input
-            # cep = st.session_state.cep_input.strip()
 
             # LIMPEZA E VALIDAÇÃO DO CEP
             cep_raw = st.session_state.cep_input.strip()
             cep_limpo, cep_valido = limpar_e_validar_cep(cep_raw)
 
-
+            # MENSAGENS DE VALIDAÇÃO
             if not sigla_organizacao or not nome_organizacao or not cnpj \
             or not endereco or not uf or not municipio_nome or not cep_raw:
 
@@ -367,7 +366,7 @@ if opcao_cadastro == "Cadastro individual":
                             "nome": municipio_doc["nome_municipio"],
                             "codigo_municipio": int(municipio_doc["codigo_municipio"])
                         },
-                        "cep": cep
+                        "cep": cep_limpo
                     }
 
 
