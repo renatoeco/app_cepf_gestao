@@ -4493,7 +4493,8 @@ with salvaguardas:
             categorias_filtradas.append(categoria)
 
 
-
+    # Inicializa a categoria geral
+    categoria_geral = ""
 
     # Determina automaticamente a categoria geral
     # prioridade: A > B > C
@@ -4508,9 +4509,12 @@ with salvaguardas:
 
 
 
-    # Coluna 4 — mostra o resultado calculado
-    col4.write('Resultado final:')
-    col4.write(f"**{categoria_geral}**")
+    col4.write("Resultado final:")
+
+    if categoria_geral:
+        col4.write(f"**{categoria_geral}**")
+    else:
+        col4.write("")
 
 
     # Coluna 5
