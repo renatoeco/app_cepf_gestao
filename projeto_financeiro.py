@@ -11,7 +11,6 @@ import streamlit_shadcn_ui as ui
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-# from num2words import num2words
 
 
 from funcoes_auxiliares import (
@@ -1251,85 +1250,70 @@ def gerar_recibo_docx(
 
 
 
-def atualizar_datas_relatorios(col_projetos, codigo_projeto):
+
+
+# Atualiza datas das parcelas, que devem ser 15 dias após o relatório anterior
+def atualizar_datas_parcelas(col_projetos, codigo_projeto):
     # Busca o projeto no MongoDB
     projeto = col_projetos.find_one({"codigo": codigo_projeto})
 
-    # Recupera a lista de parcelas do financeiro
-    # Caso não exista, retorna uma lista vazia
     parcelas = projeto.get("financeiro", {}).get("parcelas", [])
-
-    # Recupera a lista de relatórios do projeto
-    # Caso não exista, retorna uma lista vazia
     relatorios = projeto.get("relatorios", [])
 
-    # Se não houver parcelas ou relatórios, não há nada a atualizar
+    # Se não houver dados suficientes, sai
     if not parcelas or not relatorios:
         return
 
-    # Cria um dicionário para mapear as parcelas pelo número
-    # Exemplo: {1: parcela1, 2: parcela2, ...}
-    # Isso facilita e otimiza a busca da parcela correspondente ao relatório
-    mapa_parcelas = {
-        p["numero"]: p
-        for p in parcelas
-        if p.get("numero") is not None
+    # Mapeia relatórios por número (1, 2, 3...)
+    mapa_relatorios = {
+        r["numero"]: r
+        for r in relatorios
+        if r.get("numero") is not None
     }
 
-    # Lista que irá armazenar os relatórios atualizados
-    novos_relatorios = []
+    novas_parcelas = []
 
-    # Percorre todos os relatórios existentes no banco
-    for r in relatorios:
-        # Obtém o número do relatório (normalmente vinculado à parcela)
-        numero = r.get("numero")
+    for p in parcelas:
+        numero = p.get("numero")
 
-        # Verifica se existe uma parcela correspondente a esse número
-        if numero in mapa_parcelas:
-            # Converte string no formato brasileiro (dd/mm/yyyy) para datetime
-            data_parcela = pd.to_datetime(
-                mapa_parcelas[numero]["data_prevista"],
+        # Parcela 1 não muda
+        if numero == 1:
+            novas_parcelas.append(p)
+            continue
+
+        # Relatório anterior (parcela 2 → relatório 1, etc)
+        relatorio_ref = mapa_relatorios.get(numero - 1)
+
+        if relatorio_ref and relatorio_ref.get("data_prevista"):
+            data_relatorio = pd.to_datetime(
+                relatorio_ref["data_prevista"],
                 format="%d/%m/%Y",
                 errors="coerce"
             )
 
-            # Define a data prevista do relatório como
-            # 15 dias após a data prevista da parcela
-            # Calcula a nova data e converte para string no formato brasileiro
-            data_relatorio = (
-                data_parcela + datetime.timedelta(days=15)
-            ).strftime("%d/%m/%Y")
+            if pd.notnull(data_relatorio):
+                nova_data = (
+                    data_relatorio + datetime.timedelta(days=15)
+                ).strftime("%d/%m/%Y")
+            else:
+                nova_data = None
         else:
-            # Caso não exista parcela correspondente,
-            # a data do relatório fica indefinida
-            data_relatorio = None
+            nova_data = None
 
+        # Copia a parcela original
+        parcela_atualizada = p.copy()
 
+        # Atualiza apenas a data_prevista
+        parcela_atualizada["data_prevista"] = nova_data
 
+        novas_parcelas.append(parcela_atualizada)
 
-        # Monta o novo objeto de relatório
-
-        # Cria uma cópia completa do relatório original
-        relatorio_atualizado = r.copy()
-
-        # Atualiza apenas a data prevista
-        relatorio_atualizado["data_prevista"] = data_relatorio
-
-        # Garante status apenas se não existir. Se não existir é modo_edicao
-        if "status_relatorio" not in relatorio_atualizado:
-            relatorio_atualizado["status_relatorio"] = "modo_edicao"
-
-        novos_relatorios.append(relatorio_atualizado)
-
-
-
-    # Atualiza o documento do projeto no MongoDB
-    # Substitui completamente o array de relatórios
-    # pelos novos relatórios processados
+    # Atualiza no MongoDB
     col_projetos.update_one(
         {"codigo": codigo_projeto},
-        {"$set": {"relatorios": novos_relatorios}}
+        {"$set": {"financeiro.parcelas": novas_parcelas}}
     )
+
 
 
 
@@ -1623,12 +1607,14 @@ with cron_desemb:
 
 
 
-        # Radio para escolher o que será editado
+        # Define a ordem de edição do cronograma
         opcao_editar_cron = st.radio(
             "O que deseja editar?",
-            ["Valor do projeto",
-            "Parcelas", 
-            "Relatórios"],
+            [
+                "Valor do projeto",
+                "Relatórios",
+                "Parcelas"
+            ],
             horizontal=True
         )
 
@@ -1769,313 +1755,6 @@ with cron_desemb:
 
 
         # -------------------------------------------------------
-        # Editar Parcelas
-
-
-        if opcao_editar_cron == "Parcelas":
-
-            st.markdown("#### Parcelas")
-
-
-            # -----------------------------------
-            # Valor total ajustado (com aditivo e devolução)
-            # -----------------------------------
-            valor_total_base = valor_atual if valor_atual is not None else 0.0
-
-            valor_aditivo = financeiro.get("valor_aditivo") or 0.0
-            valor_devolucao = financeiro.get("valor_devolucao") or 0.0
-
-            valor_total = valor_total_base + valor_aditivo - valor_devolucao
-
-
-
-            # -----------------------------------
-            # Dados atuais
-            # -----------------------------------
-            parcelas = financeiro.get("parcelas", [])
-
-            if parcelas:
-                df_parcelas = pd.DataFrame(parcelas)
-
-                # Converte string no formato brasileiro (dd/mm/yyyy) para datetime
-                df_parcelas["data_prevista"] = pd.to_datetime(
-                    df_parcelas["data_prevista"],
-                    format="%d/%m/%Y",
-                    errors="coerce"
-                )
-
-                # Garantir colunas essenciais
-                for col in ["numero", "valor"]:
-                    if col not in df_parcelas.columns:
-                        df_parcelas[col] = None
-
-            else:
-                df_parcelas = pd.DataFrame(
-                    columns=[
-                        "numero",
-                        "valor",
-                        "data_prevista",
-                    ]
-                )
-
-            # -----------------------------------
-            # Ordenar por data prevista
-            # -----------------------------------
-            if not df_parcelas.empty:
-                df_parcelas = df_parcelas.sort_values(
-                    by="data_prevista",
-                    ascending=True
-                ).reset_index(drop=True)
-
-            # -----------------------------------
-            # Garantir coluna valor
-            # -----------------------------------
-            df_parcelas["valor"] = df_parcelas["valor"].fillna(0.0)
-
-            # -----------------------------------
-            # Calcular percentual com base no valor
-            # -----------------------------------
-            if valor_total > 0:
-                df_parcelas["percentual"] = (
-                    df_parcelas["valor"] / valor_total * 100
-                )
-            else:
-                df_parcelas["percentual"] = 0.0
-
-            # -----------------------------------
-            # Formatar valor para exibição no editor
-            # -----------------------------------
-            df_parcelas["valor_fmt"] = df_parcelas["valor"].apply(
-                lambda x: f"R$ {x:,.2f}"
-                .replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
-                if pd.notna(x) else ""
-            )
-
-            # -----------------------------------
-            # Editor de parcelas
-            # -----------------------------------
-            df_editado = st.data_editor(
-                df_parcelas[
-                    [
-                        "numero",
-                        "valor_fmt",
-                        "percentual",
-                        "data_prevista",
-                    ]
-                ],
-                num_rows="dynamic",
-                width=800,
-                column_config={
-                    "numero": st.column_config.NumberColumn(
-                        "Número",
-                        min_value=1,
-                        step=1,
-                        width=60
-                    ),
-                    "valor_fmt": st.column_config.TextColumn(
-                        "Valor (R$)",
-                        width=150
-                    ),
-                    "percentual": st.column_config.NumberColumn(
-                        "Percentual (%)",
-                        format="%.2f%%",
-                        disabled=True,
-                        width=100
-                    ),
-                    "data_prevista": st.column_config.DateColumn(
-                        "Data prevista",
-                        format="DD/MM/YYYY",
-                        width=150
-                    ),
-                },
-                key="editor_parcelas",
-            )
-
-            st.write("")
-
-            # -----------------------------------
-            # Converter valor formatado para float
-            # -----------------------------------
-            def parse_brl(valor):
-                """
-                Converte string no formato monetário brasileiro para float.
-                """
-                if not valor:
-                    return 0.0
-
-                return float(
-                    str(valor)
-                    .replace("R$", "")
-                    .replace(".", "")
-                    .replace(",", ".")
-                    .strip()
-                )
-
-            # -----------------------------------
-            # Reconstruir DataFrame após edição
-            # -----------------------------------
-            df_parcelas = df_editado.copy()
-
-            # Garante conversão consistente após edição no editor
-            df_parcelas["data_prevista"] = pd.to_datetime(
-                df_parcelas["data_prevista"],
-                errors="coerce"
-            )
-
-            # Converter valor digitado
-            df_parcelas["valor"] = df_parcelas["valor_fmt"].apply(parse_brl)
-
-            # -----------------------------------
-            # Recalcular percentual com base no valor
-            # -----------------------------------
-            if valor_total > 0:
-                df_parcelas["percentual"] = (
-                    df_parcelas["valor"] / valor_total * 100
-                )
-            else:
-                df_parcelas["percentual"] = 0.0
-
-            # -----------------------------------
-            # Total dos valores das parcelas
-            # -----------------------------------
-            soma_valores = df_parcelas["valor"].sum()
-
-            # Formatação
-            soma_fmt = (
-                f"R$ {soma_valores:,.2f}"
-                .replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
-            )
-
-            total_fmt = (
-                f"R$ {valor_total:,.2f}"
-                .replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
-            )
-
-            # Exibir valores (com escape do $)
-            st.write(
-                f"**Total das parcelas:** {soma_fmt.replace('$', '\\$')}"
-            )
-            st.write(
-                f"**Valor total ajustado do projeto:** {total_fmt.replace('$', '\\$')}"
-            )
-
-            # -----------------------------------
-            # Salvar
-            # -----------------------------------
-            if st.button("Salvar parcelas", icon=":material/save:"):
-
-                df_salvar = df_parcelas.dropna(
-                    subset=["valor", "data_prevista"],
-                    how="any"
-                ).copy()
-
-
-                # -----------------------------------
-                # Validar soma dos valores das parcelas
-                # -----------------------------------
-                soma_valores = df_salvar["valor"].sum()
-
-                if round(soma_valores, 2) != round(valor_total, 2):
-
-                    soma_fmt = (
-                        f"R$ {soma_valores:,.2f}"
-                        .replace(",", "X")
-                        .replace(".", ",")
-                        .replace("X", ".")
-                    )
-
-                    total_fmt = (
-                        f"R$ {valor_total:,.2f}"
-                        .replace(",", "X")
-                        .replace(".", ",")
-                        .replace("X", ".")
-                    )
-
-                    st.error(
-                        f"Erro: A soma das parcelas ({soma_fmt.replace('$', '\\$')}) deve ser igual ao valor total do projeto ({total_fmt.replace('$', '\\$')}).",
-                        # f"Erro: A soma das parcelas ({soma_fmt}) deve ser igual ao valor total do projeto ({total_fmt}).",
-                        icon=":material/error:"
-                    )
-                    st.stop()
-
-
-
-                # Ordenar antes de salvar
-                df_salvar = df_salvar.sort_values(
-                    by="data_prevista",
-                    ascending=True
-                ).reset_index(drop=True)
-
-                # -----------------------------------
-                # MAPA DAS PARCELAS EXISTENTES (por número)
-                # -----------------------------------
-                mapa_existente = {
-                    p.get("numero"): p
-                    for p in parcelas
-                    if p.get("numero") is not None
-                }
-
-                parcelas_final = []
-
-                for _, row in df_salvar.iterrows():
-
-                    numero = int(row["numero"]) if not pd.isna(row["numero"]) else None
-
-                    parcela_antiga = mapa_existente.get(numero, {})
-
-                    # -----------------------------------
-                    # Merge completo preservando tudo
-                    # -----------------------------------
-                    parcela_atualizada = parcela_antiga.copy()
-
-                    parcela_atualizada.update({
-                        "numero": numero,
-                        "percentual": float(row["percentual"]),
-                        "valor": float(row["valor"]),
-                        "data_prevista": (
-                            pd.to_datetime(row["data_prevista"])
-                            .strftime("%d/%m/%Y")
-                        ),
-                    })
-
-                    parcelas_final.append(parcela_atualizada)
-
-
-
-                col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {
-                        "$set": {
-                            "financeiro.parcelas": parcelas_final
-                        }
-                    }
-                )
-
-
-
-
-
-
-
-                # Atualizar relatórios vinculados
-                atualizar_datas_relatorios(col_projetos, codigo_projeto_atual)
-
-                st.success("Parcelas salvas com sucesso!", icon=":material/check:")
-                time.sleep(3)
-                st.rerun()
-
-
-
-
-
-
-        # -------------------------------------------------------
         # Editar Relatórios
 
         if opcao_editar_cron == "Relatórios":
@@ -2132,42 +1811,56 @@ with cron_desemb:
 
                 for parcela in parcelas[:-1]:  # ignora a última parcela
                     numero = parcela["numero"]
-                    data_parcela = pd.to_datetime(parcela["data_prevista"], errors="coerce")
 
-                    data_relatorio = (
-                        data_parcela + datetime.timedelta(days=15)
-                        if not pd.isna(data_parcela)
-                        else pd.NaT
-                    )
 
-                    linhas_relatorios.append(
-                        {
-                            "numero": numero,
-                            "data_prevista": data_relatorio,
-                            "entregas": [],
-                        }
-                    )
+                    # --------------------------------------------------
+                    # Montar DataFrame base dos relatórios
+                    # (baseado apenas na numeração das parcelas)
+                    # --------------------------------------------------
 
-                df_relatorios_base = pd.DataFrame(linhas_relatorios)
+                    linhas_relatorios = []
 
-                # --------------------------------------------------
-                # Mesclar com relatórios já existentes no banco
-                # (preserva entregas já salvas)
-                # --------------------------------------------------
-                relatorios_existentes = projeto.get("relatorios", [])
+                    for parcela in parcelas[:-1]:  # ignora a última parcela
+                        numero = parcela["numero"]
 
-                if relatorios_existentes:
-                    df_existente = pd.DataFrame(relatorios_existentes)
+                        linhas_relatorios.append(
+                            {
+                                "numero": numero,
+                                "data_prevista": pd.NaT,
+                                "entregas": [],
+                            }
+                        )
 
-                    for _, row in df_existente.iterrows():
-                        numero = row.get("numero")
+                    df_relatorios_base = pd.DataFrame(linhas_relatorios)
 
-                        if numero in df_relatorios_base["numero"].values:
-                            idx = df_relatorios_base.index[
-                                df_relatorios_base["numero"] == numero
-                            ][0]
+                    # --------------------------------------------------
+                    # Mesclar com relatórios já existentes no banco
+                    # --------------------------------------------------
 
-                            df_relatorios_base.at[idx, "entregas"] = row.get("entregas", [])
+                    relatorios_existentes = projeto.get("relatorios", [])
+
+                    if relatorios_existentes:
+                        df_existente = pd.DataFrame(relatorios_existentes)
+
+                        for _, row in df_existente.iterrows():
+                            numero = row.get("numero")
+
+                            if numero in df_relatorios_base["numero"].values:
+                                idx = df_relatorios_base.index[
+                                    df_relatorios_base["numero"] == numero
+                                ][0]
+
+                                # preserva entregas
+                                df_relatorios_base.at[idx, "entregas"] = row.get("entregas", [])
+
+                                # converte string para datetime
+                                df_relatorios_base.at[idx, "data_prevista"] = pd.to_datetime(
+                                    row.get("data_prevista"),
+                                    format="%d/%m/%Y",
+                                    errors="coerce"
+                                )
+
+
 
 
                 # Garantir que entregas seja sempre lista
@@ -2194,9 +1887,9 @@ with cron_desemb:
                             width=800
                         ),
                         "data_prevista": st.column_config.DateColumn(
-                            "Data prevista (auto)",
+                            "Data prevista",
                             format="DD/MM/YYYY",
-                            disabled=True,
+                            # disabled=True,
                             width=20
                         ),
                     },
@@ -2221,11 +1914,19 @@ with cron_desemb:
                             {
                                 "numero": int(row["numero"]),
                                 "entregas": entregas,
+
+                                # Converte para string no formato brasileiro
                                 "data_prevista": (
                                     None
                                     if pd.isna(row["data_prevista"])
-                                    else row["data_prevista"].date().isoformat()
+                                    else pd.to_datetime(row["data_prevista"]).strftime("%d/%m/%Y")
                                 ),
+
+                                # "data_prevista": (
+                                #     None
+                                #     if pd.isna(row["data_prevista"])
+                                #     else row["data_prevista"].date().isoformat()
+                                # ),
                             }
                         )
 
@@ -2238,9 +1939,316 @@ with cron_desemb:
                         }
                     )
 
+                    # Atualizar parcelas vinculadas
+                    atualizar_datas_parcelas(col_projetos, codigo_projeto_atual)
+
+
                     st.success("Relatórios salvos com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # -------------------------------------------------------
+        # Editar Parcelas
+        # -------------------------------------------------------
+
+        if opcao_editar_cron == "Parcelas":
+
+            st.markdown("#### Parcelas")
+
+            st.caption(
+                "A data da parcela 1 é definida manualmente. "
+                "As demais são calculadas automaticamente a partir dos relatórios."
+            )
+
+            # -----------------------------------
+            # Valor total ajustado
+            # -----------------------------------
+            valor_total_base = valor_atual if valor_atual is not None else 0.0
+
+            valor_aditivo = financeiro.get("valor_aditivo") or 0.0
+            valor_devolucao = financeiro.get("valor_devolucao") or 0.0
+
+            valor_total = valor_total_base + valor_aditivo - valor_devolucao
+
+            # -----------------------------------
+            # Dados atuais
+            # -----------------------------------
+            parcelas = financeiro.get("parcelas", [])
+
+            if parcelas:
+                df_parcelas = pd.DataFrame(parcelas)
+
+                # Conversão segura da data (sem recalcular nada)
+                df_parcelas["data_prevista"] = pd.to_datetime(
+                    df_parcelas["data_prevista"],
+                    format="%d/%m/%Y",
+                    errors="coerce"
+                )
+
+                # Garantir colunas essenciais
+                for col in ["numero", "valor"]:
+                    if col not in df_parcelas.columns:
+                        df_parcelas[col] = None
+
+            else:
+                df_parcelas = pd.DataFrame(
+                    columns=[
+                        "numero",
+                        "valor",
+                        "data_prevista",
+                    ]
+                )
+
+            # -----------------------------------
+            # Ordenação lógica (por número)
+            # -----------------------------------
+            if not df_parcelas.empty:
+                df_parcelas = df_parcelas.sort_values(
+                    by="numero",
+                    ascending=True
+                ).reset_index(drop=True)
+
+            # -----------------------------------
+            # Garantir coluna valor
+            # -----------------------------------
+            df_parcelas["valor"] = df_parcelas["valor"].fillna(0.0)
+
+            # -----------------------------------
+            # Calcular percentual
+            # -----------------------------------
+            if valor_total > 0:
+                df_parcelas["percentual"] = (
+                    df_parcelas["valor"] / valor_total * 100
+                )
+            else:
+                df_parcelas["percentual"] = 0.0
+
+            # -----------------------------------
+            # Formatar valor
+            # -----------------------------------
+            df_parcelas["valor_fmt"] = df_parcelas["valor"].apply(
+                lambda x: f"R$ {x:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+                if pd.notna(x) else ""
+            )
+
+            # -----------------------------------
+            # Editor
+            # -----------------------------------
+            df_editado = st.data_editor(
+                df_parcelas[
+                    [
+                        "numero",
+                        "valor_fmt",
+                        "percentual",
+                        "data_prevista",
+                    ]
+                ],
+                num_rows="dynamic",
+                width=800,
+                column_config={
+                    "numero": st.column_config.NumberColumn(
+                        "Número",
+                        min_value=1,
+                        step=1,
+                        width=60
+                    ),
+                    "valor_fmt": st.column_config.TextColumn(
+                        "Valor (R$)",
+                        width=150
+                    ),
+                    "percentual": st.column_config.NumberColumn(
+                        "Percentual (%)",
+                        format="%.2f%%",
+                        disabled=True,
+                        width=100
+                    ),
+                    "data_prevista": st.column_config.DateColumn(
+                        "Data prevista",
+                        format="DD/MM/YYYY",
+                        width=150
+                    ),
+                },
+                key="editor_parcelas",
+            )
+
+            st.write("")
+
+            # -----------------------------------
+            # Converter valor BRL para float
+            # -----------------------------------
+            def parse_brl(valor):
+                """
+                Converte string monetária brasileira para float.
+                """
+                if not valor:
+                    return 0.0
+
+                return float(
+                    str(valor)
+                    .replace("R$", "")
+                    .replace(".", "")
+                    .replace(",", ".")
+                    .strip()
+                )
+
+            # -----------------------------------
+            # Reconstruir DataFrame após edição
+            # -----------------------------------
+            df_parcelas = df_editado.copy()
+
+            # Conversão segura da data
+            df_parcelas["data_prevista"] = pd.to_datetime(
+                df_parcelas["data_prevista"],
+                errors="coerce"
+            )
+
+            # Converter valores
+            df_parcelas["valor"] = df_parcelas["valor_fmt"].apply(parse_brl)
+
+            # -----------------------------------
+            # Recalcular percentual
+            # -----------------------------------
+            if valor_total > 0:
+                df_parcelas["percentual"] = (
+                    df_parcelas["valor"] / valor_total * 100
+                )
+            else:
+                df_parcelas["percentual"] = 0.0
+
+            # -----------------------------------
+            # Totais
+            # -----------------------------------
+            soma_valores = df_parcelas["valor"].sum()
+
+            soma_fmt = (
+                f"R$ {soma_valores:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
+
+            total_fmt = (
+                f"R$ {valor_total:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
+
+            st.write(f"**Total das parcelas:** {soma_fmt.replace('$', '\\$')}")
+            st.write(f"**Valor total ajustado do projeto:** {total_fmt.replace('$', '\\$')}")
+
+            # -----------------------------------
+            # Salvar
+            # -----------------------------------
+            if st.button("Salvar parcelas", icon=":material/save:"):
+
+                df_salvar = df_parcelas.dropna(
+                    subset=["valor", "data_prevista"],
+                    how="any"
+                ).copy()
+
+                # -----------------------------------
+                # Validar soma
+                # -----------------------------------
+                soma_valores = df_salvar["valor"].sum()
+
+                if round(soma_valores, 2) != round(valor_total, 2):
+
+                    soma_fmt = (
+                        f"R$ {soma_valores:,.2f}"
+                        .replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                    )
+
+                    total_fmt = (
+                        f"R$ {valor_total:,.2f}"
+                        .replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                    )
+
+                    st.error(
+                        f"Erro: A soma das parcelas ({soma_fmt.replace('$', '\\$')}) deve ser igual ao valor total do projeto ({total_fmt.replace('$', '\\$')}).",
+                        icon=":material/error:"
+                    )
+                    st.stop()
+
+                # Ordenar por número (não por data)
+                df_salvar = df_salvar.sort_values(
+                    by="numero",
+                    ascending=True
+                ).reset_index(drop=True)
+
+                # -----------------------------------
+                # Preservar dados antigos
+                # -----------------------------------
+                mapa_existente = {
+                    p.get("numero"): p
+                    for p in parcelas
+                    if p.get("numero") is not None
+                }
+
+                parcelas_final = []
+
+                for _, row in df_salvar.iterrows():
+
+                    numero = int(row["numero"]) if not pd.isna(row["numero"]) else None
+
+                    parcela_antiga = mapa_existente.get(numero, {})
+
+                    parcela_atualizada = parcela_antiga.copy()
+
+                    parcela_atualizada.update({
+                        "numero": numero,
+                        "percentual": float(row["percentual"]),
+                        "valor": float(row["valor"]),
+                        "data_prevista": (
+                            pd.to_datetime(row["data_prevista"])
+                            .strftime("%d/%m/%Y")
+                        ),
+                    })
+
+                    parcelas_final.append(parcela_atualizada)
+
+                col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {
+                        "$set": {
+                            "financeiro.parcelas": parcelas_final
+                        }
+                    }
+                )
+
+                st.success("Parcelas salvas com sucesso!", icon=":material/check:")
+                time.sleep(3)
+                st.rerun()
+
+
+
+
+
+
+
+
+
 
 
 
