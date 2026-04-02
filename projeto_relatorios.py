@@ -5,9 +5,11 @@ import time
 import datetime
 from collections import defaultdict
 import uuid
-
-
+from io import BytesIO
 from zoneinfo import ZoneInfo 
+from docx import Document
+import tempfile
+import os
 
 
 from funcoes_auxiliares import (
@@ -139,6 +141,180 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
+
+
+
+
+from docx import Document
+import tempfile
+import os
+
+
+def gerar_docx_relatorio(relatorio, projeto):
+    """
+    Gera um documento .docx contendo as informações do relatório,
+    utilizando apenas o objeto de projeto como fonte principal.
+    """
+
+    # ------------------------------
+    # BUSCA ORGANIZAÇÃO
+    # ------------------------------
+    organizacao = db["organizacoes"].find_one(
+        {"_id": projeto.get("id_organizacao")}
+    )
+
+    # ------------------------------
+    # BUSCA EDITAL
+    # ------------------------------
+    edital = db["editais"].find_one(
+        {"codigo_edital": projeto.get("edital")}
+    )
+
+    # Criação do documento
+    doc = Document()
+
+
+
+
+
+
+
+
+
+
+
+
+    # ------------------------------
+    # CABEÇALHO DO RELATÓRIO
+    # ------------------------------
+
+    # Título principal
+    titulo = doc.add_heading(
+        f"Relatório {relatorio.get('numero')}",
+        level=1
+    )
+    titulo.alignment = 1  # centralizado
+
+    doc.add_paragraph("")
+
+    # Edital
+    doc.add_paragraph(
+        f"Edital {edital.get('codigo_edital') if edital else ''}"
+    )
+
+    # Código + sigla do projeto
+    doc.add_heading(
+        f"{projeto.get('codigo')} - {projeto.get('sigla')}",
+        level=2
+    )
+
+    doc.add_paragraph("")
+
+    # Datas e informações gerais
+    doc.add_paragraph(
+        f"Data de envio: {relatorio.get('data_envio', 'N/A')}"
+    )
+
+    # Data de aprovação (não existe campo estruturado, então tenta extrair)
+    data_aprovacao = "N/A"
+    for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+        for entrega in componente.get("entregas", []):
+            for atividade in entrega.get("atividades", []):
+                for relato in atividade.get("relatos", []):
+                    status = relato.get("status_aprovacao", "")
+                    if "em" in status:
+                        data_aprovacao = status.split("em")[-1].strip()
+
+    doc.add_paragraph(f"Data de aprovação: {data_aprovacao}")
+
+    # Data de exportação (data atual)
+    data_exportacao = datetime.datetime.now().strftime("%d/%m/%Y")
+    doc.add_paragraph(f"Data de exportação: {data_exportacao}")
+
+    doc.add_paragraph("")
+
+    # Organização
+    nome_org = organizacao.get("nome_organizacao") if organizacao else ""
+    doc.add_paragraph(f"Organização: {nome_org}")
+
+    # Nome do projeto
+    doc.add_paragraph(f"Projeto: {projeto.get('nome_do_projeto')}")
+
+    # Status do projeto (não existe explícito, então inferência simples)
+    status_projeto = "Em andamento"
+
+    if projeto.get("data_fim_contrato"):
+        try:
+            data_fim = datetime.datetime.strptime(
+                projeto.get("data_fim_contrato"),
+                "%d/%m/%Y"
+            )
+            if data_fim < datetime.datetime.now():
+                status_projeto = "Encerrado"
+        except:
+            pass
+
+    doc.add_paragraph(f"Status do projeto: {status_projeto}")
+
+    doc.add_paragraph("")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # ------------------------------
+    # SALVAMENTO TEMPORÁRIO
+    # ------------------------------
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+        caminho = tmp.name
+        doc.save(caminho)
+
+    # Garantia de integridade do arquivo
+    time.sleep(3)
+
+    # ------------------------------
+    # DOWNLOAD
+    # ------------------------------
+
+    numero = relatorio.get("numero")
+    codigo_projeto = projeto.get("codigo")
+    sigla_org = organizacao.get("sigla_organizacao") if organizacao else "org"
+
+    nome_arquivo = f"relatorio_{numero}_{codigo_projeto}_{sigla_org}.docx"
+
+
+
+    # Remoção do arquivo temporário
+    os.remove(caminho)
+
+    return doc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def calcular_saldo_parcela():
     # ==================================================
@@ -369,10 +545,6 @@ def gerar_email_relatorio_aprovado(
 
 
 
-
-
-
-
 def notificar_padrinhos_relatorio(
     col_pessoas,
     numero_relatorio,
@@ -400,9 +572,6 @@ def notificar_padrinhos_relatorio(
         )
 
     return True
-
-
-
 
 
 
@@ -486,7 +655,6 @@ def montar_email_relatorio_envio(
 </body>
 </html>
 """
-
 
 
 
@@ -1945,7 +2113,85 @@ relatorio = relatorios[idx]
 relatorio_numero = relatorio["numero"]
 projeto_codigo = projeto["codigo"]
 
-st.subheader(f"Relatório {relatorio_numero}")
+
+###########################################################################################################
+# LINHA COM TÍTULO E BOTÃO DE OPÇÕES
+###########################################################################################################
+
+with st.container(horizontal=True):
+
+    st.subheader(f"Relatório {relatorio_numero}")
+
+    # Popover de exportação do relatório
+    with st.popover(
+        "Exportar", 
+        icon=":material/print:", 
+        type="tertiary"):
+
+        # Fragment para isolar renderização
+        @st.fragment
+        def fragment_exportacao_relatorio():
+
+            # Inicializa estado
+            if "docx_relatorio" not in st.session_state:
+                st.session_state.docx_relatorio = None
+
+            if "relatorio_gerado" not in st.session_state:
+                st.session_state.relatorio_gerado = False
+
+
+            # BOTÃO GERAR RELATÓRIO ----------------------------------------
+            if st.button(
+                "Gerar relatório",
+                icon=":material/settings:",
+                type="secondary",
+                width="stretch"
+            ):
+
+                # Gera o documento em memória
+                buffer = BytesIO()
+
+                doc = gerar_docx_relatorio(relatorio, projeto)
+
+                doc.save(buffer)
+                buffer.seek(0)
+
+                # Armazena no session_state
+                st.session_state.docx_relatorio = buffer
+                st.session_state.relatorio_gerado = True
+
+
+            # BOTÃO DOWNLOAD -----------------------------------------------
+            if st.session_state.relatorio_gerado:
+
+                st.caption("Relatório gerado! Clique para baixar.")
+
+                numero = relatorio.get("numero")
+                codigo = projeto.get("codigo", "").replace("/", "-")
+
+                # Busca organização para sigla
+                organizacao = db["organizacoes"].find_one(
+                    {"_id": projeto.get("id_organizacao")}
+                )
+                sigla_org = organizacao.get("sigla_organizacao") if organizacao else "org"
+
+                nome_arquivo = f"relatorio_{numero}_{codigo}_{sigla_org}.docx"
+
+                st.download_button(
+                    label="Baixar relatório",
+                    data=st.session_state.docx_relatorio,
+                    file_name=nome_arquivo,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    icon=":material/download:",
+                    type="primary",
+                    width="stretch"
+                )
+
+
+        # Executa fragment
+        fragment_exportacao_relatorio()
+
+
 
 ###########################################################################################################
 # STATUS ATUAL DO RELATÓRIO
