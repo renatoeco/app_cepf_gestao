@@ -257,11 +257,586 @@ def gerar_docx_relatorio(relatorio, projeto):
     doc.add_paragraph(f"Status do projeto: {status_projeto}")
 
     doc.add_paragraph("")
+    doc.add_paragraph("")
+
+
+    # ------------------------------
+    # RELATOS DE ATIVIDADES
+    # ------------------------------
+    doc.add_heading("Relatos de Atividades", level=2)
+
+    tem_relato = False
+
+    # Percorre estrutura do plano de trabalho
+    for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+        for entrega in componente.get("entregas", []):
+            for atividade in entrega.get("atividades", []):
+
+
+                # Filtra apenas relatos do relatório atual
+                relatos = [
+                    r for r in atividade.get("relatos", [])
+                    if r.get("relatorio_numero") == relatorio.get("numero")
+                ]
+
+                # Verifica se existem relatos após o filtro
+                if relatos:
+
+                    tem_relato = True
+
+                    # Título da atividade
+                    doc.add_heading(
+                        f"Atividade: {atividade.get('atividade')}",
+                        level=3
+                    )
+
+                    doc.add_paragraph("")
+
+                    # Lista relatos
+                    for relato in relatos:
+
+                        doc.add_paragraph(
+                            f"{relato.get('id_relato')}: {relato.get('relato')}"
+                        )
+
+                        doc.add_paragraph(
+                            f"Status: {relato.get('status_relato')}"
+                        )
+
+                        doc.add_paragraph(
+                            f"Data de início: {relato.get('data_inicio')}"
+                        )
+
+                        doc.add_paragraph(
+                            f"Data de fim: {relato.get('data_fim')}"
+                        )
+
+                        doc.add_paragraph(
+                            f"Progresso da atividade informado: {relato.get('porc_ativ_relato')}"
+                        )
+
+                        doc.add_paragraph("")  # espaçamento
+
+    # Caso não existam relatos
+    if not tem_relato:
+        doc.add_paragraph("Não há relatos de atividades registrados para este projeto.")
 
 
 
 
 
+
+
+    # ------------------------------
+    # ESPAÇAMENTO
+    # ------------------------------
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+
+    # ------------------------------
+    # REGISTROS FINANCEIROS
+    # ------------------------------
+    doc.add_heading("Registros Financeiros", level=1)
+
+    tem_despesa = False
+
+    # Percorre orçamento do projeto
+    for despesa in projeto.get("financeiro", {}).get("orcamento", []):
+
+        # Filtra lançamentos do relatório atual
+        lancamentos = [
+            l for l in despesa.get("lancamentos", [])
+            if l.get("relatorio_numero") == relatorio.get("numero")
+        ]
+
+        # Verifica se há lançamentos válidos
+        if lancamentos:
+
+            tem_despesa = True
+
+            # Título da despesa
+            doc.add_heading(
+                despesa.get("nome_despesa"),
+                level=2
+            )
+
+            # Lista lançamentos
+            for lanc in lancamentos:
+
+                doc.add_paragraph(
+                    f"{lanc.get('id_lanc_despesa')}: {lanc.get('descricao_despesa')}"
+                )
+
+                doc.add_paragraph(
+                    f"Status: {lanc.get('status_despesa')}"
+                )
+
+                doc.add_paragraph(
+                    f"Data da despesa: {lanc.get('data_despesa')}"
+                )
+
+                doc.add_paragraph(
+                    f"Fornecedor: {lanc.get('fornecedor')}"
+                )
+
+                doc.add_paragraph(
+                    f"CPF/CNPJ: {lanc.get('cpf_cnpj')}"
+                )
+
+                # ------------------------------
+                # TABELA DE VALORES
+                # ------------------------------
+                tabela = doc.add_table(rows=2, cols=3)
+
+                # Cabeçalhos
+                tabela.rows[0].cells[0].text = "Quantidade"
+                tabela.rows[0].cells[1].text = "Valor unitário"
+                tabela.rows[0].cells[2].text = "Valor da despesa"
+
+                # Valores
+                tabela.rows[1].cells[0].text = str(lanc.get("quantidade", ""))
+                tabela.rows[1].cells[1].text = str(lanc.get("valor_unitario", ""))
+                tabela.rows[1].cells[2].text = str(lanc.get("valor_despesa", ""))
+
+                doc.add_paragraph("")  # espaçamento entre lançamentos
+
+
+    # Caso não existam registros financeiros
+    if not tem_despesa:
+        doc.add_paragraph("Não há registros financeiros para este relatório.")
+
+
+
+
+
+
+
+
+
+
+
+    # ------------------------------
+    # ESPAÇAMENTO
+    # ------------------------------
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+
+    # ------------------------------
+    # RESULTADOS
+    # ------------------------------
+    doc.add_heading("Resultados", level=1)
+
+    # ------------------------------
+    # INDICADORES DE PROJETO
+    # ------------------------------
+    doc.add_heading("Indicadores de projeto", level=2)
+
+    doc.add_paragraph("")
+
+    tem_indicador = False
+
+    # Percorre componentes
+    for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+
+        entregas = componente.get("entregas", [])
+
+        if entregas:
+
+            # Título do componente
+            paragrafo = doc.add_paragraph()
+            run = paragrafo.add_run(
+                f"Componente: {componente.get('componente')}"
+            )
+            run.bold = True
+
+            # doc.add_paragraph(
+            #     f"Componente: {componente.get('componente')}"
+            # )
+
+            for entrega in entregas:
+
+                indicadores = entrega.get("indicadores_projeto", [])
+
+                if indicadores:
+
+                    tem_indicador = True
+
+                    # Título da entrega
+                    doc.add_paragraph(
+                        f"Entrega: {entrega.get('entrega')}"
+                    )
+
+                    for indicador in indicadores:
+
+                        doc.add_paragraph(
+                            f"Indicador: {indicador.get('indicador_projeto')}"
+                        )
+
+                        doc.add_paragraph(
+                            f"Unidade de medida: {indicador.get('unidade_medida')}"
+                        )
+
+                        # ------------------------------
+                        # "3 COLUNAS" SIMPLES
+                        # ------------------------------
+                        doc.add_paragraph(
+                            f"Início do projeto: {indicador.get('linha_base')}    |    "
+                            f"Meta: {indicador.get('meta')}    |    "
+                            f"Resultado atual: {indicador.get('resultado_atual')}"
+                        )
+
+                        # ------------------------------
+                        # DATA DE COLETA FORMATADA
+                        # ------------------------------
+                        data_coleta = indicador.get("data_coleta")
+
+                        data_formatada = ""
+                        if data_coleta:
+                            try:
+                                data_formatada = data_coleta.strftime("%d/%m/%Y")
+                            except:
+                                data_formatada = str(data_coleta)
+
+                        doc.add_paragraph(
+                            f"Último registro em {data_formatada}"
+                        )
+
+                        doc.add_paragraph("")  # espaçamento
+
+
+    # Caso não existam indicadores
+    if not tem_indicador:
+        doc.add_paragraph("Não há indicadores registrados para este projeto.")
+
+
+
+
+
+
+
+
+    # ------------------------------
+    # ESPAÇAMENTO
+    # ------------------------------
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+
+    # ------------------------------
+    # BENEFICIÁRIOS
+    # ------------------------------
+    doc.add_heading("Beneficiários", level=1)
+
+    doc.add_heading(
+        "Número de beneficiários por gênero e faixa etária",
+        level=2
+    )
+
+    doc.add_paragraph("")
+
+
+    # Dados do relatório
+    benef = relatorio.get("beneficiarios_quant", {})
+
+    mulheres = benef.get("mulheres", {})
+    homens = benef.get("homens", {})
+    nao_binarios = benef.get("nao_binarios", {})
+
+    # Totais por faixa etária
+    total_jovens = (
+        mulheres.get("jovens", 0)
+        + homens.get("jovens", 0)
+        + nao_binarios.get("jovens", 0)
+    )
+
+    total_adultos = (
+        mulheres.get("adultas", 0)
+        + homens.get("adultos", 0)
+        + nao_binarios.get("adultos", 0)
+    )
+
+    total_idosos = (
+        mulheres.get("idosas", 0)
+        + homens.get("idosos", 0)
+        + nao_binarios.get("idosos", 0)
+    )
+
+    # Totais por gênero
+    total_mulheres = sum(mulheres.values())
+    total_homens = sum(homens.values())
+    total_nb = sum(nao_binarios.values())
+
+    total_geral = total_mulheres + total_homens + total_nb
+
+    # ------------------------------
+    # TABELA (8 colunas x 4 linhas)
+    # ------------------------------
+    tabela = doc.add_table(rows=4, cols=8)
+
+    # Linha 1 - Jovens
+    tabela.rows[0].cells[0].text = "Mulheres jovens"
+    tabela.rows[0].cells[1].text = str(mulheres.get("jovens", 0))
+
+    tabela.rows[0].cells[2].text = "Homens jovens"
+    tabela.rows[0].cells[3].text = str(homens.get("jovens", 0))
+
+    tabela.rows[0].cells[4].text = "Não-binários jovens"
+    tabela.rows[0].cells[5].text = str(nao_binarios.get("jovens", 0))
+
+    tabela.rows[0].cells[6].text = "Total de jovens"
+    tabela.rows[0].cells[7].text = str(total_jovens)
+
+    # Linha 2 - Adultos
+    tabela.rows[1].cells[0].text = "Mulheres adultas"
+    tabela.rows[1].cells[1].text = str(mulheres.get("adultas", 0))
+
+    tabela.rows[1].cells[2].text = "Homens adultos"
+    tabela.rows[1].cells[3].text = str(homens.get("adultos", 0))
+
+    tabela.rows[1].cells[4].text = "Não-binários adultos"
+    tabela.rows[1].cells[5].text = str(nao_binarios.get("adultos", 0))
+
+    tabela.rows[1].cells[6].text = "Total de adultos"
+    tabela.rows[1].cells[7].text = str(total_adultos)
+
+    # Linha 3 - Idosos
+    tabela.rows[2].cells[0].text = "Mulheres idosas"
+    tabela.rows[2].cells[1].text = str(mulheres.get("idosas", 0))
+
+    tabela.rows[2].cells[2].text = "Homens idosos"
+    tabela.rows[2].cells[3].text = str(homens.get("idosos", 0))
+
+    tabela.rows[2].cells[4].text = "Não-binários idosos"
+    tabela.rows[2].cells[5].text = str(nao_binarios.get("idosos", 0))
+
+    tabela.rows[2].cells[6].text = "Total de idosos"
+    tabela.rows[2].cells[7].text = str(total_idosos)
+
+    # Linha 4 - Totais
+    tabela.rows[3].cells[0].text = "Total de mulheres"
+    tabela.rows[3].cells[1].text = str(total_mulheres)
+
+    tabela.rows[3].cells[2].text = "Total de homens"
+    tabela.rows[3].cells[3].text = str(total_homens)
+
+    tabela.rows[3].cells[4].text = "Total de não-binários"
+    tabela.rows[3].cells[5].text = str(total_nb)
+
+    tabela.rows[3].cells[6].text = "Total geral"
+    tabela.rows[3].cells[7].text = str(total_geral)
+
+
+
+
+
+
+
+
+
+
+
+
+
+    doc.add_paragraph("")  # espaçamento
+    doc.add_paragraph("")  # espaçamento
+
+
+    # ------------------------------
+    # SUBSEÇÃO: TIPOS DE BENEFICIÁRIOS
+    # ------------------------------
+    doc.add_heading(
+        "Tipos de Beneficiários e Benefício",
+        level=2
+    )
+
+    doc.add_paragraph("")  # espaçamento
+
+
+    localidades = projeto.get("locais", {}).get("localidades", [])
+
+    tem_localidade = False
+
+    for loc in localidades:
+
+        beneficiarios = loc.get("beneficiarios", [])
+
+        if beneficiarios:
+
+            tem_localidade = True
+
+            # Nome da localidade em negrito
+            p = doc.add_paragraph()
+            run = p.add_run(loc.get("nome_localidade", ""))
+            run.bold = True
+
+            # Município
+            doc.add_paragraph(loc.get("municipio", ""))
+
+            # Lista de beneficiários
+            for ben in beneficiarios:
+
+                tipo = ben.get("tipo_beneficiario", "")
+                beneficios = ben.get("beneficios", [])
+
+
+                # Tipo de beneficiário 
+                p = doc.add_paragraph()
+                run = p.add_run(f"{tipo}")
+                # run.bold = True
+
+                # Lista de benefícios
+                for b in beneficios:
+                    doc.add_paragraph(b, style="List Bullet")
+
+                # doc.add_paragraph(
+                #     f"{tipo}    |    Benefícios: {', '.join(beneficios)}"
+                # )
+
+            doc.add_paragraph("")  # espaçamento
+
+
+    # Caso não existam dados
+    if not tem_localidade:
+        doc.add_paragraph("Não há registros de beneficiários por localidade.")
+
+
+
+
+
+
+
+
+
+
+
+    # ------------------------------
+    # ESPAÇAMENTO
+    # ------------------------------
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+
+    # ------------------------------
+    # SEÇÃO: PESQUISAS
+    # ------------------------------
+    doc.add_heading(
+        "Pesquisas / Ferramentas de Monitoramento",
+        level=1
+    )
+
+    doc.add_paragraph("")
+
+    # ------------------------------
+    # BUSCA EDITAL
+    # ------------------------------
+    edital = db["editais"].find_one(
+        {"codigo_edital": projeto.get("edital")}
+    )
+
+    pesquisas_edital = edital.get("pesquisas_relatorio", []) if edital else []
+
+    # Pesquisas respondidas no projeto
+    pesquisas_projeto = projeto.get("pesquisas", [])
+
+    # Indexa pesquisas do projeto por id (para busca rápida)
+    mapa_pesquisas = {
+        p.get("id_pesquisa"): p
+        for p in pesquisas_projeto
+    }
+
+    tem_pesquisa = False
+
+    # ------------------------------
+    # LOOP NAS PESQUISAS DO EDITAL
+    # ------------------------------
+    for pesquisa in pesquisas_edital:
+
+        tem_pesquisa = True
+
+        id_pesquisa = pesquisa.get("id")
+        nome = pesquisa.get("nome_pesquisa")
+
+        # Nome da pesquisa
+        doc.add_paragraph(nome)
+
+        # Verifica se existe no projeto
+        dados_proj = mapa_pesquisas.get(id_pesquisa)
+
+        if dados_proj:
+            respondida = "Sim" if dados_proj.get("respondida") else "Não"
+            verificada = "Sim" if dados_proj.get("verificada") else "Não"
+        else:
+            respondida = "Não"
+            verificada = "Não"
+
+        # Status
+        doc.add_paragraph(f"Respondida? {respondida}")
+        doc.add_paragraph(f"Verificada? {verificada}")
+
+        doc.add_paragraph("")  # espaçamento
+
+
+    # Caso não existam pesquisas
+    if not tem_pesquisa:
+        doc.add_paragraph("Não há pesquisas vinculadas a este edital.")
+
+
+
+
+
+
+
+
+
+
+    # ------------------------------
+    # ESPAÇAMENTO
+    # ------------------------------
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+
+    # ------------------------------
+    # SEÇÃO: FORMULÁRIO
+    # ------------------------------
+    doc.add_heading("Formulário", level=1)
+
+    doc.add_paragraph("")
+
+
+    respostas = relatorio.get("respostas_formulario", {})
+
+    tem_resposta = False
+
+    # Ordena perguntas pela ordem
+    perguntas_ordenadas = sorted(
+        respostas.values(),
+        key=lambda x: x.get("ordem", 0)
+    )
+
+    for item in perguntas_ordenadas:
+
+        pergunta = item.get("pergunta", "")
+        resposta = item.get("resposta", "")
+
+        tem_resposta = True
+
+        # Pergunta em negrito
+        p = doc.add_paragraph()
+        run = p.add_run(pergunta)
+        run.bold = True
+
+        # Resposta
+        if isinstance(resposta, list):
+            for r in resposta:
+                nome = r.get("nome", "")
+                doc.add_paragraph(nome, style="List Bullet")
+        else:
+            doc.add_paragraph(str(resposta))
+
+        doc.add_paragraph("")  # espaçamento
+
+
+    # Caso não existam respostas
+    if not tem_resposta:
+        doc.add_paragraph("Não há respostas registradas para este formulário.")
 
 
 
