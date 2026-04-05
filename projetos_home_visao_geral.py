@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao, sidebar_equipe
 import plotly.express as px
 import pandas as pd
 import datetime
@@ -9,6 +9,7 @@ import datetime
 st.set_page_config(page_title="Visão Geral", page_icon=":material/analytics:")
 
 
+sidebar_equipe()
 
 
 ###########################################################################################################
@@ -171,11 +172,19 @@ if not df_projetos.empty:
 # Logo do sidebar
 st.logo("images/ieb_logo.svg", size='large')
 
+col1, col2 = st.columns(2)
+
 # Título da página
-st.header("Projetos")
+col1.header("Projetos")
 
+with col2:
+    st.write('')
 
-st.write('')
+    with st.container(horizontal=True, horizontal_alignment="right"):
+
+        
+        st.button('Sair', icon=":material/logout:", type="tertiary")
+
 
 
 # Área de notificações

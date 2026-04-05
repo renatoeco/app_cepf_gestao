@@ -2,7 +2,7 @@ import streamlit as st
 from funcoes_auxiliares import conectar_mongo_cepf_gestao, registrar_estatistica_sessao
 
 
-st.set_page_config(page_title="Lista de projetos", page_icon=":material/list")
+st.set_page_config(page_title="Lista de projetos", page_icon=":material/list:")
 
 
 

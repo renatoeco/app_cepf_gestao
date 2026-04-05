@@ -1159,10 +1159,9 @@ def sidebar_projeto():
 
     st.sidebar.write('')
 
-    # Botão de voltar para a home_interna só para admin, equipe e visitante
-    if st.session_state.tipo_usuario in ['admin', 'equipe', 'visitante']:
+    # Botão de voltar para a home_interna só para admin, equipe
+    if st.session_state.tipo_usuario in ['admin', 'equipe']:
 
-        # if st.sidebar.button("Voltar para Home", icon=":material/arrow_back:", type="tertiary"):
         if st.sidebar.button("Voltar ao Painel", icon=":material/arrow_back:", type="tertiary"):
             
             if st.session_state.tipo_usuario == 'admin':
@@ -1217,8 +1216,32 @@ def sidebar_projeto():
         st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com cepfcerrado@iieb.org.br")
 
 
+    st.sidebar.write('')
+
+    # Botão para 'logout'
+    if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
+        st.session_state.clear()
+
+        st.rerun()
 
 
 
 
+
+
+
+
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DA EQUIPE
+# ###################################################################################################
+
+def sidebar_equipe():
+
+    if st.session_state.tipo_usuario in ['admin', 'equipe']:
+
+        # Botão para 'logout'
+        if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
+            st.session_state.clear()
+
+            st.rerun()
 
