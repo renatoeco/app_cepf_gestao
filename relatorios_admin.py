@@ -1770,6 +1770,12 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                     for p in projetos:
 
+
+                        ###################################################################################################
+                        # CÓDIGO DO PROJETO
+                        ###################################################################################################
+                        codigo_projeto = p["codigo"]
+
                         ###################################################################################################
                         # CONTRATO
                         ###################################################################################################
@@ -2220,7 +2226,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
                         dados.append({
-                            "id_CEPF": "",
+                            "id_CEPF": codigo_projeto,
                             "Contrato": contrato_nome,
                             "Direções estratégicas": direcoes_str,
                             "Nome da proposta": nome_projeto,
