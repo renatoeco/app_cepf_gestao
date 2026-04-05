@@ -174,6 +174,8 @@ mapa_org_id_nome = {
 # FUNÇÕES
 ###########################################################################################################
 
+
+
 # -----------------------------------
 # Formata float para moeda R$
 # -----------------------------------
@@ -241,19 +243,6 @@ def notifica_parcelas_desencontradas():
                 "O valor total das parcelas está diferente do valor total atualizado do projeto após ajustes financeiros. **Atualize o cronograma de parcelas.**",
                 icon=":material/warning:"
             )
-
-
-        # # -----------------------------------
-        # # Verificar inconsistência
-        # # -----------------------------------
-        # if round(soma_parcelas, 2) != round(valor_total_ajustado, 2):
-
-        #     st.warning(
-        #         "O valor total das parcelas está diferente do valor total atualizado do projeto após ajustes financeiros. **Atualize o cronograma de parcelas.**",
-        #         icon=":material/warning:"
-        #     )
-
-
 
 
 
@@ -413,7 +402,15 @@ def enviar_email_remanejamento_recusado(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+
+    # -----------------------------------
+    # Recupera nome da organização via mapa global
+    # -----------------------------------
+    organizacao = mapa_org_id_nome.get(
+        projeto.get("id_organizacao"),
+        ""
+    )
+
 
     reduzidas = item_remanejamento.get("reduzidas", [])
     aumentadas = item_remanejamento.get("aumentadas", [])
@@ -576,8 +573,9 @@ def enviar_email_remanejamento_aprovado(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
-
+    
+    organizacao = mapa_org_id_nome.get(projeto.get("id_organizacao"), "")
+    
     reduzidas = item_remanejamento.get("reduzidas", [])
     aumentadas = item_remanejamento.get("aumentadas", [])
     justificativa = item_remanejamento.get("justificativa", "")
@@ -1452,18 +1450,6 @@ def criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto):
             }
         }
     )
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3975,20 +3961,28 @@ with remanejamentos:
 
 
 
-                            # --------------------------------------------------
-                            # Enviar e-mails de notificação
-                            # --------------------------------------------------
+
+                            # -----------------------------------
+                            # Recupera nome da organização via mapa
+                            # -----------------------------------
+                            organizacao_nome = mapa_org_id_nome.get(
+                                projeto.get("id_organizacao"),
+                                ""
+                            )
+
+                            # -----------------------------------
+                            # Enviar e-mail
+                            # -----------------------------------
                             enviar_email_remanejamento(
                                 db,
                                 projeto["codigo"],
                                 projeto["sigla"],
                                 projeto["nome_do_projeto"],
-                                projeto["organizacao"],
+                                organizacao_nome,
                                 reduzidas,
                                 aumentadas,
                                 status_remanejamento
                             )
-
 
 
                             # --------------------------------------
