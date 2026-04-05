@@ -2945,7 +2945,7 @@ with orcamento:
         df_editado_orc = st.data_editor(
             df_orcamento[
                 [
-                    # "id_despesa",
+                    "id_despesa",
                     "categoria",
                     "nome_despesa",
                     "descricao_despesa",
@@ -2958,6 +2958,8 @@ with orcamento:
             num_rows="dynamic",
             height="content",
             column_config={
+                # Oculta o ID mas mantém no backend
+                "id_despesa": None,
                 "categoria": st.column_config.SelectboxColumn(
                     "Categoria de despesa",
                     options=opcoes_categorias,
@@ -3077,8 +3079,15 @@ with orcamento:
                 # -----------------------------------
                 id_despesa = row.get("id_despesa")
 
-                if not id_despesa or pd.isna(id_despesa):
+
+                # -----------------------------------
+                # Mantém ID existente sempre que possível
+                # -----------------------------------
+                if pd.isna(id_despesa) or not id_despesa:
                     id_despesa = str(uuid.uuid4())
+                else:
+                    id_despesa = str(id_despesa)
+
 
                 # -----------------------------------
                 # Buscar item antigo pelo ID
