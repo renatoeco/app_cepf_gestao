@@ -12,6 +12,9 @@ import tempfile
 import os
 
 
+
+
+
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
     sidebar_projeto,
@@ -143,11 +146,48 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 ###########################################################################################################
 
 
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.opc.constants import RELATIONSHIP_TYPE
 
 
-from docx import Document
-import tempfile
-import os
+def adicionar_hyperlink(paragraph, url, texto):
+    """
+    Adiciona um hyperlink clicável em um parágrafo do docx.
+    """
+
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        RELATIONSHIP_TYPE.HYPERLINK,
+        is_external=True
+    )
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    # Estilo de link (azul + sublinhado)
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), 'single')
+
+    color = OxmlElement('w:color')
+    color.set(qn('w:val'), '0000FF')
+
+    rPr.append(color)
+    rPr.append(u)
+
+    new_run.append(rPr)
+
+    text = OxmlElement('w:t')
+    text.text = texto
+
+    new_run.append(text)
+    hyperlink.append(new_run)
+
+    paragraph._element.append(hyperlink)
 
 
 def gerar_docx_relatorio(relatorio, projeto):
@@ -172,14 +212,6 @@ def gerar_docx_relatorio(relatorio, projeto):
 
     # Criação do documento
     doc = Document()
-
-
-
-
-
-
-
-
 
 
 
@@ -216,7 +248,7 @@ def gerar_docx_relatorio(relatorio, projeto):
     )
 
     # Data de aprovação (não existe campo estruturado, então tenta extrair)
-    data_aprovacao = "N/A"
+    data_aprovacao = "---"
     for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
         for entrega in componente.get("entregas", []):
             for atividade in entrega.get("atividades", []):
@@ -258,6 +290,9 @@ def gerar_docx_relatorio(relatorio, projeto):
 
     doc.add_paragraph("")
     doc.add_paragraph("")
+
+
+
 
 
     # ------------------------------
@@ -314,6 +349,50 @@ def gerar_docx_relatorio(relatorio, projeto):
                         doc.add_paragraph(
                             f"Progresso da atividade informado: {relato.get('porc_ativ_relato')}"
                         )
+
+
+
+
+                        # ------------------------------
+                        # ANEXOS DO RELATO
+                        # ------------------------------
+                        anexos = relato.get("anexos", [])
+
+                        if anexos:
+                            doc.add_paragraph("Anexos:")
+                                
+                            for anexo in anexos:
+
+                                id_arquivo = anexo.get("id_arquivo")
+                                nome = anexo.get("nome_arquivo", "Arquivo")
+
+                                url = f"https://drive.google.com/file/d/{id_arquivo}/view"
+
+                                p = doc.add_paragraph()
+                                adicionar_hyperlink(p, url, nome)
+
+
+                        # ------------------------------
+                        # FOTOS DO RELATO
+                        # ------------------------------
+                        fotos = relato.get("fotos", [])
+
+                        if fotos:
+                            doc.add_paragraph("Fotos:")
+
+
+                            for foto in fotos:
+
+                                id_arquivo = foto.get("id_arquivo")
+                                nome = foto.get("nome_arquivo", "Foto")
+
+                                url = f"https://drive.google.com/file/d/{id_arquivo}/view"
+
+                                p = doc.add_paragraph()
+                                adicionar_hyperlink(p, url, nome)
+
+
+
 
                         doc.add_paragraph("")  # espaçamento
 
