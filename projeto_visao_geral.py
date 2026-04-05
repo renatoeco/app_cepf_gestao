@@ -106,9 +106,6 @@ col_organizacoes = db["organizacoes"]
 registrar_estatistica_sessao(db)
 
 
-# ???????
-st.write(st.session_state)
-
 
 
 ###########################################################################################################
@@ -160,51 +157,6 @@ if not st.session_state["ultimo_acesso_atualizado"]:
         st.session_state["ultimo_acesso_atualizado"] = True
 
         time.sleep(3)
-
-
-
-# # REGISTRO DE ÚLTIMO ACESSO DO PROJETO
-
-# # Inicializa a flag de controle na sessão
-# if "ultimo_acesso_atualizado" not in st.session_state:
-#     st.session_state["ultimo_acesso_atualizado"] = False
-
-
-# # Executa apenas uma vez por sessão do usuário
-# if not st.session_state["ultimo_acesso_atualizado"]:
-
-#     # OBTÉM CÓDIGO DO PROJETO A PARTIR DA SESSÃO
-
-#     projeto_codigo = st.session_state.get("projeto_atual")
-
-#     if projeto_codigo:
-
-#         # GERA DATA NO FUSO AMERICA/SAO_PAULO (SEM HORA)
-
-#         agora_brasil = datetime.now(ZoneInfo("America/Sao_Paulo"))
-
-#         data_somente_dia = datetime(
-#             year=agora_brasil.year,
-#             month=agora_brasil.month,
-#             day=agora_brasil.day,
-#             tzinfo=ZoneInfo("America/Sao_Paulo")
-#         )
-
-#         # ATUALIZA DOCUMENTO NO MONGODB USANDO CAMPO "codigo"
-
-#         col_projetos.update_one(
-#             {"codigo": projeto_codigo},
-#             {
-#                 "$set": {
-#                     "ultimo_acesso": data_somente_dia
-#                 }
-#             }
-#         )
-
-#         # CONTROLE DE EXECUÇÃO
-
-#         st.session_state["ultimo_acesso_atualizado"] = True
-
 
 
 

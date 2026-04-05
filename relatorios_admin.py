@@ -1478,7 +1478,7 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
                                     cotacao = cambio_dict.get(mes_ano)
 
                                     if cotacao and valor_rs:
-                                        valor_usd = valor_rs * cotacao  # ajustar para divisão se necessário
+                                        valor_usd = valor_rs / cotacao  
 
                                 except:
                                     pass
