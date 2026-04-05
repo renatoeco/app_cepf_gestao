@@ -9,6 +9,14 @@ import datetime
 st.set_page_config(page_title="Visão Geral", page_icon=":material/analytics:")
 
 
+
+# verificação de autenticação do usuário
+# bloqueia acesso direto às páginas internas
+if not st.session_state.get("logged_in"):
+    st.switch_page("login.py")
+    st.stop()
+
+
 sidebar_equipe()
 
 
@@ -183,8 +191,17 @@ with col2:
     with st.container(horizontal=True, horizontal_alignment="right"):
 
         
-        st.button('Sair', icon=":material/logout:", type="tertiary")
+        # botão de logout com reinicialização completa da aplicação
+        if st.button("Sair", icon=":material/logout:", type="tertiary"):
 
+            # limpeza total da sessão
+            st.session_state.clear()
+
+            # define explicitamente estado não autenticado
+            st.session_state["logged_in"] = False
+
+            # reinicia aplicação para voltar ao fluxo inicial (login)
+            st.rerun()
 
 
 # Área de notificações

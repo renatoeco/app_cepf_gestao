@@ -106,7 +106,8 @@ col_organizacoes = db["organizacoes"]
 registrar_estatistica_sessao(db)
 
 
-
+# ???????
+st.write(st.session_state)
 
 
 

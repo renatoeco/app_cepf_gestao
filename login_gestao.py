@@ -396,11 +396,31 @@ def login():
 # EXECUÇÃO PRINCIPAL: VERIFICA LOGIN E NAVEGA ENTRE PÁGINAS
 ##############################################################################################################
 
-# Verifica se está logado
 
-# Não logado:
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
-    login()  # Mostra tela de login
+# controle central de autenticação
+
+# usuário NÃO autenticado
+if not st.session_state.get("logged_in"):
+
+    # oculta completamente o menu lateral de navegação
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebarNav"] {
+            display: none;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # exibe apenas a tela de login
+    login()
+
+    # interrompe execução para garantir que nenhuma navegação seja criada
+    st.stop()
+
+
 
 
 # Logado:

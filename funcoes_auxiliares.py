@@ -1008,148 +1008,6 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 
 
 
-# def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Calcula o status dos projetos com base em parcelas e relatórios.
-
-#     Regras:
-#     - Se status == "Cancelado", mantém.
-#     - Se NÃO houver parcelas OU relatórios → "Sem cronograma".
-#     - Se houver ambos, calcula normalmente.
-#     - Totalmente seguro contra campos ausentes, None ou NaN.
-#     """
-
-#     if df_projetos.empty:
-#         return df_projetos
-
-#     # Garante colunas necessárias
-#     for col in ["status", "dias_atraso", "proximo_evento", "data_proximo_evento"]:
-#         if col not in df_projetos.columns:
-#             df_projetos[col] = None
-
-#     # # ???
-#     # # DEBUG: MANIPULAÇÃO DA DATA DE HOJE
-#     # hoje = datetime.date(2026, 4, 30)
-
-
-#     hoje = datetime.date.today()
-
-#     for idx, projeto in df_projetos.iterrows():
-
-#         codigo = projeto.get("codigo")
-#         sigla = projeto.get("sigla")
-
-#         # ----------------------------------------------------------
-#         # MANTÉM STATUS CANCELADO
-#         # ----------------------------------------------------------
-#         if projeto.get("status") == "Cancelado":
-#             df_projetos.at[idx, "status"] = "Cancelado"
-#             df_projetos.at[idx, "dias_atraso"] = None
-#             df_projetos.at[idx, "proximo_evento"] = None
-#             df_projetos.at[idx, "data_proximo_evento"] = None
-#             continue
-
-#         # ----------------------------------------------------------
-#         # COLETA SEGURA DOS DADOS
-#         # ----------------------------------------------------------
-#         financeiro = projeto.get("financeiro")
-#         if not isinstance(financeiro, dict):
-#             financeiro = {}
-
-#         parcelas = financeiro.get("parcelas")
-#         if not isinstance(parcelas, list):
-#             parcelas = []
-
-#         relatorios = projeto.get("relatorios")
-#         if not isinstance(relatorios, list):
-#             relatorios = []
-
-#         # ----------------------------------------------------------
-#         # REGRA: precisa ter parcelas E relatórios
-#         # ----------------------------------------------------------
-#         if not parcelas or not relatorios:
-#             notificar(
-#                 f"O projeto {codigo} - {sigla} não possui parcelas e/ou relatórios cadastrados. Não é possível determinar o status."
-#             )
-
-#             df_projetos.at[idx, "status"] = "Sem cronograma"
-#             df_projetos.at[idx, "dias_atraso"] = None
-#             df_projetos.at[idx, "proximo_evento"] = None
-#             df_projetos.at[idx, "data_proximo_evento"] = None
-#             continue
-
-#         # ----------------------------------------------------------
-#         # MONTA EVENTOS
-#         # ----------------------------------------------------------
-#         eventos = []
-
-#         for p in parcelas:
-#             if isinstance(p, dict):
-#                 eventos.append({
-#                     "tipo": "Parcela",
-#                     "numero": p.get("numero"),
-#                     "data_prevista": pd.to_datetime(p.get("data_prevista"), errors="coerce"),
-#                     "realizado": p.get("data_realizada") is not None
-#                 })
-
-#         for r in relatorios:
-#             if isinstance(r, dict):
-#                 eventos.append({
-#                     "tipo": "Relatório",
-#                     "numero": r.get("numero"),
-#                     "data_prevista": pd.to_datetime(r.get("data_prevista"), errors="coerce"),
-#                     "realizado": r.get("data_envio") is not None
-#                 })
-
-#         # Remove eventos inválidos
-#         eventos = [e for e in eventos if pd.notna(e["data_prevista"])]
-
-#         if not eventos:
-#             notificar(
-#                 f"O projeto {codigo} - {sigla} não possui eventos com data válida."
-#             )
-
-#             df_projetos.at[idx, "status"] = "Sem cronograma"
-#             df_projetos.at[idx, "dias_atraso"] = None
-#             df_projetos.at[idx, "proximo_evento"] = None
-#             df_projetos.at[idx, "data_proximo_evento"] = None
-#             continue
-
-#         # ----------------------------------------------------------
-#         # ORDENA E DEFINE PRÓXIMO EVENTO
-#         # ----------------------------------------------------------
-#         eventos.sort(key=lambda x: x["data_prevista"])
-
-#         proximo = next((e for e in eventos if not e["realizado"]), None)
-
-
-#         if not proximo:
-#             df_projetos.at[idx, "status"] = "Concluído"
-#             df_projetos.at[idx, "dias_atraso"] = 0
-#             df_projetos.at[idx, "proximo_evento"] = None
-#             df_projetos.at[idx, "data_proximo_evento"] = None
-#             continue
-
-#         # ----------------------------------------------------------
-#         # CALCULA STATUS
-#         # ----------------------------------------------------------
-#         data_prevista = proximo["data_prevista"].date()
-#         dias_atraso = (hoje - data_prevista).days
-
-#         status = "Atrasado" if dias_atraso > 0 else "Em dia"
-
-#         df_projetos.at[idx, "status"] = status
-#         df_projetos.at[idx, "dias_atraso"] = dias_atraso
-#         df_projetos.at[idx, "proximo_evento"] = f"{proximo['tipo']} {proximo['numero']}"
-#         df_projetos.at[idx, "data_proximo_evento"] = data_prevista
-
-#     return df_projetos
-
-
-
-
-
-
 
 # ###################################################################################################
 # SIDEBAR DA PÁGINA DO PROJETO
@@ -1239,9 +1097,17 @@ def sidebar_equipe():
 
     if st.session_state.tipo_usuario in ['admin', 'equipe']:
 
-        # Botão para 'logout'
+
+        # botão de logout com reinicialização completa da aplicação
         if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
+
+            # limpeza total da sessão
             st.session_state.clear()
 
+            # define explicitamente estado não autenticado
+            st.session_state["logged_in"] = False
+
+            # reinicia aplicação para voltar ao fluxo inicial (login)
             st.rerun()
+
 
