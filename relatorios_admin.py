@@ -1426,6 +1426,16 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
                 for p in projetos:
 
                     ###################################################################################################
+                    # CÓDIGO DO PROJETO 
+                    ###################################################################################################
+
+                    codigo_projeto = p.get("codigo", "")
+
+
+
+
+
+                    ###################################################################################################
                     # ORGANIZAÇÃO
                     ###################################################################################################
                     id_org = p.get("id_organizacao")
@@ -1614,7 +1624,7 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
                     # MONTAGEM DA LINHA
                     ###################################################################################################
                     linha = {
-                        "id_cepf": "",
+                        "id_cepf": codigo_projeto,
                         "UploadCG": "",
                         "Beneficiário": nome_organizacao,
                         "Valor do Contrato (R$)": valor_total,
