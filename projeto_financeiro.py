@@ -1389,12 +1389,27 @@ def criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto):
 
         parcela_atualizada["numero"] = i
 
+
+
+
         # -----------------------------------
-        # Regra de data
+        # Parcela 1 mantém data existente (se houver)
         # -----------------------------------
         if i == 1:
-            # Parcela 1 mantém o que já existe
-            data_dt = None
+
+            data_existente = parcela_antiga.get("data_prevista")
+
+            if data_existente:
+                data_dt = pd.to_datetime(
+                    data_existente,
+                    format="%d/%m/%Y",
+                    errors="coerce"
+                )
+            else:
+                data_dt = None
+
+
+
 
         else:
             relatorio_ref = relatorios[i - 2]  # índice ajustado
@@ -2069,210 +2084,6 @@ with cron_desemb:
                 st.success("Relatórios salvos com sucesso!", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
-
-
-
-
-
-
-        # # -------------------------------------------------------
-        # # Editar Relatórios
-
-        # if opcao_editar_cron == "Relatórios":
-
-
-
-        #     st.markdown("#### Relatórios")
-
-
-        #     # --------------------------------------------------
-        #     # Coletar TODAS as entregas do projeto
-        #     # --------------------------------------------------
-
-        #     entregas_projeto = []
-
-        #     plano = projeto.get("plano_trabalho", {})
-        #     for componente in plano.get("componentes", []):
-        #         for entrega in componente.get("entregas", []):
-        #             if entrega.get("entrega"):
-        #                 entregas_projeto.append(entrega["entrega"])
-
-        #     entregas_projeto = sorted(set(entregas_projeto))
-
-        #     # Agora sim, valida se está vazio
-        #     if not entregas_projeto:
-        #         st.warning(
-        #             "Nenhuma entrega cadastrada para este projeto. "
-        #             "Cadastre as entregas no Plano de Trabalho antes de continuar.", icon=":material/warning:"
-        #         )
-
-
-        #     # --------------------------------------------------
-        #     # Parcelas
-        #     # --------------------------------------------------
-        #     parcelas = financeiro.get("parcelas", [])
-
-        #     # Ordenar parcelas por número
-        #     parcelas = sorted(
-        #         [p for p in parcelas if p.get("numero") is not None],
-        #         key=lambda x: x["numero"]
-        #     )
-
-        #     # # Se não houver parcelas suficientes, não há relatórios
-        #     # if len(parcelas) < 2:
-        #     #     st.caption("É necessário ter ao menos duas parcelas para gerar relatórios.")
-        #     # else:
-
-
-        #     # --------------------------------------------------
-        #     # Montar DataFrame base dos relatórios
-        #     # (parcelas - última)
-        #     # --------------------------------------------------
-        #     linhas_relatorios = []
-
-        #     for parcela in parcelas[:-1]:  # ignora a última parcela
-        #         numero = parcela["numero"]
-
-
-        #         # --------------------------------------------------
-        #         # Montar DataFrame base dos relatórios
-        #         # (baseado apenas na numeração das parcelas)
-        #         # --------------------------------------------------
-
-        #         linhas_relatorios = []
-
-        #         for parcela in parcelas[:-1]:  # ignora a última parcela
-        #             numero = parcela["numero"]
-
-        #             linhas_relatorios.append(
-        #                 {
-        #                     "numero": numero,
-        #                     "data_prevista": pd.NaT,
-        #                     "entregas": [],
-        #                 }
-        #             )
-
-        #         df_relatorios_base = pd.DataFrame(linhas_relatorios)
-
-        #         # --------------------------------------------------
-        #         # Mesclar com relatórios já existentes no banco
-        #         # --------------------------------------------------
-
-        #         relatorios_existentes = projeto.get("relatorios", [])
-
-        #         if relatorios_existentes:
-        #             df_existente = pd.DataFrame(relatorios_existentes)
-
-        #             for _, row in df_existente.iterrows():
-        #                 numero = row.get("numero")
-
-        #                 if numero in df_relatorios_base["numero"].values:
-        #                     idx = df_relatorios_base.index[
-        #                         df_relatorios_base["numero"] == numero
-        #                     ][0]
-
-        #                     # preserva entregas
-        #                     df_relatorios_base.at[idx, "entregas"] = row.get("entregas", [])
-
-        #                     # converte string para datetime
-        #                     df_relatorios_base.at[idx, "data_prevista"] = pd.to_datetime(
-        #                         row.get("data_prevista"),
-        #                         format="%d/%m/%Y",
-        #                         errors="coerce"
-        #                     )
-
-
-
-
-        #     # Garantir que entregas seja sempre lista
-        #     df_relatorios_base["entregas"] = df_relatorios_base["entregas"].apply(
-        #         lambda x: x if isinstance(x, list) else []
-        #     )
-
-        #     # --------------------------------------------------
-        #     # Editor (linhas fixas)
-        #     # --------------------------------------------------
-        #     df_editado = st.data_editor(
-        #         df_relatorios_base[["numero", "entregas", "data_prevista"]],
-        #         num_rows="fixed",
-        #         column_config={
-        #             "numero": st.column_config.NumberColumn(
-        #                 "Número (auto)",
-        #                 disabled=True,
-        #                 width=5
-        #             ),
-        #             "entregas": st.column_config.MultiselectColumn(
-        #                 "Entregas",
-        #                 options=[""] + entregas_projeto,
-        #                 help="Selecione as entregas relacionadas a este relatório",
-        #                 width=800
-        #             ),
-        #             "data_prevista": st.column_config.DateColumn(
-        #                 "Data prevista",
-        #                 format="DD/MM/YYYY",
-        #                 # disabled=True,
-        #                 width=20
-        #             ),
-        #         },
-        #         key="editor_relatorios",
-        #         hide_index=True
-        #     )
-
-        #     st.write("")
-
-        #     # --------------------------------------------------
-        #     # Salvar
-        #     # --------------------------------------------------
-        #     if st.button("Salvar relatórios", icon=":material/save:"):
-
-        #         relatorios_salvar = []
-
-        #         for _, row in df_editado.iterrows():
-
-        #             entregas = [e for e in row["entregas"] if e]
-
-        #             relatorios_salvar.append(
-        #                 {
-        #                     "numero": int(row["numero"]),
-        #                     "entregas": entregas,
-
-        #                     # Converte para string no formato brasileiro
-        #                     "data_prevista": (
-        #                         None
-        #                         if pd.isna(row["data_prevista"])
-        #                         else pd.to_datetime(row["data_prevista"]).strftime("%d/%m/%Y")
-        #                     ),
-
-        #                     # "data_prevista": (
-        #                     #     None
-        #                     #     if pd.isna(row["data_prevista"])
-        #                     #     else row["data_prevista"].date().isoformat()
-        #                     # ),
-        #                 }
-        #             )
-
-        #         col_projetos.update_one(
-        #             {"codigo": codigo_projeto_atual},
-        #             {
-        #                 "$set": {
-        #                     "relatorios": relatorios_salvar
-        #                 }
-        #             }
-        #         )
-
-        #         # Atualizar parcelas vinculadas
-        #         atualizar_datas_parcelas(col_projetos, codigo_projeto_atual)
-
-
-        #         st.success("Relatórios salvos com sucesso!", icon=":material/check:")
-        #         time.sleep(3)
-        #         st.rerun()
-
-
-
-
-
-
 
 
 
