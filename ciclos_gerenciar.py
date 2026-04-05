@@ -107,8 +107,8 @@ with tab1:
         with st.form(key="investidor_cadastro_form", border=False):
             st.write("")
 
-            sigla_investidor = st.text_input("Sigla do investidor:")
-            nome_investidor = st.text_input("Nome do investidor:")
+            sigla_investidor = st.text_input("Sigla do investidor: *")
+            nome_investidor = st.text_input("Nome do investidor: *")
 
             st.write("")
             submit_cadastro = st.form_submit_button(
@@ -167,7 +167,7 @@ with tab1:
                         disabled=True
                     )
                     nome_investidor = st.text_input(
-                        "Nome do investidor:",
+                        "Nome do investidor: *",
                         value=investidor.get("nome_investidor", "")
                     )
 
@@ -220,8 +220,8 @@ with tab2:
         with st.form(key="doador_cadastro_form", border=False):
             st.write("")
 
-            sigla_doador = st.text_input("Sigla:")
-            nome_doador = st.text_input("Nome do doador:")
+            sigla_doador = st.text_input("Sigla: *")
+            nome_doador = st.text_input("Nome do doador: *")
 
             st.write("")
             submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary")
@@ -276,7 +276,7 @@ with tab2:
                         disabled=True
                     )
                     nome_doador = st.text_input(
-                        "Nome do doador:",
+                        "Nome do doador: *",
                         value=doador.get("nome_doador", "")
                     )
 
@@ -322,15 +322,15 @@ with tab3:
 
             st.write('')
 
-            codigo_ciclo = st.text_input("Codigo do Ciclo de Investimento:")
-            nome_ciclo = st.text_input("Nome do Ciclo de Investimento:")
+            codigo_ciclo = st.text_input("Codigo do Ciclo de Investimento: *")
+            nome_ciclo = st.text_input("Nome do Ciclo de Investimento: *")
             
             # Buscar siglas únicas dos investidores no MongoDB
             siglas_investidores = sorted(col_investidores.distinct("sigla_investidor"))
             siglas_investidores.insert(0, "")  # adiciona uma opção vazia
 
             investidor = st.multiselect(
-                "Investidor(es):",
+                "Investidor(es): *",
                 options=siglas_investidores,
             )
 
@@ -340,7 +340,7 @@ with tab3:
             siglas_doadores.insert(0, "")  # adiciona uma opção vazia
 
             doador = st.multiselect(
-                "Doador(es):",
+                "Doador(es): *",
                 options=siglas_doadores,
             )
 
@@ -403,7 +403,7 @@ with tab3:
 
                     # Campos preenchidos com dados existentes
                     codigo_ciclo = st.text_input("Código do Ciclo de Investimento :", value=ciclo.get("codigo_ciclo", ""), disabled=True)
-                    nome_ciclo = st.text_input("Nome do Ciclo de Investimento :", value=ciclo.get("nome_ciclo", ""))
+                    nome_ciclo = st.text_input("Nome do Ciclo de Investimento: *", value=ciclo.get("nome_ciclo", ""))
 
                     # Investidores
                     siglas_investidores = sorted(col_investidores.distinct("sigla_investidor"))
@@ -411,7 +411,7 @@ with tab3:
                     investidores_selecionados = ciclo.get("investidores", [])
 
                     investidor = st.multiselect(
-                        "Investidor(es):",
+                        "Investidor(es): *",
                         options=siglas_investidores,
                         default=investidores_selecionados
                     )
@@ -422,7 +422,7 @@ with tab3:
                     doadores_selecionados = ciclo.get("doadores", [])
 
                     doador = st.multiselect(
-                        "Doador(es):",
+                        "Doador(es): *",
                         options=siglas_doadores,
                         default=doadores_selecionados
                     )
@@ -475,15 +475,15 @@ with tab4:
 
             st.write('')
 
-            codigo_edital = st.text_input("Codigo do edital:")
-            nome_edital = st.text_input("Nome do edital:")
-            data_lancamento = st.date_input("Data de lançamento:", format="DD/MM/YYYY")
+            codigo_edital = st.text_input("Codigo do edital: *")
+            nome_edital = st.text_input("Nome do edital: *")
+            data_lancamento = st.date_input("Data de lançamento: *", format="DD/MM/YYYY")
             
             codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
             codigos_ciclos.insert(0, "")  # adiciona uma opção vazia
 
             ciclo = st.selectbox(
-                "Ciclo de Investimento:",
+                "Ciclo de Investimento: *",
                 options=sorted(codigos_ciclos),
             )
 
@@ -554,7 +554,7 @@ with tab4:
                     )
 
                     nome_edital = st.text_input(
-                        "Nome do edital:",
+                        "Nome do edital: *",
                         value=edital.get("nome_edital", "")
                     )
 
@@ -570,7 +570,7 @@ with tab4:
                         data_lancamento = data_lancamento.date()
 
                     data_lancamento = st.date_input(
-                        "Data de lançamento:",
+                        "Data de lançamento: *",
                         value=data_lancamento,
                         format="DD/MM/YYYY"
                     )
@@ -581,7 +581,7 @@ with tab4:
 
                     ciclo_atual = edital.get("ciclo_investimento", "")
                     ciclo = st.selectbox(
-                        "Ciclo de Investimento:",
+                        "Ciclo de Investimento: *",
                         options=codigos_ciclos,
                         index=codigos_ciclos.index(ciclo_atual) if ciclo_atual in codigos_ciclos else 0
                     )

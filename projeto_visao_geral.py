@@ -1109,11 +1109,11 @@ if not editar_cadastro:
         with nova_tab:
 
             data_visita = st.text_input(
-                "Data da visita",
+                "Data da visita *",
             )
 
             relato_visita = st.text_area(
-                "Breve relato",
+                "Breve relato *",
                 height=150
             )
 
@@ -1181,12 +1181,12 @@ if not editar_cadastro:
             visita_selecionada = mapa_visitas[visita_label]
 
             nova_data = st.text_input(
-                "Data da visita (DD/MM/AAAA)",
+                "Data da visita *",
                 value=visita_selecionada["data_visita"]
             )
 
             novo_relato = st.text_area(
-                "Editar breve relato",
+                "Editar breve relato *",
                 value=visita_selecionada["relato"],
                 height=150
             )
@@ -1294,8 +1294,8 @@ if not editar_cadastro:
         with nova_tab:
 
             # Campos do formulário
-            nome = st.text_input("Nome")
-            funcao = st.text_input("Função no projeto")
+            nome = st.text_input("Nome *")
+            funcao = st.text_input("Função no projeto *")
             telefone = st.text_input("Telefone")
             email = st.text_input("E-mail")
 
@@ -1544,16 +1544,16 @@ else:
                 index_edital = 0  
 
             edital = col1.selectbox(    # Coluna 1
-                "Edital",
+                "Edital *",
                 options=lista_editais,
                 index=index_edital
             )
             
             # ---------- CÓDIGO ----------
-            codigo = col2.text_input("Código do Projeto", projeto["codigo"])      # Coluna 2    
+            codigo = col2.text_input("Código do Projeto *", projeto["codigo"])      # Coluna 2    
 
             # ---------- SIGLA ----------
-            sigla = col3.text_input("Sigla do Projeto", projeto["sigla"])      # Coluna 3
+            sigla = col3.text_input("Sigla do Projeto *", projeto["sigla"])      # Coluna 3
 
 
 
@@ -1573,7 +1573,7 @@ else:
                 index_organizacao = 0
 
             id_organizacao = st.selectbox(
-                "Organização",
+                "Organização *",
                 options=lista_org_ids,
                 index=index_organizacao,
                 format_func=lambda x: mapa_org_id_nome[x]  # exibe nome da organização
@@ -1581,29 +1581,12 @@ else:
 
 
 
-            # # ---------- ORGANIZAÇÃO ----------
-            # lista_organizacoes = df_organizacoes["nome_organizacao"].tolist()
-
-            # # Garante que o valor atual exista na lista
-            # organizacao_atual = projeto.get("organizacao")
-            # if organizacao_atual in lista_organizacoes:
-            #     index_organizacao = lista_organizacoes.index(organizacao_atual)
-            # else:
-            #     index_organizacao = 0  
-
-            # organizacao = st.selectbox(    # Coluna 1
-            #     "Organização",
-            #     options=lista_organizacoes,
-            #     index=index_organizacao
-            # )
-
-
             # ---------- NOME DO PROJETO ----------
-            nome = st.text_input("Nome do Projeto", projeto["nome_do_projeto"])
+            nome = st.text_input("Nome do Projeto *", projeto["nome_do_projeto"])
 
             # ---------- OBJETIVO GERAL ----------
             objetivo = st.text_area(
-                "Objetivo geral",
+                "Objetivo geral *",
                 projeto.get("objetivo_geral", "")
             )
 
@@ -1612,7 +1595,7 @@ else:
             # ---------- DURAÇÃO ----------
 
             duracao = col1.number_input(
-                "Duração (meses)",
+                "Duração (meses) *",
                 min_value=1,
                 value=int(projeto["duracao"])
             )

@@ -64,16 +64,6 @@ st.write(
 
 
 
-
-
-
-
-
-
-
-
-
-
 ###########################################################################################################
 # DADOS AUXILIARES (PESSOAS RESPONSÁVEIS)
 ###########################################################################################################
@@ -124,7 +114,7 @@ editais = list(col_editais.find().sort("data_lancamento", -1))
 lista_editais = [e["codigo_edital"] for e in editais]
 
 edital = col1.selectbox(
-    "Edital",
+    "Edital *",
     lista_editais,
     index=lista_editais.index(st.session_state.form_projeto["edital"])
     if st.session_state.form_projeto["edital"] in lista_editais else 0,
@@ -144,17 +134,17 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
 
 
     codigo_projeto = col2.text_input(
-        "Código do Projeto",
+        "Código do Projeto *",
         value=st.session_state.form_projeto["codigo"]
     )
 
     sigla_projeto = col3.text_input(
-        "Sigla do Projeto",
+        "Sigla do Projeto *",
         value=st.session_state.form_projeto["sigla"]
     )
 
     organizacao_id = st.selectbox(
-        "Organização",
+        "Organização *",
         lista_org_ids,
         index=0,
         format_func=lambda x: mapa_org_id_nome[x],  # exibe nome da organização
@@ -162,7 +152,7 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
 
 
     nome_projeto = st.text_input(
-        "Nome do Projeto",
+        "Nome do Projeto *",
         value=st.session_state.form_projeto["nome"]
     )
 
@@ -171,20 +161,20 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
     col1, col2, col3 = st.columns(3)
     
     duracao = col1.number_input(
-        "Duração do Projeto (meses)",
+        "Duração do Projeto (meses) *",
         min_value=1,
         step=1,
         value=st.session_state.form_projeto["duracao"]
     )
 
     data_inicio = col2.date_input(
-        "Data de Início",
+        "Data de Início *",
         value=st.session_state.form_projeto["data_inicio"],
         format="DD/MM/YYYY"
     )
 
     data_fim = col3.date_input(
-        "Data de Fim",
+        "Data de Fim *",
         value=st.session_state.form_projeto["data_fim"],
         format="DD/MM/YYYY"
     )
@@ -206,7 +196,7 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
     )
 
     objetivo = st.text_area(
-        "Objetivo geral",
+        "Objetivo geral *",
         value=st.session_state.form_projeto["objetivo"]
     )
 
@@ -259,8 +249,10 @@ if submit:
         "Objetivo": objetivo,
         "Data início": data_inicio,
         "Data fim": data_fim,
-        # "Direções": direcoes,
-        "Públicos": publicos
+        "Organização": organizacao_id,
+        "Públicos": publicos,
+        "Duração": duracao,
+        "Objetivo geral": objetivo
     }
 
     faltando = [k for k, v in obrigatorios.items() if not v]

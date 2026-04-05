@@ -201,18 +201,18 @@ if opcao_cadastro == "Cadastro individual":
 
             # Campos de entrada com keys para controle via session_state
             sigla_organizacao = st.text_input(
-                "Sigla da Organização",
+                "Sigla da Organização *",
                 key="sigla_organizacao_input",
                 width=300
             )
 
             nome_organizacao = st.text_input(
-                "Nome da Organização",
+                "Nome da Organização *",
                 key="nome_organizacao_input"
             )
 
             cnpj = st.text_input(
-                "CNPJ",
+                "CNPJ *",
                 placeholder="00.000.000/0000-00",
                 key="cnpj_input",
                 width=300
@@ -227,26 +227,26 @@ if opcao_cadastro == "Cadastro individual":
             # -------------------------------------------------------------------------------------------------
 
             endereco = st.text_input(
-                "Endereço",
+                "Endereço *",
                 key="endereco_input"
             )
 
             uf = st.selectbox(
-                "UF",
+                "UF *",
                 options=lista_ufs,
                 key="uf_input",
                 width=200
             )
 
             municipio = st.selectbox(
-                "Município",
+                "Município *",
                 options=lista_municipios,
                 key="municipio_input",
                 width=400
             )
 
             cep = st.text_input(
-                "CEP",
+                "CEP *",
                 placeholder="00.000-000",
                 key="cep_input",
                 width=200

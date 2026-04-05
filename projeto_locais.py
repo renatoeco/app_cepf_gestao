@@ -352,12 +352,12 @@ def dialog_editar_localidades():
         # CAMPOS BÁSICOS
         # --------------------------------------------------
         nome_localidade = st.text_input(
-            "Nome da localidade ou comunidade",
+            "Nome da localidade ou comunidade *",
             placeholder="Ex: Comunidade Novo Horizonte"
         )
 
         municipio = st.selectbox(
-            "Município",
+            "Município *",
             options=municipios_opcoes,
             index=None,
             placeholder="Selecione o município"
@@ -383,7 +383,7 @@ def dialog_editar_localidades():
         if modo_coordenadas == "Link do Google Maps":
 
             link_maps = st.text_input(
-                "Link do Google Maps",
+                "Link do Google Maps *",
                 placeholder="Ex: https://www.google.com/maps/@-13.7975,-47.4589,15z"
             )
 
@@ -403,12 +403,12 @@ def dialog_editar_localidades():
             col1, col2 = st.columns(2)
 
             latitude = col1.text_input(
-                "Latitude",
+                "Latitude *",
                 placeholder="-13.797500"
             )
 
             longitude = col2.text_input(
-                "Longitude",
+                "Longitude *",
                 placeholder="-47.458900"
             )
 
@@ -552,18 +552,18 @@ def dialog_editar_areas_protegidas():
         )
 
         nome_area_protegida = st.text_input(
-            "Nome da área protegida",
+            "Nome da área protegida *",
             placeholder="Ex: Parque Nacional da Chapada dos Veadeiros"
         )
 
         municipios_selecionados = st.multiselect(
-            "Municípios",
+            "Municípios *",
             options=municipios_opcoes,
             placeholder="Selecione os municípios"
         )
 
         gerente_area_protegida = st.text_input(
-            "Autoridade, gerente ou proprietário",
+            "Autoridade, gerente ou proprietário *",
             placeholder="Ex: ICMBio / Secretaria Estadual / Associação Local"
         )
 

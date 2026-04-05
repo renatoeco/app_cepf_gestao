@@ -6,11 +6,19 @@ import smtplib
 from email.mime.text import MIMEText  
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
 import bcrypt
-import textwrap
+# import os
+# import textwrap
 
 
 # Configurar o streamlit para tela wide
 st.set_page_config(layout="wide", page_title="Veredas - IEB", page_icon=":material/login:")
+
+
+
+# # definição do timezone do sistema para America/Sao_Paulo
+# # garante consistência em operações com datas e timestamps
+# os.environ["TZ"] = "America/Sao_Paulo"
+# time.tzset()
 
 
 ##############################################################################################################

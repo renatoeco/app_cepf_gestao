@@ -162,22 +162,22 @@ if opcao_cadastro == "Convite individual":
     col1, col2 = st.columns(2)
 
     # --- Inputs com keys que coincidem com as chaves do session_state ---
-    nome_completo_novo = col1.text_input("Nome completo", key="nome_completo_novo")
+    nome_completo_novo = col1.text_input("Nome completo *", key="nome_completo_novo")
 
     # depende do tipo de usuário logado (ex.: tipo_usuario vem do login)
     if tipo_usuario == "equipe":
         tipo_novo_usuario = col2.selectbox(
-            "Tipo de usuário", ["", "beneficiario", "visitante"], key="tipo_novo_usuario"
+            "Tipo de usuário *", ["", "beneficiario", "visitante"], key="tipo_novo_usuario"
         )
     elif tipo_usuario == "admin":
         tipo_novo_usuario = col2.selectbox(
-            "Tipo de usuário", ["", "admin", "equipe", "beneficiario", "visitante"], key="tipo_novo_usuario"
+            "Tipo de usuário *", ["", "admin", "equipe", "beneficiario", "visitante"], key="tipo_novo_usuario"
         )
 
     # mostra apenas se selecionado beneficiário
     if st.session_state.get("tipo_novo_usuario") == "beneficiario":
         tipo_beneficiario = col2.selectbox(
-            "Tipo de beneficiário", ["", "técnico", "financeiro"], key="tipo_beneficiario"
+            "Tipo de beneficiário *", ["", "técnico", "financeiro"], key="tipo_beneficiario"
         )
     else:
         # garante que o key exista (útil para limpeza/validação)
@@ -186,10 +186,10 @@ if opcao_cadastro == "Convite individual":
 
     col1, col2 = st.columns(2)
 
-    e_mail = col1.text_input("E-mail", key="e_mail")
+    e_mail = col1.text_input("E-mail *", key="e_mail")
     e_mail = e_mail.strip()
     
-    telefone = col2.text_input("Telefone", key="telefone")
+    telefone = col2.text_input("Telefone *", key="telefone")
 
     # Garante que a key exista com lista vazia caso ainda não exista
     if "projetos_escolhidos" not in st.session_state:
