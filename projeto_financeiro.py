@@ -1961,7 +1961,6 @@ with cron_desemb:
 
                 df_relatorios_base = pd.DataFrame(relatorios_existentes)
                 df_relatorios_base = df_relatorios_base.reindex(columns=colunas)
-                # df_relatorios_base = pd.DataFrame(relatorios_existentes)
 
                 # Garantir colunas
                 for col in ["numero", "entregas", "data_prevista"]:
@@ -2031,45 +2030,78 @@ with cron_desemb:
                     how="any"
                 )
 
-                # Ordenar por número
-                df_salvar = df_salvar.sort_values(
-                    by="numero"
-                ).reset_index(drop=True)
 
-                relatorios_salvar = []
+                # -----------------------------------
+                # Validação de datas previstas
+                # -----------------------------------
+                erros_datas = []
 
-                for _, row in df_salvar.iterrows():
+                for idx, row in df_salvar.iterrows():
 
-                    entregas = [e for e in row["entregas"] if e]
+                    data = row.get("data_prevista")
 
-                    relatorios_salvar.append(
+                    data_convertida = pd.to_datetime(
+                        data,
+                        format="%d/%m/%Y",
+                        errors="coerce"
+                    )
+
+                    if pd.isna(data_convertida):
+                        erros_datas.append(idx + 1)
+
+                # -----------------------------------
+                # Se houver erro, não salva
+                # -----------------------------------
+                if erros_datas:
+                    linhas = ", ".join(map(str, erros_datas))
+
+                    st.warning(
+                        f"Data inválida na(s) linha(s): {linhas}. Utilize o formato DD/MM/AAAA.",
+                        icon=":material/warning:"
+                    )
+                else:
+
+
+
+                    # Ordenar por número
+                    df_salvar = df_salvar.sort_values(
+                        by="numero"
+                    ).reset_index(drop=True)
+
+                    relatorios_salvar = []
+
+                    for _, row in df_salvar.iterrows():
+
+                        entregas = [e for e in row["entregas"] if e]
+
+                        relatorios_salvar.append(
+                            {
+                                "numero": int(row["numero"]),
+                                "entregas": entregas,
+                                "data_prevista": (
+                                    None
+                                    if pd.isna(row["data_prevista"])
+                                    else pd.to_datetime(row["data_prevista"]).strftime("%d/%m/%Y")
+                                ),
+                            }
+                        )
+
+                    col_projetos.update_one(
+                        {"codigo": codigo_projeto_atual},
                         {
-                            "numero": int(row["numero"]),
-                            "entregas": entregas,
-                            "data_prevista": (
-                                None
-                                if pd.isna(row["data_prevista"])
-                                else pd.to_datetime(row["data_prevista"]).strftime("%d/%m/%Y")
-                            ),
+                            "$set": {
+                                "relatorios": relatorios_salvar
+                            }
                         }
                     )
 
-                col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {
-                        "$set": {
-                            "relatorios": relatorios_salvar
-                        }
-                    }
-                )
+                    # Atualiza parcelas com base nos relatórios
+                    criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto_atual)
+                    
 
-                # Atualiza parcelas com base nos relatórios
-                criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto_atual)
-                
-
-                st.success("Relatórios salvos com sucesso!", icon=":material/check:")
-                time.sleep(3)
-                st.rerun()
+                    st.success("Relatórios salvos com sucesso!", icon=":material/check:")
+                    time.sleep(3)
+                    st.rerun()
 
 
 
