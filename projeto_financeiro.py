@@ -1945,6 +1945,7 @@ with cron_desemb:
 
             relatorios_existentes = projeto.get("relatorios", [])
 
+
             # -----------------------------------
             # Caso NÃO haja relatórios no banco
             # -----------------------------------
@@ -1955,7 +1956,11 @@ with cron_desemb:
                 )
 
             else:
+                colunas = ["numero", "entregas", "data_prevista"]
+
                 df_relatorios_base = pd.DataFrame(relatorios_existentes)
+                df_relatorios_base = df_relatorios_base.reindex(columns=colunas)
+                # df_relatorios_base = pd.DataFrame(relatorios_existentes)
 
                 # Garantir colunas
                 for col in ["numero", "entregas", "data_prevista"]:
@@ -2367,7 +2372,7 @@ with cron_desemb:
             # -----------------------------------
             # Editor
             # -----------------------------------
-            df_editado = st.data_editor(
+            df_editado_parcelas = st.data_editor(
                 df_parcelas[
                     [
                         "numero",
@@ -2427,7 +2432,7 @@ with cron_desemb:
             # -----------------------------------
             # Reconstruir DataFrame após edição
             # -----------------------------------
-            df_parcelas = df_editado.copy()
+            df_parcelas = df_editado_parcelas.copy()
 
             # Conversão segura da data
             df_parcelas["data_prevista"] = pd.to_datetime(
@@ -3126,7 +3131,7 @@ with orcamento:
         # -----------------------------------
         # Editor
         # -----------------------------------
-        df_editado = st.data_editor(
+        df_editado_orc = st.data_editor(
             df_orcamento[
                 [
                     # "id_despesa",
@@ -3213,7 +3218,7 @@ with orcamento:
             # -----------------------------------
             # Filtrar linhas válidas
             # -----------------------------------
-            df_salvar = df_editado.dropna(
+            df_salvar = df_editado_orc.dropna(
                 subset=["categoria", "nome_despesa"],
                 how="any"
             ).copy()
