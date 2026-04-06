@@ -130,7 +130,8 @@ fig.update_layout(
     yaxis_title="Sessões",
     xaxis=dict(
         tickformat="%d/%m/%Y",
-        tickangle=90
+        tickangle=90,
+        dtick="D1"
     ),
     yaxis=dict(
         dtick=1
