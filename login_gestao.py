@@ -15,10 +15,6 @@ st.set_page_config(layout="wide", page_title="Veredas - IEB", page_icon=":materi
 
 
 
-# # definição do timezone do sistema para America/Sao_Paulo
-# # garante consistência em operações com datas e timestamps
-# os.environ["TZ"] = "America/Sao_Paulo"
-# time.tzset()
 
 
 ##############################################################################################################

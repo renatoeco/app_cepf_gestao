@@ -538,491 +538,429 @@ if opcao_relatorio == "Relatório de salvaguardas":
 # RELATÓRIO DE ACOMPANHAMENTO DE DESEMBOLSOS
 ###########################################################################################################
 
+
+
+###########################################################################################################
+# RELATÓRIO DE ACOMPANHAMENTO DE DESEMBOLSOS
+###########################################################################################################
+
 elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
     st.subheader("Relatório de acompanhamento de desembolsos")
 
-
-    # Renderiza o filtro de editais 
+    # Filtro de edital
     projetos, edital_selecionado_obj = filtro_editais()
 
-
-    st.write(f"{len(projetos)} projetos")
-
-    st.write('')
-    st.write('')
-
-
-    # Gerar lista de anos
-    # EXTRAIR ANOS ÚNICOS DAS PARCELAS ############################################
-    anos_set = set()
-
-    for p in projetos:
-
-        financeiro = p.get("financeiro", {})
-        parcelas = financeiro.get("parcelas", [])
-
-        for parcela in parcelas:
-
-            data_realizada = parcela.get("data_realizada")
-
-            if data_realizada:
-                try:
-                    ano = datetime.datetime.strptime(data_realizada, "%d/%m/%Y").year
-                    anos_set.add(ano)
-                except:
-                    pass
-
-    # ordenar anos
-    anos = [""] + sorted(list(anos_set))
-
-    # SELECTBOX DE ANO ############################################
-    ano_selecionado = st.selectbox(
-        "Selecione o ano",
-        anos,
-        width=250,
-    )
-
-
-
-
     ###################################################################################################
-    # INPUTS DE CÂMBIO POR MÊS (USANDO DATA_EDITOR)
+    # SESSION STATE
     ###################################################################################################
-    st.write('')
+    if "ano_selecionado" not in st.session_state:
+        st.session_state.ano_selecionado = ""
 
-    st.markdown("##### Câmbio US\\$ por mês")
+    if "df_cambio_desembolsos" not in st.session_state:
+        st.session_state.df_cambio_desembolsos = None
 
-    # lista de meses completa
-    meses_completos = [
-        "Janeiro", "Fevereiro", "Março",
-        "Abril", "Maio", "Junho",
-        "Julho", "Agosto", "Setembro",
-        "Outubro", "Novembro", "Dezembro"
-    ]
+    if "mostrar_inputs_ano" not in st.session_state:
+        st.session_state.mostrar_inputs_ano = False
 
-    ###################################################################################################
-    # CRIA DATAFRAME BASE (MESES FIXOS + COTAÇÃO VAZIA)
-    ###################################################################################################
-    df_cambio = pd.DataFrame({
-        "Mês": meses_completos,
-        "Cotação": [None] * 12  # inicia vazio
-    })
+    if "mostrar_relatorio" not in st.session_state:
+        st.session_state.mostrar_relatorio = False
 
-
-
-
-    ###################################################################################################
-    # DATA EDITOR
-    ###################################################################################################
-    df_editado = st.data_editor(
-        df_cambio,
-        width=400,  # define largura fixa de 400px
-        height="content",
-        hide_index=True,  # esconde o índice
-        num_rows="fixed",  # não permite adicionar/remover linhas
-        column_config={
-            "Mês": st.column_config.TextColumn(
-                "Mês",
-                disabled=True  # usuário não pode alterar
-            ),
-            "Cotação": st.column_config.NumberColumn(
-                "Cotação",
-                min_value=0.0,
-                step=0.01,
-                format="%.2f"
-            )
-        },
-        key="data_editor_cambio"
-    )
-
-
-
-
-    ###################################################################################################
-    # CONVERTE PARA DICIONÁRIO
-    ###################################################################################################
-    cambio_meses = {
-        row["Mês"]: (row["Cotação"] if pd.notna(row["Cotação"]) else 0)
-        for _, row in df_editado.iterrows()
-    }
-
-
-
-
-    meses = [
-        "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-        "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-    ]
-
-    # session state
-    if "relatorio_desembolsos_pronto" not in st.session_state:
-        st.session_state.relatorio_desembolsos_pronto = False
+    if "mostrar_download" not in st.session_state:
+        st.session_state.mostrar_download = False
 
     if "arquivo_desembolsos" not in st.session_state:
         st.session_state.arquivo_desembolsos = None
 
 
-
-
-
     ###################################################################################################
-    # BOTÕES 
+    # VALIDAÇÃO DO EDITAL
     ###################################################################################################
+    if not edital_selecionado_obj:
+        st.caption("Selecione um edital para iniciar.")
+        st.stop()
+
+    st.session_state.mostrar_inputs_ano = True
+
+    st.write(f"{len(projetos)} projetos")
+    st.write('')
     st.write('')
 
-    with st.container(horizontal=True):
 
-        ###################################################################################################
-        # BOTÃO GERAR
-        ###################################################################################################
-        if st.button("Gerar relatório", icon=":material/list_alt_add:"):
+    ###################################################################################################
+    # SELECTBOX DE ANO
+    ###################################################################################################
+    if st.session_state.mostrar_inputs_ano:
 
+        anos_set = set()
 
-            ###################################################################################################
-            # VALIDAÇÕES
-            ###################################################################################################
+        for p in projetos:
+            for parcela in p.get("financeiro", {}).get("parcelas", []):
 
-            # valida ano
-            if ano_selecionado == "":
-                st.warning("Selecione um ano.")
-                time.sleep(3)
+                data_realizada = parcela.get("data_realizada")
 
-            # valida câmbio (pelo menos um mês preenchido)
-            elif not any(valor and valor > 0 for valor in cambio_meses.values()):
-            # elif not any(valor > 0 for valor in cambio_meses.values()):
-                st.warning("Informe a cotação de pelo menos um mês.")
-                time.sleep(3)
+                if data_realizada:
+                    try:
+                        ano = datetime.datetime.strptime(
+                            data_realizada, "%d/%m/%Y"
+                        ).year
+                        anos_set.add(ano)
+                    except:
+                        pass
 
+        anos = [""] + sorted(list(anos_set))
 
+        ano = st.selectbox(
+            "Selecione o ano",
+            anos,
+            width=250,
+        )
 
-            else:
-
-                # Gerando relatório
-                with st.spinner("Gerando relatório..."):
-
-
-
-                    ###################################################################################################
-                    # CALCULAR STATUS DOS PROJETOS
-                    ###################################################################################################
-                    df_projetos = pd.DataFrame(projetos)
-
-                    df_projetos_status = calcular_status_projetos(df_projetos)
-
-                    # cria mapa: codigo -> status
-                    mapa_status = {
-                        row["codigo"]: row.get("status")
-                        for _, row in df_projetos_status.iterrows()
-                    }
+        if ano != "":
+            st.session_state.ano_selecionado = ano
+            st.session_state.mostrar_relatorio = True
 
 
+    ###################################################################################################
+    # DATA EDITOR (APENAS APÓS SELEÇÃO DO ANO)
+    ###################################################################################################
+    if st.session_state.mostrar_relatorio:
 
+        ano_selecionado = st.session_state.ano_selecionado
 
+        # ------------------------------
+        # COLETA MESES COM PAGAMENTO
+        # ------------------------------
+        datas = []
 
-                    ###################################################################################################
-                    # CRIAÇÃO DO EXCEL
-                    ###################################################################################################
-                    buffer = io.BytesIO()
+        for p in projetos:
+            for parcela in p.get("financeiro", {}).get("parcelas", []):
 
-                    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                data_realizada = parcela.get("data_realizada")
 
-                        ###################################################################################################
-                        # CRIA PLANILHA
-                        ###################################################################################################
-                        workbook = writer.book
-                        worksheet = workbook.create_sheet(title="Desembolsos")
-
-                        writer.sheets["Desembolsos"] = worksheet
-
-
-                        ###################################################################################################
-                        # TÍTULO DO CÂMBIO (LINHA 1)
-                        ###################################################################################################
-                        worksheet.cell(
-                            row=1,
-                            column=1,
-                            value=f"Taxas de câmbio de {ano_selecionado}"
+                if data_realizada:
+                    try:
+                        data = datetime.datetime.strptime(
+                            data_realizada, "%d/%m/%Y"
                         )
 
+                        if str(data.year) == str(ano_selecionado):
+                            datas.append(data)
+
+                    except:
+                        pass
+
+        datas_ordenadas = sorted(datas)
+
+        # Mapeamento seguro de meses
+        mapa_meses = {
+            1: "Janeiro", 2: "Fevereiro", 3: "Março",
+            4: "Abril", 5: "Maio", 6: "Junho",
+            7: "Julho", 8: "Agosto", 9: "Setembro",
+            10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        }
+
+        meses_nomes = [mapa_meses[data.month] for data in datas_ordenadas]
+
+        # remove duplicados mantendo ordem
+        meses_unicos = list(dict.fromkeys(meses_nomes))
+
+        df_cambio = pd.DataFrame({
+            "Mês": meses_unicos,
+            "Cotação": [None] * len(meses_unicos)
+        })
+
+        st.write('')
+        st.markdown("##### Câmbio US\\$ por mês")
+
+        df_editado = st.data_editor(
+            df_cambio,
+            width=400,
+            height="content",
+            hide_index=True,
+            num_rows="fixed",
+            column_config={
+                "Mês": st.column_config.TextColumn(
+                    "Mês",
+                    disabled=True
+                ),
+                "Cotação": st.column_config.NumberColumn(
+                    "Cotação",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f"
+                )
+            },
+            key="data_editor_cambio"
+        )
+
+
+        ###################################################################################################
+        # BOTÕES
+        ###################################################################################################
+        st.write('')
+
+        with st.container(horizontal=True):
+
+            if st.button("Gerar relatório", icon=":material/list_alt_add:"):
+
+                # valida ano
+                if ano_selecionado == "":
+                    st.warning("Selecione um ano.")
+                    time.sleep(3)
+
+                # valida câmbio
+                elif not any(
+                    valor and valor > 0
+                    for valor in df_editado["Cotação"]
+                ):
+                    st.warning("Informe a cotação de pelo menos um mês.")
+                    time.sleep(3)
+
+                else:
+
+                    with st.spinner("Gerando relatório..."):
 
                         ###################################################################################################
-                        # 1. ESCREVER CÂMBIO (A1:H3)
+                        # CONVERSÃO PARA DICIONÁRIO
                         ###################################################################################################
-                        meses_completos = [
-                            "Janeiro", "Fevereiro", "Março",
-                            "Abril", "Maio", "Junho",
-                            "Julho", "Agosto", "Setembro",
-                            "Outubro", "Novembro", "Dezembro"
-                        ]
-
-                        trimestres = [
-                            meses_completos[0:3],
-                            meses_completos[3:6],
-                            meses_completos[6:9],
-                            meses_completos[9:12]
-                        ]
-
-                        col_offset = 1
-
-                        for trimestre in trimestres:
-
-                            col_mes = col_offset
-                            col_valor = col_offset + 1
-
-                            for i, mes in enumerate(trimestre):
-
-                                linha_excel = i + 2
-                                # linha_excel = i + 1
-
-                                worksheet.cell(row=linha_excel, column=col_mes, value=mes)
-                                worksheet.cell(
-                                    row=linha_excel,
-                                    column=col_valor,
-                                    value=cambio_meses.get(mes, "")
-                                )
-
-                            col_offset += 2
+                        cambio_meses = {
+                            row["Mês"]: row["Cotação"]
+                            for _, row in df_editado.iterrows()
+                        }
 
                         ###################################################################################################
-                        # 2. ESCREVER CABEÇALHO (LINHA 5)
+                        # CALCULAR STATUS DOS PROJETOS
                         ###################################################################################################
+                        df_projetos = pd.DataFrame(projetos)
+
+                        df_projetos_status = calcular_status_projetos(df_projetos)
+
+                        mapa_status = {
+                            row["codigo"]: row.get("status")
+                            for _, row in df_projetos_status.iterrows()
+                        }
 
 
-                        # COLUNAS (COM R$ E US$)
-                        colunas = [
-                            "Código",
-                            "Sigla",
-                            "Valor do contrato (R$)",
-                            "Valor do contrato (US$)",
-                        ]
-
-                        # colunas mensais
-                        for mes in meses:
-                            colunas.append(f"{mes} R$")
-                            colunas.append(f"{mes} US$")
-
-                        colunas.append("Já Pago")
-                        colunas.append("Remanescente a receber")
-                        colunas.append("Data de Encerramento")
-                        colunas.append("Status do projeto")
-
-
-
-                        for col_idx, col_nome in enumerate(colunas, start=1):
-                            worksheet.cell(row=6, column=col_idx, value=col_nome)
 
                         ###################################################################################################
-                        # 3. ESCREVER DADOS (A PARTIR DA LINHA 6)
+                        # CRIAÇÃO DO EXCEL
                         ###################################################################################################
-                        linha_excel = 7
+                        buffer = io.BytesIO()
 
-                        for p in projetos:
+                        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
 
-                            financeiro = p.get("financeiro", {})
-                            parcelas = financeiro.get("parcelas", [])
+                            ###################################################################################################
+                            # CRIA PLANILHA
+                            ###################################################################################################
+                            workbook = writer.book
+                            worksheet = workbook.create_sheet(title="Desembolsos")
 
-                            # VALOR TOTAL + ADITIVO
-                            valor_total = (
-                                financeiro.get("valor_total", 0) +
-                                financeiro.get("valor_aditivo", 0)
+                            writer.sheets["Desembolsos"] = worksheet
+
+                            ###################################################################################################
+                            # TÍTULO
+                            ###################################################################################################
+                            worksheet.cell(
+                                row=1,
+                                column=1,
+                                value=f"Taxas de câmbio de {ano_selecionado}"
                             )
 
+                            ###################################################################################################
+                            # MESES (SIGLAS)
+                            ###################################################################################################
+                            meses = [
+                                "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                                "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+                            ]
 
-                            linha = {
-                                "Código": p.get("codigo"),
-                                "Sigla": p.get("sigla"),
-                                "Valor do contrato (R$)": valor_total,
-                                "Valor do contrato (US$)": 0  # temporário (sem cotação global)
-                            }
+                            ###################################################################################################
+                            # CÂMBIO
+                            ###################################################################################################
+                            meses_completos = [
+                                "Janeiro", "Fevereiro", "Março",
+                                "Abril", "Maio", "Junho",
+                                "Julho", "Agosto", "Setembro",
+                                "Outubro", "Novembro", "Dezembro"
+                            ]
 
+                            trimestres = [
+                                meses_completos[0:3],
+                                meses_completos[3:6],
+                                meses_completos[6:9],
+                                meses_completos[9:12]
+                            ]
 
+                            col_offset = 1
 
-                            # inicializar meses
+                            for trimestre in trimestres:
+
+                                col_mes = col_offset
+                                col_valor = col_offset + 1
+
+                                for i, mes in enumerate(trimestre):
+
+                                    linha_excel = i + 2
+
+                                    worksheet.cell(row=linha_excel, column=col_mes, value=mes)
+                                    worksheet.cell(
+                                        row=linha_excel,
+                                        column=col_valor,
+                                        value=cambio_meses.get(mes, "")
+                                    )
+
+                                col_offset += 2
+
+                            ###################################################################################################
+                            # CABEÇALHO
+                            ###################################################################################################
+                            colunas = [
+                                "Código",
+                                "Sigla",
+                                "Valor do contrato (R$)",
+                                "Valor do contrato (US$)",
+                            ]
+
                             for mes in meses:
-                                linha[f"{mes} R$"] = 0
-                                linha[f"{mes} US$"] = ""
+                                colunas.append(f"{mes} R$")
+                                colunas.append(f"{mes} US$")
 
-                            # inicializa já pago
-                            ja_pago = 0
+                            colunas += [
+                                "Já Pago",
+                                "Remanescente a receber",
+                                "Data de Encerramento",
+                                "Status do projeto"
+                            ]
 
-                            # preencher parcelas
-                            for parcela in parcelas:
-
-                                data_realizada = parcela.get("data_realizada")
-
-                                if not data_realizada:
-                                    continue
-
-                                valor_parcela = parcela.get("valor", 0)
-
-                                # soma no já pago (todas com data_realizada)
-                                ja_pago += valor_parcela
-
-                                data = datetime.datetime.strptime(data_realizada, "%d/%m/%Y")
-                                
-
-                                if data.year == int(ano_selecionado):
-
-                                    mes_nome = meses[data.month - 1]
-                                    linha[f"{mes_nome} R$"] += valor_parcela
-
-
-                            #  CALCULAR DATA DE ENCERRAMENTO
-                            data_encerramento = ""
-
-                            # verifica se existem parcelas
-                            if parcelas:
-
-                                # pega apenas parcelas com data_realizada
-                                parcelas_com_data = [
-                                    parcela for parcela in parcelas
-                                    if parcela.get("data_realizada")
-                                ]
-
-                                # se TODAS têm data_realizada
-                                if len(parcelas_com_data) == len(parcelas):
-
-                                    # converte datas para datetime
-                                    datas = [
-                                        datetime.datetime.strptime(p["data_realizada"], "%Y-%m-%d")
-                                        for p in parcelas_com_data
-                                    ]
-
-                                    # pega a mais recente
-                                    ultima_data = max(datas)
-
-                                    # formata
-                                    data_encerramento = ultima_data.strftime("%d/%m/%Y")
-
-
-                            ###################################################################################################
-                            # STATUS DO PROJETO
-                            ###################################################################################################
-                            codigo_projeto = p.get("codigo")
-
-                            status_projeto = mapa_status.get(codigo_projeto, "")
-
-                            linha["Status do projeto"] = status_projeto
-
-
-
-
-
-                            # preencher já pago e remanescente a receber
-                            linha["Já Pago"] = ja_pago
-                            linha["Remanescente a receber"] = ""  # será fórmula
-                            linha["Data de Encerramento"] = data_encerramento
-                            linha["Status do projeto"] = status_projeto
-
-
-                            # escrever linha no excel
                             for col_idx, col_nome in enumerate(colunas, start=1):
-                                
-                                
-                                valor = linha.get(col_nome, "")
+                                worksheet.cell(row=6, column=col_idx, value=col_nome)
+
+                            ###################################################################################################
+                            # DADOS
+                            ###################################################################################################
+                            linha_excel = 7
+
+                            for p in projetos:
+
+                                financeiro = p.get("financeiro", {})
+                                parcelas = financeiro.get("parcelas", [])
+
+                                valor_total = (
+                                    financeiro.get("valor_total", 0) +
+                                    financeiro.get("valor_aditivo", 0)
+                                )
+
+                                linha = {
+                                    "Código": p.get("codigo"),
+                                    "Sigla": p.get("sigla"),
+                                    "Valor do contrato (R$)": valor_total,
+                                    "Valor do contrato (US$)": ""
+                                }
+
+                                for mes in meses:
+                                    linha[f"{mes} R$"] = 0
+                                    linha[f"{mes} US$"] = ""
+
+                                ja_pago = 0
+
+                                for parcela in parcelas:
+
+                                    data_realizada = parcela.get("data_realizada")
+
+                                    if not data_realizada:
+                                        continue
+
+                                    try:
+                                        data = datetime.datetime.strptime(
+                                            data_realizada, "%d/%m/%Y"
+                                        )
+                                    except:
+                                        continue
+
+                                    valor_parcela = parcela.get("valor", 0)
+                                    ja_pago += valor_parcela
+
+                                    if data.year == int(ano_selecionado):
+                                        mes_nome = meses[data.month - 1]
+                                        linha[f"{mes_nome} R$"] += valor_parcela
+
+                                ###################################################################################################
+                                # STATUS
+                                ###################################################################################################
+                                linha["Status do projeto"] = mapa_status.get(p.get("codigo"), "")
+
+                                linha["Já Pago"] = ja_pago
+                                linha["Remanescente a receber"] = ""
+                                linha["Data de Encerramento"] = ""
+
+                                ###################################################################################################
+                                # ESCREVER LINHA
+                                ###################################################################################################
+                                for col_idx, col_nome in enumerate(colunas, start=1):
+
+                                    valor = linha.get(col_nome, "")
+
+                                    if col_nome == "Remanescente a receber":
+
+                                        celula_contrato = f"C{linha_excel}"
+                                        celula_ja_pago = f"AC{linha_excel}"
+
+                                        worksheet.cell(
+                                            row=linha_excel,
+                                            column=col_idx,
+                                            value=f"={celula_contrato}-{celula_ja_pago}"
+                                        )
+
+                                    else:
+
+                                        if valor == 0:
+                                            valor = ""
+
+                                        worksheet.cell(
+                                            row=linha_excel,
+                                            column=col_idx,
+                                            value=valor
+                                        )
+
+                                linha_excel += 1
+
+                            
+                        buffer.seek(0)
+
+                        st.session_state.arquivo_desembolsos = buffer
+                        st.session_state.mostrar_download = True
 
 
-                                # coluna "Remanescente a receber" -> fórmula
-                                if col_nome == "Remanescente a receber":
+            ###################################################################################################
+            # DOWNLOAD
+            ###################################################################################################
+            if st.session_state.mostrar_download:
 
-                                    # coluna C = Valor do contrato (R$)
-                                    celula_contrato = f"C{linha_excel}"
+                download = st.download_button(
+                    label="Baixar relatório",
+                    icon=":material/download:",
+                    type="primary",
+                    data=st.session_state.arquivo_desembolsos,
+                    file_name=f"Relatorio_de_acompanhamento_de_desembolsos_{edital_selecionado_obj.get('nome_edital','').replace(' ','_')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
-                                    # coluna AC = Já Pago
-                                    celula_ja_pago = f"AC{linha_excel}"
+                ###################################################################################################
+                # RESET COMPLETO
+                ###################################################################################################
+                if download:
 
-                                    formula = f"={celula_contrato}-{celula_ja_pago}"
-
-                                    worksheet.cell(
-                                        row=linha_excel,
-                                        column=col_idx,
-                                        value=formula
-                                    )
-
-                                    continue
-
-
-                                # se for coluna US$ (dos meses)
-                                if "US$" in col_nome and "Valor do contrato" not in col_nome:
-
-                                    mes = col_nome.split()[0]  # Jan, Fev...
-
-                                    ###################################################################################################
-                                    # MAPA DE CÂMBIO (ONDE ESTÃO AS CÉLULAS)
-                                    ###################################################################################################
-                                    mapa_cambio = {
-                                        "Jan": "B2", "Fev": "B3", "Mar": "B4",
-                                        "Abr": "D2", "Mai": "D3", "Jun": "D4",
-                                        "Jul": "F2", "Ago": "F3", "Set": "F4",
-                                        "Out": "H2", "Nov": "H3", "Dez": "H4"
-                                    }
-
-                                    # coluna do R$ (coluna anterior)
-                                    col_rs_letra = worksheet.cell(row=6, column=col_idx - 1).column_letter
-
-                                    # linha atual
-                                    celula_rs = f"{col_rs_letra}{linha_excel}"
-                                    celula_cambio = mapa_cambio.get(mes)
-
-                                    formula = f'=IF({celula_rs}="","",{celula_rs}/{celula_cambio})'
-
-
-
-                                    worksheet.cell(
-                                        row=linha_excel,
-                                        column=col_idx,
-                                        value=formula
-                                    )
-
-                                else:
-
-                                    ###################################################################################################
-                                    # ESCREVER VALORES (SUBSTITUIR 0 POR VAZIO)
-                                    ###################################################################################################
-                                    if valor == 0:
-                                        valor = ""
-
-                                    worksheet.cell(
-                                        row=linha_excel,
-                                        column=col_idx,
-                                        value=valor
-                                    )
-
-
-                            linha_excel += 1
-
-
-                    buffer.seek(0)
-
-                    st.session_state.arquivo_desembolsos = buffer
+                    st.session_state.ano_selecionado = ""
+                    st.session_state.df_cambio_desembolsos = None
+                    st.session_state.mostrar_inputs_ano = False
+                    st.session_state.mostrar_relatorio = False
+                    st.session_state.mostrar_download = False
+                    st.session_state.arquivo_desembolsos = None
 
                     st.rerun()
 
-        ###################################################################################################
-        # BOTÃO DOWNLOAD
-        ###################################################################################################
-        if st.session_state.arquivo_desembolsos:
 
-            # Nome do edital (seguro para arquivo)
-            nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
-            nome_edital_arquivo = nome_edital.replace(" ", "_")
-
-            download_clicado = st.download_button(
-                label="Baixar relatório",
-                type="primary",
-                icon=":material/download:",
-                data=st.session_state.arquivo_desembolsos,
-                file_name=f"Relatorio_acompanhamento_desembolsos_{nome_edital_arquivo}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-            ###################################################################################################
-            # SE CLICOU NO DOWNLOAD, LIMPA O ESTADO
-            ###################################################################################################
-            if download_clicado:
-                st.session_state.arquivo_desembolsos = None
-                st.rerun()
 
 
 
@@ -1031,12 +969,6 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
     ###################################################################################################
     if st.session_state.arquivo_desembolsos:
         st.caption("Relatório gerado. Clique para baixar.")
-
-
-
-
-
-
 
 
 
