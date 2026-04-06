@@ -134,7 +134,7 @@ fig.update_layout(
         dtick="D1"
     ),
     yaxis=dict(
-        dtick=1
+        dtick=10
     )
 )
 
