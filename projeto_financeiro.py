@@ -3056,6 +3056,64 @@ with orcamento:
                 how="any"
             ).copy()
 
+
+
+            # -----------------------------------
+            # Validação de campos obrigatórios
+            # -----------------------------------
+
+            # Definir campos obrigatórios
+            campos_obrigatorios = [
+                "categoria",
+                "nome_despesa",
+                "descricao_despesa",
+                "unidade",
+                "quantidade_fmt",
+                "valor_unitario_fmt",
+            ]
+
+            nomes_legiveis = {
+                "categoria": "Categoria",
+                "nome_despesa": "Despesa",
+                "descricao_despesa": "Descrição",
+                "unidade": "Unidade",
+                "quantidade_fmt": "Quantidade",
+                "valor_unitario_fmt": "Valor unitário",
+
+            }
+
+            erros = []
+
+            for idx, row in df_salvar.iterrows():
+
+                # Identificação da linha (para mensagem)
+                linha = idx + 1
+
+                for campo in campos_obrigatorios:
+
+                    valor = row.get(campo)
+
+                    if pd.isna(valor) or str(valor).strip() == "":
+                        erros.append(f"Linha {linha}: campo '{nomes_legiveis.get(campo, campo)}' não preenchido.")
+
+            # -----------------------------------
+            # Exibir erros e interromper salvamento
+            # -----------------------------------
+            if erros:
+
+                st.error(
+                    "Existem campos obrigatórios não preenchidos no orçamento. Verifique os itens abaixo:",
+                    icon=":material/error:"
+                )
+
+                for erro in erros:
+                    st.write(f"- {erro}")
+
+                st.stop()
+
+
+
+
             # -----------------------------------
             # Converter quantidade
             # -----------------------------------
