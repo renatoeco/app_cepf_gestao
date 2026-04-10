@@ -743,6 +743,9 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
 
 
+
+
+
                         ###################################################################################################
                         # CRIAÇÃO DO EXCEL
                         ###################################################################################################
@@ -750,34 +753,30 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
                         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
 
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
                             # CRIA PLANILHA
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
                             workbook = writer.book
                             worksheet = workbook.create_sheet(title="Desembolsos")
-
                             writer.sheets["Desembolsos"] = worksheet
 
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
                             # TÍTULO
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
                             worksheet.cell(
                                 row=1,
                                 column=1,
                                 value=f"Taxas de câmbio de {ano_selecionado}"
                             )
 
-                            ###################################################################################################
-                            # MESES (SIGLAS)
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
+                            # MESES
+                            # ---------------------------------------------------------------------------------------------
                             meses = [
                                 "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
                                 "Jul", "Ago", "Set", "Out", "Nov", "Dez"
                             ]
 
-                            ###################################################################################################
-                            # CÂMBIO
-                            ###################################################################################################
                             meses_completos = [
                                 "Janeiro", "Fevereiro", "Março",
                                 "Abril", "Maio", "Junho",
@@ -785,6 +784,9 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                 "Outubro", "Novembro", "Dezembro"
                             ]
 
+                            # ---------------------------------------------------------------------------------------------
+                            # TABELA DE CÂMBIO (BLOCO SUPERIOR)
+                            # ---------------------------------------------------------------------------------------------
                             trimestres = [
                                 meses_completos[0:3],
                                 meses_completos[3:6],
@@ -812,9 +814,9 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
 
                                 col_offset += 2
 
-                            ###################################################################################################
-                            # CABEÇALHO
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
+                            # CABEÇALHO DA TABELA DE PROJETOS
+                            # ---------------------------------------------------------------------------------------------
                             colunas = [
                                 "Código",
                                 "Sigla",
@@ -836,9 +838,19 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                             for col_idx, col_nome in enumerate(colunas, start=1):
                                 worksheet.cell(row=6, column=col_idx, value=col_nome)
 
-                            ###################################################################################################
-                            # DADOS
-                            ###################################################################################################
+                            # ---------------------------------------------------------------------------------------------
+                            # MAPA DAS CÉLULAS DE CÂMBIO
+                            # ---------------------------------------------------------------------------------------------
+                            mapa_cambio = {
+                                "Jan": "B2", "Fev": "B3", "Mar": "B4",
+                                "Abr": "D2", "Mai": "D3", "Jun": "D4",
+                                "Jul": "F2", "Ago": "F3", "Set": "F4",
+                                "Out": "H2", "Nov": "H3", "Dez": "H4"
+                            }
+
+                            # ---------------------------------------------------------------------------------------------
+                            # DADOS DOS PROJETOS
+                            # ---------------------------------------------------------------------------------------------
                             linha_excel = 7
 
                             for p in projetos:
@@ -858,12 +870,14 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                     "Valor do contrato (US$)": ""
                                 }
 
+                                # inicializa meses
                                 for mes in meses:
                                     linha[f"{mes} R$"] = 0
                                     linha[f"{mes} US$"] = ""
 
                                 ja_pago = 0
 
+                                # processamento das parcelas
                                 for parcela in parcelas:
 
                                     data_realizada = parcela.get("data_realizada")
@@ -885,22 +899,21 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                         mes_nome = meses[data.month - 1]
                                         linha[f"{mes_nome} R$"] += valor_parcela
 
-                                ###################################################################################################
-                                # STATUS
-                                ###################################################################################################
+                                # status
                                 linha["Status do projeto"] = mapa_status.get(p.get("codigo"), "")
 
                                 linha["Já Pago"] = ja_pago
                                 linha["Remanescente a receber"] = ""
                                 linha["Data de Encerramento"] = ""
 
-                                ###################################################################################################
-                                # ESCREVER LINHA
-                                ###################################################################################################
+                                # -----------------------------------------------------------------------------------------
+                                # ESCRITA DAS CÉLULAS
+                                # -----------------------------------------------------------------------------------------
                                 for col_idx, col_nome in enumerate(colunas, start=1):
 
                                     valor = linha.get(col_nome, "")
 
+                                    # fórmula remanescente
                                     if col_nome == "Remanescente a receber":
 
                                         celula_contrato = f"C{linha_excel}"
@@ -912,16 +925,41 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                                             value=f"={celula_contrato}-{celula_ja_pago}"
                                         )
 
-                                    else:
+                                        continue
 
-                                        if valor == 0:
-                                            valor = ""
+                                    # fórmula US$
+                                    if "US$" in col_nome and "Valor do contrato" not in col_nome:
+
+                                        mes_sigla = col_nome.split()[0]
+
+                                        celula_cambio = mapa_cambio.get(mes_sigla)
+
+                                        col_rs_letra = worksheet.cell(
+                                            row=6,
+                                            column=col_idx - 1
+                                        ).column_letter
+
+                                        celula_rs = f"{col_rs_letra}{linha_excel}"
+
+                                        formula = f'=IF({celula_rs}="","",{celula_rs}/{celula_cambio})'
 
                                         worksheet.cell(
                                             row=linha_excel,
                                             column=col_idx,
-                                            value=valor
+                                            value=formula
                                         )
+
+                                        continue
+
+                                    # valores padrão
+                                    if valor == 0:
+                                        valor = ""
+
+                                    worksheet.cell(
+                                        row=linha_excel,
+                                        column=col_idx,
+                                        value=valor
+                                    )
 
                                 linha_excel += 1
 
