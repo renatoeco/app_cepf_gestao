@@ -1089,25 +1089,25 @@ def sidebar_projeto():
 
 
 
-# ###################################################################################################
-# SIDEBAR DA PÁGINA DA EQUIPE
-# ###################################################################################################
+# # ###################################################################################################
+# # SIDEBAR DA PÁGINA DA EQUIPE
+# # ###################################################################################################
 
-def sidebar_equipe():
+# def sidebar_equipe():
 
-    if st.session_state.tipo_usuario in ['admin', 'equipe']:
+#     if st.session_state.tipo_usuario in ['admin', 'equipe']:
 
 
-        # botão de logout com reinicialização completa da aplicação
-        if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
+#         # botão de logout com reinicialização completa da aplicação
+#         if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
 
-            # limpeza total da sessão
-            st.session_state.clear()
+#             # limpeza total da sessão
+#             st.session_state.clear()
 
-            # define explicitamente estado não autenticado
-            st.session_state["logged_in"] = False
+#             # define explicitamente estado não autenticado
+#             st.session_state["logged_in"] = False
 
-            # reinicia aplicação para voltar ao fluxo inicial (login)
-            st.rerun()
+#             # reinicia aplicação para voltar ao fluxo inicial (login)
+#             st.rerun()
 
 

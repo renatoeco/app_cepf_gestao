@@ -454,6 +454,9 @@ else:
                 st.Page("relatorios_admin.py", title="Exportar relatórios", icon=":material/assignment:"),
 
             ],
+            "Conta": [
+                st.Page("sair.py", title="Sair", icon=":material/logout:")
+            ],
         },
 
         "home_equipe": {

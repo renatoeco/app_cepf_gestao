@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao, sidebar_equipe
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao
 import plotly.express as px
 import pandas as pd
 import datetime
@@ -17,7 +17,7 @@ if not st.session_state.get("logged_in"):
     st.stop()
 
 
-sidebar_equipe()
+# sidebar_equipe()
 
 
 ###########################################################################################################
@@ -180,28 +180,9 @@ if not df_projetos.empty:
 # Logo do sidebar
 st.logo("images/ieb_logo.svg", size='large')
 
-col1, col2 = st.columns(2)
 
 # Título da página
-col1.header("Projetos")
-
-with col2:
-    st.write('')
-
-    with st.container(horizontal=True, horizontal_alignment="right"):
-
-        
-        # botão de logout com reinicialização completa da aplicação
-        if st.button("Sair", icon=":material/logout:", type="tertiary"):
-
-            # limpeza total da sessão
-            st.session_state.clear()
-
-            # define explicitamente estado não autenticado
-            st.session_state["logged_in"] = False
-
-            # reinicia aplicação para voltar ao fluxo inicial (login)
-            st.rerun()
+st.header("Projetos")
 
 
 # Área de notificações
