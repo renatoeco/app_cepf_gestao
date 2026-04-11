@@ -2416,7 +2416,6 @@ with orcamento:
     # ==================================================
     # PERMISSÃO E MODO DE EDIÇÃO
     # ==================================================
-    # usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
     with st.container(horizontal=True, horizontal_alignment="right"):
         if usuario_interno:
