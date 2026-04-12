@@ -4,6 +4,9 @@ import pandas as pd
 import bson
 import time
 
+from st_rsuite import date_picker
+
+
 
 st.set_page_config(page_title="Novo Projeto", page_icon=":material/add_circle:")
 
@@ -167,11 +170,34 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
         value=st.session_state.form_projeto["duracao"]
     )
 
-    data_inicio = col2.date_input(
-        "Data de Início *",
-        value=st.session_state.form_projeto["data_inicio"],
-        format="DD/MM/YYYY"
-    )
+
+    with col2:
+        data_inicio = date_picker(
+            label="Data de Início *",
+            value=st.session_state.form_projeto["data_inicio"],
+            format="dd/MM/yyyy",
+            locale="pt_BR",
+            one_tap=True,
+            key="data_inicio",
+            placeholder="dd/mm/aaaa",
+        )
+
+    # with col3:
+    #     data_fim = date_picker(
+    #         label="Data de Fim",
+    #         value=st.session_state.form_projeto["data_fim"],
+    #         format="dd/MM/yyyy",
+    #         locale="pt_BR",
+    #         one_tap=True,
+    #         key="data_fim"
+    #     )
+
+
+    # data_inicio = col2.date_input(
+    #     "Data de Início *",
+    #     value=st.session_state.form_projeto["data_inicio"],
+    #     format="DD/MM/YYYY"
+    # )
 
     data_fim = col3.date_input(
         "Data de Fim *",
