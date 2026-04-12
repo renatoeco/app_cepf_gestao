@@ -524,112 +524,147 @@ if not editar_cadastro:
     st.write(f"**Organização:** {nome_org}")
     st.write(f"**Nome do projeto:** {df_projeto['nome_do_projeto'].values[0]}")
     st.write(f"**Objetivo geral:** {df_projeto['objetivo_geral'].values[0]}")
-    st.write(f"**Duração:** {df_projeto['duracao'].values[0]} meses")
-
-    cols = st.columns(3)
-    cols[0].write(f"**Início:** {df_projeto['data_inicio_contrato'].values[0]}")
-    cols[1].write(f"**Fim:** {df_projeto['data_fim_contrato'].values[0]}")
-
-    # ---------- CONTRATOS ----------
-
-    contratos = df_projeto["contratos"].values[0] if "contratos" in df_projeto.columns else None
-
-    with cols[2]:
 
 
-        if contratos:
-            with st.popover("**Contrato**", type="tertiary"):
-                
-                for c in contratos:
-                    st.markdown(
-                        f"[**{c['descricao_contrato']}**]({c['url_contrato']})"
-                    )
+
+
+
+    cols = st.columns(2)
+
+    with cols[0]:
+
+
+        # ---------- DIREÇÕES ESTRATÉGICAS ----------
+
+        if "direcoes_estrategicas" in df_projeto.columns:
+
+            direcoes = df_projeto["direcoes_estrategicas"].values[0]
+
+        else:
+            direcoes = None
+
+
+        if direcoes:
+
+            with st.popover("**Direções estratégicas**", type="tertiary"):
+
+                for item in direcoes:
+
+                    # Novo formato (dict com subcategorias)
+                    if isinstance(item, dict):
+
+                        tema = item.get("tema")
+                        subcategorias = item.get("subcategorias", [])
+
+                        st.write(f"**{tema}**")
+
+                        if subcategorias:
+                            for sub in subcategorias:
+                                st.write(f"   - {sub}")
+
+                    # Formato antigo (string)
+                    elif isinstance(item, str):
+                        st.write(f"- {item}")
+
         else:
             st.markdown(
-                "**Contrato:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+                "**Direções estratégicas:** <span style='color:#c46a00; font-style:italic;'>não cadastradas</span>",
                 unsafe_allow_html=True
             )
 
 
 
 
-    # ---------- RESPONSÁVEL(IS) (DERIVADO DA COLEÇÃO DE PESSOAS | SOMENTE BENEFICIÁRIOS) ----------
+        # Beneficiários
+        publicos = df_projeto['publicos'].values[0]
+        if publicos:
+            st.write("**Beneficiários:**", " / ".join(publicos))
 
-    codigo_projeto = projeto["codigo"]
 
-    df_responsaveis = df_pessoas[
-        (df_pessoas["tipo_usuario"] == "beneficiario") &   # 👈 filtra tipo
-        (
-            df_pessoas["projetos"].apply(
-                lambda x: isinstance(x, list) and codigo_projeto in x
+
+
+
+        # ---------- RESPONSÁVEL(IS) (DERIVADO DA COLEÇÃO DE PESSOAS | SOMENTE BENEFICIÁRIOS) ----------
+
+        codigo_projeto = projeto["codigo"]
+
+        df_responsaveis = df_pessoas[
+            (df_pessoas["tipo_usuario"] == "beneficiario") &   # 👈 filtra tipo
+            (
+                df_pessoas["projetos"].apply(
+                    lambda x: isinstance(x, list) and codigo_projeto in x
+                )
             )
-        )
-    ]
+        ]
 
-    if df_responsaveis.empty:
-        st.markdown(
-            "**Responsável:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
-            unsafe_allow_html=True
-        )
-    else:
-        nomes = ", ".join(sorted(df_responsaveis["nome_completo"].tolist()))
-        st.write(f"**Responsável:** {nomes}")
-
+        if df_responsaveis.empty:
+            st.markdown(
+                "**Responsável:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+                unsafe_allow_html=True
+            )
+        else:
+            nomes = ", ".join(sorted(df_responsaveis["nome_completo"].tolist()))
+            st.write(f"**Responsável:** {nomes}")
 
 
-    # Padrinho
-    valor = df_projeto["padrinho"].values[0]
-    if pd.isna(valor) or str(valor).strip() == "":
-        st.markdown(
-            "**Padrinho/Madrinha:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
-            unsafe_allow_html=True
-        )
-    else:
-        st.write(f"**Padrinho/Madrinha:** {valor}")
 
-    # st.write(f"**Padrinho/Madrinha:** {df_projeto['padrinho'].values[0]}")
-
-    # ---------- DIREÇÕES ESTRATÉGICAS ----------
-
-    if "direcoes_estrategicas" in df_projeto.columns:
-
-        direcoes = df_projeto["direcoes_estrategicas"].values[0]
-
-    else:
-        direcoes = None
+        # Padrinho
+        valor = df_projeto["padrinho"].values[0]
+        if pd.isna(valor) or str(valor).strip() == "":
+            st.markdown(
+                "**Padrinho/Madrinha:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.write(f"**Padrinho/Madrinha:** {valor}")
 
 
-    if direcoes:
 
-        with st.popover("**Direções estratégicas**", type="tertiary"):
 
-            for item in direcoes:
 
-                # Novo formato (dict com subcategorias)
-                if isinstance(item, dict):
 
-                    tema = item.get("tema")
-                    subcategorias = item.get("subcategorias", [])
+    with cols[1]:
 
-                    st.write(f"**{tema}**")
 
-                    if subcategorias:
-                        for sub in subcategorias:
-                            st.write(f"   - {sub}")
+        # ---------- CONTRATOS ----------
 
-                # Formato antigo (string)
-                elif isinstance(item, str):
-                    st.write(f"- {item}")
+        contratos = df_projeto["contratos"].values[0] if "contratos" in df_projeto.columns else None
 
-    else:
-        st.markdown(
-            "**Direções estratégicas:** <span style='color:#c46a00; font-style:italic;'>não cadastradas</span>",
-            unsafe_allow_html=True
-        )
+        with cols[1]:
 
-    publicos = df_projeto['publicos'].values[0]
-    if publicos:
-        st.write("**Beneficiários:**", " / ".join(publicos))
+
+            if contratos:
+                with st.popover("**Contrato**", type="tertiary"):
+                    
+                    for c in contratos:
+                        st.markdown(
+                            f"[**{c['descricao_contrato']}**]({c['url_contrato']})"
+                        )
+            else:
+                st.markdown(
+                    "**Contrato:** <span style='color:#c46a00; font-style:italic;'>não cadastrado</span>",
+                    unsafe_allow_html=True
+                )
+
+
+
+
+        sub1, sub2 = st.columns([1, 6])
+
+        with sub1:
+            st.write("**Duração:**")
+            st.write("**Início:**")
+            st.write("**Fim:**")
+
+        with sub2:
+            st.write(f"{df_projeto['duracao'].values[0]} meses")
+            st.write(f"{df_projeto['data_inicio_contrato'].values[0]}")
+            st.write(f"{df_projeto['data_fim_contrato'].values[0]}")
+
+
+
+
+
 
 
 
