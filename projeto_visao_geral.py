@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, calcular_status_atividade, registrar_estatistica_sessao
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, sidebar_projeto, calcular_status_projetos, calcular_status_atividade, registrar_estatistica_sessao, add_permissao_drive
 import pandas as pd
 import streamlit_shadcn_ui as ui
 import datetime
@@ -481,6 +481,7 @@ df_projeto = df_projeto.merge(
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
+
 
 # Logo do sidebar
 st.logo("images/ieb_logo.svg", size='large')
@@ -1329,10 +1330,40 @@ if not editar_cadastro:
                     {"$push": {"contatos": contato}}
                 )
 
+
+
+
                 if resultado.modified_count == 1:
+
+                    # ###############################################################
+                    # Tenta aplicar permissão de leitura na pasta do projeto
+                    # ###############################################################
+
+                    servico_drive = obter_servico_drive()
+
+                    # Obtém (ou cria) a pasta do projeto
+
+                    # Recupera a sigla diretamente do dataframe do projeto
+                    sigla = df_projeto["sigla"].values[0]
+
+                    pasta_id = obter_pasta_projeto(
+                        servico_drive,
+                        st.session_state.projeto_atual,
+                        sigla
+                    )
+
+
+                    # Aplica permissão apenas para o contato recém-criado
+                    add_permissao_drive(servico_drive, pasta_id, contato)
+
+
+
                     st.success("Contato cadastrado com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
+
+
+
                 else:
                     st.error("Erro ao salvar contato.")
 
@@ -1437,9 +1468,55 @@ if not editar_cadastro:
 
 
                 if resultado.modified_count == 1:
+
+                    # Verifica se houve alteração no e-mail
+                    email_antigo = contato_selecionado.get("email", "").strip()
+                    email_novo = email.strip()
+
+                    if email_novo and email_novo != email_antigo:
+
+                        # Inicializa serviço do Drive sob demanda
+                        servico_drive = obter_servico_drive()
+
+                        # Recupera a sigla diretamente do dataframe do projeto
+                        sigla = df_projeto["sigla"].values[0]
+
+                        # Obtém (ou cria) a pasta do projeto
+                        pasta_id = obter_pasta_projeto(
+                            servico_drive,
+                            st.session_state.projeto_atual,
+                            sigla
+                        )
+
+                        # Estrutura mínima do contato para a função
+                        contato_atualizado = {
+                            "email": email_novo
+                        }
+
+                        # Aplica permissão apenas para o novo e-mail
+                        add_permissao_drive(servico_drive, pasta_id, contato_atualizado)
+
                     st.success("Contato atualizado com sucesso!", icon=":material/check:")
-                    time.sleep(2)
+                    time.sleep(3)
                     st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    # st.success("Contato atualizado com sucesso!", icon=":material/check:")
+                    # time.sleep(2)
+                    # st.rerun()
                 else:
                     st.error("Erro ao atualizar contato.")
 
