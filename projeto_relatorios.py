@@ -6545,7 +6545,13 @@ if step_selecionado == "Enviar":
     # CASO 4: USUÁRIO NÃO PODE EDITAR
     # --------------------------------------------------
     else:
-        st.info("Este relatório não pode ser editado no momento.")
+    
+        if "visitante" in st.session_state.tipo_usuario:
+            st.caption("Função indisponível para visitantes.")
+    
+        else:
+
+            st.caption("Este relatório não pode ser editado no momento.")
 
 
 

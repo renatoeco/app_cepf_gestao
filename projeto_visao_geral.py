@@ -915,7 +915,7 @@ if not editar_cadastro:
                 )
 
                 if resultado.modified_count == 1:
-                    st.success("Anotação salva com sucesso!")
+                    st.success("Anotação salva com sucesso!", icon=":material/check:")
                     time.sleep(2)
                     st.rerun()
                 else:
@@ -1501,37 +1501,22 @@ if not editar_cadastro:
                     st.rerun()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    # st.success("Contato atualizado com sucesso!", icon=":material/check:")
-                    # time.sleep(2)
-                    # st.rerun()
                 else:
                     st.error("Erro ao atualizar contato.")
 
 
 
+    if "visitante" not in st.session_state.get("tipo_usuario"):
 
-    with st.container(horizontal=True, horizontal_alignment="right"):
-        if st.button(
-            "Gerenciar contatos",
-            icon=":material/edit:",
-            type="secondary",
-            width=200,
-            key="gerenciar_contatos"
-        ):
-            gerenciar_contatos()
+        with st.container(horizontal=True, horizontal_alignment="right"):
+            if st.button(
+                "Gerenciar contatos",
+                icon=":material/edit:",
+                type="secondary",
+                width=200,
+                key="gerenciar_contatos"
+            ):
+                gerenciar_contatos()
 
 
 

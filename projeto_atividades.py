@@ -3647,141 +3647,175 @@ with monitoramento:
 
                     df_monitoramento = df_monitoramento[ordem_colunas]
 
+                    # Se for visitante mostra o dataframa, não o data_editor
+                    if "visitante" in st.session_state.tipo_usuario:
+
+                        df_editado = st.dataframe(
+                            df_monitoramento,
+                            hide_index=True,
+                            key=f"dataframe_monitoramento_{componente['id']}_{entrega['id']}",
+                            column_config={
+                                "Indicador do projeto": st.column_config.TextColumn(),
+                                "Linha de base": st.column_config.NumberColumn(
+                                    format="%.1f",
+                                    step=0.1
+                                ),
+                                "Meta": st.column_config.NumberColumn(
+                                    format="%.1f",
+                                    step=0.1
+                                ),
+                                "Resultado atual": st.column_config.TextColumn(disabled=True),
+                                "Observações da coleta": st.column_config.TextColumn(disabled=True),
+                                "Unidade de medida": st.column_config.TextColumn(),
+                                "Periodicidade": st.column_config.TextColumn(),
+                                "Fonte de verificação": st.column_config.TextColumn(),
+                                "Responsável": st.column_config.TextColumn(),
+                                "Data da coleta": st.column_config.DateColumn(disabled=True, format="DD/MM/YYYY")
+                            }
+                        )
 
 
-                    # ------------------------------------------------------
-                    # Renderiza o data_editor
-                    # ------------------------------------------------------
-                    df_editado = st.data_editor(
-                        df_monitoramento,
-                        num_rows="dynamic",
-                        hide_index=True,
-                        key=f"editor_monitoramento_{componente['id']}_{entrega['id']}",
-                        column_config={
-                            "Indicador do projeto": st.column_config.TextColumn(),
-                            "Linha de base": st.column_config.NumberColumn(
-                                format="%.1f",
-                                step=0.1
-                            ),
-                            "Meta": st.column_config.NumberColumn(
-                                format="%.1f",
-                                step=0.1
-                            ),
-                            "Resultado atual": st.column_config.TextColumn(disabled=True),
-                            "Observações da coleta": st.column_config.TextColumn(disabled=True),
-                            "Unidade de medida": st.column_config.TextColumn(),
-                            "Periodicidade": st.column_config.TextColumn(),
-                            "Fonte de verificação": st.column_config.TextColumn(),
-                            "Responsável": st.column_config.TextColumn(),
-                            "Data da coleta": st.column_config.DateColumn(disabled=True, format="DD/MM/YYYY")
-                        }
-                    )
+                    # se não for visitante, renderiza o data_editor
+                    else:
+
+                        # ------------------------------------------------------
+                        # Renderiza o data_editor
+                        # ------------------------------------------------------
+                        df_editado = st.data_editor(
+                            df_monitoramento,
+                            num_rows="dynamic",
+                            hide_index=True,
+                            key=f"editor_monitoramento_{componente['id']}_{entrega['id']}",
+                            column_config={
+                                "Indicador do projeto": st.column_config.TextColumn(),
+                                "Linha de base": st.column_config.NumberColumn(
+                                    format="%.1f",
+                                    step=0.1
+                                ),
+                                "Meta": st.column_config.NumberColumn(
+                                    format="%.1f",
+                                    step=0.1
+                                ),
+                                "Resultado atual": st.column_config.TextColumn(disabled=True),
+                                "Observações da coleta": st.column_config.TextColumn(disabled=True),
+                                "Unidade de medida": st.column_config.TextColumn(),
+                                "Periodicidade": st.column_config.TextColumn(),
+                                "Fonte de verificação": st.column_config.TextColumn(),
+                                "Responsável": st.column_config.TextColumn(),
+                                "Data da coleta": st.column_config.DateColumn(disabled=True, format="DD/MM/YYYY")
+                            }
+                        )
 
                     # ======================================================
                     # 3) BOTÃO DE SALVAR
                     # ======================================================
 
-                    with st.container(horizontal=True, horizontal_alignment="right"):
-
-                        if st.button(
-                            "Salvar indicadores do projeto",
-                            icon=":material/save:",
-                            key=f"btn_salvar_{componente['id']}_{entrega['id']}",
-                            type="primary"
-                        ):
-
-                            # --------------------------------------------------
-                            # Limpa linhas vazias
-                            # --------------------------------------------------
-                            df_editado = df_editado.dropna(
-                                how="all"
-                            )
+                    # usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
 
-                            # --------------------------------------------------
-                            # REMOVE ESPAÇOS EM BRANCO NO INÍCIO E FIM DOS TEXTOS
-                            # --------------------------------------------------
-                            colunas_texto = [
-                                "Indicador do projeto",
-                                "Observações da coleta",
-                                "Unidade de medida",
-                                "Periodicidade",
-                                "Fonte de verificação",
-                                "Responsável"
-                            ]
+                    if "visitante" not in st.session_state.tipo_usuario:
 
-                            for col in colunas_texto:
-                                if col in df_editado.columns:
-                                    df_editado[col] = (
-                                        df_editado[col]
-                                        .astype(str)
-                                        .str.strip()
-                                        .replace("nan", "")
-                                    )
+                        with st.container(horizontal=True, horizontal_alignment="right"):
 
-                            # --------------------------------------------------
-                            # Renomeia colunas para o padrão do banco
-                            # --------------------------------------------------
-                            df_para_salvar = df_editado.rename(columns={
-                                "Indicador do projeto": "indicador_projeto",
-                                "Linha de base": "linha_base",
-                                "Meta": "meta",
-                                "Resultado atual": "resultado_atual",
-                                "Observações da coleta": "observacoes_coleta",
-                                "Unidade de medida": "unidade_medida",
-                                "Periodicidade": "periodicidade",
-                                "Fonte de verificação": "fonte_verificacao",
-                                "Responsável": "responsavel",
-                                "Data da coleta": "data_coleta"
-                            })
+                            if st.button(
+                                "Salvar indicadores do projeto",
+                                icon=":material/save:",
+                                key=f"btn_salvar_{componente['id']}_{entrega['id']}",
+                                type="primary"
+                            ):
 
-                            # --------------------------------------------------
-                            # Converte para lista de dicionários
-                            # --------------------------------------------------
-                            lista_indicadores_projeto = df_para_salvar.to_dict("records")
+                                # --------------------------------------------------
+                                # Limpa linhas vazias
+                                # --------------------------------------------------
+                                df_editado = df_editado.dropna(
+                                    how="all"
+                                )
 
-                            # --------------------------------------------------
-                            # Atualiza apenas a entrega correta
-                            # --------------------------------------------------
-                            componentes_atualizados = []
 
-                            for comp in componentes:
-                                if comp["id"] == componente["id"]:
-                                    novas_entregas = []
+                                # --------------------------------------------------
+                                # REMOVE ESPAÇOS EM BRANCO NO INÍCIO E FIM DOS TEXTOS
+                                # --------------------------------------------------
+                                colunas_texto = [
+                                    "Indicador do projeto",
+                                    "Observações da coleta",
+                                    "Unidade de medida",
+                                    "Periodicidade",
+                                    "Fonte de verificação",
+                                    "Responsável"
+                                ]
 
-                                    for ent in comp.get("entregas", []):
-                                        if ent["id"] == entrega["id"]:
-                                            novas_entregas.append({
-                                                **ent,
-                                                "indicadores_projeto": lista_indicadores_projeto
-                                            })
-                                        else:
-                                            novas_entregas.append(ent)
+                                for col in colunas_texto:
+                                    if col in df_editado.columns:
+                                        df_editado[col] = (
+                                            df_editado[col]
+                                            .astype(str)
+                                            .str.strip()
+                                            .replace("nan", "")
+                                        )
 
-                                    componentes_atualizados.append({
-                                        **comp,
-                                        "entregas": novas_entregas
-                                    })
+                                # --------------------------------------------------
+                                # Renomeia colunas para o padrão do banco
+                                # --------------------------------------------------
+                                df_para_salvar = df_editado.rename(columns={
+                                    "Indicador do projeto": "indicador_projeto",
+                                    "Linha de base": "linha_base",
+                                    "Meta": "meta",
+                                    "Resultado atual": "resultado_atual",
+                                    "Observações da coleta": "observacoes_coleta",
+                                    "Unidade de medida": "unidade_medida",
+                                    "Periodicidade": "periodicidade",
+                                    "Fonte de verificação": "fonte_verificacao",
+                                    "Responsável": "responsavel",
+                                    "Data da coleta": "data_coleta"
+                                })
+
+                                # --------------------------------------------------
+                                # Converte para lista de dicionários
+                                # --------------------------------------------------
+                                lista_indicadores_projeto = df_para_salvar.to_dict("records")
+
+                                # --------------------------------------------------
+                                # Atualiza apenas a entrega correta
+                                # --------------------------------------------------
+                                componentes_atualizados = []
+
+                                for comp in componentes:
+                                    if comp["id"] == componente["id"]:
+                                        novas_entregas = []
+
+                                        for ent in comp.get("entregas", []):
+                                            if ent["id"] == entrega["id"]:
+                                                novas_entregas.append({
+                                                    **ent,
+                                                    "indicadores_projeto": lista_indicadores_projeto
+                                                })
+                                            else:
+                                                novas_entregas.append(ent)
+
+                                        componentes_atualizados.append({
+                                            **comp,
+                                            "entregas": novas_entregas
+                                        })
+                                    else:
+                                        componentes_atualizados.append(comp)
+
+                                # --------------------------------------------------
+                                # Persistência no MongoDB
+                                # --------------------------------------------------
+                                resultado = col_projetos.update_one(
+                                    {"codigo": codigo_projeto_atual},
+                                    {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+                                )
+
+                                # --------------------------------------------------
+                                # Feedback ao usuário
+                                # --------------------------------------------------
+                                if resultado.matched_count == 1:
+                                    st.success("Indicadores do projeto salvos com sucesso.", icon=":material/check:")
+                                    time.sleep(3)
+                                    st.rerun()
                                 else:
-                                    componentes_atualizados.append(comp)
-
-                            # --------------------------------------------------
-                            # Persistência no MongoDB
-                            # --------------------------------------------------
-                            resultado = col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
-                                {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
-                            )
-
-                            # --------------------------------------------------
-                            # Feedback ao usuário
-                            # --------------------------------------------------
-                            if resultado.matched_count == 1:
-                                st.success("Indicadores do projeto salvos com sucesso.", icon=":material/check:")
-                                time.sleep(3)
-                                st.rerun()
-                            else:
-                                st.error("Erro ao salvar indicadores do projeto.")
+                                    st.error("Erro ao salvar indicadores do projeto.")
 
 
 

@@ -116,7 +116,7 @@ def primeiro_acesso_dialog():
                 elif usuario.get("codigo_convite") != codigo_input:
                     st.error("Código inválido. Verifique o e-mail enviado.")
                 else:
-                    st.success(f"Código validado! Aguarde...")
+                    st.success(f"Código validado! Aguarde...", icon=":material/check:")
                     time.sleep(3)
                     # Guarda info na sessão
                     st.session_state.usuario_validado = True
@@ -158,7 +158,8 @@ def primeiro_acesso_dialog():
 
                     # Mensagem final
                     sucesso = st.success(
-                        "Senha cadastrada com sucesso.\n\nFaça o login normalmente."
+                        "Senha cadastrada com sucesso.\n\nFaça o login normalmente.",
+                        icon=":material/check:"
                     )
 
                     time.sleep(3)

@@ -969,15 +969,16 @@ with aba_cadastro:
 
         col_botao, col_titulo = st.columns([1, 30])
 
-        with col_botao:
+        if "visitante" not in st.session_state.tipo_usuario:
+            with col_botao:
 
-            if st.button(
-                "",
-                icon=":material/edit:",
-                key="editar_estados",
-                type="tertiary"
-            ):
-                dialog_editar_estados()
+                if st.button(
+                    "",
+                    icon=":material/edit:",
+                    key="editar_estados",
+                    type="tertiary"
+                ):
+                    dialog_editar_estados()
 
         with col_titulo:
 
@@ -1007,14 +1008,16 @@ with aba_cadastro:
 
         col_botao, col_titulo = st.columns([1, 30])
 
-        with col_botao:
-            if st.button(
-                "",
-                icon=":material/edit:",
-                key="editar_municipios",
-                type="tertiary"
-            ):
-                dialog_editar_municipios()
+        if "visitante" not in st.session_state.tipo_usuario:
+
+            with col_botao:
+                if st.button(
+                    "",
+                    icon=":material/edit:",
+                    key="editar_municipios",
+                    type="tertiary"
+                ):
+                    dialog_editar_municipios()
 
         with col_titulo:
             st.markdown("#### Municípios")
@@ -1045,14 +1048,16 @@ with aba_cadastro:
 
         col_botao, col_titulo = st.columns([1, 30])
 
-        with col_botao:
-            if st.button(
-                "",
-                icon=":material/edit:",
-                key="editar_localidades",
-                type="tertiary"
-            ):
-                dialog_editar_localidades()
+        if "visitante" not in st.session_state.tipo_usuario:
+
+            with col_botao:
+                if st.button(
+                    "",
+                    icon=":material/edit:",
+                    key="editar_localidades",
+                    type="tertiary"
+                ):
+                    dialog_editar_localidades()
 
         with col_titulo:
             st.markdown("#### Localidades e Comunidades")
@@ -1081,14 +1086,16 @@ with aba_cadastro:
 
         col_botao, col_titulo = st.columns([1, 30])
 
-        with col_botao:
-            if st.button(
-                "",
-                icon=":material/edit:",
-                key="editar_areas_protegidas",
-                type="tertiary"
-            ):
-                dialog_editar_areas_protegidas()
+        if "visitante" not in st.session_state.tipo_usuario:
+
+            with col_botao:
+                if st.button(
+                    "",
+                    icon=":material/edit:",
+                    key="editar_areas_protegidas",
+                    type="tertiary"
+                ):
+                    dialog_editar_areas_protegidas()
 
         with col_titulo:
             st.markdown("#### Áreas protegidas")
@@ -1122,14 +1129,16 @@ with aba_cadastro:
 
         col_botao, col_titulo = st.columns([1, 30])
 
-        with col_botao:
-            if st.button(
-                "",
-                icon=":material/edit:",
-                key="editar_corredores",
-                type="tertiary"
-            ):
-                dialog_editar_corredores()
+        if "visitante" not in st.session_state.tipo_usuario:
+
+            with col_botao:
+                if st.button(
+                    "",
+                    icon=":material/edit:",
+                    key="editar_corredores",
+                    type="tertiary"
+                ):
+                    dialog_editar_corredores()
 
         with col_titulo:
             st.markdown("#### Corredores Prioritários de Conservação")
@@ -1153,14 +1162,16 @@ with aba_cadastro:
 
         col_botao, col_titulo = st.columns([1, 30])
 
-        with col_botao:
-            if st.button(
-                "",
-                icon=":material/edit:",
-                key="editar_kbas",
-                type="tertiary"
-            ):
-                dialog_editar_kbas()
+        if "visitante" not in st.session_state.tipo_usuario:
+
+            with col_botao:
+                if st.button(
+                    "",
+                    icon=":material/edit:",
+                    key="editar_kbas",
+                    type="tertiary"
+                ):
+                    dialog_editar_kbas()
 
         with col_titulo:
             st.markdown("#### KBAs (Áreas Chave de Biodiversidade)")
@@ -1184,9 +1195,11 @@ with aba_cadastro:
 
         col_btn, col_title = st.columns([1, 30])
 
-        with col_btn:
-            if st.button("", icon=":material/edit:", type="tertiary"):
-                dialog_mapas()
+        if "visitante" not in st.session_state.tipo_usuario:
+
+            with col_btn:
+                if st.button("", icon=":material/edit:", type="tertiary"):
+                    dialog_mapas()
 
         with col_title:
             st.markdown("#### Mapas")

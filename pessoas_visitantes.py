@@ -185,18 +185,11 @@ def editar_pessoa(_id: str):
                     # Falhas individuais não interrompem o fluxo
                     continue
 
-        st.success("Pessoa atualizada com sucesso!")
+        st.success("Pessoa atualizada com sucesso!", icon=":material/check:")
         time.sleep(3)
         st.rerun()
 
 
-
-        # # Atualiza o registro
-        # col_pessoas.update_one({"_id": ObjectId(_id)}, {"$set": update_data})
-
-        # st.success("Pessoa atualizada com sucesso!")
-        # time.sleep(3)
-        # st.rerun()
 
 
 
