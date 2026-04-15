@@ -112,6 +112,8 @@ projeto = df_projeto.iloc[0].to_dict()
 # INTERFACE
 ###########################################################################################################
 
+sidebar_projeto()
+
 st.logo("images/ieb_logo.svg", size="large")
 
 col_titulo, col_identificacao = st.columns([3, 2])
@@ -127,7 +129,9 @@ with col_identificacao:
         unsafe_allow_html=True
     )
 
-sidebar_projeto()
+
+st.write("Não compartilhe as fotos externamente, pois podem ser visualizadas por qualquer pessoa com o link.")
+
 
 ###########################################################################################################
 # GALERIA DE FOTOS
