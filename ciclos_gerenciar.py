@@ -108,8 +108,10 @@ with tab1:
         with st.form(key="investidor_cadastro_form", border=False):
             st.write("")
 
-            sigla_investidor = st.text_input("Sigla do investidor: *")
-            nome_investidor = st.text_input("Nome do investidor: *")
+            col1, col2 = st.columns([1, 5])
+
+            sigla_investidor = col1.text_input("Sigla do investidor: *")
+            nome_investidor = col2.text_input("Nome do investidor: *")
 
             st.write("")
             submit_cadastro = st.form_submit_button(
@@ -149,7 +151,8 @@ with tab1:
         investidor_selecionado = st.selectbox(
             "Selecione o investidor:",
             options=[""] + lista_investidores,
-            index=0
+            index=0,
+            width=400
         )
 
         if investidor_selecionado:
@@ -161,13 +164,15 @@ with tab1:
                 with st.form(key="investidor_editar_form", border=False):
                     st.divider()
 
+                    col1, col2 = st.columns([1, 5])
+
                     # Sigla não editável
-                    sigla_investidor = st.text_input(
+                    sigla_investidor = col1.text_input(
                         "Sigla do investidor:",
                         value=investidor.get("sigla_investidor", ""),
                         disabled=True
                     )
-                    nome_investidor = st.text_input(
+                    nome_investidor = col2.text_input(
                         "Nome do investidor: *",
                         value=investidor.get("nome_investidor", "")
                     )
