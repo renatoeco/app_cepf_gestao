@@ -481,22 +481,29 @@ with tab4:
 
             st.write('')
 
-            codigo_edital = st.text_input("Codigo do edital: *")
+            col1, col2, col3 = st.columns(3)
+
+            codigo_edital = col1.text_input("Codigo do edital: *")
             nome_edital = st.text_input("Nome do edital: *")
-            data_lancamento = date_picker(
-                label="Data de lançamento",
-                format="dd/MM/yyyy",
-                locale="pt_BR",
-                one_tap=True,
-                key="data_lancamento"
-            )            
+
             codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
             codigos_ciclos.insert(0, "")  # adiciona uma opção vazia
 
-            ciclo = st.selectbox(
+            ciclo = col2.selectbox(
                 "Ciclo de Investimento: *",
                 options=sorted(codigos_ciclos),
             )
+
+
+            with col3:
+                data_lancamento = date_picker(
+                    label="Data de lançamento",
+                    format="dd/MM/yyyy",
+                    locale="pt_BR",
+                    one_tap=True,
+                    key="data_lancamento",
+                )            
+
 
             st.write('')
 
@@ -544,7 +551,8 @@ with tab4:
         edital_selecionado = st.selectbox(
             "Selecione o Edital:", 
             options=[""] + lista_editais,
-            index=0
+            index=0,
+            width=400
         )
 
         if edital_selecionado:
@@ -557,8 +565,11 @@ with tab4:
 
                     st.divider()
 
+                    col1, col2, col3 = st.columns(3)
+
+
                     # Campos preenchidos com dados existentes
-                    codigo_edital = st.text_input(
+                    codigo_edital = col1.text_input(
                         "Código do edital:",
                         value=edital.get("codigo_edital", ""),
                         disabled=True
@@ -569,26 +580,6 @@ with tab4:
                         value=edital.get("nome_edital", "")
                     )
 
-                    # Data de lançamento
-                    data_lancamento = edital.get("data_lancamento")
-                    if isinstance(data_lancamento, str):
-                        try:
-                            from datetime import datetime
-                            data_lancamento = datetime.strptime(data_lancamento, "%d/%m/%Y").date()
-                        except:
-                            data_lancamento = None
-                    elif data_lancamento:
-                        data_lancamento = data_lancamento.date()
-                    
-                    
-                    data_lancamento = date_picker(
-                        label="Data de lançamento",
-                        value=data_lancamento,
-                        format="dd/MM/yyyy",
-                        locale="pt_BR",
-                        one_tap=True,
-                        key="data_lancamento"
-                    )
 
 
                     # Ciclo de investimento vinculado
@@ -596,11 +587,37 @@ with tab4:
                     codigos_ciclos.insert(0, "")
 
                     ciclo_atual = edital.get("ciclo_investimento", "")
-                    ciclo = st.selectbox(
+                    ciclo = col2.selectbox(
                         "Ciclo de Investimento: *",
                         options=codigos_ciclos,
                         index=codigos_ciclos.index(ciclo_atual) if ciclo_atual in codigos_ciclos else 0
                     )
+
+
+                    with col3:
+
+                        # Data de lançamento
+                        data_lancamento = edital.get("data_lancamento")
+                        if isinstance(data_lancamento, str):
+                            try:
+                                from datetime import datetime
+                                data_lancamento = datetime.strptime(data_lancamento, "%d/%m/%Y").date()
+                            except:
+                                data_lancamento = None
+                        elif data_lancamento:
+                            data_lancamento = data_lancamento.date()
+                        
+                        
+                        data_lancamento = date_picker(
+                            label="Data de lançamento",
+                            value=data_lancamento,
+                            format="dd/MM/yyyy",
+                            locale="pt_BR",
+                            one_tap=True,
+                            key="data_lancamento"
+                        )
+
+
 
                     st.write('')
                     submit_editar = st.form_submit_button(
