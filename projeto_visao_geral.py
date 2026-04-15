@@ -9,7 +9,7 @@ import io
 import re
 from bson import ObjectId
 from zoneinfo import ZoneInfo
-
+from st_rsuite import date_picker
 
 # Google Drive API
 from google.oauth2.service_account import Credentials
@@ -1650,19 +1650,31 @@ else:
                 value=int(projeto["duracao"])
             )
 
-            # ---------- DATA DE INÍCIO DO CONTRATO ----------
-            data_inicio = col2.date_input(
-                "Data de início do contrato",
-                value=pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True),
-                format="DD/MM/YYYY"
-            )
 
-            # ---------- DATA DE FIM DO CONTRATO ----------
-            data_fim = col3.date_input(
-                "Data de fim do contrato",
-                value=pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True),
-                format="DD/MM/YYYY"
-            )
+            with col2:
+
+                # ---------- DATA DE INÍCIO DO CONTRATO ----------
+                data_inicio = date_picker(
+                    label="Data de início do contrato",
+                    value=pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True),
+                    format="dd/MM/yyyy",
+                    locale="pt_BR",
+                    one_tap=True,
+                    key="data_inicio_contrato"
+                )
+
+
+            with col3:
+
+                # ---------- DATA DE FIM DO CONTRATO ----------
+                data_fim = date_picker(
+                    label="Data de fim do contrato",
+                    value=pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True),
+                    format="dd/MM/yyyy",
+                    locale="pt_BR",
+                    one_tap=True,
+                    key="data_fim_contrato"
+                )
 
 
 

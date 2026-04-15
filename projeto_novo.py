@@ -182,22 +182,17 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
             placeholder="dd/mm/aaaa",
         )
 
-    # with col3:
-    #     data_fim = date_picker(
-    #         label="Data de Fim",
-    #         value=st.session_state.form_projeto["data_fim"],
-    #         format="dd/MM/yyyy",
-    #         locale="pt_BR",
-    #         one_tap=True,
-    #         key="data_fim"
-    #     )
+    with col3:
+        data_fim = date_picker(
+            label="Data de Fim",
+            value=st.session_state.form_projeto["data_fim"],
+            format="dd/MM/yyyy",
+            locale="pt_BR",
+            one_tap=True,
+            key="data_fim"
+        )
 
 
-    # data_inicio = col2.date_input(
-    #     "Data de Início *",
-    #     value=st.session_state.form_projeto["data_inicio"],
-    #     format="DD/MM/YYYY"
-    # )
 
     data_fim = col3.date_input(
         "Data de Fim *",

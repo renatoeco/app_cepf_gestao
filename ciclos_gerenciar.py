@@ -3,6 +3,7 @@ from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personaliz
 import pandas as pd
 import time
 import datetime
+from st_rsuite import date_picker
 
 
 
@@ -477,8 +478,13 @@ with tab4:
 
             codigo_edital = st.text_input("Codigo do edital: *")
             nome_edital = st.text_input("Nome do edital: *")
-            data_lancamento = st.date_input("Data de lançamento: *", format="DD/MM/YYYY")
-            
+            data_lancamento = date_picker(
+                label="Data de lançamento",
+                format="dd/MM/yyyy",
+                locale="pt_BR",
+                one_tap=True,
+                key="data_lancamento"
+            )            
             codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
             codigos_ciclos.insert(0, "")  # adiciona uma opção vazia
 
@@ -568,12 +574,17 @@ with tab4:
                             data_lancamento = None
                     elif data_lancamento:
                         data_lancamento = data_lancamento.date()
-
-                    data_lancamento = st.date_input(
-                        "Data de lançamento: *",
+                    
+                    
+                    data_lancamento = date_picker(
+                        label="Data de lançamento",
                         value=data_lancamento,
-                        format="DD/MM/YYYY"
+                        format="dd/MM/yyyy",
+                        locale="pt_BR",
+                        one_tap=True,
+                        key="data_lancamento"
                     )
+
 
                     # Ciclo de investimento vinculado
                     codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))

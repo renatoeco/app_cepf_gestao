@@ -6,6 +6,7 @@ import os
 import uuid
 
 import streamlit_shadcn_ui as ui
+from st_rsuite import date_picker
 
 # Geração de docx
 from docx import Document
@@ -3626,12 +3627,19 @@ if usuario_interno:
                     # --------------------------------------------------
                     # Data do pagamento (obrigatória)
                     # --------------------------------------------------
-                    data_pagamento = st.date_input(
-                        "Data do pagamento:",
-                        format="DD/MM/YYYY",
-                        key=f"data_pagamento_{numero}",
-                        width=180
-                    )
+
+                    col1, col2 = st.columns([1, 4])
+
+                    with col1:
+                        data_pagamento = date_picker(
+                            label="Data do pagamento",
+                            format="dd/MM/yyyy",
+                            locale="pt_BR",
+                            one_tap=True,
+                            key=f"data_pagamento_{numero}",
+                        )
+
+
 
                     # --------------------------------------------------
                     # Upload do arquivo
