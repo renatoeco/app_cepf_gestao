@@ -57,17 +57,18 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
         msg = MIMEMultipart()
         msg['From'] = endereco_email
         msg['To'] = email_destino
-        msg['Subject'] = "Convite para a Plataforma CEPF"
+        msg['Subject'] = "Convite para o sistema Veredas"
 
         corpo_html = f"""
         <p>Olá {nome_completo},</p>
-        <p>Você foi convidado para utilizar a <strong>Plataforma de Gestão de Projetos do CEPF</strong>.</p>
+        <p>Você foi convidado para utilizar o <strong>Sistema Veredas</strong>, a plataforma de gestão de projetos do IEB.</p>
         <p>Para realizar seu cadastro, acesse o link abaixo e clique no botão <strong>"Primeiro acesso"</strong>:</p>
         <p><a href="https://valid-veredas.streamlit.app/">Acesse aqui a Plataforma</a></p>
         <p>Insira o seu <strong>e-mail</strong> e o <strong>código</strong> que te enviamos abaixo:</p>
         <h2>{codigo}</h2>
-        <p>Se tiver alguma dúvida, entre em contato com a equipe do CEPF.</p>
+        <p>Se tiver alguma dúvida, entre em contato com a equipe do IEB.</p>
         """
+
         msg.attach(MIMEText(corpo_html, 'html'))
 
         server = smtplib.SMTP(smtp_server, port)
@@ -76,7 +77,6 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
         server.send_message(msg)
         server.quit()
 
-        # st.success(f":material/mail: E-mail de convite enviado para {email_destino}.")
         return True
     except Exception as e:
         st.error(f"Erro ao enviar e-mail para {email_destino}: {e}")

@@ -530,7 +530,7 @@ def enviar_email_remanejamento_recusado(
         <p>{motivo_recusa}</p>
 
         <br>
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -700,7 +700,7 @@ def enviar_email_remanejamento_aprovado(
         </p>
 
         <br>
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -732,8 +732,6 @@ def enviar_email_remanejamento(
     Envia e-mail para:
     • tipo_usuario in ["admin", "equipe"]
     • pessoa vinculada ao projeto
-
-    Usa HTML padrão do sistema.
     """
 
     col_pessoas = db["pessoas"]
@@ -890,7 +888,7 @@ def enviar_email_remanejamento(
                 <p>{mensagem_status}</p>
 
                 <br>
-                <p>Sistema de Gestão de Projetos</p>
+                <p>Sistema Veredas</p>
 
             </div>
 

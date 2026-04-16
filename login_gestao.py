@@ -60,7 +60,7 @@ def enviar_email(destinatario, codigo):
     senha = st.secrets["senhas"]["senha_email"]
 
     # Conteúdo do e_mail
-    assunto = f"Código de Verificação - CEPF Gestão: {codigo}"
+    assunto = f"Código de Verificação - Veredas: {codigo}"
     corpo = f"""
     <html>
         <body>
@@ -527,9 +527,6 @@ else:
     # ----------------------------------------------------------------------
 
 
-
-# ????????????????
-    # st.write(st.session_state)
 
     # Garante que tipo_usuario existe
     # tipo_usuario = set(st.session_state.get("tipo_usuario", []))

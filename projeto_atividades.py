@@ -768,7 +768,7 @@ def enviar_email_remanejamento_atividade(
         max-width: 760px;
         margin: 0 auto;
         background: white;
-        border-top: 6px solid #28A745; /* verde */
+        border-top: 6px solid #A0C256; /* verde */
         padding: 30px;
     }}
 
@@ -778,7 +778,7 @@ def enviar_email_remanejamento_atividade(
     }}
 
     .highlight {{
-        color: #28A745;
+        color: #A0C256;
         font-weight: bold;
     }}
 
@@ -818,7 +818,7 @@ def enviar_email_remanejamento_atividade(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -921,7 +921,7 @@ def enviar_email_remanejamento_atividade_aprovado(
         max-width: 760px;
         margin: 0 auto;
         background: white;
-        border-top: 6px solid #28A745;
+        border-top: 6px solid #A0C256;
         padding: 30px;
     }}
 
@@ -931,7 +931,7 @@ def enviar_email_remanejamento_atividade_aprovado(
     }}
 
     .highlight {{
-        color: #28A745;
+        color: #A0C256;
         font-weight: bold;
     }}
 
@@ -981,7 +981,7 @@ def enviar_email_remanejamento_atividade_aprovado(
         <p>{justificativa}</p>
 
         <br>
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1148,7 +1148,7 @@ def enviar_email_remanejamento_atividade_recusado(
         <p>{motivo_recusa}</p>
 
         <br>
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1214,7 +1214,7 @@ def enviar_email_nova_atividade(
         max-width:760px;
         margin:auto;
         background:white;
-        border-top:6px solid #28A745;
+        border-top:6px solid #A0C256;
         padding:30px;
     }}
 
@@ -1254,7 +1254,7 @@ def enviar_email_nova_atividade(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1330,7 +1330,7 @@ def enviar_email_nova_atividade_aprovada(
         max-width: 760px;
         margin: 0 auto;
         background: white;
-        border-top: 6px solid #28A745;
+        border-top: 6px solid #A0C256;
         padding: 30px;
     }}
 
@@ -1340,7 +1340,7 @@ def enviar_email_nova_atividade_aprovada(
     }}
 
     .highlight {{
-        color: #28A745;
+        color: #A0C256;
         font-weight: bold;
     }}
 
@@ -1409,7 +1409,7 @@ def enviar_email_nova_atividade_aprovada(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1551,7 +1551,7 @@ def enviar_email_nova_atividade_recusada(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1619,7 +1619,7 @@ def enviar_email_remocao_atividade_solicitada(
         max-width: 760px;
         margin: 0 auto;
         background: white;
-        border-top: 6px solid #28A745;
+        border-top: 6px solid #A0C256;
         padding: 30px;
     }}
 
@@ -1629,7 +1629,7 @@ def enviar_email_remocao_atividade_solicitada(
     }}
 
     .highlight {{
-        color: #28A745;
+        color: #A0C256;
         font-weight: bold;
     }}
 
@@ -1664,7 +1664,7 @@ def enviar_email_remocao_atividade_solicitada(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1731,7 +1731,7 @@ def enviar_email_remocao_atividade_aprovada(
         max-width: 760px;
         margin: 0 auto;
         background: white;
-        border-top: 6px solid #28A745;
+        border-top: 6px solid #A0C256;
         padding: 30px;
     }}
 
@@ -1741,7 +1741,7 @@ def enviar_email_remocao_atividade_aprovada(
     }}
 
     .highlight {{
-        color: #28A745;
+        color: #A0C256;
         font-weight: bold;
     }}
 
@@ -1781,7 +1781,7 @@ def enviar_email_remocao_atividade_aprovada(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 
@@ -1904,7 +1904,7 @@ def enviar_email_remocao_atividade_recusada(
 
         <br>
 
-        <p>Sistema de Gestão de Projetos</p>
+        <p>Sistema Veredas</p>
 
     </div>
 

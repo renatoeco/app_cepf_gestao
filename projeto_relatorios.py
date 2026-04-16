@@ -983,16 +983,6 @@ def gerar_docx_relatorio(relatorio, projeto):
 
 
 
-
-
-
-
-
-
-
-
-
-
 def calcular_saldo_parcela():
     # ==================================================
     # CÁLCULO DO SALDO DA PARCELA
@@ -1157,7 +1147,7 @@ def gerar_email_relatorio_aprovado(
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            border-top: 6px solid #2e7d32;
+            border-top: 6px solid #A0C256;
             padding: 30px;
         }}
         .logo {{
@@ -1176,7 +1166,7 @@ def gerar_email_relatorio_aprovado(
             text-align: center;
         }}
         .highlight {{
-            color: #2e7d32;
+            color: #A0C256;
             font-weight: bold;
         }}
     </style>
@@ -1205,7 +1195,7 @@ def gerar_email_relatorio_aprovado(
 
             <p>
                 Atenciosamente,<br>
-                <strong>Sistema de Gestão de Projetos do IEB</strong>
+                <strong>Sistema Veredas</strong>
             </p>
         </div>
 
@@ -1276,7 +1266,7 @@ def montar_email_relatorio_envio(
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            border-top: 6px solid #b30000;
+            border-top: 6px solid #A0C256;
             padding: 30px;
         }}
         .logo {{
@@ -1295,7 +1285,7 @@ def montar_email_relatorio_envio(
             text-align: center;
         }}
         .highlight {{
-            color: #b30000;
+            color: #A0C256;
             font-weight: bold;
         }}
     </style>
@@ -1321,7 +1311,7 @@ def montar_email_relatorio_envio(
             </p>
 
             <p>Atenciosamente,<br>
-            <strong>Sistema de Gestão de Projetos</strong></p>
+            <strong>Sistema Veredas</strong></p>
         </div>
 
         <div class="footer">
