@@ -1277,7 +1277,10 @@ with aba_mapas:
                     <b>Código:</b> {row['codigo']}<br>
                     <b>Projeto:</b> {row['nome_projeto']}<br>
                     <b>Município:</b> {row['municipio']}<br>
-                    <b>Localidade:</b> {row['localidade']}
+                    <b>Localidade:</b> {row['localidade']}<br>
+                    <b>Latitude:</b> {row['latitude']}<br>
+                    <b>Longitude:</b> {row['longitude']}<br>
+
                 </div>
                 """
 
