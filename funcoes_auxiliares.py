@@ -1091,6 +1091,8 @@ def sidebar_projeto():
 
     # Pequeno cabeçalho no sidebar
 
+    st.sidebar.write('')
+
     tipo_usuario = st.session_state.get("tipo_usuario")
 
 
@@ -1112,20 +1114,21 @@ def sidebar_projeto():
     st.sidebar.caption("Projeto: " + st.session_state.get("projeto_atual", "-"))
 
 
-    st.sidebar.divider()
 
     if tipo_usuario == 'beneficiario':
+
+        st.sidebar.divider()
 
         st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com cepfcerrado@iieb.org.br")
 
 
-    st.sidebar.write('')
+    # st.sidebar.write('')
 
-    # Botão para 'logout'
-    if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
-        st.session_state.clear()
+    # # Botão para 'logout'
+    # if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
+    #     st.session_state.clear()
 
-        st.rerun()
+    #     st.rerun()
 
 
 

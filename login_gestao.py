@@ -498,6 +498,7 @@ else:
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
             st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
             st.Page("projeto_fotos.py", title="Fotos", icon=":material/image:"),
+            st.Page("sair.py", title="Sair", icon=":material/logout:")
         ],
 
 
@@ -506,12 +507,12 @@ else:
             ],
        
 
-        "visitante": {
-            "PROJETOS": [
-                st.Page("projetos_home_visao_geral.py", title="Projetos", icon=":material/assignment:"),
-                st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-            ],
-        },
+        # "visitante": {
+        #     "PROJETOS": [
+        #         st.Page("projetos_home_visao_geral.py", title="Projetos", icon=":material/assignment:"),
+        #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
+        #     ],
+        # },
     }
 
 
@@ -529,7 +530,6 @@ else:
 
 
     # Garante que tipo_usuario existe
-    # tipo_usuario = set(st.session_state.get("tipo_usuario", []))
     tipo_usuario = st.session_state.get("tipo_usuario", "")
 
 

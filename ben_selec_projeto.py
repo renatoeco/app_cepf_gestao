@@ -36,19 +36,11 @@ registrar_estatistica_sessao(db)
 
 
 
-###########################################################################################################
-# FUNÇÕES
-###########################################################################################################
-
-
-
 
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
-# Define o layout da página como largura total
-# st.set_page_config(layout="centered")
 
 # Exibe o logo
 container_logo = st.container(horizontal=True, horizontal_alignment="center")
@@ -117,3 +109,20 @@ with col2:
         st.write("Não há projetos associados a este usuário.")
         st.write("Entre em contato com os administradores do sistema.")
 
+
+    st.write('')
+    st.write('')
+    st.write('')
+    st.write('')
+
+    # Botão de sair
+
+    if st.button("Sair", icon=":material/logout:", type="tertiary"):
+        # limpeza total da sessão
+        st.session_state.clear()
+
+        # define explicitamente estado não autenticado
+        st.session_state["logged_in"] = False
+
+        # reinicia aplicação para voltar ao fluxo inicial (login)
+        st.rerun()
