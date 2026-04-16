@@ -1074,9 +1074,11 @@ def sidebar_projeto():
                 st.rerun()
 
 
-    # Botão de voltar para beneficiário — apenas se tiver mais de um projeto
+    # Botão de voltar para beneficiário e visitante - apenas se tiver mais de um projeto
     if (
-        st.session_state.get("tipo_usuario") == "beneficiario"
+        st.session_state.tipo_usuario in ['beneficiario', 'visitante']
+
+        # st.session_state.get("tipo_usuario") == "beneficiario"
         and len(st.session_state.get("projetos", [])) > 1
     ):
         if st.sidebar.button("Voltar", icon=":material/arrow_back:", type="tertiary"):
