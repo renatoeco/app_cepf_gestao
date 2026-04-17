@@ -220,7 +220,8 @@ opcao_relatorio = st.radio(
         "Relatório de salvaguardas",
         "Relatório de acompanhamento de desembolsos",
         "Relatório de acompanhamento de desembolsos por parcela",
-        "Relatório de acompanhamento completo"
+        "Relatório de acompanhamento completo",
+        "Lista de comunidades"
     ]
 )
 
@@ -2265,7 +2266,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             "KBAs": kbas_str,
                             "Áreas protegidas": areas_protegidas_str,
                             "Corredores": corredores_str,
-                                                        
+
                             "Verificação de Segurança (CSI Number)": "",
 
                             "VALOR TOTAL (R$)": valor_total,
@@ -2393,3 +2394,171 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
     ###################################################################################################
     if st.session_state.arquivo_acompanhamento_completo:
         st.caption("Relatório gerado. Clique para baixar.")
+
+
+
+
+
+
+
+
+
+
+
+
+elif opcao_relatorio == "Lista de comunidades":
+
+    st.subheader("Lista de comunidades")
+
+    ###################################################################################################
+    # FILTRO DE EDITAIS
+    ###################################################################################################
+    projetos, edital_selecionado_obj = filtro_editais()
+
+    st.write(f"{len(projetos)} projetos")
+
+    st.write('')
+    st.write('')
+
+
+    ###################################################################################################
+    # SESSION STATE
+    ###################################################################################################
+    if "arquivo_lista_comunidades" not in st.session_state:
+        st.session_state.arquivo_lista_comunidades = None
+
+
+    ###################################################################################################
+    # BOTÕES
+    ###################################################################################################
+    with st.container(horizontal=True):
+
+        ###################################################################################################
+        # BOTÃO GERAR RELATÓRIO (APENAS SE EDITAL FOI SELECIONADO)
+        ###################################################################################################
+        if edital_selecionado_obj:
+
+            gerar = st.button("Gerar relatório", icon=":material/list_alt_add:")
+
+            if gerar:
+
+                ###################################################################################################
+                # VALIDAÇÃO
+                ###################################################################################################
+                if not projetos:
+                    st.warning("Nenhum projeto encontrado para o edital selecionado.", icon=":material/warning:")
+                    st.session_state.arquivo_lista_comunidades = None
+                    time.sleep(3)
+
+                else:
+
+                    with st.spinner("Gerando relatório..."):
+
+                        ###################################################################################################
+                        # MONTAGEM DOS DADOS
+                        ###################################################################################################
+                        dados = []
+
+                        for p in projetos:
+
+                            ###################################################################################################
+                            # DADOS BÁSICOS
+                            ###################################################################################################
+                            codigo = p.get("codigo", "")
+                            sigla = p.get("sigla", "")
+
+                            id_org = p.get("id_organizacao")
+                            org_info = mapa_organizacoes.get(str(id_org), {}) if id_org else {}
+                            nome_organizacao = org_info.get("nome", "")
+
+                            linha = {
+                                "Código": codigo,
+                                "Sigla": sigla,
+                                "Organização": nome_organizacao
+                            }
+
+                            ###################################################################################################
+                            # LOCALIDADES
+                            ###################################################################################################
+                            localidades = p.get("locais", {}).get("localidades", [])
+
+                            for idx, loc in enumerate(localidades, start=1):
+
+                                linha[f"Nome da localidade {idx}"] = loc.get("nome_localidade", "")
+                                linha[f"Município {idx}"] = loc.get("municipio", "")
+                                linha[f"Latitude {idx}"] = loc.get("latitude", "")
+                                linha[f"Longitude {idx}"] = loc.get("longitude", "")
+
+                                ###################################################################################################
+                                # BENEFICIÁRIOS
+                                ###################################################################################################
+                                beneficiarios = loc.get("beneficiarios", [])
+
+                                tipos_beneficiarios = [
+                                    b.get("tipo_beneficiario", "")
+                                    for b in beneficiarios
+                                    if b.get("tipo_beneficiario")
+                                ]
+
+                                linha[f"Beneficiários {idx}"] = ", ".join(tipos_beneficiarios)
+
+                            dados.append(linha)
+
+                        ###################################################################################################
+                        # DATAFRAME E EXCEL
+                        ###################################################################################################
+                        df = pd.DataFrame(dados)
+
+                        buffer = io.BytesIO()
+
+                        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                            df.to_excel(writer, index=False, sheet_name="Lista de comunidades")
+
+                        buffer.seek(0)
+
+                        st.session_state.arquivo_lista_comunidades = buffer
+
+                        st.rerun()
+
+
+        ###################################################################################################
+        # BOTÃO DOWNLOAD (PRIMARY)
+        ###################################################################################################
+        if st.session_state.arquivo_lista_comunidades:
+
+            nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
+            nome_edital_arquivo = nome_edital.replace(" ", "_")
+
+            download_clicado = st.download_button(
+                label="Baixar relatório",
+                icon=":material/download:",
+                data=st.session_state.arquivo_lista_comunidades,
+                file_name=f"Lista_de_comunidades_{nome_edital_arquivo}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary"
+            )
+
+            ###################################################################################################
+            # LIMPA APÓS DOWNLOAD
+            ###################################################################################################
+            if download_clicado:
+                st.session_state.arquivo_lista_comunidades = None
+                st.rerun()
+
+
+
+
+
+
+
+
+
+    ###################################################################################################
+    # MENSAGEM FINAL
+    ###################################################################################################
+    if st.session_state.arquivo_lista_comunidades:
+        st.caption("Relatório gerado. Clique para baixar.")
+
+
+
+

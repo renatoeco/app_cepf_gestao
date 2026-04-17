@@ -5666,7 +5666,8 @@ if step_selecionado == "Beneficiários":
 
                 st.success(
                     f"Beneficiários da comunidade "
-                    f"**{nome_localidade}** salvos com sucesso."
+                    f"**{nome_localidade}** salvos com sucesso.",
+                    icon=":material/check:"
                 )
                 time.sleep(3)
                 st.rerun()
