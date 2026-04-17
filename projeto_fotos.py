@@ -129,8 +129,7 @@ with col_identificacao:
         unsafe_allow_html=True
     )
 
-
-st.write("Não compartilhe as fotos externamente, pois podem ser visualizadas por qualquer pessoa com o link.")
+st.write("Cuidado ao compartilhar os links externamente, pois podem ser acessados por qualquer pessoa.")
 
 
 ###########################################################################################################
