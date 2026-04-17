@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao # Funções personalizadas
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, obter_servico_drive, obter_pasta_projeto, add_permissao_drive
 import pandas as pd
 import locale
 import re
@@ -210,95 +210,138 @@ if opcao_cadastro == "Convite individual":
 
 
     if submit_button:
-        # 1) Validações
-        if not st.session_state["nome_completo_novo"] or not st.session_state["tipo_novo_usuario"] \
-        or not st.session_state["e_mail"] or not st.session_state["telefone"]:
-            st.error(":material/error: Todos os campos obrigatórios devem ser preenchidos.")
-            st.stop()
-
-        if st.session_state["tipo_novo_usuario"] == "beneficiario" and not st.session_state.get("tipo_beneficiario"):
-            st.error(":material/error: O campo 'Tipo de beneficiário' é obrigatório para beneficiários.")
-            st.stop()
-
-        if not validar_email(st.session_state["e_mail"]):
-            st.error(":material/error: E-mail inválido.")
-            st.stop()
-
-        if col_pessoas.find_one({"e_mail": st.session_state["e_mail"]}):
-            st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
-            st.stop()
-
-        # 2) Gera código de 6 dígitos
-        codigo_6_digitos = gerar_codigo_aleatorio()
-
-        # 3) Monta documento a inserir no MongoDB
-        novo_doc = {
-            "nome_completo": st.session_state["nome_completo_novo"],
-            "tipo_usuario": st.session_state["tipo_novo_usuario"],
-            "e_mail": st.session_state["e_mail"],
-            "telefone": st.session_state["telefone"],
-            "status": "convidado",
-            "projetos": st.session_state.get("projetos_escolhidos", []),
-            "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
-            "senha": None,
-            "codigo_convite": codigo_6_digitos
-        }
-
-        if st.session_state["tipo_novo_usuario"] == "beneficiario":
-            novo_doc["tipo_beneficiario"] = st.session_state.get("tipo_beneficiario")
-
-        # 4) Inserir no banco
-        col_pessoas.insert_one(novo_doc)
-
-
-
-
-        # ==========================================================
-        # Atualiza contatos nos projetos (apenas para beneficiários)
-        # ==========================================================
-        if st.session_state["tipo_novo_usuario"] == "beneficiario":
-
-            for codigo_projeto in st.session_state.get("projetos_escolhidos", []):
-
-                # busca o projeto pelo código
-                projeto = col_projetos.find_one({"codigo": codigo_projeto})
-
-                if not projeto:
-                    continue  # projeto não encontrado, ignora
-
-                # garante que a chave 'contatos' exista
-                contatos = projeto.get("contatos", [])
-
-                # verifica se já existe contato com o mesmo e-mail
-                ja_existe = any(
-                    c.get("email", "").lower() == st.session_state["e_mail"].lower()
-                    for c in contatos
-                )
-
-                if not ja_existe:
-
-                    novo_contato = {
-                        "nome": st.session_state["nome_completo_novo"],
-                        "funcao": "Usuário(a) do sistema",
-                        "telefone": st.session_state["telefone"],
-                        "email": st.session_state["e_mail"],
-                        "assina_docs": False
-                    }
-
-                    # adiciona o contato ao projeto
-                    col_projetos.update_one(
-                        {"_id": projeto["_id"]},
-                        {"$push": {"contatos": novo_contato}}
-                    )
-
-
-
-
 
         with st.spinner("Cadastrando pessoa... aguarde..."):
 
 
-            st.success(":material/check: Pessoa cadastrada com sucesso. E-mail de convite enviado.")
+            # 1) Validações
+            if not st.session_state["nome_completo_novo"] or not st.session_state["tipo_novo_usuario"] \
+            or not st.session_state["e_mail"] or not st.session_state["telefone"]:
+                st.error(":material/error: Todos os campos obrigatórios devem ser preenchidos.")
+                st.stop()
+
+            if st.session_state["tipo_novo_usuario"] == "beneficiario" and not st.session_state.get("tipo_beneficiario"):
+                st.error(":material/error: O campo 'Tipo de beneficiário' é obrigatório para beneficiários.")
+                st.stop()
+
+            if not validar_email(st.session_state["e_mail"]):
+                st.error(":material/error: E-mail inválido.")
+                st.stop()
+
+            if col_pessoas.find_one({"e_mail": st.session_state["e_mail"]}):
+                st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
+                st.stop()
+
+            # 2) Gera código de 6 dígitos
+            codigo_6_digitos = gerar_codigo_aleatorio()
+
+            # 3) Monta documento a inserir no MongoDB
+            novo_doc = {
+                "nome_completo": st.session_state["nome_completo_novo"],
+                "tipo_usuario": st.session_state["tipo_novo_usuario"],
+                "e_mail": st.session_state["e_mail"],
+                "telefone": st.session_state["telefone"],
+                "status": "convidado",
+                "projetos": st.session_state.get("projetos_escolhidos", []),
+                "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
+                "senha": None,
+                "codigo_convite": codigo_6_digitos
+            }
+
+            if st.session_state["tipo_novo_usuario"] == "beneficiario":
+                novo_doc["tipo_beneficiario"] = st.session_state.get("tipo_beneficiario")
+
+            # 4) Inserir no banco
+            col_pessoas.insert_one(novo_doc)
+
+
+
+            # ==========================================================
+            # Concede permissões no Google Drive para os projetos selecionados
+            # ==========================================================
+
+            # Só executa se houver e-mail válido
+            if st.session_state.get("e_mail"):
+
+                # Inicializa serviço do Drive sob demanda
+                servico_drive = obter_servico_drive()
+
+                for codigo_projeto in st.session_state.get("projetos_escolhidos", []):
+
+                    try:
+                        # Busca o projeto para obter a sigla
+                        projeto = col_projetos.find_one({"codigo": codigo_projeto})
+
+                        if not projeto:
+                            continue
+
+                        sigla = projeto.get("sigla", "")
+
+                        # Obtém (ou cria) a pasta do projeto
+                        pasta_id = obter_pasta_projeto(
+                            servico_drive,
+                            codigo_projeto,
+                            sigla
+                        )
+
+                        # Estrutura mínima esperada pela função
+                        contato_drive = {
+                            "email": st.session_state["e_mail"]
+                        }
+
+                        # Aplica permissão de leitura
+                        add_permissao_drive(servico_drive, pasta_id, contato_drive)
+
+                    except Exception:
+                        # Falhas individuais não interrompem o fluxo
+                        continue
+
+
+
+
+
+            # ==========================================================
+            # Atualiza contatos nos projetos (apenas para beneficiários)
+            # ==========================================================
+            if st.session_state["tipo_novo_usuario"] == "beneficiario":
+
+                for codigo_projeto in st.session_state.get("projetos_escolhidos", []):
+
+                    # busca o projeto pelo código
+                    projeto = col_projetos.find_one({"codigo": codigo_projeto})
+
+                    if not projeto:
+                        continue  # projeto não encontrado, ignora
+
+                    # garante que a chave 'contatos' exista
+                    contatos = projeto.get("contatos", [])
+
+                    # verifica se já existe contato com o mesmo e-mail
+                    ja_existe = any(
+                        c.get("email", "").lower() == st.session_state["e_mail"].lower()
+                        for c in contatos
+                    )
+
+                    if not ja_existe:
+
+                        novo_contato = {
+                            "nome": st.session_state["nome_completo_novo"],
+                            "funcao": "Usuário(a) do sistema",
+                            "telefone": st.session_state["telefone"],
+                            "email": st.session_state["e_mail"],
+                            "assina_docs": False
+                        }
+
+                        # adiciona o contato ao projeto
+                        col_projetos.update_one(
+                            {"_id": projeto["_id"]},
+                            {"$push": {"contatos": novo_contato}}
+                        )
+
+
+
+
+
 
             # 5) Envio do e-mail de convite
             enviado = enviar_email_convite(
@@ -307,6 +350,7 @@ if opcao_cadastro == "Convite individual":
                 codigo=codigo_6_digitos
             )
 
+            st.success(":material/check: Pessoa cadastrada com sucesso. E-mail de convite enviado.")
 
 
             # 6) Limpar campos do formulário e rerun
@@ -516,52 +560,64 @@ elif opcao_cadastro == "Convite em massa":
             # ==========================================================
             if st.button(":material/save: Confirmar e convidar pessoas", type="primary"):
 
-                registros = []
-                for _, row in df_upload.iterrows():
-
-                    # gera código único para cada pessoa
-                    codigo_6_digitos_massa = gerar_codigo_aleatorio()
-
-                    doc = {
-                        "nome_completo": row["nome_completo"],
-                        "tipo_usuario": "beneficiario",
-                        "tipo_beneficiario": row["tipo_beneficiario"],
-                        "e_mail": row["e_mail"],
-                        "status": "convidado",
-                        "codigo_convite": codigo_6_digitos_massa,
-                        "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
-                        "senha": None
-                    }
-
-                    if pd.notna(row["telefone (opcional)"]) and str(row["telefone (opcional)"]).strip():
-                        doc["telefone"] = str(row["telefone (opcional)"]).strip()
-
-                    if row["projetos"]:
-                        doc["projetos"] = row["projetos"]
-
-                    registros.append(doc)
-
-                # 1) Inserção em massa no banco
-                resultado = col_pessoas.insert_many(registros)
-
-                st.success(f":material/check: {len(resultado.inserted_ids)} pessoas cadastradas no banco de dados!")
-                st.write('')
-
-                # 2) Envio de e-mails com barra de progresso
-
-                st.write('')
-
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-
-                total = len(registros)
-                falhas = []  # <- LISTA PARA ARMAZENAR FALHAS
-
-
-
-                status_line = st.empty()   # <-- Placeholder que será atualizado a cada iteração
-
                 with st.spinner("Enviando e-mails... Aguarde..."):
+
+
+
+                    registros = []
+                    for _, row in df_upload.iterrows():
+
+                        # gera código único para cada pessoa
+                        codigo_6_digitos_massa = gerar_codigo_aleatorio()
+
+                        doc = {
+                            "nome_completo": row["nome_completo"],
+                            "tipo_usuario": "beneficiario",
+                            "tipo_beneficiario": row["tipo_beneficiario"],
+                            "e_mail": row["e_mail"],
+                            "status": "convidado",
+                            "codigo_convite": codigo_6_digitos_massa,
+                            "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
+                            "senha": None
+                        }
+
+                        if pd.notna(row["telefone (opcional)"]) and str(row["telefone (opcional)"]).strip():
+                            doc["telefone"] = str(row["telefone (opcional)"]).strip()
+
+                        if row["projetos"]:
+                            doc["projetos"] = row["projetos"]
+
+                        registros.append(doc)
+
+                    # 1) Inserção em massa no banco
+                    resultado = col_pessoas.insert_many(registros)
+
+                    st.success(f":material/check: {len(resultado.inserted_ids)} pessoas cadastradas no banco de dados!")
+                    st.write('')
+
+                    # 2) Envio de e-mails com barra de progresso
+
+                    st.write('')
+
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+
+                    total = len(registros)
+                    falhas = []  # <- LISTA PARA ARMAZENAR FALHAS
+
+
+
+                    status_line = st.empty()   # <-- Placeholder que será atualizado a cada iteração
+
+
+
+                    # Inicializa serviço do Drive uma única vez
+                    servico_drive = obter_servico_drive()
+
+
+
+
+
 
                     for i, pessoa in enumerate(registros):
 
@@ -583,14 +639,49 @@ elif opcao_cadastro == "Convite em massa":
                             falhas.append((email, str(e)))
                             status_line.error(f":material/error: Falha ao enviar e-mail para {email}. Erro: {e}")
 
+                        # ==========================================================
+                        # Concede permissões no Google Drive para os projetos da pessoa
+                        # ==========================================================
+
+                        if email:
+
+                            for codigo_projeto in pessoa.get("projetos", []):
+
+                                try:
+                                    # Busca o projeto para obter a sigla
+                                    projeto = col_projetos.find_one({"codigo": codigo_projeto})
+
+                                    if not projeto:
+                                        continue
+
+                                    sigla = projeto.get("sigla", "")
+
+                                    # Obtém (ou cria) a pasta do projeto
+                                    pasta_id = obter_pasta_projeto(
+                                        servico_drive,
+                                        codigo_projeto,
+                                        sigla
+                                    )
+
+                                    # Estrutura mínima esperada pela função
+                                    contato_drive = {
+                                        "email": email
+                                    }
+
+                                    # Aplica permissão de leitura
+                                    add_permissao_drive(servico_drive, pasta_id, contato_drive)
+
+                                except Exception:
+                                    # Falhas individuais não interrompem o fluxo
+                                    continue
+
                         progress_bar.progress((i + 1) / total)
 
                         time.sleep(2)
 
+
                 # Após terminar, limpar o placeholder
                 status_line.empty()
-
-
 
 
 
@@ -611,7 +702,7 @@ elif opcao_cadastro == "Convite em massa":
 
                 # Resetar uploader
                 st.session_state['uploader_key'] = str(uuid.uuid4())
-                time.sleep(3)
+                time.sleep(10)
                 st.rerun()
 
 
