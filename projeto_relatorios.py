@@ -1535,9 +1535,23 @@ def dialog_lanc_financ(relatorio_numero, projeto, col_projetos):
             if not fornecedor or not fornecedor.strip():
                 erros_campos.append("Fornecedor")
 
-            # Validação do CPF/CNPJ
+
+
+            # ==================================================
+            # VALIDAÇÃO DO CPF / CNPJ
+            # ==================================================
+
             if not cpf_cnpj or not cpf_cnpj.strip():
                 erros_campos.append("CPF / CNPJ")
+            else:
+                # Remove tudo que não for número
+                cpf_cnpj_numeros = "".join(filter(str.isdigit, cpf_cnpj))
+
+                # Verifica se tem 11 (CPF) ou 14 (CNPJ) dígitos
+                if len(cpf_cnpj_numeros) not in [11, 14]:
+                    erros_campos.append("CPF / CNPJ inválido.")
+
+
 
 
             # ==================================================
