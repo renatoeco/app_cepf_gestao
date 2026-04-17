@@ -2199,6 +2199,54 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
 
+
+                        ###################################################################################################
+                        # KBAs
+                        ###################################################################################################
+                        kbas = p.get("locais", {}).get("kbas", [])
+
+                        nomes_kbas = [
+                            kba.get("nome_kba", "")
+                            for kba in kbas
+                            if kba.get("nome_kba")
+                        ]
+
+                        kbas_str = ", ".join(nomes_kbas)
+
+
+                        ###################################################################################################
+                        # ÁREAS PROTEGIDAS
+                        ###################################################################################################
+                        areas_protegidas = p.get("locais", {}).get("areas_protegidas", [])
+
+                        nomes_areas = [
+                            area.get("nome_area_protegida", "")
+                            for area in areas_protegidas
+                            if area.get("nome_area_protegida")
+                        ]
+
+                        areas_protegidas_str = ", ".join(nomes_areas)
+
+
+                        ###################################################################################################
+                        # CORREDORES
+                        ###################################################################################################
+                        corredores = p.get("locais", {}).get("corredores", [])
+
+                        nomes_corredores = [
+                            corredor.get("nome_corredor", "")
+                            for corredor in corredores
+                            if corredor.get("nome_corredor")
+                        ]
+
+                        corredores_str = ", ".join(nomes_corredores)
+
+
+
+
+
+
+
                         dados.append({
                             "id_CEPF": codigo_projeto,
                             "Contrato": contrato_nome,
@@ -2214,6 +2262,10 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             "Responsável(is) pelo projeto": responsaveis_projeto_str,
                             "CEP": cep_organizacao,
                             "Cidade(s)": cidades_str,
+                            "KBAs": kbas_str,
+                            "Áreas protegidas": areas_protegidas_str,
+                            "Corredores": corredores_str,
+                                                        
                             "Verificação de Segurança (CSI Number)": "",
 
                             "VALOR TOTAL (R$)": valor_total,
