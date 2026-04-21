@@ -423,8 +423,8 @@ else:
     # Cronograma de contratos
     st.write("**Cronograma de contratos**")
 
-    # ????????
-    st.write(df_filtrado)
+
+
 
     # Criando uma nova coluna com a data de fim no formato datetime, pra poder usar o sort por data
     df_filtrado['data_fim_contrato_dt'] = pd.to_datetime(
@@ -438,6 +438,10 @@ else:
         by='data_fim_contrato_dt',
         ascending=False
     )
+
+# ????????????//
+    st.write(df_filtrado_sorted)
+
 
     altura_base = 400
     altura_extra = sum([10 / (1 + i * 0.01) for i in range(len(df_filtrado_sorted))])
@@ -454,7 +458,7 @@ else:
         ),
         x_start='data_inicio_contrato_dtime',
         x_end='data_fim_contrato_dtime',
-        y='codigo',
+        y='_texto_barra',
         text='_texto_barra',  # inline: codigo - sigla
         color='status',
         color_discrete_map=mapa_cores_status,
