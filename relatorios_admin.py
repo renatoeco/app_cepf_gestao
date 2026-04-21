@@ -2336,7 +2336,7 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                     # colunas Q e R
 
                     df["Valor residual R$"] = [
-                        f"=Q{idx+2}-R{idx+2}"
+                        f"=T{idx+2}-U{idx+2}"
                         for idx in range(len(df))
                     ]
 
