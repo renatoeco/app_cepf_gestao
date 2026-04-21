@@ -257,19 +257,35 @@ def recuperar_senha_dialog():
                             if result.matched_count > 0:
                                 st.success("Senha redefinida com sucesso!")
 
+
+                                # reconstrução completa da sessão exatamente como no login
+                                st.session_state["logged_in"] = True
+
+                                # garante consistência com o login principal
+                                st.session_state["tipo_usuario"] = usuario.get("tipo_usuario", "")
+
+                                st.session_state["nome"] = usuario.get("nome_completo")
+                                st.session_state["id_usuario"] = usuario.get("_id")
+
+                                # mantém compatibilidade com outras partes do sistema
+                                st.session_state["email"] = usuario.get("e_mail", "")
+                                st.session_state["projetos"] = usuario.get("projetos", [])
+
+                                # reseta navegação para forçar fluxo correto
+                                st.session_state["pagina_atual"] = None
+                                st.session_state["projeto_atual"] = None
+
+
+
                                 # Limpa variáveis de sessão
                                 for key in ["codigo_enviado", "codigo_verificacao", "email_verificado", "codigo_validado"]:
                                     st.session_state.pop(key, None)
 
-                                # Inicializa tipo de usuário
-                                tipo_usuario = usuario.get("tipo_usuario", "")
-                                # tipo_usuario = [x.strip() for x in usuario.get("tipo_usuario", "").split(",")]
-                                st.session_state["tipo_usuario"] = tipo_usuario
 
-                                # Marca usuário como logado e reinicia
-                                st.session_state.logged_in = True
-                                time.sleep(2)
+                                time.sleep(3)
                                 st.rerun()
+
+
                             else:
                                 st.error("Erro ao redefinir a senha. Tente novamente.")
                         except Exception as e:
@@ -507,12 +523,7 @@ else:
             ],
        
 
-        # "visitante": {
-        #     "PROJETOS": [
-        #         st.Page("projetos_home_visao_geral.py", title="Projetos", icon=":material/assignment:"),
-        #         st.Page("mapa.py", title="Mapa", icon=":material/map:"),
-        #     ],
-        # },
+        
     }
 
 
