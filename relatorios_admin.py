@@ -2454,15 +2454,17 @@ elif opcao_relatorio == "Lista de comunidades":
 
                     with st.spinner("Gerando relatório..."):
 
+
+
                         ###################################################################################################
-                        # MONTAGEM DOS DADOS
+                        # MONTAGEM DOS DADOS (1 LINHA POR LOCALIDADE)
                         ###################################################################################################
                         dados = []
 
                         for p in projetos:
 
                             ###################################################################################################
-                            # DADOS BÁSICOS
+                            # DADOS BÁSICOS DO PROJETO
                             ###################################################################################################
                             codigo = p.get("codigo", "")
                             sigla = p.get("sigla", "")
@@ -2471,23 +2473,29 @@ elif opcao_relatorio == "Lista de comunidades":
                             org_info = mapa_organizacoes.get(str(id_org), {}) if id_org else {}
                             nome_organizacao = org_info.get("nome", "")
 
-                            linha = {
-                                "Código": codigo,
-                                "Sigla": sigla,
-                                "Organização": nome_organizacao
-                            }
 
                             ###################################################################################################
                             # LOCALIDADES
                             ###################################################################################################
                             localidades = p.get("locais", {}).get("localidades", [])
 
-                            for idx, loc in enumerate(localidades, start=1):
 
-                                linha[f"Nome da localidade {idx}"] = loc.get("nome_localidade", "")
-                                linha[f"Município {idx}"] = loc.get("municipio", "")
-                                linha[f"Latitude {idx}"] = loc.get("latitude", "")
-                                linha[f"Longitude {idx}"] = loc.get("longitude", "")
+                            ###################################################################################################
+                            # IGNORA PROJETOS SEM LOCALIDADES
+                            ###################################################################################################
+                            if not localidades:
+                                continue
+
+
+                            ###################################################################################################
+                            # UMA LINHA PARA CADA LOCALIDADE
+                            ###################################################################################################
+                            for loc in localidades:
+
+                                nome_localidade = loc.get("nome_localidade", "")
+                                municipio = loc.get("municipio", "")
+                                latitude = loc.get("latitude", "")
+                                longitude = loc.get("longitude", "")
 
                                 ###################################################################################################
                                 # BENEFICIÁRIOS
@@ -2500,9 +2508,25 @@ elif opcao_relatorio == "Lista de comunidades":
                                     if b.get("tipo_beneficiario")
                                 ]
 
-                                linha[f"Beneficiários {idx}"] = ", ".join(tipos_beneficiarios)
+                                beneficiarios_str = ", ".join(tipos_beneficiarios)
 
-                            dados.append(linha)
+
+                                ###################################################################################################
+                                # LINHA DA TABELA (ORDEM DAS COLUNAS DEFINIDA AQUI)
+                                ###################################################################################################
+                                dados.append({
+                                    "Nome da localidade": nome_localidade,
+                                    "Código do projeto": codigo,
+                                    "Sigla do projeto": sigla,
+                                    "Organização": nome_organizacao,
+                                    "Município": municipio,
+                                    "Latitude": latitude,
+                                    "Longitude": longitude,
+                                    "Beneficiários": beneficiarios_str,
+                                })
+
+
+
 
                         ###################################################################################################
                         # DATAFRAME E EXCEL
