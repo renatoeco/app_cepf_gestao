@@ -3190,40 +3190,37 @@ with orcamento:
         st.write('')
 
 
+        # -----------------------------------
+        # SALVAR
+        # -----------------------------------
 
         with st.container(horizontal=True, horizontal_alignment="right"):
-
-
-            # # -----------------------------------
-            # # BOTÃO ATUALIZAR
-            # # -----------------------------------
-            # if st.button("Atualizar tabela", icon=":material/sync:", width=200):
-
-            #     df_temp = df_editado_orc.copy()
-
-            #     df_temp["quantidade"] = df_temp["quantidade_fmt"].apply(parse_decimal)
-            #     df_temp["valor_unitario"] = df_temp["valor_unitario_fmt"].apply(parse_brl)
-
-            #     df_temp["valor_total"] = (
-            #         df_temp["quantidade"] * df_temp["valor_unitario"]
-            #     )
-
-            #     df_temp["valor_total_fmt"] = df_temp["valor_total"].apply(format_brl)
-
-            #     # Atualiza estado corretamente (sem erro de widget)
-            #     st.session_state["df_orcamento_editor"] = df_temp
-
-            #     st.rerun()
-
-            # -----------------------------------
-            # SALVAR
-            # -----------------------------------
-            
+          
             botao_salvar_orcamento = st.button("Salvar orçamento", icon=":material/save:", type="primary", width=200)
+            
             
             
         
         if botao_salvar_orcamento:
+
+
+            # -----------------------------------
+            # Atualizar tabela antes de salvar (mesma lógica do botão Atualizar)
+            # -----------------------------------
+            df_temp = df_editado_orc.copy()
+
+            df_temp["quantidade"] = df_temp["quantidade_fmt"].apply(parse_decimal)
+            df_temp["valor_unitario"] = df_temp["valor_unitario_fmt"].apply(parse_brl)
+
+            df_temp["valor_total"] = (
+                df_temp["quantidade"] * df_temp["valor_unitario"]
+            )
+
+            df_temp["valor_total_fmt"] = df_temp["valor_total"].apply(format_brl)
+
+            # Atualizar estado visual
+            st.session_state["df_orcamento_editor"] = df_temp
+
 
             df_salvar = df_editado_orc.dropna(
                 subset=["categoria", "nome_despesa"],
