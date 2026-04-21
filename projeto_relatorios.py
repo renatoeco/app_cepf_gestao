@@ -3248,8 +3248,6 @@ if step_selecionado == "Atividades":
                             if relato.get("porc_ativ_relato") is not None:
                                 st.write(f"**Progresso da atividade informado:** {relato.get('porc_ativ_relato')}%")
 
-                            # col1.write(f"**Quando:** {relato.get('quando')}")
-                            # col2.write(f"**Onde:** {relato.get('onde')}")
 
                             # --------------------------------------------------
                             # ANEXOS (links do Drive)
@@ -4147,7 +4145,19 @@ if step_selecionado == "Despesas":
                                 st.markdown("**Anexos:**")
                                 for a in anexos:
                                     link = gerar_link_drive(a["id_arquivo"])
-                                    st.markdown(f"- [{a['nome_arquivo']}]({link})")
+
+
+                                    # # ==================================================
+                                    # # EXIBE ANEXOS COM NOME COMPLETO
+                                    # # ==================================================
+
+                                    nome = a["nome_arquivo"]
+
+                                    st.markdown(
+                                        f"<a href='{link}' target='_blank'>{nome}</a>",
+                                        unsafe_allow_html=True
+                                    )
+
 
 
 
