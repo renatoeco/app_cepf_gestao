@@ -55,12 +55,6 @@ registrar_estatistica_sessao(db)
 
 
 
-###########################################################################################################
-# FUNÇÕES
-###########################################################################################################
-
-
-
 
 
 # ============================================
@@ -387,6 +381,8 @@ else:
         status = contagens.index.tolist()
         contagem_status = contagens.values.tolist()
 
+
+
         fig = px.pie(
             names=status,
             values=contagem_status,
@@ -394,10 +390,41 @@ else:
             color_discrete_map=mapa_cores_status,
             height=300
         )
+
+        # Customização do tooltip (hover)
+        # Exibe apenas o status e a quantidade de projetos
+        fig.update_traces(
+            hovertemplate=(
+                '<b>Status:</b> %{label}<br>' +
+                '<b>Projetos:</b> %{value}<br>' +
+                '<extra></extra>'  # remove informações adicionais padrão
+            )
+        )
+
         st.plotly_chart(fig)
+
+
+
+
+        # fig = px.pie(
+        #     names=status,
+        #     values=contagem_status,
+        #     color=status,
+        #     color_discrete_map=mapa_cores_status,
+        #     height=300
+        # )
+        # st.plotly_chart(fig)
+
+
+
+
+
 
     # Cronograma de contratos
     st.write("**Cronograma de contratos**")
+
+    # ????????
+    st.write(df_filtrado)
 
     # Criando uma nova coluna com a data de fim no formato datetime, pra poder usar o sort por data
     df_filtrado['data_fim_contrato_dt'] = pd.to_datetime(
@@ -428,7 +455,7 @@ else:
         x_start='data_inicio_contrato_dtime',
         x_end='data_fim_contrato_dtime',
         y='codigo',
-        text='_texto_barra',  # 👈 inline: codigo - sigla
+        text='_texto_barra',  # inline: codigo - sigla
         color='status',
         color_discrete_map=mapa_cores_status,
         height=altura,
