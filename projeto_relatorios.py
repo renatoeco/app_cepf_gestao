@@ -244,22 +244,32 @@ def gerar_docx_relatorio(relatorio, projeto):
 
         doc.add_paragraph("")
 
+
+
         # Datas e informações gerais
         doc.add_paragraph(
             f"Data de envio: {relatorio.get('data_envio', 'N/A')}"
         )
 
-        # Data de aprovação (não existe campo estruturado, então tenta extrair)
-        data_aprovacao = "---"
-        for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
-            for entrega in componente.get("entregas", []):
-                for atividade in entrega.get("atividades", []):
-                    for relato in atividade.get("relatos", []):
-                        status = relato.get("status_aprovacao", "")
-                        if "em" in status:
-                            data_aprovacao = status.split("em")[-1].strip()
+
+        # Data de aprovação do relatório
+        data_aprovacao = relatorio.get("data_aprovacao", "---")
 
         doc.add_paragraph(f"Data de aprovação: {data_aprovacao}")
+
+
+        # # Data de aprovação 
+        # data_aprovacao = "---"
+
+        # for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+        #     for entrega in componente.get("entregas", []):
+        #         for atividade in entrega.get("atividades", []):
+        #             for relato in atividade.get("relatos", []):
+        #                 status = relato.get("status_aprovacao", "")
+        #                 if "em" in status:
+        #                     data_aprovacao = status.split("em")[-1].strip()
+
+        # doc.add_paragraph(f"Data de aprovação: {data_aprovacao}")
 
         # Data de exportação (data atual)
         data_exportacao = datetime.datetime.now().strftime("%d/%m/%Y")
@@ -289,6 +299,13 @@ def gerar_docx_relatorio(relatorio, projeto):
                 pass
 
         doc.add_paragraph(f"Status do projeto: {status_projeto}")
+
+        # Status do relatório
+        status_db = relatorio.get("status_relatorio", "")
+        status_ui = STATUS_DB_TO_UI.get(status_db, status_db)
+
+        doc.add_paragraph(f"Status do relatório: {status_ui}")
+
 
         doc.add_paragraph("")
         doc.add_paragraph("")
@@ -349,7 +366,7 @@ def gerar_docx_relatorio(relatorio, projeto):
                             )
 
                             doc.add_paragraph(
-                                f"Progresso da atividade informado: {relato.get('porc_ativ_relato')}"
+                                f"Progresso da atividade informado: {relato.get('porc_ativ_relato')}%"
                             )
 
 
