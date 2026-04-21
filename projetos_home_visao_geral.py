@@ -406,19 +406,6 @@ else:
 
 
 
-        # fig = px.pie(
-        #     names=status,
-        #     values=contagem_status,
-        #     color=status,
-        #     color_discrete_map=mapa_cores_status,
-        #     height=300
-        # )
-        # st.plotly_chart(fig)
-
-
-
-
-
 
     # Cronograma de contratos
     st.write("**Cronograma de contratos**")
@@ -438,9 +425,6 @@ else:
         by='data_fim_contrato_dt',
         ascending=False
     )
-
-# ????????????//
-    st.write(df_filtrado_sorted)
 
 
     altura_base = 400
