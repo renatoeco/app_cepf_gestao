@@ -4841,6 +4841,196 @@ if step_selecionado == "Despesas":
 
 if step_selecionado == "Resultados":
 
+
+    # ======================================================
+    # DEVOLUTIVA DOS RESULTADOS (ADMIN / EQUIPE)
+    # ======================================================
+
+    if tipo_usuario in ["admin", "equipe"]:
+
+        st.write('')
+
+        with st.expander("Devolutivas", expanded=False, icon=":material/forum:"):
+
+            devolutivas = relatorio.get("devolutiva_resultados", [])
+
+            # Permite devolutiva apenas em análise e bloqueia quando aprovado
+            pode_devolver = (
+                status_atual_db == "em_analise"
+                and status_atual_db != "aprovado"
+            )
+
+            # --------------------------------------------------
+            # CONTROLE DE ESTADO
+            # --------------------------------------------------
+            if "confirmar_dev_resultados" not in st.session_state:
+                st.session_state["confirmar_dev_resultados"] = False
+
+            if not pode_devolver:
+                st.session_state["confirmar_dev_resultados"] = False
+
+            # --------------------------------------------------
+            # LAYOUT EM DUAS COLUNAS
+            # --------------------------------------------------
+            col_nova, col_historico = st.columns([1, 1])
+
+            # ==================================================
+            # COLUNA 1 — NOVA DEVOLUTIVA
+            # ==================================================
+            with col_nova:
+
+                st.markdown("**Nova devolutiva**")
+
+                if not pode_devolver:
+                    st.caption(
+                        "Disponível apenas quando o relatório estiver em análise."
+                    )
+
+                texto_dev_resultados = st.text_area(
+                    "Devolutiva dos Resultados",
+                    placeholder="Descreva os ajustes necessários nos indicadores...",
+                    disabled=not pode_devolver,
+                    key=f"dev_resultados_input_{relatorio_numero}"
+                )
+
+
+
+                # Botão secondary conforme solicitado
+                if st.button(
+                    "Salvar devolutiva",
+                    icon=":material/save:",
+                    type="secondary",
+                    key=f"btn_dev_resultados_{relatorio_numero}",
+                    disabled=not pode_devolver
+                ):
+
+                    if not texto_dev_resultados or not texto_dev_resultados.strip():
+                        st.warning("A devolutiva deve ser preenchida.")
+                    else:
+
+                        nova_devolutiva = {
+                            "data": datetime.datetime.now().strftime("%d/%m/%Y"),
+                            "autor": st.session_state.get("nome", "Usuário"),
+                            "texto_devolutiva_resultado": texto_dev_resultados.strip()
+                        }
+
+                        col_projetos.update_one(
+                            {
+                                "codigo": projeto_codigo,
+                                "relatorios.numero": relatorio_numero
+                            },
+                            {
+                                "$push": {
+                                    "relatorios.$.devolutiva_resultados": nova_devolutiva
+                                }
+                            }
+                        )
+
+                        st.success("Devolutiva registrada com sucesso.", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+
+            # ==================================================
+            # COLUNA 2 — HISTÓRICO
+            # ==================================================
+            with col_historico:
+
+
+                # --------------------------------------------------
+                # RESET DE ESTADO DE EXCLUSÃO (segurança)
+                # --------------------------------------------------
+                if "dev_result_apagando" not in st.session_state:
+                    st.session_state["dev_result_apagando"] = None
+
+                # Se o índice salvo não existir mais (após exclusão), limpa o estado
+                elif st.session_state["dev_result_apagando"] is not None:
+                    if st.session_state["dev_result_apagando"] >= len(devolutivas):
+                        st.session_state["dev_result_apagando"] = None
+
+
+                st.markdown("**Histórico de devolutivas**")
+
+                if not devolutivas:
+                    st.caption("Nenhuma devolutiva registrada.")
+                else:
+                    for i, d in enumerate(reversed(devolutivas)):
+
+                        idx_real = len(devolutivas) - 1 - i
+
+                        with st.container(border=True):
+
+                            st.markdown(
+                                f"**{d.get('autor')}** · {d.get('data')}"
+                            )
+
+                            st.markdown(
+                                d.get("texto_devolutiva_resultado", "").replace("\n", "<br>"),
+                                unsafe_allow_html=True
+                            )
+
+                            # --------------------------------------------------
+                            # BOTÃO EXCLUIR
+                            # --------------------------------------------------
+
+                            with st.container(horizontal=True, horizontal_alignment="right"):
+
+                                if st.button(
+                                    "Excluir",
+                                    key=f"del_dev_result_{relatorio_numero}_{idx_real}",
+                                    type="tertiary",
+                                    icon=":material/delete:"
+                                ):
+                                    st.session_state["dev_result_apagando"] = idx_real
+                                    st.rerun()
+
+                            if "dev_result_apagando" not in st.session_state:
+                                st.session_state["dev_result_apagando"] = None
+
+                            if st.session_state["dev_result_apagando"] == idx_real:
+
+                                st.warning(
+                                    "Tem certeza que deseja apagar esta devolutiva? Esta ação não pode ser desfeita.",
+                                    icon=":material/warning:"
+                                )
+
+                                with st.container(horizontal=True):
+
+                                    if st.button(
+                                        "Sim, apagar",
+                                        key=f"confirm_del_dev_result_{relatorio_numero}_{idx_real}",
+                                        type="primary",
+                                        icon=":material/delete:"
+                                    ):
+
+                                        # Remove da lista em memória
+                                        relatorio["devolutiva_resultados"].pop(idx_real)
+
+                                        # Salva no Mongo
+                                        col_projetos.update_one(
+                                            {"codigo": projeto_codigo},
+                                            {
+                                                "$set": {
+                                                    "relatorios": projeto["relatorios"]
+                                                }
+                                            }
+                                        )
+
+                                        st.success("Devolutiva excluída.", icon=":material/check:")
+                                        time.sleep(3)
+
+                                        st.session_state["dev_result_apagando"] = None
+                                        st.rerun()
+
+                                    if st.button(
+                                        "Cancelar",
+                                        key=f"cancel_del_dev_result_{relatorio_numero}_{idx_real}"
+                                    ):
+                                        st.session_state["dev_result_apagando"] = None
+                                        st.rerun()
+
+
+
+
     # Espaçamento visual
     st.write("")
     st.write("")
@@ -4848,6 +5038,10 @@ if step_selecionado == "Resultados":
     # Título da seção
     st.markdown("#### Indicadores de projeto")
     st.write("")
+
+
+
+
 
     # Recupera os componentes do plano de trabalho
     componentes = projeto.get("plano_trabalho", {}).get("componentes", [])
@@ -5102,18 +5296,6 @@ if step_selecionado == "Resultados":
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 # ---------- BENEFÍCIOS ----------
 
 if step_selecionado == "Beneficiários":
@@ -5153,7 +5335,194 @@ if step_selecionado == "Beneficiários":
         modo_visualizacao_benef = not usuario_beneficiario
 
 
+    # ======================================================
+    # DEVOLUTIVA DOS BENEFICIÁRIOS (ADMIN / EQUIPE)
+    # ======================================================
 
+
+    if tipo_usuario in ["admin", "equipe"]:
+
+        st.write('')
+
+        with st.expander("Devolutivas", expanded=False, icon=":material/forum:"):
+
+            devolutivas = relatorio.get("devolutiva_beneficiarios", [])
+
+            # Permite devolutiva apenas em análise e bloqueia quando aprovado
+            pode_devolver = (
+                status_atual_db == "em_analise"
+                and status_atual_db != "aprovado"
+            )
+
+            # --------------------------------------------------
+            # CONTROLE DE ESTADO
+            # --------------------------------------------------
+            if "confirmar_dev_benef" not in st.session_state:
+                st.session_state["confirmar_dev_benef"] = False
+
+            if not pode_devolver:
+                st.session_state["confirmar_dev_benef"] = False
+
+            # --------------------------------------------------
+            # LAYOUT EM DUAS COLUNAS
+            # --------------------------------------------------
+            col_nova, col_historico = st.columns([1, 1])
+
+            # ==================================================
+            # COLUNA 1 — NOVA DEVOLUTIVA
+            # ==================================================
+            with col_nova:
+
+                st.markdown("**Nova devolutiva**")
+
+                if not pode_devolver:
+                    st.caption(
+                        "Disponível apenas quando o relatório estiver em análise."
+                    )
+
+                texto_dev_benef = st.text_area(
+                    "Devolutiva dos Beneficiários",
+                    placeholder="Descreva os ajustes necessários relacionados aos beneficiários...",
+                    disabled=not pode_devolver,
+                    key=f"dev_benef_input_{relatorio_numero}"
+                )
+
+                if st.button(
+                    "Salvar devolutiva",
+                    icon=":material/save:",
+                    type="secondary",
+                    key=f"btn_dev_benef_{relatorio_numero}",
+                    disabled=not pode_devolver
+                ):
+
+                    if not texto_dev_benef or not texto_dev_benef.strip():
+                        st.warning("A devolutiva deve ser preenchida.")
+                    else:
+
+                        nova_devolutiva = {
+                            "data": datetime.datetime.now().strftime("%d/%m/%Y"),
+                            "autor": st.session_state.get("nome", "Usuário"),
+                            "texto_devolutiva_beneficiarios": texto_dev_benef.strip()
+                        }
+
+                        col_projetos.update_one(
+                            {
+                                "codigo": projeto_codigo,
+                                "relatorios.numero": relatorio_numero
+                            },
+                            {
+                                "$push": {
+                                    "relatorios.$.devolutiva_beneficiarios": nova_devolutiva
+                                }
+                            }
+                        )
+
+                        st.success("Devolutiva registrada com sucesso.", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+
+            # ==================================================
+            # COLUNA 2 — HISTÓRICO
+            # ==================================================
+            with col_historico:
+
+                st.markdown("**Histórico de devolutivas**")
+
+
+
+                # --------------------------------------------------
+                # RESET DE ESTADO DE EXCLUSÃO (segurança)
+                # --------------------------------------------------
+                if "dev_result_apagando" not in st.session_state:
+                    st.session_state["dev_result_apagando"] = None
+
+                # Se o índice salvo não existir mais (após exclusão), limpa o estado
+                elif st.session_state["dev_result_apagando"] is not None:
+                    if st.session_state["dev_result_apagando"] >= len(devolutivas):
+                        st.session_state["dev_result_apagando"] = None
+
+
+
+
+                if not devolutivas:
+                    st.caption("Nenhuma devolutiva registrada.")
+                else:
+                    for i, d in enumerate(reversed(devolutivas)):
+
+                        idx_real = len(devolutivas) - 1 - i
+
+                        with st.container(border=True):
+
+                            st.markdown(
+                                f"**{d.get('autor')}** · {d.get('data')}"
+                            )
+
+                            st.markdown(
+                                d.get("texto_devolutiva_beneficiarios", "").replace("\n", "<br>"),
+                                unsafe_allow_html=True
+                            )
+
+                            # --------------------------------------------------
+                            # BOTÃO EXCLUIR
+                            # --------------------------------------------------
+                            with st.container(horizontal=True, horizontal_alignment="right"):
+
+                                if st.button(
+                                    "Excluir",
+                                    key=f"del_dev_benef_{relatorio_numero}_{idx_real}",
+                                    type="tertiary",
+                                    icon=":material/delete:"
+                                ):
+                                    st.session_state["dev_benef_apagando"] = idx_real
+                                    st.rerun()
+
+                            # --------------------------------------------------
+                            # CONFIRMAÇÃO DE EXCLUSÃO
+                            # --------------------------------------------------
+                            if "dev_benef_apagando" not in st.session_state:
+                                st.session_state["dev_benef_apagando"] = None
+
+                            if st.session_state["dev_benef_apagando"] == idx_real:
+
+                                st.warning(
+                                    "Tem certeza que deseja apagar esta devolutiva? Esta ação não pode ser desfeita.",
+                                    icon=":material/warning:"
+                                )
+
+                                with st.container(horizontal=True):
+
+                                    if st.button(
+                                        "Sim, apagar",
+                                        key=f"confirm_del_dev_benef_{relatorio_numero}_{idx_real}",
+                                        type="primary",
+                                        icon=":material/delete:"
+                                    ):
+
+                                        # Remove da lista em memória
+                                        relatorio["devolutiva_beneficiarios"].pop(idx_real)
+
+                                        # Atualiza no Mongo
+                                        col_projetos.update_one(
+                                            {"codigo": projeto_codigo},
+                                            {
+                                                "$set": {
+                                                    "relatorios": projeto["relatorios"]
+                                                }
+                                            }
+                                        )
+
+                                        st.success("Devolutiva excluída.", icon=":material/check:")
+                                        time.sleep(3)
+
+                                        st.session_state["dev_benef_apagando"] = None
+                                        st.rerun()
+
+                                    if st.button(
+                                        "Cancelar",
+                                        key=f"cancel_del_dev_benef_{relatorio_numero}_{idx_real}"
+                                    ):
+                                        st.session_state["dev_benef_apagando"] = None
+                                        st.rerun()
 
 
     # PARTE 1 - QUANTITATIVO DE BENEFICIÁRIOS ---------------------------------------------------------------------------------------------------------------------------
@@ -5744,6 +6113,10 @@ if step_selecionado == "Beneficiários":
 
 
 
+
+
+
+
 # ---------- PESQUISAS ----------
 if step_selecionado == "Pesquisas":
 
@@ -6006,6 +6379,193 @@ if step_selecionado == "Pesquisas":
 
 # ---------- FORMULÁRIO ----------
 if step_selecionado == "Formulário":
+
+
+
+    # ======================================================
+    # DEVOLUTIVA DO FORMULÁRIO (ADMIN / EQUIPE)
+    # ======================================================
+
+    if tipo_usuario in ["admin", "equipe"]:
+
+        st.write('')
+
+        with st.expander("Devolutivas", expanded=False, icon=":material/forum:"):
+
+            devolutivas = relatorio.get("devolutiva_formulario", [])
+
+            # Permite devolutiva apenas em análise e bloqueia quando aprovado
+            pode_devolver = (
+                status_atual_db == "em_analise"
+                and status_atual_db != "aprovado"
+            )
+
+            # --------------------------------------------------
+            # CONTROLE DE ESTADO
+            # --------------------------------------------------
+            if "dev_form_apagando" not in st.session_state:
+                st.session_state["dev_form_apagando"] = None
+
+            # Reset de segurança caso índice fique inválido
+            elif st.session_state["dev_form_apagando"] is not None:
+                if st.session_state["dev_form_apagando"] >= len(devolutivas):
+                    st.session_state["dev_form_apagando"] = None
+
+            # --------------------------------------------------
+            # LAYOUT EM DUAS COLUNAS
+            # --------------------------------------------------
+            col_nova, col_historico = st.columns([1, 1])
+
+            # ==================================================
+            # COLUNA 1 — NOVA DEVOLUTIVA
+            # ==================================================
+            with col_nova:
+
+                st.markdown("**Nova devolutiva**")
+
+                if not pode_devolver:
+                    st.caption(
+                        "Disponível apenas quando o relatório estiver em análise."
+                    )
+
+                texto_dev_form = st.text_area(
+                    "Devolutiva do Formulário",
+                    placeholder="Descreva os ajustes necessários no formulário...",
+                    disabled=not pode_devolver,
+                    key=f"dev_form_input_{relatorio_numero}"
+                )
+
+                if st.button(
+                    "Salvar devolutiva",
+                    icon=":material/save:",
+                    type="secondary",
+                    key=f"btn_dev_form_{relatorio_numero}",
+                    disabled=not pode_devolver
+                ):
+
+                    if not texto_dev_form or not texto_dev_form.strip():
+                        st.warning("A devolutiva deve ser preenchida.")
+                    else:
+
+                        nova_devolutiva = {
+                            "data": datetime.datetime.now().strftime("%d/%m/%Y"),
+                            "autor": st.session_state.get("nome", "Usuário"),
+                            "texto_devolutiva_formulario": texto_dev_form.strip()
+                        }
+
+                        col_projetos.update_one(
+                            {
+                                "codigo": projeto_codigo,
+                                "relatorios.numero": relatorio_numero
+                            },
+                            {
+                                "$push": {
+                                    "relatorios.$.devolutiva_formulario": nova_devolutiva
+                                }
+                            }
+                        )
+
+                        st.success("Devolutiva registrada com sucesso.", icon=":material/check:")
+                        time.sleep(3)
+                        st.rerun()
+
+            # ==================================================
+            # COLUNA 2 — HISTÓRICO
+            # ==================================================
+            with col_historico:
+
+                st.markdown("**Histórico de devolutivas**")
+
+                if not devolutivas:
+                    st.caption("Nenhuma devolutiva registrada.")
+                else:
+                    for i, d in enumerate(reversed(devolutivas)):
+
+                        idx_real = len(devolutivas) - 1 - i
+
+                        with st.container(border=True):
+
+                            st.markdown(
+                                f"**{d.get('autor')}** · {d.get('data')}"
+                            )
+
+                            st.markdown(
+                                d.get("texto_devolutiva_formulario", "").replace("\n", "<br>"),
+                                unsafe_allow_html=True
+                            )
+
+                            # --------------------------------------------------
+                            # BOTÃO EXCLUIR
+                            # --------------------------------------------------
+                            with st.container(horizontal=True, horizontal_alignment="right"):
+
+                                if st.button(
+                                    "Excluir",
+                                    key=f"del_dev_form_{relatorio_numero}_{idx_real}",
+                                    type="tertiary",
+                                    icon=":material/delete:"
+                                ):
+                                    st.session_state["dev_form_apagando"] = idx_real
+                                    st.rerun()
+
+                            # --------------------------------------------------
+                            # CONFIRMAÇÃO DE EXCLUSÃO
+                            # --------------------------------------------------
+                            if st.session_state["dev_form_apagando"] == idx_real:
+
+                                st.warning(
+                                    "Tem certeza que deseja apagar esta devolutiva? Esta ação não pode ser desfeita.",
+                                    icon=":material/warning:"
+                                )
+
+                                with st.container(horizontal=True):
+
+                                    if st.button(
+                                        "Sim, apagar",
+                                        key=f"confirm_del_dev_form_{relatorio_numero}_{idx_real}",
+                                        type="primary",
+                                        icon=":material/delete:"
+                                    ):
+
+                                        # Remove da lista em memória
+                                        relatorio["devolutiva_formulario"].pop(idx_real)
+
+                                        # Atualiza no Mongo
+                                        col_projetos.update_one(
+                                            {"codigo": projeto_codigo},
+                                            {
+                                                "$set": {
+                                                    "relatorios": projeto["relatorios"]
+                                                }
+                                            }
+                                        )
+
+                                        st.success("Devolutiva excluída.", icon=":material/check:")
+                                        time.sleep(3)
+
+                                        st.session_state["dev_form_apagando"] = None
+                                        st.rerun()
+
+                                    if st.button(
+                                        "Cancelar",
+                                        key=f"cancel_del_dev_form_{relatorio_numero}_{idx_real}"
+                                    ):
+                                        st.session_state["dev_form_apagando"] = None
+                                        st.rerun()
+
+
+
+
+    # Espaçamento visual
+    st.write("")
+    st.write("")
+
+    # Título da seção
+    st.markdown("#### Formulário")
+    
+
+
+
 
     ###########################################################################
     # 1. BUSCA O EDITAL CORRESPONDENTE AO PROJETO
@@ -6816,7 +7376,7 @@ if step_selecionado == "Avaliação":
     # Anotações
     with col2:
 
-        st.write("**Anotações**")
+        st.write("**Anotações internas**")
 
         # --------------------------------------------------
         # DIALOG DE NOVA ANOTAÇÃO
@@ -7092,10 +7652,6 @@ if step_selecionado == "Avaliação":
                 disabled=not pode_reprovar
             ):
 
-                # if not texto_devolutiva.strip():
-                #     st.warning("A devolutiva não pode estar vazia.")
-                #     st.stop()
-
                 nova_devolucao = {
                     "data_devolucao": datetime.datetime.now().strftime("%d/%m/%Y"),
                     "autor": st.session_state.get("nome", "Usuário não identificado"),
@@ -7171,10 +7727,25 @@ if step_selecionado == "Avaliação":
         # --------------------------------------------------
         if devolucoes:
 
+
+            # --------------------------------------------------
+            # CONTROLE DE ESTADO DE EXCLUSÃO
+            # --------------------------------------------------
+            if "dev_avaliacao_apagando" not in st.session_state:
+                st.session_state["dev_avaliacao_apagando"] = None
+
+            elif st.session_state["dev_avaliacao_apagando"] is not None:
+                if st.session_state["dev_avaliacao_apagando"] >= len(devolucoes):
+                    st.session_state["dev_avaliacao_apagando"] = None
+
+
             st.write("")
             st.write("**Histórico de devoluções**")
 
-            for d in reversed(devolucoes):
+            for i, d in enumerate(reversed(devolucoes)):
+
+                idx_real = len(devolucoes) - 1 - i
+
 
                 with st.container(border=True):
 
@@ -7187,9 +7758,70 @@ if step_selecionado == "Avaliação":
                         unsafe_allow_html=True
                     )
 
+                    # --------------------------------------------------
+                    # BOTÃO EXCLUIR
+                    # --------------------------------------------------
+                    with st.container(horizontal=True, horizontal_alignment="right"):
+
+                        if st.button(
+                            "Excluir",
+                            key=f"del_dev_avaliacao_{relatorio_numero}_{idx_real}",
+                            type="tertiary",
+                            icon=":material/delete:"
+                        ):
+                            st.session_state["dev_avaliacao_apagando"] = idx_real
+                            st.rerun()
+
+                    if st.session_state["dev_avaliacao_apagando"] == idx_real:
+
+                        st.warning(
+                            "Tem certeza que deseja apagar esta devolução? Esta ação não pode ser desfeita.",
+                            icon=":material/warning:"
+                        )
+
+                        with st.container(horizontal=True):
+
+                            if st.button(
+                                "Sim, apagar",
+                                key=f"confirm_del_dev_avaliacao_{relatorio_numero}_{idx_real}",
+                                type="primary",
+                                icon=":material/delete:"
+                            ):
+
+                                # --------------------------------------------------
+                                # REMOVE DA LISTA
+                                # --------------------------------------------------
+                                relatorio["devolucao"].pop(idx_real)
+
+                                # --------------------------------------------------
+                                # ATUALIZA NO MONGO
+                                # --------------------------------------------------
+                                col_projetos.update_one(
+                                    {"codigo": projeto_codigo},
+                                    {
+                                        "$set": {
+                                            "relatorios": projeto["relatorios"]
+                                        }
+                                    }
+                                )
+
+                                st.success("Devolutiva excluída.", icon=":material/check:")
+                                time.sleep(3)
+
+                                st.session_state["dev_avaliacao_apagando"] = None
+                                st.rerun()
+
+                            if st.button(
+                                "Cancelar",
+                                key=f"cancel_del_dev_avaliacao_{relatorio_numero}_{idx_real}"
+                            ):
+                                st.session_state["dev_avaliacao_apagando"] = None
+                                st.rerun()
+
+
 
     # ==================================================
-    # COLUNA 3 — APROVAÇÃO DO RELATÓRIO
+    # COLUNA 4 — APROVAÇÃO DO RELATÓRIO
     # ==================================================
     with col4:
 
