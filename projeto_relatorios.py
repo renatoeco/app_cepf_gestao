@@ -7585,7 +7585,7 @@ if step_selecionado == "Avaliação":
 
     with col3:
 
-        st.write("**Reprovação e Devolutiva**")
+        st.write("**Reprovação e Devolutiva geral**")
         st.write("")
 
         devolucoes = relatorio_db.get("devolucao", [])
