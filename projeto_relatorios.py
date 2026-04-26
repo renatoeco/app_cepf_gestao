@@ -7605,7 +7605,7 @@ if step_selecionado == "Avaliação":
         # --------------------------------------------------
         texto_devolutiva = st.text_area(
             "Devolutiva",
-            placeholder="Descreva os ajustes necessários para reprovação do relatório...",
+            placeholder="Descreva os ajustes necessários para o reenvio do relatório...",
             disabled=not pode_reprovar
         )
 
@@ -7740,7 +7740,7 @@ if step_selecionado == "Avaliação":
 
 
             st.write("")
-            st.write("**Histórico de devoluções**")
+            st.write("**Histórico de devolutivas**")
 
             for i, d in enumerate(reversed(devolucoes)):
 
