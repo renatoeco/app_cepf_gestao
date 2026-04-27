@@ -1505,7 +1505,7 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
 
     form_key = st.session_state["form_despesa_key"]
 
-    with st.expander("Registrar despesa", expanded=False):
+    with st.expander("**Registrar despesa**", expanded=False, icon=":material/add:"):
 
         # ==================================================
         # OPÇÕES DE DESPESA
