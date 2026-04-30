@@ -1648,11 +1648,42 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
             if not fornecedor or not fornecedor.strip():
                 erros_campos.append("Fornecedor")
 
-            if not cpf_cnpj or not cpf_cnpj.strip():
-                erros_campos.append("CPF / CNPJ")
+            # if not cpf_cnpj or not cpf_cnpj.strip():
+            #     erros_campos.append("CPF / CNPJ")
 
             if not is_taxa_bancaria and (not anexos or len(anexos) == 0):
                 erros_campos.append("Anexos")
+
+
+            if not cpf_cnpj or not cpf_cnpj.strip():
+                erros_campos.append("CPF / CNPJ")
+            else:
+                # Remove tudo que não é número
+                cpf_cnpj_numeros = ''.join(filter(str.isdigit, cpf_cnpj))
+
+                # Validação de tamanho
+                if len(cpf_cnpj_numeros) not in [11, 14]:
+                    erros_campos.append("CPF / CNPJ inválido.")
+                else:
+                    # Aplica máscara
+                    if len(cpf_cnpj_numeros) == 11:
+                        cpf_cnpj_formatado = (
+                            f"{cpf_cnpj_numeros[:3]}."
+                            f"{cpf_cnpj_numeros[3:6]}."
+                            f"{cpf_cnpj_numeros[6:9]}-"
+                            f"{cpf_cnpj_numeros[9:]}"
+                        )
+                    else:
+                        cpf_cnpj_formatado = (
+                            f"{cpf_cnpj_numeros[:2]}."
+                            f"{cpf_cnpj_numeros[2:5]}."
+                            f"{cpf_cnpj_numeros[5:8]}/"
+                            f"{cpf_cnpj_numeros[8:12]}-"
+                            f"{cpf_cnpj_numeros[12:]}"
+                        )
+
+
+
 
             # -------------------------------
             # Exibição de erros
@@ -1669,7 +1700,7 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
             # ==================================================
             # SALVAMENTO
             # ==================================================
-            with area_notif_despesas.spinner("Salvando despesa..."):
+            with area_notif_despesas.spinner("Registrando despesa..."):
 
                 novo_lancamento = {
                     "id_lanc_despesa": id_despesa,
@@ -1677,7 +1708,7 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
                     "data_despesa": data_despesa.strftime("%d/%m/%Y"),
                     "descricao_despesa": descricao,
                     "fornecedor": fornecedor,
-                    "cpf_cnpj": cpf_cnpj,
+                    "cpf_cnpj": cpf_cnpj_formatado,
                     "quantidade": quantidade,
                     "valor_unitario": valor_unitario,
                     "valor_despesa": valor,
