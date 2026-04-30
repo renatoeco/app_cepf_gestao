@@ -399,7 +399,7 @@ def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
         return True
 
     except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
+        st.error(f"Erro ao enviar e-mail: {e}")
         return False
 
 
