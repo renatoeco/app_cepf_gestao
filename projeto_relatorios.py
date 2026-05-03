@@ -147,6 +147,214 @@ tipo_usuario = st.session_state.get("tipo_usuario")
 # FUNÇÕES
 ###########################################################################################################
 
+# Função para renderizar as pendências na aba de Enviar do relatório.
+def renderizar_pendencias(projeto, relatorio_numero):
+    """
+    Renderiza pendências apenas se houver conteúdo
+    """
+
+    # ==================================================
+    # VERIFICAÇÕES (ANTES DE RENDERIZAR)
+    # ==================================================
+
+    # --- devolução geral ---
+    devolucoes = relatorio.get("devolucao", [])
+    ultima_devolucao = next(
+        (d for d in reversed(devolucoes) if d.get("status_devolucao") == "Devolvido"),
+        None
+    )
+
+    tem_comentario_geral = bool(
+        ultima_devolucao and ultima_devolucao.get("texto_devolutiva")
+    )
+
+    # --- relatos ---
+    total_pendencias_relatos = 0
+    for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+        for entrega in componente.get("entregas", []):
+            for atividade in entrega.get("atividades", []):
+                for relato in atividade.get("relatos", []):
+                    if (
+                        relato.get("relatorio_numero") == relatorio_numero
+                        and relato.get("status_relato") == "aberto"
+                        and relato.get("devolutiva")
+                    ):
+                        total_pendencias_relatos += 1
+
+    tem_pendencias_relatos = total_pendencias_relatos > 0
+
+    # --- despesas ---
+    total_pendencias_despesas = 0
+    for despesa in projeto.get("financeiro", {}).get("orcamento", []):
+        for lanc in despesa.get("lancamentos", []):
+            if (
+                lanc.get("relatorio_numero") == relatorio_numero
+                and lanc.get("status_despesa") == "aberto"
+                and lanc.get("devolutiva")
+            ):
+                total_pendencias_despesas += 1
+
+    tem_pendencias_despesas = total_pendencias_despesas > 0
+
+    # --- resultados ---
+    pendencias_resultados = [
+        d for d in relatorio.get("devolutiva_resultados", [])
+        if d.get("status_devolutiva_resultado") == "pendente"
+    ]
+    tem_resultados = len(pendencias_resultados) > 0
+
+    # --- beneficiários ---
+    pendencias_beneficiarios = [
+        d for d in relatorio.get("devolutiva_beneficiarios", [])
+        if d.get("status_devolutiva_beneficiarios") == "pendente"
+    ]
+    tem_beneficiarios = len(pendencias_beneficiarios) > 0
+
+    # --- formulário ---
+    pendencias_formulario = [
+        d for d in relatorio.get("devolutiva_formulario", [])
+        if d.get("status_devolutiva_formulario") == "pendente"
+    ]
+    tem_formulario = len(pendencias_formulario) > 0
+
+    # --------------------------------------------------
+    # FLAG FINAL
+    # --------------------------------------------------
+    if not any([
+        tem_comentario_geral,
+        tem_pendencias_relatos,
+        tem_pendencias_despesas,
+        tem_resultados,
+        tem_beneficiarios,
+        tem_formulario
+    ]):
+        return
+
+    # ==================================================
+    # RENDERIZAÇÃO
+    # ==================================================
+
+    st.write('')
+    st.divider()
+
+    st.markdown(
+        "<h4 style='color: rgba(226, 101, 12);'>Pendências</h4>",
+        unsafe_allow_html=True
+    )
+
+    col1, col2 = st.columns([2, 3], gap="medium")
+
+    # ==================================================
+    # COLUNA 1 — COMENTÁRIO GERAL
+    # ==================================================
+    with col1:
+
+        if tem_comentario_geral:
+
+            st.write('')
+            st.write("**COMENTÁRIO GERAL SOBRE O RELATÓRIO**")
+
+            st.markdown(
+                ultima_devolucao.get("texto_devolutiva", "").replace("\n", "<br>"),
+                unsafe_allow_html=True
+            )
+
+    # ==================================================
+    # COLUNA 2 — PENDÊNCIAS
+    # ==================================================
+    with col2:
+
+        # ---------------- RELATOS ----------------
+        if tem_pendencias_relatos:
+
+            with st.container(border=False):
+
+                st.write('')
+                st.write("**Pendências de Relatos de Atividades**")
+
+                if total_pendencias_relatos == 1:
+                    st.write(
+                        "1 relato de atividade está com pendência. "
+                        "Verifique os detalhes na aba \"Atividades\" do relatório."
+                    )
+                else:
+                    st.write(
+                        f"{total_pendencias_relatos} relatos de atividades estão com pendências. "
+                        "Verifique os detalhes na aba \"Atividades\" do relatório."
+                    )
+
+        # ---------------- DESPESAS ----------------
+        if tem_pendencias_despesas:
+
+            with st.container(border=False):
+
+                st.write('')
+                st.write("**Pendências de registros de despesas**")
+
+                if total_pendencias_despesas == 1:
+                    st.write(
+                        "1 registro de despesa está com pendência. "
+                        "Verifique os detalhes na aba \"Despesas\" do relatório."
+                    )
+                else:
+                    st.write(
+                        f"{total_pendencias_despesas} registros de despesas estão com pendências. "
+                        "Verifique os detalhes na aba \"Despesas\" do relatório."
+                    )
+
+        # ---------------- RESULTADOS ----------------
+        if tem_resultados:
+
+            with st.container(border=False):
+
+                st.write('')
+                st.write("**Pendências da aba Resultados**")
+
+                for d in pendencias_resultados:
+                    texto = d.get("texto_devolutiva_resultado", "")
+                    if texto:
+                        st.markdown(
+                            texto.replace("\n", "<br>"),
+                            unsafe_allow_html=True
+                        )
+
+        # ---------------- BENEFICIÁRIOS ----------------
+        if tem_beneficiarios:
+
+            with st.container(border=False):
+
+                st.write('')
+                st.write("**Pendências da aba Beneficiários**")
+
+                for d in pendencias_beneficiarios:
+                    texto = d.get("texto_devolutiva_beneficiarios", "")
+                    if texto:
+                        st.markdown(
+                            texto.replace("\n", "<br>"),
+                            unsafe_allow_html=True
+                        )
+
+        # ---------------- FORMULÁRIO ----------------
+        if tem_formulario:
+
+            with st.container(border=False):
+
+                st.write('')
+                st.write("**Pendências do Formulário**")
+
+                for d in pendencias_formulario:
+                    texto = d.get("texto_devolutiva_formulario", "")
+                    if texto:
+                        st.markdown(
+                            texto.replace("\n", "<br>"),
+                            unsafe_allow_html=True
+                        )
+
+
+
+
+
+
 
 
 # Função para configurar hyperlink no docx do relatório exportado.
@@ -7166,6 +7374,215 @@ if step_selecionado == "Formulário":
 
 if step_selecionado == "Enviar":
 
+
+    def renderizar_pendencias(projeto, relatorio_numero):
+        """
+        Renderiza pendências apenas se houver conteúdo
+        """
+
+        # ==================================================
+        # VERIFICAÇÕES (ANTES DE RENDERIZAR)
+        # ==================================================
+
+        # --- devolução geral ---
+        devolucoes = relatorio.get("devolucao", [])
+        ultima_devolucao = next(
+            (d for d in reversed(devolucoes) if d.get("status_devolucao") == "Devolvido"),
+            None
+        )
+
+        tem_comentario_geral = bool(
+            ultima_devolucao and ultima_devolucao.get("texto_devolutiva")
+        )
+
+        # --- relatos ---
+        total_pendencias_relatos = 0
+        for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
+            for entrega in componente.get("entregas", []):
+                for atividade in entrega.get("atividades", []):
+                    for relato in atividade.get("relatos", []):
+                        if (
+                            relato.get("relatorio_numero") == relatorio_numero
+                            and relato.get("status_relato") == "aberto"
+                            and relato.get("devolutiva")
+                        ):
+                            total_pendencias_relatos += 1
+
+        tem_pendencias_relatos = total_pendencias_relatos > 0
+
+        # --- despesas ---
+        total_pendencias_despesas = 0
+        for despesa in projeto.get("financeiro", {}).get("orcamento", []):
+            for lanc in despesa.get("lancamentos", []):
+                if (
+                    lanc.get("relatorio_numero") == relatorio_numero
+                    and lanc.get("status_despesa") == "aberto"
+                    and lanc.get("devolutiva")
+                ):
+                    total_pendencias_despesas += 1
+
+        tem_pendencias_despesas = total_pendencias_despesas > 0
+
+        # --- resultados ---
+        pendencias_resultados = [
+            d for d in relatorio.get("devolutiva_resultados", [])
+            if d.get("status_devolutiva_resultado") == "pendente"
+        ]
+        tem_resultados = len(pendencias_resultados) > 0
+
+        # --- beneficiários ---
+        pendencias_beneficiarios = [
+            d for d in relatorio.get("devolutiva_beneficiarios", [])
+            if d.get("status_devolutiva_beneficiarios") == "pendente"
+        ]
+        tem_beneficiarios = len(pendencias_beneficiarios) > 0
+
+        # --- formulário ---
+        pendencias_formulario = [
+            d for d in relatorio.get("devolutiva_formulario", [])
+            if d.get("status_devolutiva_formulario") == "pendente"
+        ]
+        tem_formulario = len(pendencias_formulario) > 0
+
+        # --------------------------------------------------
+        # FLAG FINAL
+        # --------------------------------------------------
+        if not any([
+            tem_comentario_geral,
+            tem_pendencias_relatos,
+            tem_pendencias_despesas,
+            tem_resultados,
+            tem_beneficiarios,
+            tem_formulario
+        ]):
+            return
+
+        # ==================================================
+        # RENDERIZAÇÃO
+        # ==================================================
+
+        st.write('')
+        st.divider()
+
+        st.markdown(
+            "<h4 style='color: rgba(226, 101, 12);'>Pendências</h4>",
+            unsafe_allow_html=True
+        )
+
+        col1, col2 = st.columns([2, 3], gap="medium")
+
+        # ==================================================
+        # COLUNA 1 — COMENTÁRIO GERAL
+        # ==================================================
+        with col1:
+
+            if tem_comentario_geral:
+
+                st.write('')
+                st.write("**COMENTÁRIO GERAL SOBRE O RELATÓRIO**")
+
+                st.markdown(
+                    ultima_devolucao.get("texto_devolutiva", "").replace("\n", "<br>"),
+                    unsafe_allow_html=True
+                )
+
+        # ==================================================
+        # COLUNA 2 — PENDÊNCIAS
+        # ==================================================
+        with col2:
+
+            # ---------------- RELATOS ----------------
+            if tem_pendencias_relatos:
+
+                with st.container(border=False):
+
+                    st.write('')
+                    st.write("**Pendências de Relatos de Atividades**")
+
+                    if total_pendencias_relatos == 1:
+                        st.write(
+                            "1 relato de atividade está com pendência. "
+                            "Verifique os detalhes na aba \"Atividades\" do relatório."
+                        )
+                    else:
+                        st.write(
+                            f"{total_pendencias_relatos} relatos de atividades estão com pendências. "
+                            "Verifique os detalhes na aba \"Atividades\" do relatório."
+                        )
+
+            # ---------------- DESPESAS ----------------
+            if tem_pendencias_despesas:
+
+                with st.container(border=False):
+
+                    st.write('')
+                    st.write("**Pendências de registros de despesas**")
+
+                    if total_pendencias_despesas == 1:
+                        st.write(
+                            "1 registro de despesa está com pendência. "
+                            "Verifique os detalhes na aba \"Despesas\" do relatório."
+                        )
+                    else:
+                        st.write(
+                            f"{total_pendencias_despesas} registros de despesas estão com pendências. "
+                            "Verifique os detalhes na aba \"Despesas\" do relatório."
+                        )
+
+            # ---------------- RESULTADOS ----------------
+            if tem_resultados:
+
+                with st.container(border=False):
+
+                    st.write('')
+                    st.write("**Pendências da aba Resultados**")
+
+                    for d in pendencias_resultados:
+                        texto = d.get("texto_devolutiva_resultado", "")
+                        if texto:
+                            st.markdown(
+                                texto.replace("\n", "<br>"),
+                                unsafe_allow_html=True
+                            )
+
+            # ---------------- BENEFICIÁRIOS ----------------
+            if tem_beneficiarios:
+
+                with st.container(border=False):
+
+                    st.write('')
+                    st.write("**Pendências da aba Beneficiários**")
+
+                    for d in pendencias_beneficiarios:
+                        texto = d.get("texto_devolutiva_beneficiarios", "")
+                        if texto:
+                            st.markdown(
+                                texto.replace("\n", "<br>"),
+                                unsafe_allow_html=True
+                            )
+
+            # ---------------- FORMULÁRIO ----------------
+            if tem_formulario:
+
+                with st.container(border=False):
+
+                    st.write('')
+                    st.write("**Pendências do Formulário**")
+
+                    for d in pendencias_formulario:
+                        texto = d.get("texto_devolutiva_formulario", "")
+                        if texto:
+                            st.markdown(
+                                texto.replace("\n", "<br>"),
+                                unsafe_allow_html=True
+                            )
+
+
+
+
+
+
+
     st.write('')
     st.write('')
 
@@ -7199,11 +7616,27 @@ if step_selecionado == "Enviar":
             f"##### Relatório enviado em {data_formatada}.")
 
         st.write("Aguardando análise.")
+
+
+
+
+        # Mensagem de pendências    
+        renderizar_pendencias(projeto, relatorio_numero)
+
+
+
+
+
     # --------------------------------------------------
     # CASO 2: RELATÓRIO APROVADO
     # --------------------------------------------------
     elif status_atual_db == "aprovado":
         st.markdown("##### Relatório aprovado.")
+
+
+
+
+
 
     # --------------------------------------------------
     # CASO 3: RELATÓRIO EM MODO EDIÇÃO E USUÁRIO PODE EDITAR
@@ -7240,6 +7673,12 @@ if step_selecionado == "Enviar":
             st.markdown(
                 "**O relatório já pode ser enviado.**"
             )
+
+
+
+        # Mensagem de pendências    
+        renderizar_pendencias(projeto, relatorio_numero)
+
 
 
 
