@@ -4903,7 +4903,7 @@ if step_selecionado == "Resultados":
             # --------------------------------------------------
             # LAYOUT EM DUAS COLUNAS
             # --------------------------------------------------
-            col_nova, col_historico = st.columns([1, 1])
+            col_nova, col_historico = st.columns([1, 1], gap="medium")
 
             # ==================================================
             # COLUNA 1 — NOVA DEVOLUTIVA
@@ -4942,7 +4942,9 @@ if step_selecionado == "Resultados":
                         nova_devolutiva = {
                             "data": datetime.datetime.now().strftime("%d/%m/%Y"),
                             "autor": st.session_state.get("nome", "Usuário"),
-                            "texto_devolutiva_resultado": texto_dev_resultados.strip()
+                            "texto_devolutiva_resultado": texto_dev_resultados.strip(),
+                            "status_devolutiva_resultado": "pendente"
+
                         }
 
                         col_projetos.update_one(
@@ -4999,11 +5001,51 @@ if step_selecionado == "Resultados":
                                 unsafe_allow_html=True
                             )
 
-                            # --------------------------------------------------
-                            # BOTÃO EXCLUIR
-                            # --------------------------------------------------
 
-                            with st.container(horizontal=True, horizontal_alignment="right"):
+                            with st.container(horizontal=True, horizontal_alignment="right", gap="medium"):
+
+
+                                # --------------------------------------------------
+                                # STATUS RESOLUÇÃO
+                                # --------------------------------------------------
+                                status_atual = d.get("status_devolutiva_resultado", "pendente")
+
+                                checkbox_key = f"chk_dev_result_{relatorio_numero}_{idx_real}"
+
+                                resolvido = st.checkbox(
+                                    "Resolvido",
+                                    value=(status_atual == "resolvido"),
+                                    key=checkbox_key
+                                )
+
+                                # --------------------------------------------------
+                                # ATUALIZA STATUS NO BANCO (IMEDIATO)
+                                # --------------------------------------------------
+                                novo_status = "resolvido" if resolvido else "pendente"
+
+                                if novo_status != status_atual:
+
+                                    # Atualiza em memória
+                                    relatorio["devolutiva_resultados"][idx_real]["status_devolutiva_resultado"] = novo_status
+
+                                    # Persiste no Mongo
+                                    col_projetos.update_one(
+                                        {"codigo": projeto_codigo},
+                                        {
+                                            "$set": {
+                                                "relatorios": projeto["relatorios"]
+                                            }
+                                        }
+                                    )
+
+                                    st.rerun()
+
+
+
+                                # --------------------------------------------------
+                                # BOTÃO EXCLUIR
+                                # --------------------------------------------------
+
 
                                 if st.button(
                                     "Excluir",
@@ -5433,7 +5475,9 @@ if step_selecionado == "Beneficiários":
                         nova_devolutiva = {
                             "data": datetime.datetime.now().strftime("%d/%m/%Y"),
                             "autor": st.session_state.get("nome", "Usuário"),
-                            "texto_devolutiva_beneficiarios": texto_dev_benef.strip()
+                            "texto_devolutiva_beneficiarios": texto_dev_benef.strip(),
+                            "status_devolutiva_beneficiarios": "pendente"
+
                         }
 
                         col_projetos.update_one(
@@ -5464,13 +5508,13 @@ if step_selecionado == "Beneficiários":
                 # --------------------------------------------------
                 # RESET DE ESTADO DE EXCLUSÃO (segurança)
                 # --------------------------------------------------
-                if "dev_result_apagando" not in st.session_state:
-                    st.session_state["dev_result_apagando"] = None
+                if "dev_benef_apagando" not in st.session_state:
+                    st.session_state["dev_benef_apagando"] = None
 
                 # Se o índice salvo não existir mais (após exclusão), limpa o estado
-                elif st.session_state["dev_result_apagando"] is not None:
-                    if st.session_state["dev_result_apagando"] >= len(devolutivas):
-                        st.session_state["dev_result_apagando"] = None
+                elif st.session_state["dev_benef_apagando"] is not None:
+                    if st.session_state["dev_benef_apagando"] >= len(devolutivas):
+                        st.session_state["dev_benef_apagando"] = None
 
 
 
@@ -5493,10 +5537,51 @@ if step_selecionado == "Beneficiários":
                                 unsafe_allow_html=True
                             )
 
-                            # --------------------------------------------------
-                            # BOTÃO EXCLUIR
-                            # --------------------------------------------------
-                            with st.container(horizontal=True, horizontal_alignment="right"):
+
+                            with st.container(horizontal=True, horizontal_alignment="right", gap="medium"):
+
+
+                                # --------------------------------------------------
+                                # STATUS RESOLUÇÃO
+                                # --------------------------------------------------
+                                status_atual = d.get("status_devolutiva_beneficiarios", "pendente")
+
+                                checkbox_key = f"chk_dev_benef_{relatorio_numero}_{idx_real}"
+
+                                resolvido = st.checkbox(
+                                    "Resolvido",
+                                    value=(status_atual == "resolvido"),
+                                    key=checkbox_key
+                                )
+
+                                # --------------------------------------------------
+                                # ATUALIZA STATUS NO BANCO (IMEDIATO)
+                                # --------------------------------------------------
+                                novo_status = "resolvido" if resolvido else "pendente"
+
+                                if novo_status != status_atual:
+
+                                    # Atualiza em memória
+                                    relatorio["devolutiva_beneficiarios"][idx_real]["status_devolutiva_beneficiarios"] = novo_status
+
+                                    # Persiste no Mongo
+                                    col_projetos.update_one(
+                                        {"codigo": projeto_codigo},
+                                        {
+                                            "$set": {
+                                                "relatorios": projeto["relatorios"]
+                                            }
+                                        }
+                                    )
+
+                                    st.rerun()
+
+
+
+
+                                # --------------------------------------------------
+                                # BOTÃO EXCLUIR
+                                # --------------------------------------------------
 
                                 if st.button(
                                     "Excluir",
@@ -6481,7 +6566,9 @@ if step_selecionado == "Formulário":
                         nova_devolutiva = {
                             "data": datetime.datetime.now().strftime("%d/%m/%Y"),
                             "autor": st.session_state.get("nome", "Usuário"),
-                            "texto_devolutiva_formulario": texto_dev_form.strip()
+                            "texto_devolutiva_formulario": texto_dev_form.strip(),
+                            "status_devolutiva_formulario": "pendente"
+
                         }
 
                         col_projetos.update_one(
@@ -6525,10 +6612,51 @@ if step_selecionado == "Formulário":
                                 unsafe_allow_html=True
                             )
 
-                            # --------------------------------------------------
-                            # BOTÃO EXCLUIR
-                            # --------------------------------------------------
-                            with st.container(horizontal=True, horizontal_alignment="right"):
+
+                            with st.container(horizontal=True, horizontal_alignment="right", gap="medium"):
+
+
+
+                                # --------------------------------------------------
+                                # STATUS RESOLUÇÃO
+                                # --------------------------------------------------
+                                status_atual = d.get("status_devolutiva_formulario", "pendente")
+
+                                checkbox_key = f"chk_dev_form_{relatorio_numero}_{idx_real}"
+
+                                resolvido = st.checkbox(
+                                    "Resolvido",
+                                    value=(status_atual == "resolvido"),
+                                    key=checkbox_key
+                                )
+
+                                # --------------------------------------------------
+                                # ATUALIZA STATUS NO BANCO (IMEDIATO)
+                                # --------------------------------------------------
+                                novo_status = "resolvido" if resolvido else "pendente"
+
+                                if novo_status != status_atual:
+
+                                    # Atualiza em memória
+                                    relatorio["devolutiva_formulario"][idx_real]["status_devolutiva_formulario"] = novo_status
+
+                                    # Persiste no Mongo
+                                    col_projetos.update_one(
+                                        {"codigo": projeto_codigo},
+                                        {
+                                            "$set": {
+                                                "relatorios": projeto["relatorios"]
+                                            }
+                                        }
+                                    )
+
+                                    st.rerun()
+
+
+
+                                # --------------------------------------------------
+                                # BOTÃO EXCLUIR
+                                # --------------------------------------------------
 
                                 if st.button(
                                     "Excluir",
