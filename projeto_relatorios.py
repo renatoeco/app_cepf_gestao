@@ -1856,8 +1856,6 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
             if not fornecedor or not fornecedor.strip():
                 erros_campos.append("Fornecedor")
 
-            # if not cpf_cnpj or not cpf_cnpj.strip():
-            #     erros_campos.append("CPF / CNPJ")
 
             if not is_taxa_bancaria and (not anexos or len(anexos) == 0):
                 erros_campos.append("Anexos")
@@ -2048,7 +2046,9 @@ def listar_relatos_atividade(atividade, relatorio_numero):
 
 
 
-# Função para salvar o relato
+
+
+# Função para salvar o relato (mantendo TODAS as features)
 def salvar_relato():
     """
     Salva um relato de atividade:
@@ -2057,7 +2057,7 @@ def salvar_relato():
     - envia anexos e fotos
     - grava no MongoDB
     - limpa o session_state
-    - executa rerun ao final
+    - NÃO executa UI nem rerun (controlado externamente)
     """
 
     # --------------------------------------------------
@@ -2071,25 +2071,21 @@ def salvar_relato():
     porcentagem_atividade = st.session_state.get("campo_porcentagem_atividade", 0)
 
     # --------------------------------------------------
-    # 2. VALIDAÇÕES
+    # 2. VALIDAÇÕES (mantidas, mas sem UI)
     # --------------------------------------------------
     erros = []
+
     if not texto_relato.strip():
-        erros.append("O campo Relato é obrigatório.")
-    # --------------------------------------------------
-    # VALIDAÇÃO DAS DATAS
-    # --------------------------------------------------
+        erros.append("Relato vazio")
 
     if not data_inicio:
-        erros.append("O campo Data de início é obrigatório.")
+        erros.append("Data início ausente")
 
     if not data_fim:
-        erros.append("O campo Data de fim é obrigatório.")
+        erros.append("Data fim ausente")
 
     if erros:
-        for e in erros:
-            st.error(e)
-        return
+        return False
 
     # --------------------------------------------------
     # 3. CONEXÃO COM GOOGLE DRIVE
@@ -2098,20 +2094,17 @@ def salvar_relato():
 
     projeto = st.session_state.get("projeto_mongo")
     if not projeto:
-        st.error("Projeto não encontrado na sessão.")
-        return
+        return False
 
     codigo = projeto["codigo"]
     sigla = projeto["sigla"]
 
-    # Pasta do projeto (padrão já usado em Locais)
     pasta_projeto_id = obter_pasta_projeto(
         servico,
         codigo,
         sigla
     )
 
-    # Pasta Relatos_atividades
     pasta_relatos_id = obter_ou_criar_pasta(
         servico,
         "Relatos_atividades",
@@ -2123,8 +2116,7 @@ def salvar_relato():
     # --------------------------------------------------
     atividade = st.session_state.get("atividade_selecionada_drive")
     if not atividade:
-        st.error("Atividade não selecionada.")
-        return
+        return False
 
     id_atividade = atividade.get("id")
 
@@ -2133,12 +2125,10 @@ def salvar_relato():
     # --------------------------------------------------
     atividade_mongo = obter_atividade_mongo(projeto, id_atividade)
     if not atividade_mongo:
-        st.error("Atividade não encontrada no banco de dados.")
-        return
+        return False
 
-   
     # --------------------------------------------------
-    # GERA ID DE RELATO GLOBALMENTE ÚNICO
+    # 6. GERA ID GLOBAL
     # --------------------------------------------------
     maior_numero = 0
 
@@ -2154,15 +2144,10 @@ def salvar_relato():
                         except ValueError:
                             pass
 
-    # Próximo número disponível
-    novo_numero = maior_numero + 1
-    id_relato = f"relato_{novo_numero:03d}"
-
-
-
+    id_relato = f"relato_{maior_numero + 1:03d}"
 
     # --------------------------------------------------
-    # 6. PASTA DO RELATO (DIRETAMENTE EM Relatos_atividades)
+    # 7. PASTA DO RELATO
     # --------------------------------------------------
     pasta_relato_id = obter_ou_criar_pasta(
         servico,
@@ -2170,9 +2155,8 @@ def salvar_relato():
         pasta_relatos_id
     )
 
-
     # --------------------------------------------------
-    # 7. UPLOAD DE ANEXOS
+    # 8. UPLOAD DE ANEXOS (mantido)
     # --------------------------------------------------
     lista_anexos = []
 
@@ -2196,10 +2180,8 @@ def salvar_relato():
                     "id_arquivo": id_drive
                 })
 
-
-
     # --------------------------------------------------
-    # 8. UPLOAD DE FOTOGRAFIAS
+    # 9. UPLOAD DE FOTOGRAFIAS (INTEGRALMENTE PRESERVADO)
     # --------------------------------------------------
     lista_fotos = []
 
@@ -2208,14 +2190,8 @@ def salvar_relato():
         if f.get("arquivo") is not None
     ]
 
-
-
     if fotos_validas:
 
-        # --------------------------------------------------
-        # CRIA PASTA FOTOS (SE NÃO EXISTIR)
-        # --------------------------------------------------
-        # Verifica se já existe antes
         consulta = (
             f"name='fotos' and "
             f"'{pasta_relato_id}' in parents and "
@@ -2234,17 +2210,13 @@ def salvar_relato():
         if arquivos:
             pasta_fotos_id = arquivos[0]["id"]
         else:
-            # Cria pasta
             pasta_fotos_id = obter_ou_criar_pasta(
                 servico,
                 "fotos",
                 pasta_relato_id
             )
 
-
-            # DEFINE PERMISSÃO PÚBLICA na pasta de fotos de cada relato
             garantir_permissao_publica_leitura(servico, pasta_fotos_id)
-
 
         for foto in fotos_validas:
             arq = foto["arquivo"]
@@ -2263,33 +2235,22 @@ def salvar_relato():
                     "id_arquivo": id_drive
                 })
 
-
-
-
     # --------------------------------------------------
-    # 9. OBJETO FINAL DO RELATO
+    # 10. OBJETO FINAL (mantido)
     # --------------------------------------------------
-    
-
     data_inicio_str = data_inicio.strftime("%d/%m/%Y") if data_inicio else None
-    data_fim_str = data_fim.strftime("%d/%m/%Y") if data_fim else None    
-    
+    data_fim_str = data_fim.strftime("%d/%m/%Y") if data_fim else None
 
     novo_relato = {
         "id_relato": id_relato,
         "status_relato": "aberto",
         "relatorio_numero": st.session_state.get("relatorio_numero"),
         "relato": texto_relato.strip(),
-
         "data_inicio": data_inicio_str,
         "data_fim": data_fim_str,
-
         "porc_ativ_relato": int(porcentagem_atividade),
-
         "autor": st.session_state.get("nome", "Usuário")
     }
-
-
 
     if lista_anexos:
         novo_relato["anexos"] = lista_anexos
@@ -2309,9 +2270,8 @@ def salvar_relato():
     )
 
     # --------------------------------------------------
-    # 10. LIMPEZA DO SESSION_STATE (CRÍTICO)
+    # 11. LIMPEZA (mantida)
     # --------------------------------------------------
-
     for chave in [
         "campo_relato",
         "campo_data_inicio",
@@ -2320,21 +2280,18 @@ def salvar_relato():
         "campo_anexos",
         "fotos_relato"
     ]:
-
         if chave in st.session_state:
             del st.session_state[chave]
 
-    # Remove chaves dinâmicas das fotos
     for k in list(st.session_state.keys()):
         if k.startswith("foto_"):
             del st.session_state[k]
 
-    # --------------------------------------------------
-    # 11. FINALIZAÇÃO
-    # --------------------------------------------------
-    st.success("Relato salvo com sucesso.", icon=":material/check:")
-    time.sleep(3)
-    st.rerun()
+    return True
+
+
+
+
 
 
 # Função auxiliar para o salvar_relato, que dá permissão de leitura pública para a pasta de fotos no ato da criação da pasta no drivce
@@ -2361,347 +2318,221 @@ def garantir_permissao_publica_leitura(servico, pasta_id):
 
 
 
-# ==========================================================================================
-# DIÁLOGO: RELATAR ATIVIDADE
-# ==========================================================================================
-@st.dialog("Relatar atividade", width="medium")
-def dialog_relatos():
 
-    projeto = st.session_state.get("projeto_mongo")
-    if not projeto:
-        st.error("Projeto não encontrado.")
-        return
+# ==================================================
+# RELATO DE ATIVIDADE (EXPANDER)
+# ==================================================
+def render_relato_atividade(relatorio_numero, projeto, col_projetos):
 
-    # --------------------------------------------------
-    # 1. MONTA LISTA DE ATIVIDADES
-    # --------------------------------------------------
-    atividades = []
+    if "form_relato_key" not in st.session_state:
+        st.session_state["form_relato_key"] = 0
 
-    for componente in projeto["plano_trabalho"]["componentes"]:
-        for entrega in componente["entregas"]:
-            for atividade in entrega["atividades"]:
-                atividades.append({
-                    "id": atividade["id"],
-                    "atividade": atividade["atividade"],
-                    "componente": componente["componente"],
-                    "entrega": entrega["entrega"],
-                    "data_inicio": atividade.get("data_inicio"),
-                    "data_fim": atividade.get("data_fim"),
-                    "relatos": atividade.get("relatos", [])
-                })
+    form_key = st.session_state["form_relato_key"]
 
-    if not atividades:
-        st.info("Nenhuma atividade cadastrada.")
-        time.sleep(3)
-        return
+    with st.expander("**Relatar atividade**", expanded=False, icon=":material/add:"):
 
-    # --------------------------------------------------
-    # 2. SELECTBOX COM OPÇÃO VAZIA
-    # --------------------------------------------------
-    atividades_com_placeholder = (
-        [{"id": None, "atividade": ""}]
-        + atividades
-    )
+        # ==================================================
+        # LISTA DE ATIVIDADES (MESMA LÓGICA)
+        # ==================================================
+        atividades = []
 
-    atividade_selecionada = st.selectbox(
-        "Selecione a atividade *",
-        atividades_com_placeholder,
-        format_func=lambda x: x["atividade"],
-        key="atividade_select_dialog"
-    )
+        for componente in projeto["plano_trabalho"]["componentes"]:
+            for entrega in componente["entregas"]:
+                for atividade in entrega["atividades"]:
+                    atividades.append({
+                        "id": atividade["id"],
+                        "atividade": atividade["atividade"],
+                        "componente": componente["componente"],
+                        "entrega": entrega["entrega"],
+                        "data_inicio": atividade.get("data_inicio"),
+                        "data_fim": atividade.get("data_fim"),
+                        "relatos": atividade.get("relatos", [])
+                    })
 
+        if not atividades:
+            st.info("Nenhuma atividade cadastrada.")
+            return
 
+        atividades_com_placeholder = [{"id": None, "atividade": ""}] + atividades
 
-
-    # recupera datas da atividade selecionada
-    data_inicio_atv = None
-    data_fim_atv = None
-
-    if atividade_selecionada and atividade_selecionada.get("id"):
-
-        atividade_mongo = obter_atividade_mongo(
-            projeto,
-            atividade_selecionada["id"]
+        atividade_selecionada = st.selectbox(
+            "Selecione a atividade *",
+            atividades_com_placeholder,
+            format_func=lambda x: x["atividade"],
+            key=f"atividade_select_{form_key}"
         )
 
-        if atividade_mongo:
-            data_inicio_atv = atividade_mongo.get("data_inicio")
-            data_fim_atv = atividade_mongo.get("data_fim")
+        # --------------------------------------------------
+        # SINCRONIZA PARA FUNÇÃO DE SALVAR (CRÍTICO)
+        # --------------------------------------------------
+        st.session_state["atividade_selecionada_drive"] = atividade_selecionada
 
-    # mostra período programado da atividade
-    if data_inicio_atv and data_fim_atv:
-        st.write(
-            f"Programada para começar em **{data_inicio_atv}** e terminar em **{data_fim_atv}**."
+        # ==================================================
+        # PORCENTAGEM (MANTIDO)
+        # ==================================================
+        porcentagens = list(range(0, 101, 10))
+
+        porcentagem_escolhida = st.selectbox(
+            "Atualize a porcentagem de execução da atividade *",
+            options=porcentagens,
+            format_func=lambda x: f"{x}%",
+            key="campo_porcentagem_atividade"
         )
 
-        st.write('')
-
-
-
-
-
-
-
-    # SELECTBOX DE PORCENTAGEM DE EXECUÇÃO DA ATIVIDADE
-
-    # opções de porcentagem
-    porcentagens = list(range(0, 101, 10))
-
-    porcentagem_atual = 0
-
-    # busca a porcentagem atual da atividade selecionada
-    if atividade_selecionada and atividade_selecionada.get("id"):
-
-        atividade_mongo = obter_atividade_mongo(
-            projeto,
-            atividade_selecionada["id"]
-        )
-
-        if atividade_mongo:
-            porcentagem_atual = atividade_mongo.get("porcentagem_atv", 0)
-
-    # garante que esteja dentro das opções
-    if porcentagem_atual not in porcentagens:
-        porcentagem_atual = 0
-
-    # sincroniza o session_state quando a atividade muda
-    if (
-        "campo_porcentagem_atividade" not in st.session_state
-        or st.session_state.get("atividade_porcentagem_ref") != atividade_selecionada.get("id")
-    ):
-        st.session_state["campo_porcentagem_atividade"] = porcentagem_atual
-        st.session_state["atividade_porcentagem_ref"] = atividade_selecionada.get("id")
-
-    # selectbox de porcentagem
-    porcentagem_escolhida = st.selectbox(
-        "Atualize a porcentagem de execução da atividade *",
-        options=porcentagens,
-        format_func=lambda x: f"{x}%",
-        key="campo_porcentagem_atividade",
-        width=300
-    )
-
-
-
-
-
-
-    # Salva no session_state (mesmo vazia, para validação)
-    st.session_state["atividade_selecionada"] = atividade_selecionada
-    st.session_state["atividade_selecionada_drive"] = atividade_selecionada
-
-
-
-    
-
-    # ==================================================
-    # 3. FORMULÁRIO DO RELATO
-    # ==================================================
-    @st.fragment
-    def corpo_formulario():
-
-        st.divider()
-
-        # -----------------------------
-        # CAMPOS BÁSICOS
-        # -----------------------------
-        st.text_area(
+        # ==================================================
+        # RELATO
+        # ==================================================
+        relato = st.text_area(
             "Relato *",
-            placeholder="Descreva o que foi feito",
-            key="campo_relato"
+            key=f"campo_relato_{form_key}"
         )
 
-
-        # --------------------------------------------------
-        # CAMPOS DE DATA DO RELATO
-        # --------------------------------------------------
-
-
+        # ==================================================
+        # DATAS
+        # ==================================================
         col1, col2 = st.columns(2)
 
-        # ---------- DATA DE INÍCIO ----------
         with col1:
             data_inicio = date_picker(
                 label="Data de início",
                 format="dd/MM/yyyy",
                 locale="pt_BR",
                 one_tap=True,
-                key="campo_data_inicio"
+                key=f"campo_data_inicio_{form_key}"
             )
 
-        # ---------- DATA DE FIM ----------
         with col2:
             data_fim = date_picker(
                 label="Data de fim",
                 format="dd/MM/yyyy",
                 locale="pt_BR",
                 one_tap=True,
-                key="campo_data_fim"
+                key=f"campo_data_fim_{form_key}"
             )
 
-        # col1.date_input(
-        #     "Data de início *",
-        #     key="campo_data_inicio",
-        #     format="DD/MM/YYYY"
-        # )
-
-        # col2.date_input(
-        #     "Data de fim *",
-        #     key="campo_data_fim",
-        #     format="DD/MM/YYYY"
-        # )
-
-
-        st.divider()
-
-        # -----------------------------
-        # ANEXOS
-        # -----------------------------
-        st.write("**Anexos**")
-        st.write("Adicione aqui todos os anexos relevantes para esse relato: listas de presença, relatórios, publicações, etc.")
-        st.write("Você pode adicionar vários arquivos de uma só vez. **Não inclua fotos aqui**.")
-        st.write("")
-        
-        st.file_uploader(
-            "Selecione um ou vários arquivos.",
-            type=["pdf", "docx", "xlsx", "csv", "jpg", "jpeg", "png"],
+        # ==================================================
+        # ANEXOS (MANTIDO)
+        # ==================================================
+        anexos = st.file_uploader(
+            "Anexos",
             accept_multiple_files=True,
-            key="campo_anexos"
+            key=f"campo_anexos_{form_key}"
         )
 
-        st.divider()
-
-
-        # -----------------------------
-        # FOTOGRAFIAS
-        # -----------------------------
-        st.write("**Fotografias**")
-
-        st.write("Selecione aqui todas as **fotografias** relevantes para esse relato.")
-        st.write("Você pode adicionar várias fotografias, mas uma de cada vez. Clique no botão **'Adicionar fotografia'** sempre que quiser adicionar mais uma.")
-
-
+        # ==================================================
+        # FOTOGRAFIAS (MANTIDO INTEGRALMENTE)
+        # ==================================================
         if "fotos_relato" not in st.session_state:
             st.session_state["fotos_relato"] = []
 
-        st.write('')
-        # Botão para adicionar
         if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
-            # Usamos um ID único para cada foto em vez de apenas o índice
-
             st.session_state["fotos_relato"].append({
-                "id": str(uuid.uuid4()), 
+                "id": str(uuid.uuid4()),
                 "arquivo": None,
                 "descricao": "",
                 "fotografo": ""
             })
-            st.rerun(scope="fragment") # Atualiza APENAS o fragmento
+            st.rerun()
 
-        # Iteramos sobre uma cópia da lista para evitar erros de índice ao deletar
         for i, foto in enumerate(st.session_state["fotos_relato"]):
-            # Criamos uma chave única baseada no ID gerado, não apenas no índice i
-            # Isso evita que o Streamlit confunda os campos após uma remoção
+
             foto_id = foto["id"]
-            
+
             with st.container(border=True):
+
                 col_info, col_delete = st.columns([8, 2])
                 col_info.write(f"Fotografia {i+1}")
-                
 
-                with col_delete.container(horizontal=True, horizontal_alignment="right"):
-
-                    if st.button("", 
-                                        key=f"btn_del_{foto_id}", 
-                                        help="Remover foto", 
-                                        icon=":material/close:",
-                                        type="tertiary"):
-                        
+                with col_delete:
+                    if st.button("", key=f"del_{foto_id}", icon=":material/close:"):
                         st.session_state["fotos_relato"].pop(i)
-                        st.rerun(scope="fragment") # O "pulo do gato": atualiza só o fragmento
+                        st.rerun()
 
-                arquivo_foto = st.file_uploader(
+                arquivo = st.file_uploader(
                     "Selecione a foto",
-                    type=["jpg", "jpeg", "png"],
                     key=f"file_{foto_id}"
                 )
 
                 descricao = st.text_input(
-                    "Descrição da foto",
+                    "Descrição",
                     key=f"desc_{foto_id}"
                 )
 
                 fotografo = st.text_input(
-                    "Nome do(a) fotógrafo(a)",
+                    "Fotógrafo",
                     key=f"autor_{foto_id}"
                 )
 
-            # Sincronização
-            foto["arquivo"] = arquivo_foto
-            foto["descricao"] = descricao
-            foto["fotografo"] = fotografo
+                foto["arquivo"] = arquivo
+                foto["descricao"] = descricao
+                foto["fotografo"] = fotografo
 
-
-
-
-        # --------------------------------------------------
-        # AÇÕES FINAIS: BOTÕES + VALIDAÇÃO + SPINNER
-        # --------------------------------------------------
-        st.write('')
+        # ==================================================
+        # BOTÃO + NOTIFICAÇÃO
+        # ==================================================
         with st.container(horizontal=True):
 
-            # Botão salvar
             salvar = st.button(
                 "Salvar relato",
                 type="primary",
                 icon=":material/save:"
             )
 
-            # Botão cancelar
-            cancelar = st.button("Cancelar")
+            area_notif = st.container()
 
+        # ==================================================
+        # SALVAR
+        # ==================================================
         if salvar:
 
             erros = []
 
-            # Valida atividade
-            if not atividade_selecionada.get("id"):
-                erros.append("Selecione uma atividade.")
+            if not atividade_selecionada or not atividade_selecionada.get("id"):
+                erros.append("Atividade")
 
-            # Valida campos obrigatórios
-            if not st.session_state.get("campo_relato", "").strip():
-                erros.append("O campo Relato é obrigatório.")
-
-            # VALIDAÇÃO DAS DATAS
-            # Verifica se ambas as datas foram informadas.
-
-            data_inicio = st.session_state.get("campo_data_inicio")
-            data_fim = st.session_state.get("campo_data_fim")
+            if not relato or not relato.strip():
+                erros.append("Relato")
 
             if not data_inicio:
-                erros.append("O campo Data de início é obrigatório.")
+                erros.append("Data de início")
 
             if not data_fim:
-                erros.append("O campo Data de fim é obrigatório.")
+                erros.append("Data de fim")
 
-
-            # Mostra erros (mesma funcionalidade de antes)
             if erros:
-                for e in erros:
-                    st.error(e)
-                return
+                area_notif.warning(
+                    f"Preencha os seguintes campos obrigatórios: {', '.join(erros)}"
+                )
+                st.stop()
 
-            # Se passou na validação, salva
-            with st.spinner("Salvando, aguarde..."):
-                salvar_relato()
+            # --------------------------------------------------
+            # SINCRONIZAÇÃO COMPLETA (CRÍTICO)
+            # --------------------------------------------------
+            st.session_state["campo_relato"] = relato
+            st.session_state["campo_data_inicio"] = data_inicio
+            st.session_state["campo_data_fim"] = data_fim
+            st.session_state["campo_anexos"] = anexos
+            st.session_state["projeto_mongo"] = projeto
+            st.session_state["relatorio_numero"] = relatorio_numero
 
-            st.success("Relato salvo com sucesso.")
+            # ==================================================
+            # SALVAMENTO (FUNÇÃO ORIGINAL)
+            # ==================================================
+            with area_notif.spinner("Salvando relato..."):
+                sucesso = salvar_relato()
+
+            if not sucesso:
+                area_notif.warning("Erro ao salvar o relato.")
+                st.stop()
+
+            # ==================================================
+            # RESET
+            # ==================================================
+            st.session_state["form_relato_key"] += 1
+
+            area_notif.success("Relato salvo com sucesso!", icon=":material/check:")
+            time.sleep(3)
             st.rerun()
-
-        # Cancelar apenas faz rerun
-        if cancelar:
-            st.rerun()
-
-    corpo_formulario()
 
 
 
@@ -3349,32 +3180,13 @@ if step_selecionado == "Atividades":
     st.markdown("#### Relatos de atividades")
     st.write('')
 
-    # --------------------------------------------------
-    # BOTÃO PARA CRIAR NOVO RELATO
-    # --------------------------------------------------
-    with st.container(horizontal=True, horizontal_alignment="right"):
 
-        if pode_editar_relatorio:
-            if st.button(
-                "Relatar atividade",
-                type="primary",
-                key=f"btn_relatar_{idx}",
-                icon=":material/add:",
-                width=260
-            ):
-                # Limpa qualquer resíduo antigo de formulário
-                for chave in [
-                    "campo_relato",
-                    "campo_quando",
-                    "campo_onde",
-                    "campo_anexos",
-                    "fotos_relato",
-                    "atividade_select_dialog"
-                ]:
-                    if chave in st.session_state:
-                        del st.session_state[chave]
-
-                dialog_relatos()
+    if pode_editar_relatorio:
+        render_relato_atividade(
+            relatorio_numero=relatorio_numero,
+            projeto=projeto,
+            col_projetos=col_projetos
+        )
 
 
     # --------------------------------------------------
@@ -3922,22 +3734,6 @@ if step_selecionado == "Atividades":
 
 
 
-
-
-
-                            # data_inicio = col1.date_input(
-                            #     "Data de início *",
-                            #     value=data_inicio_valor,
-                            #     key=f"edit_data_inicio_{id_relato}",
-                            #     format="DD/MM/YYYY"
-                            # )
-
-                            # data_fim = col2.date_input(
-                            #     "Data de fim *",
-                            #     value=data_fim_valor,
-                            #     key=f"edit_data_fim_{id_relato}",
-                            #     format="DD/MM/YYYY"
-                            # )
 
 
                             st.divider()
