@@ -2082,7 +2082,8 @@ with aba_corredores:
         if st.button(
             "Salvar alterações",
             icon=":material/save:",
-            type="primary"
+            type="primary",
+            key="salvar_corredores"
         ):
 
             # Remove linhas vazias
