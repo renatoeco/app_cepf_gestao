@@ -2517,6 +2517,30 @@ with orcamento:
 
 
 
+    # -----------------------------------
+    # Preparar categorias de despesa
+    # -----------------------------------
+    col_categorias_despesa = db["categorias_despesa"]
+
+    categorias = list(
+        col_categorias_despesa
+        .find({}, {"categoria": 1})
+        .sort("categoria", 1)
+    )
+
+    # -----------------------------------
+    # Mapas auxiliares
+    # -----------------------------------
+    mapa_categoria_id_nome = {
+        str(c["_id"]): c["categoria"]
+        for c in categorias
+    }
+
+    mapa_categoria_nome_id = {
+        c["categoria"]: str(c["_id"])
+        for c in categorias
+    }
+
 
 
 
@@ -2753,6 +2777,26 @@ with orcamento:
         # --------------------------------------------------
         df_orcamento = pd.DataFrame(orcamento)
 
+
+        # --------------------------------------------------
+        # Converter ID categoria -> nome
+        # --------------------------------------------------
+        df_orcamento["categoria_nome"] = (
+            df_orcamento["categoria"]
+            .astype(str)
+            .map(mapa_categoria_id_nome)
+        )
+
+        # --------------------------------------------------
+        # Compatibilidade com registros antigos
+        # --------------------------------------------------
+        df_orcamento["categoria_nome"] = (
+            df_orcamento["categoria_nome"]
+            .fillna(df_orcamento["categoria"])
+        )
+
+
+
         # coluna auxiliar numérica (NÃO exibida)
         df_orcamento["saldo_num"] = df_orcamento["saldo"]
 
@@ -2789,12 +2833,13 @@ with orcamento:
         # Agrupamento por categoria (ordem alfabética)
         # --------------------------------------------------
         categorias = sorted(
-            df_orcamento["categoria"]
+            df_orcamento["categoria_nome"]
             .dropna()
             .unique()
             .tolist(),
-            key=str.lower  # ordenação case-insensitive
+            key=str.lower
         )
+
 
 
 
@@ -2846,7 +2891,7 @@ with orcamento:
             st.markdown(f"##### {categoria}")
 
             # Filtra categoria
-            df_cat = df_orcamento[df_orcamento["categoria"] == categoria].copy()
+            df_cat = df_orcamento[df_orcamento["categoria_nome"] == categoria].copy()
 
             # Renomeia colunas para exibição
             df_vis = df_cat.rename(columns={
@@ -2925,23 +2970,20 @@ with orcamento:
 
 
 
+
     # ==================================================
     # MODO EDIÇÃO — CRUD DO ORÇAMENTO
     # ==================================================
     if modo_edicao:
 
-        # -----------------------------------
-        # Buscar categorias de despesa
-        # -----------------------------------
-        col_categorias_despesa = db["categorias_despesa"]
 
-        categorias = list(
-            col_categorias_despesa
-            .find({}, {"categoria": 1})
-            .sort("categoria", 1)
+
+        # -----------------------------------
+        # Opções exibidas no selectbox
+        # -----------------------------------
+        opcoes_categorias = list(
+            mapa_categoria_nome_id.keys()
         )
-
-        opcoes_categorias = [c["categoria"] for c in categorias]
 
         if not opcoes_categorias:
             st.warning(
@@ -2949,6 +2991,9 @@ with orcamento:
                 "Cadastre primeiro nas configurações auxiliares."
             )
             st.stop()
+
+
+
 
         # -----------------------------------
         # Dados atuais do orçamento
@@ -2985,6 +3030,19 @@ with orcamento:
             if col not in df_orcamento.columns:
                 df_orcamento[col] = None
 
+
+
+        # -----------------------------------
+        # Converter ID categoria -> nome
+        # -----------------------------------
+        df_orcamento["categoria_nome"] = (
+            df_orcamento["categoria"]
+            .astype(str)
+            .map(mapa_categoria_id_nome)
+        )
+
+
+
         # -----------------------------------
         # Preencher valores nulos
         # -----------------------------------
@@ -3014,7 +3072,11 @@ with orcamento:
         # -----------------------------------
         # Ordenar
         # -----------------------------------
-        df_orcamento = df_orcamento.sort_values("categoria", ignore_index=True)
+        df_orcamento = df_orcamento.sort_values(
+            "categoria_nome",
+            ignore_index=True
+        )
+        # df_orcamento = df_orcamento.sort_values("categoria", ignore_index=True)
 
         # -----------------------------------
         # Inicializar estado do editor
@@ -3029,7 +3091,7 @@ with orcamento:
             st.session_state["df_orcamento_editor"][
                 [
                     "id_despesa",
-                    "categoria",
+                    "categoria_nome",
                     "nome_despesa",
                     "descricao_despesa",
                     "unidade",
@@ -3042,7 +3104,7 @@ with orcamento:
             height="content",
             column_config={
                 "id_despesa": None,
-                "categoria": st.column_config.SelectboxColumn(
+                "categoria_nome": st.column_config.SelectboxColumn(
                     "Categoria de despesa",
                     options=opcoes_categorias,
                     required=True
@@ -3240,12 +3302,10 @@ with orcamento:
 
             df_temp["valor_total_fmt"] = df_temp["valor_total"].apply(format_brl)
 
-            # Atualizar estado visual
-            st.session_state["df_orcamento_editor"] = df_temp
 
 
             df_salvar = df_editado_orc.dropna(
-                subset=["categoria", "nome_despesa"],
+                subset=["categoria_nome", "nome_despesa"],
                 how="any"
             ).copy()
 
@@ -3253,7 +3313,7 @@ with orcamento:
             # Validação
             # -----------------------------------
             campos_obrigatorios = [
-                "categoria",
+                "categoria_nome",
                 "nome_despesa",
                 "descricao_despesa",
                 "unidade",
@@ -3262,7 +3322,7 @@ with orcamento:
             ]
 
             nomes_legiveis = {
-                "categoria": "Categoria",
+                "categoria_nome": "Categoria",
                 "nome_despesa": "Despesa",
                 "descricao_despesa": "Descrição",
                 "unidade": "Unidade",
@@ -3337,6 +3397,7 @@ with orcamento:
             for _, row in df_salvar.iterrows():
 
                 id_despesa = row.get("id_despesa")
+
                 if pd.isna(id_despesa) or not id_despesa:
                     id_despesa = str(uuid.uuid4())
                 else:
@@ -3344,11 +3405,23 @@ with orcamento:
 
                 item_existente = mapa_antigo.get(id_despesa, {})
 
+
+                # -----------------------------------
+                # Categoria salva como ID
+                # -----------------------------------
+                nome_categoria = row["categoria_nome"]
+
+                id_categoria = (
+                    mapa_categoria_nome_id
+                    .get(nome_categoria)
+                )
+
+
                 item_atualizado = item_existente.copy()
 
                 item_atualizado.update({
                     "id_despesa": id_despesa,
-                    "categoria": row["categoria"],
+                    "categoria": id_categoria,
                     "nome_despesa": row["nome_despesa"],
                     "descricao_despesa": row.get("descricao_despesa"),
                     "unidade": row.get("unidade"),
