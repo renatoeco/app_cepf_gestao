@@ -163,30 +163,6 @@ if not st.session_state["ultimo_acesso_atualizado"]:
 
 
 
-# ###########################################################################################################
-# # CONEXÃO COM GOOGLE DRIVE
-# ###########################################################################################################
-
-
-# # Escopo mínimo necessário para Drive
-# ESCOPO_DRIVE = ["https://www.googleapis.com/auth/drive"]
-
-# @st.cache_resource
-# def obter_servico_drive():
-#     """
-#     Retorna o cliente autenticado do Google Drive,
-#     usando as credenciais armazenadas em st.secrets.
-#     """
-#     credenciais = Credentials.from_service_account_info(
-#         st.secrets["gcp_service_account"],
-#         scopes=ESCOPO_DRIVE
-#     )
-#     return build("drive", "v3", credentials=credenciais)
-
-
-
-
-
 
 ###########################################################################################################
 # FUNÇÕES
@@ -754,28 +730,58 @@ if not editar_cadastro:
             else:
                 texto_data = "com data não informada."
 
-            # Mensagem principal
-            if str(proximo_evento).startswith("Parcela"):
+
+
+            # =====================================================================================
+            # VERIFICA SE EXISTE RELATÓRIO EM ANÁLISE
+            # =====================================================================================
+
+            relatorios = projeto.get("relatorios", [])
+
+            relatorio_em_analise = next(
+                (
+                    r for r in relatorios
+                    if isinstance(r, dict)
+                    and r.get("status_relatorio") == "em_analise"
+                ),
+                None
+            )
+
+            # =====================================================================================
+            # MENSAGEM PRINCIPAL
+            # =====================================================================================
+
+            # PRIORIDADE: relatório em análise
+            if relatorio_em_analise:
+
+                numero_relatorio = relatorio_em_analise.get("numero", "?")
+
                 st.write(
-                    f"O próximo passo é o pagamento da **{proximo_evento.lower()}**, {texto_data}."
+                    f"O **Relatório {numero_relatorio}** está **em análise**. "
+                    "Aguarde o retorno da equipe do IEB."
                 )
 
-            elif str(proximo_evento).startswith("Relatório"):
-                st.write(
-                    f"O próximo passo é o envio do **{proximo_evento.lower()}**, {texto_data}."
-                )
-
+            # Próximo evento normal
             else:
-                st.info(
-                    f"Próximo evento: **{proximo_evento}**, {texto_data}."
-                )
 
-            # Atraso / antecedência
-            if dias_atraso is not None:
-                if dias_atraso > 0:
-                    st.write(f"O projeto acumula **{dias_atraso} dias** de atraso.")
-                elif dias_atraso < 0:
-                    st.write(f"Faltam **{abs(dias_atraso)} dias**.")
+                if str(proximo_evento).startswith("Parcela"):
+                    st.write(
+                        f"O próximo passo é o pagamento da **{proximo_evento.lower()}**, {texto_data}."
+                    )
+
+                elif str(proximo_evento).startswith("Relatório"):
+                    st.write(
+                        f"O próximo passo é o envio do **{proximo_evento.lower()}**, {texto_data}."
+                    )
+
+
+
+                # Atraso / antecedência
+                if dias_atraso is not None:
+                    if dias_atraso > 0:
+                        st.write(f"O projeto acumula **{dias_atraso} dias** de atraso.")
+                    elif dias_atraso < 0:
+                        st.write(f"Faltam **{abs(dias_atraso)} dias**.")
 
 
 
