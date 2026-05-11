@@ -194,13 +194,6 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
 
 
 
-    data_fim = col3.date_input(
-        "Data de Fim *",
-        value=st.session_state.form_projeto["data_fim"],
-        format="DD/MM/YYYY"
-    )
-
-
     col1, col2 = st.columns([2, 1])
 
     responsaveis_ids = col1.multiselect(

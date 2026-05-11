@@ -123,7 +123,7 @@ projetos = df_projetos["codigo"].unique().tolist()
 st.logo("images/ieb_logo.svg", size='large')
 
 # Título da página
-st.header("Convidar pessoa")
+st.header("Convidar pessoas")
 
 
 opcao_cadastro = st.radio("", ["Convite individual", "Convite em massa"], key="opcao_cadastro", horizontal=True)

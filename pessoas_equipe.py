@@ -203,7 +203,7 @@ def editar_pessoa(_id: str):
             {"$set": update_data},
         )
 
-        st.success("Pessoa atualizada com sucesso!")
+        st.success("Pessoa atualizada com sucesso!", icon=":material/check:")
         time.sleep(2)
         st.rerun()
 

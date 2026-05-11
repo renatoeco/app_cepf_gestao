@@ -887,7 +887,7 @@ if not editar_cadastro:
                 )
 
                 if resultado.modified_count == 1:
-                    st.success("Anotação atualizada com sucesso!")
+                    st.success("Anotação atualizada com sucesso!", icon=":material/check:")
                     time.sleep(2)
                     st.rerun()
                 else:
@@ -1015,7 +1015,7 @@ if not editar_cadastro:
                 )
 
                 if resultado.modified_count == 1:
-                    st.success("Visita registrada com sucesso!")
+                    st.success("Visita registrada com sucesso!", icon=":material/check:")
                     time.sleep(2)
                     st.rerun()
                 else:
@@ -1090,7 +1090,7 @@ if not editar_cadastro:
                 )
 
                 if resultado.modified_count == 1:
-                    st.success("Visita atualizada com sucesso!")
+                    st.success("Visita atualizada com sucesso!", icon=":material/check:")
                     time.sleep(2)
                     st.rerun()
                 else:
