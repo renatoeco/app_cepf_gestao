@@ -243,7 +243,7 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
 
 
         # # Feedback
-        # st.success("Pergunta adicionada com sucesso!")
+        # st.success("Pergunta adicionada com sucesso!", icon=":material/check:")
 
         # # Mantém padrão
         # time.sleep(3)
@@ -283,7 +283,7 @@ def confirmar_exclusao_pergunta(pergunta_atual, perguntas, edital_selecionado):
                 {"$set": {"perguntas_relatorio": novas}}
             )
 
-            st.success("Pergunta excluída com sucesso!")
+            st.success("Pergunta excluída com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -673,7 +673,7 @@ with aba_perguntas:
                         {"$set": {"perguntas_relatorio": novas_perguntas}}
                     )
 
-                    st.success(":material/check: Ordem atualizada com sucesso!")
+                    st.success(":material/check: Ordem atualizada com sucesso!", icon=":material/check:")
                     time.sleep(3)
                     st.rerun()
 
@@ -825,7 +825,7 @@ with aba_pesquisas:
                             }
                         )
 
-                        st.success(":material/check: Pesquisa cadastrada com sucesso!")
+                        st.success(":material/check: Pesquisa cadastrada com sucesso!", icon=":material/check:")
                         time.sleep(3)
                         st.rerun()
 
@@ -912,7 +912,7 @@ with aba_pesquisas:
                                 {"$set": {"pesquisas_relatorio": pesquisas_atualizadas}}
                             )
 
-                            st.success(":material/check: Pesquisa atualizada com sucesso!")
+                            st.success(":material/check: Pesquisa atualizada com sucesso!", icon=":material/check:")
                             time.sleep(3)
                             st.rerun()
 
@@ -933,7 +933,7 @@ with aba_pesquisas:
                             {"$set": {"pesquisas_relatorio": pesquisas_atualizadas}}
                         )
 
-                        st.success(":material/check: Pesquisa excluída com sucesso!")
+                        st.success(":material/check: Pesquisa excluída com sucesso!", icon=":material/check:")
                         time.sleep(3)
                         st.rerun()
 
@@ -1685,7 +1685,7 @@ with aba_publicos:
                     st.stop()
                 col_publicos.insert_one({"publico": publico})
 
-            st.success("Beneficiários atualizados com sucesso!")
+            st.success("Beneficiários atualizados com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -1824,7 +1824,7 @@ with aba_beneficios:
 
                 col_beneficios.insert_one({"beneficio": beneficio})
 
-            st.success("Tipos de benefício atualizados com sucesso!")
+            st.success("Tipos de benefício atualizados com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -2433,7 +2433,7 @@ with aba_kbas:
                 df_salvar.to_dict(orient="records")
             )
 
-            st.success("KBAs atualizadas com sucesso!")
+            st.success("KBAs atualizadas com sucesso!", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
