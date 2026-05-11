@@ -332,7 +332,7 @@ def login():
     for _ in range(7):
         st.write('')
 
-    esq, centro, dir = st.columns([2, 1, 2])
+    esq, centro, dir = st.columns([3, 2, 3])
 
     with centro.form("login_form", border=False):
         # Campo de e-mail
@@ -379,8 +379,9 @@ def login():
             else:
                 st.error("E-mail ou senha inválidos!", width=300)
 
-    st.write('')
-    st.write('')
+        st.write('')
+        st.write('')
+
 
     with centro.container(horizontal=True, horizontal_alignment="left", gap="large"):
 
