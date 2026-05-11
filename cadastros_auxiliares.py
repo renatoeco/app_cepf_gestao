@@ -1637,7 +1637,7 @@ with aba_publicos:
             }
         )
 
-        if st.button("Salvar alterações", icon=":material/save:", type="primary"):
+        if st.button("Salvar alterações", icon=":material/save:", type="primary", key="salvar_publicos"):
 
             if "publico" not in df_editado.columns:
                 st.error("Nenhum dado válido para salvar.")
