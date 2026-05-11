@@ -1538,9 +1538,18 @@ else:
             with col2:
 
                 # ---------- DATA DE INÍCIO DO CONTRATO ----------
+                
+                data_inicio_dt = pd.to_datetime(
+                    projeto["data_inicio_contrato"],
+                    dayfirst=True
+                ).date()
+
+
                 data_inicio = date_picker(
                     label="Data de início do contrato",
-                    value=pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True),
+                    value=data_inicio_dt,
+
+                    # value=pd.to_datetime(projeto["data_inicio_contrato"], dayfirst=True),
                     format="dd/MM/yyyy",
                     locale="pt_BR",
                     one_tap=True,
@@ -1551,9 +1560,15 @@ else:
             with col3:
 
                 # ---------- DATA DE FIM DO CONTRATO ----------
+
+                data_fim_dt = pd.to_datetime(
+                    projeto["data_fim_contrato"],
+                    dayfirst=True
+                ).date()
+
                 data_fim = date_picker(
                     label="Data de fim do contrato",
-                    value=pd.to_datetime(projeto["data_fim_contrato"], dayfirst=True),
+                    value=data_fim_dt,
                     format="dd/MM/yyyy",
                     locale="pt_BR",
                     one_tap=True,
