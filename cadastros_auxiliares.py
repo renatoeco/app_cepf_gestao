@@ -91,15 +91,19 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
     tipo = st.selectbox(
         "Tipo de pergunta",
         [
-            "Resposta curta",
-            "Resposta longa",
-            "Número",
-            "Múltipla escolha",
-            "Escolha única",
-            "Upload de arquivos",  # 👈 NOVO
             "Título",
             "Subtítulo",
             "Parágrafo",
+            
+            "Resposta curta",
+            "Resposta longa",
+            "Número",
+
+            "Escolha única",
+            "Múltipla escolha",
+
+            "Upload de arquivos",
+
         ],
         key="tipo_pergunta_nova"
     )
