@@ -242,18 +242,6 @@ def formulario_nova_pergunta(perguntas, edital_selecionado):
 
 
 
-        # # Feedback
-        # st.success("Pergunta adicionada com sucesso!", icon=":material/check:")
-
-        # # Mantém padrão
-        # time.sleep(3)
-
-        # # Recarrega
-        # st.rerun()
-
-
-
-
 
 
 # Diálogo de confirmação de exclusão de pergunta de relatório
@@ -1735,7 +1723,8 @@ with aba_beneficios:
             st.dataframe(
                 df_beneficios[["beneficio"]].sort_values("beneficio"),
                 hide_index=True,
-                width=500
+                width=500,
+                height='content'
             )
 
     # -------------------------
@@ -2071,9 +2060,7 @@ with aba_categorias_despesa:
                         }
                     )
 
-            st.success(
-                "Categorias de despesa atualizadas com sucesso!"
-            )
+            st.success("Categorias de despesa atualizadas com sucesso!", icon=":material/check:")
 
             time.sleep(3)
 
