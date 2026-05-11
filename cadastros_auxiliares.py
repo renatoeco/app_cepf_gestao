@@ -2122,7 +2122,6 @@ with aba_corredores:
         if df_corredores.empty:
             st.caption("Nenhum corredor cadastrado.")
         else:
-
             df_tabela = (
                 df_corredores
                 .sort_values("nome_corredor")
@@ -2134,7 +2133,17 @@ with aba_corredores:
             )
 
             st.dataframe(df_tabela,
-                         hide_index=True, 
+                         hide_index=True,
+                         height="content",
+                         column_config={
+                            "ID do corredor": st.column_config.TextColumn(
+                                width=150
+                            ),
+                            "Nome do corredor": st.column_config.TextColumn(
+                                width=900
+                            ),
+                        }
+
                          )
 
     # ==================================================
@@ -2160,16 +2169,16 @@ with aba_corredores:
 
         df_editado = st.data_editor(
             df_editor,
+            height="content",
             num_rows="dynamic",
             hide_index=True,
             key="editor_corredores",
-            # width=700,
             column_config={
                 "id_corredor": st.column_config.TextColumn(
                     "ID do corredor",
                     required=True,
                     help="Identificador único do corredor (texto livre)",
-                    width=20
+                    width=150
                 ),
                 "nome_corredor": st.column_config.TextColumn(
                     "Nome do corredor",
@@ -2311,7 +2320,16 @@ with aba_kbas:
 
             st.dataframe(
                 df_tabela,
-                hide_index=True
+                hide_index=True,
+                height=500,
+                column_config={
+                    "ID da KBA": st.column_config.TextColumn(
+                        width=150
+                    ),
+                    "Nome da KBA": st.column_config.TextColumn(
+                        width=900
+                    ),
+                }
             )
 
     # ==================================================
@@ -2339,13 +2357,14 @@ with aba_kbas:
             df_editor,
             num_rows="dynamic",
             hide_index=True,
+            height=500,
             key="editor_kbas",
             column_config={
                 "id_kba": st.column_config.TextColumn(
                     "ID da KBA",
                     required=True,
                     help="Identificador único da KBA (texto livre)",
-                    width=20
+                    width=150
                 ),
                 "nome_kba": st.column_config.TextColumn(
                     "Nome da KBA",
