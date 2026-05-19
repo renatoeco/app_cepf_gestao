@@ -228,13 +228,26 @@ st.logo("images/ieb_logo.svg", size='large')
 st.header('Equipe')
 
 # st.write('')
-st.divider()
+# st.divider()
 
 
-# Separando só a equipe e administradores
+aba_ativos, aba_inativos = st.tabs([":material/person: Ativos", ":material/block: Inativos"])
+
+
+
+# Filtra apenas usuários da equipe e administradores,
+# removendo registros com status "convidado"
 df_equipe = df_pessoas[
-    df_pessoas["Tipo de usuário"].isin(["admin", "equipe"])
+    (
+        df_pessoas["Tipo de usuário"].isin(["admin", "equipe"])
+    )
+    &
+    (
+        df_pessoas["Status"] != "convidado"
+    )
 ]
+
+
 
 
 st.write('')
