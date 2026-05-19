@@ -224,7 +224,7 @@ with st.container(horizontal=True):
     with col_toggle:
         st.write("")
         ver_meus_projetos = st.toggle(
-            "Ver somente os meus projetos",
+            "Ver meus projetos",
             False
         )
 

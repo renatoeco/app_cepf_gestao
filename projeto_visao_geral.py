@@ -1455,7 +1455,7 @@ else:
     aba_info, aba_direcoes_publico, aba_contratos = st.tabs([
         "Informações cadastrais",
         "Direções estratégicas e Público",
-        "Contrato e Emendas"
+        "Contrato e Aditivos"
     ])
 
     with aba_info:
@@ -2014,14 +2014,18 @@ else:
 
             st.markdown("##### Dados do contrato")
 
-
             with st.container(horizontal=True):
 
-                # Data de assinatura
+                # =============================================================================
+                # DATA DE ASSINATURA
+                # =============================================================================
+
                 data_assinatura_salva = projeto.get("contrato_data_assinatura")
 
                 if data_assinatura_salva:
-                    data_assinatura_default = pd.to_datetime(data_assinatura_salva).date()
+                    data_assinatura_default = pd.to_datetime(
+                        data_assinatura_salva
+                    ).date()
                 else:
                     data_assinatura_default = None
 
@@ -2032,7 +2036,10 @@ else:
                     width=250
                 )
 
-                # Nome do contrato
+                # =============================================================================
+                # NOME/NÚMERO DO CONTRATO
+                # =============================================================================
+
                 contrato_nome = st.text_input(
                     "Nome/Número do contrato",
                     value=projeto.get("contrato_nome", ""),
@@ -2040,54 +2047,56 @@ else:
                     width=400
                 )
 
-
-
             st.divider()
-
 
             col1, col2 = st.columns(2, gap="large")
 
-
-
-
-
-            # st.divider()
-            
-            # Adicionar documento
+            # =============================================================================
+            # ADICIONAR DOCUMENTO
+            # =============================================================================
 
             col1.markdown("##### Adicionar documento")
 
+            col1.caption('Cadastre aqui o Contrato, Aditivos e demais documentos contratuais.')
+
             descricao_contrato = col1.text_input(
-                "Descrição do documento",
+                "Descrição do documento *",
                 placeholder="Ex: Contrato principal, Aditivo 01..."
             )
 
             arquivo_contrato = col1.file_uploader(
-                "Selecione o arquivo",
+                "Selecione o arquivo *",
                 type=["pdf", "docx", "doc", "jpg", "png"]
             )
 
+            # =============================================================================
+            # DOCUMENTOS CADASTRADOS
+            # =============================================================================
 
-
-            # Documentos cadastrados
-            
             col2.markdown("##### Documentos cadastrados")
 
             contratos = projeto.get("contratos", [])
 
             if contratos:
+
                 for c in contratos:
-                    col2.markdown(f"[**{c['descricao_contrato']}**]({c['url_contrato']})")
+
+                    col2.markdown(
+                        f"[**{c['descricao_contrato']}**]({c['url_contrato']})"
+                    )
+
             else:
+
                 col2.markdown(
-                    "<span style='color:#c46a00; font-style:italic;'>Nenhum documento cadastrado</span>",
+                    "<span style='color:#c46a00; font-style:italic;'>"
+                    "Nenhum documento cadastrado"
+                    "</span>",
                     unsafe_allow_html=True
                 )
 
-
-
-
-
+            # =============================================================================
+            # BOTÃO SALVAR
+            # =============================================================================
 
             salvar_contrato = st.form_submit_button(
                 "Salvar",
@@ -2095,34 +2104,72 @@ else:
                 type="primary"
             )
 
+            # =============================================================================
+            # SALVAR
+            # =============================================================================
+
             if salvar_contrato:
 
-                with st.spinner("Salvando alterações..."):
+                # =========================================================================
+                # VALIDAÇÃO OBRIGATÓRIA DO DOCUMENTO
+                # =========================================================================
 
-                    # Converte data para datetime
-                    if data_assinatura_contrato:
-                        data_assinatura_dt = datetime.datetime.combine(
-                            data_assinatura_contrato,
-                            datetime.datetime.min.time()
-                        )
-                    else:
-                        data_assinatura_dt = None
 
-                    # Atualiza dados do contrato
-                    col_projetos.update_one(
-                        {"_id": projeto["_id"]},
-                        {
-                            "$set": {
-                                "contrato_data_assinatura": data_assinatura_dt,
-                                "contrato_nome": contrato_nome.strip() if contrato_nome else None
-                            }
-                        }
+                if not descricao_contrato.strip() or arquivo_contrato is None:
+
+                    st.warning(
+                        "Preencha a descrição e selecione um arquivo antes de salvar.",
+                        icon=":material/warning:"
                     )
 
-                    # Se adicionou documento
-                    if descricao_contrato and arquivo_contrato:
+                else:
+
+
+
+                    with st.spinner("Salvando alterações..."):
+
+                        # =========================================================================
+                        # CONVERTE DATA
+                        # =========================================================================
+
+                        if data_assinatura_contrato:
+
+                            data_assinatura_dt = datetime.datetime.combine(
+                                data_assinatura_contrato,
+                                datetime.datetime.min.time()
+                            )
+
+                        else:
+
+                            data_assinatura_dt = None
+
+                        # =========================================================================
+                        # ATUALIZA DADOS DO CONTRATO
+                        # =========================================================================
+
+                        col_projetos.update_one(
+                            {"_id": projeto["_id"]},
+                            {
+                                "$set": {
+                                    "contrato_data_assinatura": data_assinatura_dt,
+                                    "contrato_nome": (
+                                        contrato_nome.strip()
+                                        if contrato_nome
+                                        else None
+                                    )
+                                }
+                            }
+                        )
+
+                        # =========================================================================
+                        # CONECTA AO GOOGLE DRIVE
+                        # =========================================================================
 
                         servico = obter_servico_drive()
+
+                        # =========================================================================
+                        # PASTA DO PROJETO
+                        # =========================================================================
 
                         pasta_projeto = obter_pasta_projeto(
                             servico,
@@ -2130,11 +2177,19 @@ else:
                             projeto["sigla"]
                         )
 
+                        # =========================================================================
+                        # PASTA CONTRATOS
+                        # =========================================================================
+
                         pasta_contratos = obter_ou_criar_pasta(
                             servico,
                             "Contratos",
                             pasta_projeto
                         )
+
+                        # =========================================================================
+                        # ENVIA ARQUIVO
+                        # =========================================================================
 
                         id_arquivo = enviar_arquivo_drive(
                             servico,
@@ -2142,24 +2197,42 @@ else:
                             arquivo_contrato
                         )
 
+                        # =========================================================================
+                        # GERA LINK
+                        # =========================================================================
+
                         url_contrato = gerar_link_drive(id_arquivo)
+
+                        # =========================================================================
+                        # SALVA NO MONGO
+                        # =========================================================================
 
                         col_projetos.update_one(
                             {"_id": projeto["_id"]},
                             {
                                 "$push": {
                                     "contratos": {
-                                        "descricao_contrato": descricao_contrato,
+                                        "descricao_contrato": (
+                                            descricao_contrato.strip()
+                                        ),
                                         "url_contrato": url_contrato
                                     }
                                 }
                             }
                         )
 
-                    st.success("Contrato atualizado com sucesso!", icon=":material/check:")
-                    time.sleep(3)
-                    st.rerun()
+                        # =========================================================================
+                        # SUCESSO
+                        # =========================================================================
 
+                        st.success(
+                            "Contrato atualizado com sucesso!",
+                            icon=":material/check:"
+                        )
+
+                        time.sleep(3)
+
+                        st.rerun()
 
 
 
