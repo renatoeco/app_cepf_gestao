@@ -764,7 +764,7 @@ def enviar_email_remanejamento_atividade(
 
     assunto = f"Nova solicitação de alteração de atividade - {codigo}"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
 
     # --------------------------------------------------
@@ -923,7 +923,7 @@ def enviar_email_remanejamento_atividade_aprovado(
 
     assunto = "Remanejamento de atividade aprovado"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
     corpo_html = f"""
     <!DOCTYPE html>
@@ -1087,7 +1087,7 @@ def enviar_email_remanejamento_atividade_recusado(
 
     assunto = "Remanejamento de atividade recusado"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
     corpo_html = f"""
     <!DOCTYPE html>
@@ -1222,7 +1222,7 @@ def enviar_email_nova_atividade(
     organizacao = obter_nome_organizacao(projeto)
 
 
-    logo = logo_cepf
+    logo = logo_ieb
 
     assunto = f"Solicitação de nova atividade - {codigo_projeto}"
 
@@ -1337,7 +1337,7 @@ def enviar_email_nova_atividade_aprovada(
 
     assunto = "Nova atividade aprovada"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
 
     corpo_html = f"""
@@ -1486,7 +1486,7 @@ def enviar_email_nova_atividade_recusada(
 
     assunto = "Solicitação de nova atividade recusada"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
 
     corpo_html = f"""
@@ -1626,7 +1626,7 @@ def enviar_email_remocao_atividade_solicitada(
 
     assunto = f"Nova solicitação de remoção de atividade - {codigo}"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
 
     corpo_html = f"""
@@ -1738,7 +1738,7 @@ def enviar_email_remocao_atividade_aprovada(
 
     assunto = "Remoção de atividade aprovada"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
 
     corpo_html = f"""
@@ -1860,7 +1860,7 @@ def enviar_email_remocao_atividade_recusada(
 
     assunto = "Solicitação de remoção de atividade recusada"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
 
     corpo_html = f"""
@@ -2125,7 +2125,7 @@ def dialog_relatos():
 ###########################################################################################################
 
 # Logo hospedada no site do IEB para renderizar nos e-mails.
-logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+logo_ieb = "https://iieb.org.br/wp-content/uploads/2021/02/IEB-logo.svg"
 
 
 codigo_projeto_atual = st.session_state.get("projeto_atual")

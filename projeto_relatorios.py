@@ -2866,7 +2866,7 @@ if "step_relatorio" not in st.session_state:
 ###########################################################################################################
 
 # Logo hospedada no site do IEB para renderizar nos e-mails.
-logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+logo_ieb = "https://iieb.org.br/wp-content/uploads/2021/02/IEB-logo.svg"
 
 
 # Logo do sidebar
@@ -7605,7 +7605,7 @@ if step_selecionado == "Enviar":
                     col_pessoas=col_pessoas,
                     numero_relatorio=relatorio_numero,
                     projeto=projeto_atualizado,
-                    logo_url=logo_cepf
+                    logo_url=logo_ieb
                 )
 
 
@@ -8100,7 +8100,7 @@ if step_selecionado == "Avaliação":
                         relatorio_numero=relatorio_numero,
                         projeto=projeto,
                         organizacao=nome_org,
-                        logo_url=logo_cepf
+                        logo_url=logo_ieb
                     )
 
                     enviar_email(
@@ -8205,7 +8205,7 @@ if step_selecionado == "Avaliação":
                         relatorio_numero=relatorio_numero,
                         projeto=projeto,
                         organizacao=nome_org,
-                        logo_url=logo_cepf
+                        logo_url=logo_ieb
                     )
 
                     enviar_email(

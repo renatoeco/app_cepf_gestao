@@ -1122,40 +1122,4 @@ def sidebar_projeto():
         st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com cepfcerrado@iieb.org.br")
 
 
-    # st.sidebar.write('')
-
-    # # Botão para 'logout'
-    # if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
-    #     st.session_state.clear()
-
-    #     st.rerun()
-
-
-
-
-
-
-
-
-# # ###################################################################################################
-# # SIDEBAR DA PÁGINA DA EQUIPE
-# # ###################################################################################################
-
-# def sidebar_equipe():
-
-#     if st.session_state.tipo_usuario in ['admin', 'equipe']:
-
-
-#         # botão de logout com reinicialização completa da aplicação
-#         if st.sidebar.button("Sair", icon=":material/logout:", type="tertiary"):
-
-#             # limpeza total da sessão
-#             st.session_state.clear()
-
-#             # define explicitamente estado não autenticado
-#             st.session_state["logged_in"] = False
-
-#             # reinicia aplicação para voltar ao fluxo inicial (login)
-#             st.rerun()
-
 

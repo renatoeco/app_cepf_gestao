@@ -122,7 +122,7 @@ col_investidores = db["investidores"]
 ###########################################################################################################
 
 # Logo hospedada no site do IEB para renderizar nos e-mails.
-logo_cepf = "https://cepfcerrado.iieb.org.br/wp-content/uploads/2025/02/LogoConjuntaCEPFIEBGREEN-768x140.png"
+logo_ieb = "https://iieb.org.br/wp-content/uploads/2021/02/IEB-logo.svg"
 
 
 
@@ -438,7 +438,7 @@ def enviar_email_remanejamento_recusado(
 
     assunto = "Remanejamento recusado"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
     corpo_html = f"""
     <!DOCTYPE html>
@@ -607,7 +607,7 @@ def enviar_email_remanejamento_aprovado(
     # --------------------------------------------------
     assunto = "Remanejamento aprovado"
 
-    logo = logo_cepf
+    logo = logo_ieb
 
     corpo_html = f"""
     <!DOCTYPE html>
@@ -791,7 +791,7 @@ def enviar_email_remanejamento(
     # --------------------------------------------------
     # Enviar para cada pessoa (personalizado)
     # --------------------------------------------------
-    logo = logo_cepf
+    logo = logo_ieb
 
     with st.spinner("Enviando..."):
 
