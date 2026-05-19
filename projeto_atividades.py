@@ -57,7 +57,7 @@ col_editais = db["editais"]
 # Pessoas
 col_pessoas = db["pessoas"]
 
-
+col_organizacoes = db["organizacoes"]
 
 
 ###########################################################################################################
@@ -65,11 +65,31 @@ col_pessoas = db["pessoas"]
 ###########################################################################################################
 
 
+
+# Retorna o nome da organização vinculada ao projeto
+def obter_nome_organizacao(projeto):
+
+    id_organizacao = projeto.get("id_organizacao")
+
+    if id_organizacao is None:
+        return ""
+
+    organizacao_doc = col_organizacoes.find_one({
+        "_id": id_organizacao
+    })
+
+    if not organizacao_doc:
+        return ""
+
+    return organizacao_doc.get(
+        "nome_organizacao",
+        ""
+    )
+
+
 # ==================================================
 # Função para renderizar a interface de ações da equipe, no modo análise da solicitação de remanejamento
 # ==================================================
-
-
 
 def renderizar_acoes_remanejamento(item, idx):
 
@@ -701,8 +721,8 @@ def enviar_email_remanejamento_atividade(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
-
+    organizacao = obter_nome_organizacao(projeto)
+    
     # justificativa = item_remanejamento.get("justificativa", "")
     antes = item_remanejamento.get("antes", {})
     depois = item_remanejamento.get("depois", {})
@@ -863,7 +883,7 @@ def enviar_email_remanejamento_atividade_aprovado(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
 
     justificativa = item_remanejamento.get("justificativa", "")
 
@@ -1022,9 +1042,11 @@ def enviar_email_remanejamento_atividade_recusado(
     if not destinatarios:
         return
 
+    # Dados principais do projeto
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
+
 
     justificativa = item_remanejamento.get("justificativa", "")
     motivo_recusa = item_remanejamento.get("motivo_recusa", "")
@@ -1193,8 +1215,12 @@ def enviar_email_nova_atividade(
     if not destinatarios:
         return
 
+    # Dados principais do projeto
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+
+    # Busca o nome da organização vinculada ao projeto
+    organizacao = obter_nome_organizacao(projeto)
+
 
     logo = logo_cepf
 
@@ -1298,7 +1324,7 @@ def enviar_email_nova_atividade_aprovada(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
 
     componente = item_remanejamento.get("componente")
     entrega = item_remanejamento.get("entrega")
@@ -1449,7 +1475,7 @@ def enviar_email_nova_atividade_recusada(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
 
     atividade = item_remanejamento.get("add_atividade")
     data_inicio = item_remanejamento.get("data_inicio")
@@ -1596,7 +1622,7 @@ def enviar_email_remocao_atividade_solicitada(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
 
     assunto = f"Nova solicitação de remoção de atividade - {codigo}"
 
@@ -1700,7 +1726,7 @@ def enviar_email_remocao_atividade_aprovada(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
 
     atividade = item_remanejamento.get("del_atividade")
     data_inicio = item_remanejamento.get("data_inicio")
@@ -1825,7 +1851,7 @@ def enviar_email_remocao_atividade_recusada(
 
     codigo = projeto.get("codigo")
     nome_projeto = projeto.get("nome_do_projeto")
-    organizacao = projeto.get("organizacao")
+    organizacao = obter_nome_organizacao(projeto)
 
     atividade = item_remanejamento.get("del_atividade")
 
