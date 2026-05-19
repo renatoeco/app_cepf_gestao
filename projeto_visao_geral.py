@@ -33,7 +33,6 @@ from googleapiclient.http import MediaIoBaseUpload
 
 
 
-st.set_page_config(page_title="Visão Geral", page_icon=":material/home:")
 
 
 
@@ -42,6 +41,9 @@ st.set_page_config(page_title="Visão Geral", page_icon=":material/home:")
 ###########################################################################################################
 # CONFIGURAÇÕES DO STREAMLIT
 ###########################################################################################################
+
+st.set_page_config(page_title="Visão Geral", page_icon=":material/home:")
+
 
 
 # Traduzindo o texto do st.file_uploader
@@ -85,6 +87,18 @@ section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-s
 }
 </style>
 """, unsafe_allow_html=True)
+
+
+
+
+
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+sidebar_projeto()
+
+
 
 
 
@@ -2237,12 +2251,4 @@ else:
 
 
 
-
-
-
-# ###################################################################################################
-# SIDEBAR DA PÁGINA DO PROJETO
-# ###################################################################################################
-
-sidebar_projeto()
 

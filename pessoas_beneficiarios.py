@@ -1,5 +1,10 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, obter_servico_drive, obter_pasta_projeto, add_permissao_drive
+from funcoes_auxiliares import (
+    conectar_mongo_cepf_gestao, 
+    obter_servico_drive, 
+    obter_pasta_projeto, 
+    add_permissao_drive
+)
 import pandas as pd
 from bson import ObjectId
 import time

@@ -6,8 +6,9 @@ import smtplib
 from email.mime.text import MIMEText  
 from funcoes_auxiliares import conectar_mongo_cepf_gestao  # Função personalizada para conectar ao MongoDB
 import bcrypt
-# import os
-# import textwrap
+from email.utils import formataddr
+
+
 
 
 # Configurar o streamlit para tela wide
@@ -74,7 +75,8 @@ def enviar_email(destinatario, codigo):
     # Cria o e_mail formatado com HTML
     msg = MIMEText(corpo, "html", "utf-8")
     msg["Subject"] = assunto
-    msg["From"] = remetente
+    msg["From"] = formataddr(("Sistema Veredas", remetente))
+
     msg["To"] = destinatario
 
     # Tenta enviar o e_mail via SMTP seguro (SSL)

@@ -10,6 +10,7 @@ import smtplib
 import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 
 st.set_page_config(page_title="Convidar", page_icon=":material/person_add:")
@@ -55,7 +56,7 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
         senha_email = st.secrets["senhas"]["senha_email"]
 
         msg = MIMEMultipart()
-        msg['From'] = endereco_email
+        msg["From"] = formataddr(("Sistema Veredas", endereco_email))
         msg['To'] = email_destino
         msg['Subject'] = "Convite para o sistema Veredas"
 
