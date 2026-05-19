@@ -249,11 +249,6 @@ st.logo("images/ieb_logo.svg", size='large')
 
 st.header('Beneficiários(as)')
 
-# Separando só os beneficiários
-df_benef = df_pessoas[
-    df_pessoas["Tipo de usuário"] == "beneficiario"
-]
-
 
 
 
@@ -354,81 +349,276 @@ with st.container(horizontal=True, horizontal_alignment="right"):
 
 
 
+aba_ativos, aba_inativos = st.tabs([":material/person: Ativos", ":material/block: Inativos"])
 
 
 
-st.divider()
+with aba_ativos:
+
+    # Filtra apenas beneficiários ativos
+    df_benef = df_pessoas[
+        (
+            df_pessoas["Tipo de usuário"] == "beneficiario"
+        )
+        &
+        (
+            df_pessoas["Status"] == "ativo"
+        )
+    ]
 
 
+    st.write('')
 
-st.write('')
+    dist_colunas = [3, 4, 3, 2, 3, 2, 1]
 
-dist_colunas = [3, 4, 3, 2, 3, 2, 1]
-
-# Colunas
-col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
-
-# Cabeçalho da lista
-col1.write('**Nome**')
-col2.write('**Projetos**')
-col3.write('**E-mail**')
-col4.write('**Telefone**')
-col5.write('**Tipo de usuário**')
-col6.write('**Status**')
-col7.write('')
-
-st.write('')
-
-# Pra cada linha, criar colunas para os dados
-for _, row in df_benef.iterrows():
+    # Colunas
     col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
 
-    # NOME -----------------
-    col1.write(row["Nome"])
+    # Cabeçalho da lista
+    col1.write('**Nome**')
+    col2.write('**Projetos**')
+    col3.write('**E-mail**')
+    col4.write('**Telefone**')
+    col5.write('**Tipo de usuário**')
+    col6.write('**Status**')
+    col7.write('')
 
-    # PROJETOS -----------------
+    st.write('')
 
-    # Tratando a coluna projetos, que pode ter múltiplos valores------
-    projetos = row.get("Projetos", [])
-    # Garante que 'projetos' seja uma lista
-    if isinstance(projetos, str):
-        projetos = [projetos]
-    elif not isinstance(projetos, list):
-        projetos = []
-    # Exibe de forma amigável
-    if len(projetos) == 0:
-        col2.write("")
-    elif len(projetos) == 1:
-        col2.write(projetos[0])
-    else:
-        col2.write(", ".join(projetos))
+    # Pra cada linha, criar colunas para os dados
+    for _, row in df_benef.iterrows():
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
+
+        # NOME -----------------
+        col1.write(row["Nome"])
+
+        # PROJETOS -----------------
+
+        # Tratando a coluna projetos, que pode ter múltiplos valores
+        projetos = row.get("Projetos", [])
+
+        # Garante que 'projetos' seja uma lista
+        if isinstance(projetos, str):
+            projetos = [projetos]
+        elif not isinstance(projetos, list):
+            projetos = []
+
+        # Exibe de forma amigável
+        if len(projetos) == 0:
+            col2.write("")
+        elif len(projetos) == 1:
+            col2.write(projetos[0])
+        else:
+            col2.write(", ".join(projetos))
+
+        # E-MAIL -----------------
+        col3.write(row["E-mail"])
+
+        # TELEFONE -----------------
+        col4.write(row["Telefone"])
+
+        # TIPO DE USUÁRIO -----------------
+        tipo_usuario = row.get("Tipo de usuário", "").strip()
+        tipo_beneficiario = row.get("Tipo de beneficiário", "").strip() if "Tipo de beneficiário" in row else ""
+
+        # Se for beneficiário, concatena o tipo_beneficiario
+        if tipo_usuario.lower() == "beneficiario" and tipo_beneficiario:
+            tipo_exibido = f"{tipo_usuario} ({tipo_beneficiario})"
+        else:
+            tipo_exibido = tipo_usuario
+
+        col5.write(tipo_exibido)
+
+        # STATUS -----------------
+        col6.write(row["Status"])
+
+        # BOTÃO DE EDITAR -----------------
+        col7.button(
+            ":material/edit:",
+            key=row["_id"],
+            on_click=editar_pessoa,
+            args=(row["_id"],)
+        )
+
+
+
+
+
+with aba_inativos:
+
+    st.write('')
+
+    st.markdown(
+        "<span style='color:red;'>Usuários inativos estão impedidos de acessar o sistema.</span>",
+        unsafe_allow_html=True
+    )
+
+    st.write('')
+
+    # Filtra apenas beneficiários inativos
+    df_benef_inativos = df_pessoas[
+        (
+            df_pessoas["Tipo de usuário"] == "beneficiario"
+        )
+        &
+        (
+            df_pessoas["Status"] == "inativo"
+        )
+    ]
+
+    dist_colunas = [3, 4, 3, 2, 3, 2, 1]
+
+    # Colunas
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
+
+    # Cabeçalho da lista
+    col1.write('**Nome**')
+    col2.write('**Projetos**')
+    col3.write('**E-mail**')
+    col4.write('**Telefone**')
+    col5.write('**Tipo de usuário**')
+    col6.write('**Status**')
+    col7.write('')
+
+    st.write('')
+
+    # Pra cada linha, criar colunas para os dados
+    for _, row in df_benef_inativos.iterrows():
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
+
+        # NOME -----------------
+        col1.write(row["Nome"])
+
+        # PROJETOS -----------------
+
+        # Tratando a coluna projetos, que pode ter múltiplos valores
+        projetos = row.get("Projetos", [])
+
+        # Garante que 'projetos' seja uma lista
+        if isinstance(projetos, str):
+            projetos = [projetos]
+        elif not isinstance(projetos, list):
+            projetos = []
+
+        # Exibe de forma amigável
+        if len(projetos) == 0:
+            col2.write("")
+        elif len(projetos) == 1:
+            col2.write(projetos[0])
+        else:
+            col2.write(", ".join(projetos))
+
+        # E-MAIL -----------------
+        col3.write(row["E-mail"])
+
+        # TELEFONE -----------------
+        col4.write(row["Telefone"])
+
+        # TIPO DE USUÁRIO -----------------
+        tipo_usuario = row.get("Tipo de usuário", "").strip()
+        tipo_beneficiario = row.get("Tipo de beneficiário", "").strip() if "Tipo de beneficiário" in row else ""
+
+        # Se for beneficiário, concatena o tipo_beneficiario
+        if tipo_usuario.lower() == "beneficiario" and tipo_beneficiario:
+            tipo_exibido = f"{tipo_usuario} ({tipo_beneficiario})"
+        else:
+            tipo_exibido = tipo_usuario
+
+        col5.write(tipo_exibido)
+
+        # STATUS -----------------
+        col6.write(row["Status"])
+
+        # BOTÃO DE EDITAR -----------------
+        col7.button(
+            ":material/edit:",
+            key=f'inativo_{row["_id"]}',
+            on_click=editar_pessoa,
+            args=(row["_id"],)
+        )
+
+
+
+
+
+
+
+
+
+
+
+# st.divider()
+
+
+
+# st.write('')
+
+# dist_colunas = [3, 4, 3, 2, 3, 2, 1]
+
+# # Colunas
+# col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
+
+# # Cabeçalho da lista
+# col1.write('**Nome**')
+# col2.write('**Projetos**')
+# col3.write('**E-mail**')
+# col4.write('**Telefone**')
+# col5.write('**Tipo de usuário**')
+# col6.write('**Status**')
+# col7.write('')
+
+# st.write('')
+
+# # Pra cada linha, criar colunas para os dados
+# for _, row in df_benef.iterrows():
+#     col1, col2, col3, col4, col5, col6, col7 = st.columns(dist_colunas)
+
+#     # NOME -----------------
+#     col1.write(row["Nome"])
+
+#     # PROJETOS -----------------
+
+#     # Tratando a coluna projetos, que pode ter múltiplos valores------
+#     projetos = row.get("Projetos", [])
+#     # Garante que 'projetos' seja uma lista
+#     if isinstance(projetos, str):
+#         projetos = [projetos]
+#     elif not isinstance(projetos, list):
+#         projetos = []
+#     # Exibe de forma amigável
+#     if len(projetos) == 0:
+#         col2.write("")
+#     elif len(projetos) == 1:
+#         col2.write(projetos[0])
+#     else:
+#         col2.write(", ".join(projetos))
     
 
-    # E-MAIL -----------------
+#     # E-MAIL -----------------
 
-    col3.write(row["E-mail"])
+#     col3.write(row["E-mail"])
 
-    # TELEFONE -----------------
-    col4.write(row["Telefone"])
-
-
-    # TIPO DE USUÁRIO -----------------
-    tipo_usuario = row.get("Tipo de usuário", "").strip()
-    tipo_beneficiario = row.get("Tipo de beneficiário", "").strip() if "Tipo de beneficiário" in row else ""
-
-    # Se for beneficiário, concatena o tipo_beneficiario
-    if tipo_usuario.lower() == "beneficiario" and tipo_beneficiario:
-        tipo_exibido = f"{tipo_usuario} ({tipo_beneficiario})"
-    else:
-        tipo_exibido = tipo_usuario
-
-    col5.write(tipo_exibido)
+#     # TELEFONE -----------------
+#     col4.write(row["Telefone"])
 
 
+#     # TIPO DE USUÁRIO -----------------
+#     tipo_usuario = row.get("Tipo de usuário", "").strip()
+#     tipo_beneficiario = row.get("Tipo de beneficiário", "").strip() if "Tipo de beneficiário" in row else ""
+
+#     # Se for beneficiário, concatena o tipo_beneficiario
+#     if tipo_usuario.lower() == "beneficiario" and tipo_beneficiario:
+#         tipo_exibido = f"{tipo_usuario} ({tipo_beneficiario})"
+#     else:
+#         tipo_exibido = tipo_usuario
+
+#     col5.write(tipo_exibido)
 
 
-    # STATUS -----------------       
-    col6.write(row["Status"])
 
-    # BOTÃO DE EDITAR -----------------
-    col7.button(":material/edit:", key=row["_id"], on_click=editar_pessoa, args=(row["_id"],))
+
+#     # STATUS -----------------       
+#     col6.write(row["Status"])
+
+#     # BOTÃO DE EDITAR -----------------
+#     col7.button(":material/edit:", key=row["_id"], on_click=editar_pessoa, args=(row["_id"],))
