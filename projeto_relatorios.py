@@ -4004,6 +4004,108 @@ if step_selecionado == "Atividades":
 
                             st.divider()
 
+
+
+                            # --------------------------------------------------
+                            # LINKS EXISTENTES (REMOVER)
+                            # --------------------------------------------------
+                            links_remover = []
+                            links_existentes = relato.get("links", [])
+
+                            if links_existentes:
+
+                                st.markdown("**Links:**")
+
+                                for i, item_link in enumerate(links_existentes):
+
+                                    descricao = item_link.get("descricao", "")
+                                    link = item_link.get("link", "")
+
+                                    label = descricao
+
+                                    if link:
+                                        label += f" | {link}"
+
+                                    if st.checkbox(
+                                        f"**Remover:** {label}",
+                                        key=f"rm_link_{id_relato}_{i}"
+                                    ):
+                                        links_remover.append(item_link)
+
+
+
+                            # --------------------------------------------------
+                            # NOVOS LINKS
+                            # --------------------------------------------------
+                            st.write("")
+                            st.write("**Adicionar novos links**")
+
+                            links_novos_key = f"links_novos_{id_relato}"
+
+                            # inicializa lista
+                            if links_novos_key not in st.session_state:
+                                st.session_state[links_novos_key] = []
+
+                            # botão adicionar
+                            if st.button(
+                                "Adicionar link",
+                                key=f"btn_add_link_{id_relato}",
+                                icon=":material/link:"
+                            ):
+
+                                st.session_state[links_novos_key].append({
+                                    "id": str(uuid.uuid4()),
+                                    "descricao": "",
+                                    "link": ""
+                                })
+
+                                st.rerun()
+
+                            # renderização dinâmica
+                            for i, item_link in enumerate(st.session_state[links_novos_key]):
+
+                                link_id = item_link["id"]
+
+                                with st.container(border=True):
+
+                                    col_info, col_delete = st.columns([8, 2])
+
+                                    col_info.write(f"Link {i+1}")
+
+                                    # botão remover
+                                    with col_delete:
+
+                                        with st.container(horizontal=True, horizontal_alignment="right"):
+
+                                            if st.button(
+                                                "",
+                                                key=f"del_link_inline_{link_id}",
+                                                icon=":material/close:"
+                                            ):
+
+                                                st.session_state[links_novos_key].pop(i)
+                                                st.rerun()
+
+                                    # descrição
+                                    descricao = st.text_input(
+                                        "Descrição do link *",
+                                        key=f"desc_link_inline_{link_id}"
+                                    )
+
+                                    # url
+                                    link = st.text_input(
+                                        "Link *",
+                                        placeholder="https://...",
+                                        key=f"url_link_inline_{link_id}"
+                                    )
+
+                                    # sincronização
+                                    item_link["descricao"] = descricao
+                                    item_link["link"] = link
+
+
+                            st.divider()
+
                             # --------------------------------------------------
                             # FOTOS EXISTENTES (REMOVER)
                             # --------------------------------------------------
@@ -4031,47 +4133,94 @@ if step_selecionado == "Atividades":
                                         fotos_remover.append(f)
 
 
+
+
+
+
                             # --------------------------------------------------
-                            # NOVAS FOTOS
+                            # NOVAS FOTOGRAFIAS
                             # --------------------------------------------------
-                            st.write('')
+                            st.write("")
                             st.write("**Adicionar novas fotografias**")
 
                             fotos_novas_key = f"fotos_novas_{id_relato}"
+
+                            # inicializa lista
                             if fotos_novas_key not in st.session_state:
                                 st.session_state[fotos_novas_key] = []
 
+                            # botão adicionar
                             if st.button(
                                 "Adicionar fotografia",
                                 key=f"btn_add_foto_{id_relato}",
                                 icon=":material/add_a_photo:"
                             ):
+
                                 st.session_state[fotos_novas_key].append({
+                                    "id": str(uuid.uuid4()),
                                     "arquivo": None,
                                     "descricao": "",
                                     "fotografo": ""
                                 })
 
+                                st.rerun()
+
+                            # renderização dinâmica
                             for i, foto in enumerate(st.session_state[fotos_novas_key]):
+
+                                foto_id = foto["id"]
+
                                 with st.container(border=True):
 
-                                    foto["arquivo"] = st.file_uploader(
-                                        "Arquivo da foto",
+                                    col_info, col_delete = st.columns([8, 2])
+
+                                    col_info.write(f"Fotografia {i+1}")
+
+                                    # botão remover
+                                    with col_delete:
+
+                                        with st.container(horizontal=True, horizontal_alignment="right"):
+
+                                            if st.button(
+                                                "",
+                                                key=f"del_foto_inline_{foto_id}",
+                                                icon=":material/close:"
+                                            ):
+
+                                                st.session_state[fotos_novas_key].pop(i)
+                                                st.rerun()
+
+                                    # upload
+                                    arquivo = st.file_uploader(
+                                        "Selecione a foto *",
                                         type=["jpg", "jpeg", "png"],
-                                        key=f"foto_edit_file_{id_relato}_{i}"
+                                        key=f"file_inline_{foto_id}"
                                     )
 
-                                    foto["descricao"] = st.text_input(
-                                        "Descrição",
-                                        key=f"foto_edit_desc_{id_relato}_{i}"
+                                    # descrição
+                                    descricao = st.text_input(
+                                        "Descrição *",
+                                        key=f"desc_inline_{foto_id}"
                                     )
 
-                                    foto["fotografo"] = st.text_input(
-                                        "Fotógrafo(a)",
-                                        key=f"foto_edit_autor_{id_relato}_{i}"
+                                    # fotógrafo
+                                    fotografo = st.text_input(
+                                        "Fotógrafo *",
+                                        key=f"autor_inline_{foto_id}"
                                     )
+
+                                    # sincronização
+                                    foto["arquivo"] = arquivo
+                                    foto["descricao"] = descricao
+                                    foto["fotografo"] = fotografo
+
+
 
                             st.divider()
+
+
+
+
 
                             # --------------------------------------------------
                             # AÇÕES
@@ -4087,6 +4236,8 @@ if step_selecionado == "Atividades":
                                 ):
                                     st.session_state["relato_editando_id"] = None
                                     st.session_state.pop(fotos_novas_key, None)
+                                    st.session_state.pop(links_novos_key, None)
+
                                     st.rerun()
 
 
@@ -4113,6 +4264,34 @@ if step_selecionado == "Atividades":
 
                                     if not data_fim:
                                         erros.append("Data de fim")
+
+
+                                    # --------------------------------------------------
+                                    # VALIDAÇÃO DOS LINKS
+                                    # --------------------------------------------------
+                                    for i, item_link in enumerate(st.session_state[links_novos_key], start=1):
+
+                                        if not item_link.get("descricao", "").strip():
+                                            erros.append(f"Descrição do link {i}")
+
+                                        if not item_link.get("link", "").strip():
+                                            erros.append(f"URL do link {i}")
+
+
+                                    # --------------------------------------------------
+                                    # VALIDAÇÃO DAS NOVAS FOTOS
+                                    # --------------------------------------------------
+                                    for i, foto in enumerate(st.session_state[fotos_novas_key], start=1):
+
+                                        if foto.get("arquivo") is None:
+                                            erros.append(f"Arquivo da fotografia {i}")
+
+                                        if not foto.get("descricao", "").strip():
+                                            erros.append(f"Descrição da fotografia {i}")
+
+                                        if not foto.get("fotografo", "").strip():
+                                            erros.append(f"Fotógrafo da fotografia {i}")
+
 
 
                                     # Exibe erros
@@ -4157,6 +4336,12 @@ if step_selecionado == "Atividades":
                                             relato["fotos"] = [
                                                 f for f in relato.get("fotos", [])
                                                 if f not in fotos_remover
+                                            ]
+
+                                        if links_remover:
+                                            relato["links"] = [
+                                                l for l in relato.get("links", [])
+                                                if l not in links_remover
                                             ]
 
                                         # ==================================================
@@ -4230,6 +4415,28 @@ if step_selecionado == "Atividades":
                                                         "id_arquivo": id_drive
                                                     })
 
+
+                                        # -----------------------------
+                                        # LINKS
+                                        # -----------------------------
+                                        links_validos = [
+                                            l for l in st.session_state[links_novos_key]
+                                            if l.get("descricao") and l.get("link")
+                                        ]
+
+                                        if links_validos:
+
+                                            relato.setdefault("links", [])
+
+                                            for item_link in links_validos:
+
+                                                relato["links"].append({
+                                                    "descricao": item_link.get("descricao", "").strip(),
+                                                    "link": item_link.get("link", "").strip()
+                                                })
+
+
+
                                         # ==================================================
                                         # SALVA NO MONGO
                                         # ==================================================
@@ -4243,6 +4450,7 @@ if step_selecionado == "Atividades":
                                         # Limpa estado
                                         st.session_state["relato_editando_id"] = None
                                         st.session_state.pop(fotos_novas_key, None)
+                                        st.session_state.pop(links_novos_key, None)
 
                                         st.success("Relato atualizado com sucesso!", icon=":material/check:")
                                         time.sleep(3)
