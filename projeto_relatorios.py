@@ -4412,7 +4412,10 @@ if step_selecionado == "Despesas":
                         with col1:
                             data = date_picker(
                                 label="Data da despesa",
-                                value=pd.to_datetime(lanc["data_despesa"], dayfirst=True),
+                                value=pd.to_datetime(
+                                    lanc["data_despesa"],
+                                    dayfirst=True
+                                ).date(),
                                 format="dd/MM/yyyy",
                                 locale="pt_BR",
                                 one_tap=True,
