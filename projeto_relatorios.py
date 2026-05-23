@@ -2462,7 +2462,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             )
 
         # ==================================================
-        # ANEXOS (MANTIDO)
+        # ANEXOS
         # ==================================================
         anexos = st.file_uploader(
             "Anexos",
@@ -2471,7 +2471,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
         )
 
         # ==================================================
-        # FOTOGRAFIAS (MANTIDO INTEGRALMENTE)
+        # FOTOGRAFIAS
         # ==================================================
         if "fotos_relato" not in st.session_state:
             st.session_state["fotos_relato"] = []
@@ -2492,25 +2492,27 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             with st.container(border=True):
 
                 col_info, col_delete = st.columns([8, 2])
+                
                 col_info.write(f"Fotografia {i+1}")
 
                 with col_delete:
-                    if st.button("", key=f"del_{foto_id}", icon=":material/close:"):
-                        st.session_state["fotos_relato"].pop(i)
-                        st.rerun()
+                    with st.container(horizontal=True, horizontal_alignment="right"):
+                        if st.button("", key=f"del_{foto_id}", icon=":material/close:"):
+                            st.session_state["fotos_relato"].pop(i)
+                            st.rerun()
 
                 arquivo = st.file_uploader(
-                    "Selecione a foto",
+                    "Selecione a foto *",
                     key=f"file_{foto_id}"
                 )
 
                 descricao = st.text_input(
-                    "Descrição",
+                    "Descrição *",
                     key=f"desc_{foto_id}"
                 )
 
                 fotografo = st.text_input(
-                    "Fotógrafo",
+                    "Fotógrafo *",
                     key=f"autor_{foto_id}"
                 )
 
@@ -2550,6 +2552,38 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             if not data_fim:
                 erros.append("Data de fim")
 
+
+
+
+            # ==================================================
+            # VALIDAÇÃO DAS FOTOGRAFIAS
+            # ==================================================
+
+            for idx, foto in enumerate(st.session_state["fotos_relato"], start=1):
+
+                # Se começou a preencher qualquer campo,
+                # então todos passam a ser obrigatórios
+                possui_algum_dado = any([
+                    foto.get("arquivo"),
+                    foto.get("descricao", "").strip(),
+                    foto.get("fotografo", "").strip()
+                ])
+
+                if possui_algum_dado:
+
+                    if not foto.get("arquivo"):
+                        erros.append(f"Fotografia {idx}: selecione o arquivo")
+
+                    if not foto.get("descricao", "").strip():
+                        erros.append(f"Fotografia {idx}: descrição")
+
+                    if not foto.get("fotografo", "").strip():
+                        erros.append(f"Fotografia {idx}: fotógrafo")
+
+
+
+
+
             if erros:
                 area_notif.warning(
                     f"Preencha os seguintes campos obrigatórios: {', '.join(erros)}"
@@ -2557,7 +2591,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
                 st.stop()
 
             # --------------------------------------------------
-            # SINCRONIZAÇÃO COMPLETA (CRÍTICO)
+            # SINCRONIZAÇÃO COMPLETA 
             # --------------------------------------------------
             st.session_state["campo_relato"] = relato
             st.session_state["campo_data_inicio"] = data_inicio
@@ -2567,7 +2601,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             st.session_state["relatorio_numero"] = relatorio_numero
 
             # ==================================================
-            # SALVAMENTO (FUNÇÃO ORIGINAL)
+            # SALVAMENTO
             # ==================================================
             with area_notif.spinner("Salvando relato..."):
                 sucesso = salvar_relato()
