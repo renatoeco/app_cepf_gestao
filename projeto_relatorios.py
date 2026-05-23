@@ -6460,110 +6460,133 @@ if step_selecionado == "Pesquisas":
             )
         )
 
+
+
         # -------- BOTÃO SALVAR --------
         with col5:
-            if linha_modificada and pode_editar:
 
-                if st.button(
-                    "Salvar",
-                    type="primary",
-                    key=f"salvar_{relatorio_numero}_{pesquisa['id']}",
-                    icon=":material/save:",
-                ):
+            # Chave de controle do horário do último salvamento
+            salvar_horario_key = f"salvo_horario_{relatorio_numero}_{pesquisa['id']}"
 
+            if st.button(
+                "Salvar",
+                type="primary",
+                key=f"salvar_{relatorio_numero}_{pesquisa['id']}",
+                icon=":material/save:",
+                disabled=not pode_editar
+            ):
 
-                    with st.spinner("Salvando..."):
+                with st.spinner("Salvando..."):
 
-                        # Conecta ao Drive SOMENTE aqui
-                        servico = obter_servico_drive()
+                    # Conecta ao Drive somente durante o salvamento
+                    servico = obter_servico_drive()
 
-                        # Pasta do projeto
-                        pasta_projeto = obter_pasta_projeto(
+                    # Pasta principal do projeto
+                    pasta_projeto = obter_pasta_projeto(
+                        servico,
+                        projeto["codigo"],
+                        projeto["sigla"]
+                    )
+
+                    # Pasta de pesquisas do projeto
+                    pasta_pesquisas = obter_pasta_pesquisas(
+                        servico,
+                        pasta_projeto,
+                        projeto["codigo"]
+                    )
+
+                    # Mantém URL já existente caso não exista novo upload
+                    url_anexo_final = url_anexo_db
+
+                    # -------------------------------------------------
+                    # Upload de novo arquivo
+                    # -------------------------------------------------
+                    if (
+                        arquivo is not None
+                        and not st.session_state.get(upload_salvo_key, False)
+                    ):
+
+                        id_drive = enviar_arquivo_drive(
                             servico,
-                            projeto["codigo"],
-                            projeto["sigla"]
+                            pasta_pesquisas,
+                            arquivo
                         )
 
-                        # Pasta Pesquisas (direto no projeto)
-                        pasta_pesquisas = obter_pasta_pesquisas(
-                            servico,
-                            pasta_projeto,
-                            projeto["codigo"]
-                        )
+                        url_anexo_final = gerar_link_drive(id_drive)
 
-                        url_anexo_final = url_anexo_db  # valor já salvo no banco (se existir)
+                        # Marca upload como concluído na sessão atual
+                        st.session_state[upload_salvo_key] = True
 
-                        # ------------------------------
-                        # UPLOAD (somente se houver novo arquivo)
-                        # ------------------------------
-                        if (
-                            arquivo is not None
-                            and not st.session_state.get(upload_salvo_key, False)
-                        ):
-                            id_drive = enviar_arquivo_drive(
-                                servico,
-                                pasta_pesquisas,
-                                arquivo
-                            )
+                    # -------------------------------------------------
+                    # Estrutura da pesquisa
+                    # -------------------------------------------------
+                    pesquisa_obj = {
+                        "id_pesquisa": pesquisa["id"],
+                        "respondida": respondida_ui,
+                        "verificada": verificada_ui
+                    }
 
-                            url_anexo_final = gerar_link_drive(id_drive)
+                    if url_anexo_final:
+                        pesquisa_obj["url_anexo"] = url_anexo_final
 
-                            # Marca upload como concluído
-                            st.session_state[upload_salvo_key] = True
-
-                        # ------------------------------
-                        # MONTA O OBJETO DA PESQUISA
-                        # ------------------------------
-                        pesquisa_obj = {
-                            "id_pesquisa": pesquisa["id"],
-                            "respondida": respondida_ui,
-                            "verificada": verificada_ui
+                    # -------------------------------------------------
+                    # Atualiza ou insere pesquisa no projeto
+                    # -------------------------------------------------
+                    existe = col_projetos.count_documents(
+                        {
+                            "codigo": codigo_projeto_atual,
+                            "pesquisas.id_pesquisa": pesquisa["id"]
                         }
+                    ) > 0
 
-                        if url_anexo_final:
-                            pesquisa_obj["url_anexo"] = url_anexo_final
+                    if existe:
 
-                        # ------------------------------
-                        # VERIFICA SE JÁ EXISTE NO PROJETO
-                        # ------------------------------
-                        existe = col_projetos.count_documents(
+                        col_projetos.update_one(
                             {
                                 "codigo": codigo_projeto_atual,
                                 "pesquisas.id_pesquisa": pesquisa["id"]
+                            },
+                            {
+                                "$set": {
+                                    "pesquisas.$": pesquisa_obj
+                                }
                             }
-                        ) > 0
+                        )
 
-                        if existe:
-                            col_projetos.update_one(
-                                {
-                                    "codigo": codigo_projeto_atual,
-                                    "pesquisas.id_pesquisa": pesquisa["id"]
-                                },
-                                {
-                                    "$set": {
-                                        "pesquisas.$": pesquisa_obj
-                                    }
+                    else:
+
+                        col_projetos.update_one(
+                            {"codigo": codigo_projeto_atual},
+                            {
+                                "$push": {
+                                    "pesquisas": pesquisa_obj
                                 }
-                            )
-                        else:
-                            col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
-                                {
-                                    "$push": {
-                                        "pesquisas": pesquisa_obj
-                                    }
-                                }
-                            )
+                            }
+                        )
+
+                    # -------------------------------------------------
+                    # Registra horário do salvamento na sessão
+                    # -------------------------------------------------
+                    st.session_state[salvar_horario_key] = datetime.datetime.now().strftime("%H:%M")
+
+                # Limpa estados temporários
+                st.session_state.pop(upload_key, None)
+                st.session_state.pop(upload_salvo_key, None)
+
+                st.success(":material/check: Salvo!")
+                time.sleep(3)
+                st.rerun()
+
+            # -------------------------------------------------
+            # Exibe horário do último salvamento
+            # -------------------------------------------------
+            if salvar_horario_key in st.session_state:
+
+                st.caption(
+                    f"Salvo às {st.session_state[salvar_horario_key]}"
+                )
 
 
-
-                    # Limpa estados temporários
-                    st.session_state.pop(upload_key, None)
-                    st.session_state.pop(upload_salvo_key, None)
-
-                    st.success(":material/check: Salvo!")
-                    time.sleep(3)
-                    st.rerun()
 
         st.divider()
 
