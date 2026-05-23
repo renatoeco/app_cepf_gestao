@@ -2494,9 +2494,9 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
         # ANEXOS
         # ==================================================
         anexos = st.file_uploader(
-            "Anexos",
+            "Anexos (lista de presença, produtos, planos, publicações, relatórios, etc.)",
             accept_multiple_files=True,
-            key=f"campo_anexos_{form_key}"
+            key=f"campo_anexos_{form_key}",
         )
 
 
@@ -2543,6 +2543,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
 
                 descricao_link = st.text_input(
                     "Descrição do link *",
+                    placeholder="Título do vídeo, site, legenda, perfil de divulgação, notícias, posts, publicações, etc...",
                     key=f"desc_link_{link_id}"
                 )
 
