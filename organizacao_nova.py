@@ -160,6 +160,9 @@ if st.session_state.limpar_form_organizacao:
     st.session_state.sigla_organizacao_input = ""
     st.session_state.nome_organizacao_input = ""
     st.session_state.cnpj_input = ""
+    st.session_state.inscricao_estadual_input = ""
+    st.session_state.email_geral_input = ""
+    st.session_state.website_redes_input = ""
 
     # Desativa a flag após limpar
     st.session_state.limpar_form_organizacao = False
@@ -197,34 +200,79 @@ if opcao_cadastro == "Cadastro individual":
     with st.form(key="organizacao_form", border=False):
 
 
-        with st.container(horizontal=True):
+        ###########################################################################################################
+        # DADOS PRINCIPAIS DA ORGANIZAÇÃO
+        ###########################################################################################################
 
-            # Campos de entrada com keys para controle via session_state
-            sigla_organizacao = st.text_input(
+        with st.container():
+
+            # ---------------------------------------------------------------------------------------------
+            # PRIMEIRA LINHA
+            # ---------------------------------------------------------------------------------------------
+
+            col1, col2 = st.columns([1, 3])
+
+            # SIGLA DA ORGANIZAÇÃO
+            sigla_organizacao = col1.text_input(
                 "Sigla da Organização *",
                 key="sigla_organizacao_input",
-                width=300
+                width="stretch"
             )
 
-            nome_organizacao = st.text_input(
+            # NOME DA ORGANIZAÇÃO
+            nome_organizacao = col2.text_input(
                 "Nome da Organização *",
                 key="nome_organizacao_input"
             )
 
-            cnpj = st.text_input(
-                "CNPJ *",
-                placeholder="00.000.000/0000-00",
-                key="cnpj_input",
-                width=300
+            # ---------------------------------------------------------------------------------------------
+            # SEGUNDA LINHA
+            # ---------------------------------------------------------------------------------------------
 
+            with st.container(horizontal=True):
+
+                # CNPJ
+                cnpj = st.text_input(
+                    "CNPJ *",
+                    placeholder="00.000.000/0000-00",
+                    key="cnpj_input",
+                    width=250
+                )
+
+                # INSCRIÇÃO ESTADUAL
+                inscricao_estadual = st.text_input(
+                    "Inscrição estadual",
+                    key="inscricao_estadual_input",
+                    width=250
+                )
+
+            # ---------------------------------------------------------------------------------------------
+            # TERCEIRA LINHA
+            # ---------------------------------------------------------------------------------------------
+
+            col1, col2 = st.columns([1, 3])
+
+            # E-MAIL GERAL
+            email_geral = col1.text_input(
+                "E-mail geral *",
+                key="email_geral_input",
+                width="stretch"
             )
+
+            # WEBSITE / REDES SOCIAIS
+            website_redes = col2.text_input(
+                "Websites / Redes sociais (endereços separados por vírgula)",
+                key="website_redes_input",
+                width="stretch"
+            )
+
+
+        # -------------------------------------------------------------------------------------------------
+        # QUARTA LINHA - CAMPOS DE LOCALIZAÇÃO
+        # -------------------------------------------------------------------------------------------------
 
         with st.container(horizontal=True):
 
-
-            # -------------------------------------------------------------------------------------------------
-            # CAMPOS DE LOCALIZAÇÃO
-            # -------------------------------------------------------------------------------------------------
 
             endereco = st.text_input(
                 "Endereço *",
@@ -284,9 +332,10 @@ if opcao_cadastro == "Cadastro individual":
 
             # MENSAGENS DE VALIDAÇÃO
             if not sigla_organizacao or not nome_organizacao or not cnpj \
-            or not endereco or not uf or not municipio_nome or not cep_raw:
+            or not email_geral or not endereco or not uf \
+            or not municipio_nome or not cep_raw:
 
-                st.error("Todos os campos devem ser preenchidos.")
+                st.error("Todos os campos obrigatórios * devem ser preenchidos.")
 
             elif not validar_cnpj(cnpj):
 
@@ -354,6 +403,10 @@ if opcao_cadastro == "Cadastro individual":
                         "sigla_organizacao": sigla_organizacao,
                         "nome_organizacao": nome_organizacao,
                         "cnpj": cnpj,
+                        "inscricao_estadual": inscricao_estadual,
+
+                        "email_geral": email_geral,
+                        "website_redes_sociais": website_redes,
 
                         # Dados de localização
                         "endereco": endereco,
@@ -406,15 +459,24 @@ elif opcao_cadastro == "Cadastro em massa":
     # ---------------------------------------------------------------------------------------------
     # DATAFRAME INICIAL (VAZIO)
     # ---------------------------------------------------------------------------------------------
+
+###########################################################################################################
+# DATAFRAME BASE DO CADASTRO EM MASSA
+###########################################################################################################
+
     df_base = pd.DataFrame({
         "sigla_organizacao": [""],
         "nome_organizacao": [""],
         "cnpj": [""],
+        "inscricao_estadual": [""],
+        "email_geral": [""],
+        "website_redes_sociais": [""],
         "endereco": [""],
         "uf": [""],
         "municipio": [""],
         "cep": [""]
     })
+
 
     # ---------------------------------------------------------------------------------------------
     # LISTAS PARA SELECTBOX
@@ -429,15 +491,62 @@ elif opcao_cadastro == "Cadastro em massa":
         df_base,
         num_rows="dynamic",
         width="stretch",
+
         column_config={
-            "sigla_organizacao": st.column_config.TextColumn("Sigla", width=1),
-            "nome_organizacao": st.column_config.TextColumn("Nome da Organização", width=200),
-            "cnpj": st.column_config.TextColumn("CNPJ", width=1),
-            "endereco": st.column_config.TextColumn("Endereço", width=200),
-            "uf": st.column_config.SelectboxColumn("UF", options=lista_ufs, width=1),
-            "municipio": st.column_config.SelectboxColumn("Município", options=lista_municipios, width=1),
-            "cep": st.column_config.TextColumn("CEP", width=1),
+
+            "sigla_organizacao": st.column_config.TextColumn(
+                "Sigla *",
+                width=1
+            ),
+
+            "nome_organizacao": st.column_config.TextColumn(
+                "Nome da Organização *",
+                width=200
+            ),
+
+            "cnpj": st.column_config.TextColumn(
+                "CNPJ *",
+                width=1
+            ),
+
+            "inscricao_estadual": st.column_config.TextColumn(
+                "Inscrição Estadual",
+                width=1
+            ),
+
+            "email_geral": st.column_config.TextColumn(
+                "E-mail Geral *",
+                width=200
+            ),
+
+            "website_redes_sociais": st.column_config.TextColumn(
+                "Website / Redes Sociais",
+                width=200
+            ),
+
+            "endereco": st.column_config.TextColumn(
+                "Endereço *",
+                width=200
+            ),
+
+            "uf": st.column_config.SelectboxColumn(
+                "UF *",
+                options=lista_ufs,
+                width=1
+            ),
+
+            "municipio": st.column_config.SelectboxColumn(
+                "Município *",
+                options=lista_municipios,
+                width=1
+            ),
+
+            "cep": st.column_config.TextColumn(
+                "CEP *",
+                width=1
+            ),
         }
+
     )
 
     st.write("")
@@ -479,6 +588,9 @@ elif opcao_cadastro == "Cadastro em massa":
             uf = str(row["uf"]).strip()
             municipio_nome = str(row["municipio"]).strip()
             cep_raw = str(row["cep"]).strip()
+            inscricao_estadual = str(row["inscricao_estadual"]).strip()
+            email_geral = str(row["email_geral"]).strip()
+            website_redes_sociais = str(row["website_redes_sociais"]).strip()
 
 
 
@@ -490,7 +602,8 @@ elif opcao_cadastro == "Cadastro em massa":
             # -----------------------------
             # Validação obrigatórios
             # -----------------------------
-            if not sigla or not nome or not cnpj or not endereco or not uf or not municipio_nome or not cep_raw:
+            if not sigla or not nome or not cnpj or not email_geral or not endereco or not uf or not municipio_nome or not cep_raw:
+            # if not sigla or not nome or not cnpj or not endereco or not uf or not municipio_nome or not cep_raw:
                 erros.append(f"{identificador}: Campos obrigatórios não preenchidos.")
                 continue
 
@@ -564,7 +677,10 @@ elif opcao_cadastro == "Cadastro em massa":
                     "nome": municipio_doc["nome_municipio"],
                     "codigo_municipio": int(municipio_doc["codigo_municipio"])
                 },
-                "cep": cep_limpo
+                "cep": cep_limpo,
+                "inscricao_estadual": inscricao_estadual,
+                "email_geral": email_geral,
+                "website_redes_sociais": website_redes_sociais,
             }
 
             registros_validos.append(doc)

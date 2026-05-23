@@ -416,10 +416,14 @@ df_exibicao = df_organizacoes.drop(columns=["_id"])
 
 
 st.dataframe(df_exibicao, 
+
             column_order=[
                 "sigla_organizacao",
                 "nome_organizacao",
                 "cnpj",
+                "inscricao_estadual",
+                "email_geral",
+                "website_redes_sociais",
                 "endereco",
                 "uf_sigla",
                 "municipio_nome",
@@ -427,39 +431,65 @@ st.dataframe(df_exibicao,
                 "quantidade_projetos"
             ],
 
-             hide_index=True,
-             column_config={
-                 "sigla_organizacao": st.column_config.Column(
-                     label="Sigla",
-                     width="small" 
-                 ),
-                 "nome_organizacao": st.column_config.Column(
-                     label="Nome",
-                     width="medium" 
-                 ),
-                 "cnpj": st.column_config.Column(
-                     label="CNPJ", 
-                     width="medium" 
-                 ),
-                 "quantidade_projetos": st.column_config.Column(
-                     label="Projetos", 
-                     width="small" 
-                 ),
-                 "endereco": st.column_config.Column(
+
+            hide_index=True,
+
+            column_config={
+
+                "sigla_organizacao": st.column_config.Column(
+                    label="Sigla",
+                    width="small"
+                ),
+
+                "nome_organizacao": st.column_config.Column(
+                    label="Nome",
+                    width="medium"
+                ),
+
+                "cnpj": st.column_config.Column(
+                    label="CNPJ",
+                    width="medium"
+                ),
+
+                "inscricao_estadual": st.column_config.Column(
+                    label="Inscrição Estadual",
+                    width="medium"
+                ),
+
+                "email_geral": st.column_config.Column(
+                    label="E-mail Geral",
+                    width="medium"
+                ),
+
+                "website_redes_sociais": st.column_config.Column(
+                    label="Website / Redes Sociais",
+                    width="large"
+                ),
+
+                "quantidade_projetos": st.column_config.Column(
+                    label="Projetos",
+                    width="small"
+                ),
+
+                "endereco": st.column_config.Column(
                     label="Endereço",
                     width="medium"
                 ),
-                 "uf_sigla": st.column_config.Column(
+
+                "uf_sigla": st.column_config.Column(
                     label="UF",
                     width="small"
                 ),
+
                 "municipio_nome": st.column_config.Column(
                     label="Município",
                     width="small"
                 ),
+
                 "cep": st.column_config.Column(
                     label="CEP",
                     width="small"
                 ),
-             })
+            }
 
+)
