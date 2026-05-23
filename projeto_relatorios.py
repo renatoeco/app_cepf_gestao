@@ -1715,27 +1715,72 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
 
     with st.expander("**Registrar despesa**", expanded=False, icon=":material/add:"):
 
+
         # ==================================================
         # OPÇÕES DE DESPESA
         # ==================================================
+
+        # -----------------------------------
+        # Orçamento do projeto
+        # -----------------------------------
         orcamento = projeto["financeiro"]["orcamento"]
 
-        opcoes = sorted([
-            f"{o['categoria']} | {o['nome_despesa']}"
-            for o in orcamento
-        ], key=lambda x: x.lower())
 
+
+        # -----------------------------------
+        # Montar opções do selectbox
+        # -----------------------------------
+        opcoes = []
+
+        for o in orcamento:
+
+            # Categoria salva como ID
+            id_categoria = str(o.get("categoria"))
+
+            # Converter ID -> nome
+            nome_categoria = mapa_categoria_id_nome.get(
+                id_categoria,
+                id_categoria
+            )
+
+            # Texto exibido
+            texto_opcao = (
+                f"{nome_categoria} | "
+                f"{o['nome_despesa']}"
+            )
+
+            opcoes.append(texto_opcao)
+
+        # -----------------------------------
+        # Ordenar opções
+        # -----------------------------------
+        opcoes = sorted(
+            opcoes,
+            key=lambda x: x.lower()
+        )
+
+        # -----------------------------------
+        # Selectbox
+        # -----------------------------------
         escolha = st.selectbox(
             "Categoria / Despesa *",
             options=opcoes,
             key=f"desp_categoria_{form_key}"
         )
 
-        categoria, nome_despesa = escolha.split(" | ")
+        # -----------------------------------
+        # Separar valores
+        # -----------------------------------
+        categoria_nome, nome_despesa = (
+            escolha.split(" | ", 1)
+        )
+
 
         # ==================================================
         # DADOS DO LANÇAMENTO
         # ==================================================
+
+
         id_despesa = gerar_id_lanc_despesa(projeto)
 
 
@@ -1798,7 +1843,7 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
         # ==================================================
         # ANEXOS
         # ==================================================
-        categoria_lower = categoria.lower()
+        categoria_lower = categoria_nome.lower()
         is_taxa_bancaria = "taxas bancárias" in categoria_lower
 
         label_anexos = "Anexos" if is_taxa_bancaria else "Anexos *"
@@ -1954,10 +1999,27 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
                 # -------------------------------
                 # Inserção no objeto do projeto
                 # -------------------------------
+
                 for d in projeto["financeiro"]["orcamento"]:
-                    if d["categoria"] == categoria and d["nome_despesa"] == nome_despesa:
-                        d.setdefault("lancamentos", []).append(novo_lancamento)
+
+                    # Converter ID -> nome
+                    nome_categoria_item = mapa_categoria_id_nome.get(
+                        str(d["categoria"]),
+                        str(d["categoria"])
+                    )
+
+                    if (
+                        nome_categoria_item == categoria_nome and
+                        d["nome_despesa"] == nome_despesa
+                    ):
+                        d.setdefault(
+                            "lancamentos",
+                            []
+                        ).append(novo_lancamento)
+
                         break
+
+
 
                 # -------------------------------
                 # Persistência no MongoDB
@@ -2041,11 +2103,6 @@ def listar_relatos_atividade(atividade, relatorio_numero):
                         f"{f.get('descricao', '')} | "
                         f"{f.get('fotografo', '')}"
                     )
-
-
-
-
-
 
 
 # Função para salvar o relato (mantendo TODAS as features)
@@ -2290,10 +2347,6 @@ def salvar_relato():
     return True
 
 
-
-
-
-
 # Função auxiliar para o salvar_relato, que dá permissão de leitura pública para a pasta de fotos no ato da criação da pasta no drivce
 def garantir_permissao_publica_leitura(servico, pasta_id):
     """
@@ -2314,8 +2367,6 @@ def garantir_permissao_publica_leitura(servico, pasta_id):
     except Exception as e:
         st.error(f"Erro ao definir permissão: {str(e)}")
         raise
-
-
 
 
 
@@ -2535,10 +2586,6 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             st.rerun()
 
 
-
-
-
-
 # Função para liberar o próximo relatório quando o relatório anterior for aprovado
 def liberar_proximo_relatorio(projeto_codigo, relatorios):
     """
@@ -2563,8 +2610,6 @@ def liberar_proximo_relatorio(projeto_codigo, relatorios):
             )
 
 
-
-
 # Renderiza as perguntas em modo visualização
 def renderizar_visualizacao(pergunta, resposta):
     """
@@ -2578,7 +2623,6 @@ def renderizar_visualizacao(pergunta, resposta):
     st.write("")
 
 
-
 # Atualiza o status do relatório no banco de dados, apoiando o segmented_control
 
 STATUS_UI_TO_DB = {
@@ -2588,8 +2632,6 @@ STATUS_UI_TO_DB = {
 }
 
 STATUS_DB_TO_UI = {v: k for k, v in STATUS_UI_TO_DB.items()}
-
-
 
 
 def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
@@ -2749,11 +2791,6 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
         )
 
 
-
-
-
-
-
 def extrair_atividades(projeto):
     atividades = []
 
@@ -2773,7 +2810,6 @@ def extrair_atividades(projeto):
                 })
 
     return atividades
-
 
 
 # Função para formatar números no padrão brasileiro, com poucas casas decimais (dinamicamente)
@@ -2839,6 +2875,32 @@ def data_hoje_br():
 ###########################################################################################################
 # TRATAMENTO DOS DADOS E CONTROLES DE SESSÃO
 ###########################################################################################################
+
+
+
+# -----------------------------------
+# Buscar categorias de despesa
+# -----------------------------------
+col_categorias_despesa = db["categorias_despesa"]
+
+categorias_despesa = list(
+    col_categorias_despesa.find(
+        {},
+        {"categoria": 1}
+    )
+)
+
+# -----------------------------------
+# Mapa ID categoria -> nome
+# -----------------------------------
+mapa_categoria_id_nome = {
+    str(c["_id"]): c["categoria"]
+    for c in categorias_despesa
+}
+
+
+
+
 
 
 # Libera automaticamente o próximo relatório, se aplicável
@@ -4110,7 +4172,15 @@ if step_selecionado == "Despesas":
     # ==================================================
     for categoria, despesas in grupo.items():
 
-        st.markdown(f"##### {categoria}")
+        # -----------------------------------
+        # Converter ID categoria -> nome
+        # -----------------------------------
+        categoria_nome = mapa_categoria_id_nome.get(
+            str(categoria),
+            str(categoria)
+        )
+
+        st.markdown(f"##### {categoria_nome}")
 
         for nome_despesa, lancamentos in despesas.items():
 
@@ -4849,6 +4919,9 @@ if step_selecionado == "Despesas":
                             mostrar_devolutiva = False
                         else:
                             mostrar_devolutiva = bool(devolutiva)
+
+            st.write('')
+            st.write('')
 
 
 
