@@ -466,18 +466,6 @@ def gerar_docx_relatorio(relatorio, projeto):
         doc.add_paragraph(f"Data de aprovação: {data_aprovacao}")
 
 
-        # # Data de aprovação 
-        # data_aprovacao = "---"
-
-        # for componente in projeto.get("plano_trabalho", {}).get("componentes", []):
-        #     for entrega in componente.get("entregas", []):
-        #         for atividade in entrega.get("atividades", []):
-        #             for relato in atividade.get("relatos", []):
-        #                 status = relato.get("status_aprovacao", "")
-        #                 if "em" in status:
-        #                     data_aprovacao = status.split("em")[-1].strip()
-
-        # doc.add_paragraph(f"Data de aprovação: {data_aprovacao}")
 
         # Data de exportação (data atual)
         data_exportacao = datetime.datetime.now().strftime("%d/%m/%Y")
@@ -597,6 +585,41 @@ def gerar_docx_relatorio(relatorio, projeto):
 
                                     p = doc.add_paragraph()
                                     adicionar_hyperlink(p, url, nome)
+
+
+
+
+                            # ------------------------------
+                            # LINKS DO RELATO
+                            # ------------------------------
+                            links = relato.get("links", [])
+
+                            if links:
+
+                                doc.add_paragraph("Links:")
+
+                                for item_link in links:
+
+                                    descricao = item_link.get("descricao", "Link")
+                                    url = item_link.get("link", "")
+
+                                    # ignora links vazios
+                                    if not url:
+                                        continue
+
+                                    p = doc.add_paragraph()
+
+                                    # garante protocolo http/https
+                                    if not url.startswith(("http://", "https://")):
+                                        url = f"https://{url}"
+
+
+                                    adicionar_hyperlink(
+                                        p,
+                                        url,
+                                        descricao
+                                    )
+
 
 
                             # ------------------------------
