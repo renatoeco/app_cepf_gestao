@@ -2124,6 +2124,7 @@ def salvar_relato():
     data_inicio = st.session_state.get("campo_data_inicio")
     data_fim = st.session_state.get("campo_data_fim")
     anexos = st.session_state.get("campo_anexos", [])
+    links = st.session_state.get("links_relato", [])
     fotos = st.session_state.get("fotos_relato", [])
     porcentagem_atividade = st.session_state.get("campo_porcentagem_atividade", 0)
 
@@ -2237,8 +2238,32 @@ def salvar_relato():
                     "id_arquivo": id_drive
                 })
 
+
+
+
     # --------------------------------------------------
-    # 9. UPLOAD DE FOTOGRAFIAS (INTEGRALMENTE PRESERVADO)
+    # 9. LINKS
+    # --------------------------------------------------
+    lista_links = []
+
+    for item_link in links:
+
+        descricao = item_link.get("descricao", "").strip()
+        link = item_link.get("link", "").strip()
+
+        # salva apenas links completos
+        if descricao and link:
+
+            lista_links.append({
+                "descricao": descricao,
+                "link": link
+            })
+
+
+
+
+    # --------------------------------------------------
+    # 10. UPLOAD DE FOTOGRAFIAS (INTEGRALMENTE PRESERVADO)
     # --------------------------------------------------
     lista_fotos = []
 
@@ -2293,7 +2318,7 @@ def salvar_relato():
                 })
 
     # --------------------------------------------------
-    # 10. OBJETO FINAL (mantido)
+    # 11. OBJETO FINAL
     # --------------------------------------------------
     data_inicio_str = data_inicio.strftime("%d/%m/%Y") if data_inicio else None
     data_fim_str = data_fim.strftime("%d/%m/%Y") if data_fim else None
@@ -2312,6 +2337,9 @@ def salvar_relato():
     if lista_anexos:
         novo_relato["anexos"] = lista_anexos
 
+    if lista_links:
+        novo_relato["links"] = lista_links
+
     if lista_fotos:
         novo_relato["fotos"] = lista_fotos
 
@@ -2327,7 +2355,7 @@ def salvar_relato():
     )
 
     # --------------------------------------------------
-    # 11. LIMPEZA (mantida)
+    # 12. LIMPEZA
     # --------------------------------------------------
     for chave in [
         "campo_relato",
@@ -2335,7 +2363,8 @@ def salvar_relato():
         "campo_data_fim",
         "campo_porcentagem_atividade",
         "campo_anexos",
-        "fotos_relato"
+        "fotos_relato",
+        "links_relato"
     ]:
         if chave in st.session_state:
             del st.session_state[chave]
@@ -2470,13 +2499,75 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             key=f"campo_anexos_{form_key}"
         )
 
+
+        # ==================================================
+        # LINKS
+        # ==================================================
+        if "links_relato" not in st.session_state:
+            st.session_state["links_relato"] = []
+
+        st.write('')
+
+        if st.button("Adicionar link", icon=":material/link:", width=200):
+
+            st.session_state["links_relato"].append({
+                "id": str(uuid.uuid4()),
+                "descricao": "",
+                "link": ""
+            })
+
+            st.rerun()
+
+        for i, item_link in enumerate(st.session_state["links_relato"]):
+
+            link_id = item_link["id"]
+
+            with st.container(border=True):
+
+                col_info, col_delete = st.columns([8, 2])
+
+                col_info.write(f"Link {i+1}")
+
+                with col_delete:
+
+                    with st.container(horizontal=True, horizontal_alignment="right"):
+
+                        if st.button(
+                            "",
+                            key=f"del_link_{link_id}",
+                            icon=":material/close:"
+                        ):
+
+                            st.session_state["links_relato"].pop(i)
+                            st.rerun()
+
+                descricao_link = st.text_input(
+                    "Descrição do link *",
+                    key=f"desc_link_{link_id}"
+                )
+
+                url_link = st.text_input(
+                    "Link *",
+                    placeholder="https://...",
+                    key=f"url_link_{link_id}"
+                )
+
+                item_link["descricao"] = descricao_link
+                item_link["link"] = url_link
+
+
+
+
+
         # ==================================================
         # FOTOGRAFIAS
         # ==================================================
         if "fotos_relato" not in st.session_state:
             st.session_state["fotos_relato"] = []
 
-        if st.button("Adicionar fotografia", icon=":material/add_a_photo:"):
+        st.write('')
+
+        if st.button("Adicionar fotografia", icon=":material/add_a_photo:", width=200):
             st.session_state["fotos_relato"].append({
                 "id": str(uuid.uuid4()),
                 "arquivo": None,
@@ -2523,12 +2614,16 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
         # ==================================================
         # BOTÃO + NOTIFICAÇÃO
         # ==================================================
-        with st.container(horizontal=True):
+
+        st.write('')
+
+        with st.container(horizontal=True, horizontal_alignment="right"):
 
             salvar = st.button(
                 "Salvar relato",
                 type="primary",
-                icon=":material/save:"
+                icon=":material/save:",
+                width=200
             )
 
             area_notif = st.container()
@@ -2552,6 +2647,18 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
             if not data_fim:
                 erros.append("Data de fim")
 
+
+            # ==================================================
+            # VALIDAÇÃO DOS LINKS
+            # ==================================================
+
+            for i, item_link in enumerate(st.session_state["links_relato"], start=1):
+
+                if not item_link["descricao"].strip():
+                    erros.append(f"Descrição do link {i}")
+
+                if not item_link["link"].strip():
+                    erros.append(f"URL do link {i}")
 
 
 
@@ -2589,6 +2696,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
                     f"Preencha os seguintes campos obrigatórios: {', '.join(erros)}"
                 )
                 st.stop()
+
 
             # --------------------------------------------------
             # SINCRONIZAÇÃO COMPLETA 
