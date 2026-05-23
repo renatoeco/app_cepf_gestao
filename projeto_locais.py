@@ -1174,7 +1174,7 @@ with aba_cadastro:
                     dialog_editar_kbas()
 
         with col_titulo:
-            st.markdown("#### KBAs (Áreas Chave de Biodiversidade)")
+            st.markdown("#### KBAs (Áreas Chave para Biodiversidade)")
 
             kbas_cadastradas = locais.get("kbas", [])
 
