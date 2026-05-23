@@ -734,28 +734,35 @@ def dialog_editar_corredores():
 
 
 
+
+
 @st.dialog("Editar KBAs", width="medium")
 def dialog_editar_kbas():
 
     st.write("")
 
     # --------------------------------------------------
-    # NOMES DE KBAs DISPONÍVEIS
+    # OPÇÕES DISPONÍVEIS DE KBAs
     # --------------------------------------------------
-    nomes_kbas = sorted(
-        [kba["nome_kba"] for kba in lista_kbas],
+    opcoes_kbas = sorted(
+        [
+            f"{kba['id_kba']} - {kba['nome_kba']}"
+            for kba in lista_kbas
+        ],
         key=lambda x: x.lower()
     )
 
+    # --------------------------------------------------
+    # VALORES PADRÃO JÁ ASSOCIADOS AO PROJETO
+    # --------------------------------------------------
     kbas_default = [
-        kba["nome_kba"]
+        f"{kba.get('id_kba')} - {kba.get('nome_kba')}"
         for kba in locais.get("kbas", [])
-        if kba.get("nome_kba") in nomes_kbas
     ]
 
     kbas_selecionadas = st.multiselect(
         "Selecione as KBAs associadas ao projeto",
-        options=nomes_kbas,
+        options=opcoes_kbas,
         default=kbas_default,
         placeholder="Selecione as KBAs"
     )
@@ -771,14 +778,20 @@ def dialog_editar_kbas():
         key="salvar_kbas_dialogo"
     ):
 
-        kbas_para_salvar = [
-            {
-                "id_kba": kba["id_kba"],
-                "nome_kba": kba["nome_kba"]
-            }
-            for kba in lista_kbas
-            if kba["nome_kba"] in kbas_selecionadas
-        ]
+        kbas_para_salvar = []
+
+        for kba in lista_kbas:
+
+            valor_formatado = (
+                f"{kba['id_kba']} - {kba['nome_kba']}"
+            )
+
+            if valor_formatado in kbas_selecionadas:
+
+                kbas_para_salvar.append({
+                    "id_kba": kba["id_kba"],
+                    "nome_kba": kba["nome_kba"]
+                })
 
         col_projetos.update_one(
             {"codigo": codigo_projeto_atual},
@@ -792,6 +805,7 @@ def dialog_editar_kbas():
         st.success("KBAs atualizadas com sucesso!", icon=":material/check:")
         time.sleep(3)
         st.rerun()
+
 
 
 
@@ -1181,11 +1195,15 @@ with aba_cadastro:
             if not kbas_cadastradas:
                 st.caption("Nenhuma KBA cadastrada para este projeto.")
             else:
+
                 for kba in sorted(
                     kbas_cadastradas,
                     key=lambda x: x.get("nome_kba", "").lower()
                 ):
-                    st.write(kba.get("nome_kba", ""))
+
+                    st.write(
+                        f"{kba.get('id_kba', '')} - {kba.get('nome_kba', '')}"
+                    )
 
 
     # -------------------------------------------------------------------------------
