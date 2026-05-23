@@ -3548,8 +3548,6 @@ if step_selecionado == "Atividades":
                             col1.write(f"**Data de início:** {relato.get('data_inicio')}")
                             col2.write(f"**Data de fim:** {relato.get('data_fim')}")
 
-                            if relato.get("porc_ativ_relato") is not None:
-                                st.write(f"**Progresso da atividade informado:** {relato.get('porc_ativ_relato')}%")
 
 
                             # --------------------------------------------------
@@ -3586,8 +3584,40 @@ if step_selecionado == "Atividades":
 
 
 
+                            # --------------------------------------------------
+                            # LINKS
+                            # --------------------------------------------------
+                            if relato.get("links"):
+
+                                st.write("")
+
+                                c1, c2 = st.columns([1, 14])
+
+                                c1.write("**Links:**")
+
+                                with c2:
+
+                                    for item_link in relato["links"]:
+
+                                        descricao = item_link.get("descricao", "")
+                                        link = item_link.get("link", "")
+
+                                        if link:
+
+                                            # adiciona https:// automaticamente se não existir
+                                            if not link.startswith(("http://", "https://")):
+                                                link = f"https://{link}"
+
+                                            texto_link = f"[{descricao}]({link})"
+
+                                            st.markdown(
+                                                texto_link,
+                                                unsafe_allow_html=True
+                                            )
 
 
+                            if relato.get("porc_ativ_relato") is not None:
+                                st.write(f"**Progresso da atividade informado:** {relato.get('porc_ativ_relato')}%")
 
 
 
