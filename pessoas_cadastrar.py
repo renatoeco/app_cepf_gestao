@@ -104,6 +104,37 @@ def validar_email(email):
 
 
 
+# normaliza e valida telefone
+def formatar_telefone(telefone):
+
+    # remove qualquer caractere não numérico
+    telefone = re.sub(r"\D", "", telefone)
+
+    # deve conter:
+    # 3 dígitos de DDD
+    # + 8 ou 9 dígitos de telefone
+    if len(telefone) not in [11, 12]:
+        return None
+
+    ddd = telefone[:3]
+    numero = telefone[3:]
+
+    # telefone com 9 dígitos
+    if len(numero) == 9:
+        telefone_formatado = f"({ddd}) {numero[:5]}-{numero[5:]}"
+
+    # telefone com 8 dígitos
+    elif len(numero) == 8:
+        telefone_formatado = f"({ddd}) {numero[:4]}-{numero[4:]}"
+
+    else:
+        return None
+
+    return telefone_formatado
+
+
+
+
 
 ###########################################################################################################
 # TRATAMENTO DE DADOS   
@@ -233,6 +264,21 @@ if opcao_cadastro == "Convite individual":
                 st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
                 st.stop()
 
+
+            # normaliza e valida telefone
+            telefone_formatado = formatar_telefone(
+                st.session_state["telefone"]
+            )
+
+            if not telefone_formatado:
+                st.error(
+                    ":material/error: Telefone inválido. "
+                    "Informar DDD + telefone com 8 ou 9 dígitos. Exemplo: (061) 99999-9999"
+                )
+                st.stop()
+
+
+
             # 2) Gera código de 6 dígitos
             codigo_6_digitos = gerar_codigo_aleatorio()
 
@@ -241,7 +287,7 @@ if opcao_cadastro == "Convite individual":
                 "nome_completo": st.session_state["nome_completo_novo"],
                 "tipo_usuario": st.session_state["tipo_novo_usuario"],
                 "e_mail": st.session_state["e_mail"],
-                "telefone": st.session_state["telefone"],
+                "telefone": telefone_formatado,
                 "status": "convidado",
                 "projetos": st.session_state.get("projetos_escolhidos", []),
                 "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
@@ -524,8 +570,48 @@ elif opcao_cadastro == "Convite em massa":
                 st.stop()
 
 
+
             # ==========================================================
-            # 6) Validar projetos no banco
+            # 6) Validar telefones
+            # ==========================================================
+
+            telefones_invalidos = []
+
+            for _, row in df_upload.iterrows():
+
+                telefone_original = row.get("telefone (opcional)", "")
+
+                # ignora vazio
+                if pd.isna(telefone_original) or not str(telefone_original).strip():
+                    continue
+
+                telefone_formatado = formatar_telefone(
+                    telefone_original
+                )
+
+                # armazena linhas inválidas
+                if not telefone_formatado:
+                    telefones_invalidos.append(row)
+
+            if telefones_invalidos:
+
+                st.error(
+                    ":material/error: Existem telefones inválidos no arquivo.\n\n"
+                    "O formato esperado é:\n"
+                    "DDD + telefone com 8 ou 9 dígitos.\n\n"
+                    "Nenhum cadastro foi realizado."
+                )
+
+                st.dataframe(
+                    df_index1(pd.DataFrame(telefones_invalidos))
+                )
+
+                st.stop()
+
+
+
+            # ==========================================================
+            # 7) Validar projetos no banco
             # ==========================================================
 
             # Códigos válidos vindos da tabela de projetos
@@ -557,7 +643,7 @@ elif opcao_cadastro == "Convite em massa":
 
 
             # ==========================================================
-            # 7) Inserir no banco + Enviar e-mails de convite
+            # 8) Inserir no banco + Enviar e-mails de convite
             # ==========================================================
             if st.button(":material/save: Confirmar e convidar pessoas", type="primary"):
 
@@ -582,13 +668,25 @@ elif opcao_cadastro == "Convite em massa":
                             "senha": None
                         }
 
-                        if pd.notna(row["telefone (opcional)"]) and str(row["telefone (opcional)"]).strip():
-                            doc["telefone"] = str(row["telefone (opcional)"]).strip()
+                        if (
+                            pd.notna(row["telefone (opcional)"])
+                            and str(row["telefone (opcional)"]).strip()
+                        ):
+
+                            telefone_formatado = formatar_telefone(
+                                row["telefone (opcional)"]
+                            )
+
+                            doc["telefone"] = telefone_formatado
+
+                        # if pd.notna(row["telefone (opcional)"]) and str(row["telefone (opcional)"]).strip():
+                        #     doc["telefone"] = str(row["telefone (opcional)"]).strip()
 
                         if row["projetos"]:
                             doc["projetos"] = row["projetos"]
 
                         registros.append(doc)
+
 
                     # 1) Inserção em massa no banco
                     resultado = col_pessoas.insert_many(registros)
@@ -614,10 +712,6 @@ elif opcao_cadastro == "Convite em massa":
 
                     # Inicializa serviço do Drive uma única vez
                     servico_drive = obter_servico_drive()
-
-
-
-
 
 
                     for i, pessoa in enumerate(registros):
