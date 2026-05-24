@@ -3987,17 +3987,16 @@ with salvaguardas:
     col1, col2 = st.columns(2)
 
     
-    # Recupera o nome do usuário logado no session_state
-    nome_avaliador = st.session_state.get("nome")
+    # # Recupera o nome do usuário logado no session_state
+    # nome_usuario_atual = st.session_state.get("nome")
 
-    # Mostra o nome na tela
 
     # Recupera o nome da pessoa que fez a última avaliação
     nome_avaliador = salvaguardas_doc.get("nome_avaliador_risco")
 
     # Mostra apenas se existir informação no banco
     if nome_avaliador:
-        col1.write(f"**Nome da pessoa que completa a avaliação de risco:** {nome_avaliador}")
+        col1.write(f"**Responsável pela última avaliação:** {nome_avaliador}")
 
 
 
@@ -4007,7 +4006,7 @@ with salvaguardas:
 
     # Mostra a data apenas se existir no banco
     if data_aval_risco:
-        col2.write(f"**Data da última atualização:** {data_aval_risco}")
+        col2.write(f"**Data da última avaliação:** {data_aval_risco}")
 
 
     st.write("")
@@ -4678,10 +4677,13 @@ with salvaguardas:
             # Data da avaliação
             data_avaliacao = datetime.datetime.today().strftime("%d/%m/%Y")
 
+            # Nome do avaliador
+            avaliador_atual = st.session_state.get("nome", "Usuário")
+
             # Estrutura organizada das respostas de salvaguardas
             dados_salvaguardas = {
 
-                "nome_avaliador_risco": nome_avaliador,
+                "nome_avaliador_risco": avaliador_atual,
                 "data_aval_risco": data_avaliacao,
                 "categoria_geral_risco": categoria_geral,
 
