@@ -3705,6 +3705,31 @@ with monitoramento:
                     else:
 
                         # ------------------------------------------------------
+                        # NORMALIZAÇÃO DOS VALORES VAZIOS
+                        # ------------------------------------------------------
+                        # Substitui:
+                        # - None
+                        # - "None"
+                        # - NaN
+                        # - NaT
+                        # - strings vazias
+                        # por "-"
+                        # ------------------------------------------------------
+
+                        df_monitoramento = df_monitoramento.astype(object)
+
+                        df_monitoramento = df_monitoramento.fillna("-")
+
+                        df_monitoramento = df_monitoramento.replace({
+                            None: "-",
+                            "None": "-",
+                            "nan": "-",
+                            "NaN": "-",
+                            "NaT": "-",
+                            "": "-"
+                        })
+
+                        # ------------------------------------------------------
                         # Renderiza o data_editor
                         # ------------------------------------------------------
                         df_editado = st.data_editor(
@@ -3743,12 +3768,64 @@ with monitoramento:
 
                         with st.container(horizontal=True, horizontal_alignment="right"):
 
-                            if st.button(
+                            botao_salvar_monitoramento =  st.button(
                                 "Salvar indicadores do projeto",
                                 icon=":material/save:",
                                 key=f"btn_salvar_{componente['id']}_{entrega['id']}",
                                 type="primary"
-                            ):
+                            )
+
+
+                        if botao_salvar_monitoramento:
+
+                            # --------------------------------------------------
+                            # CAMPOS OBRIGATÓRIOS
+                            # --------------------------------------------------
+
+                            campos_obrigatorios = [
+                                "Indicador do projeto",
+                                "Linha de base",
+                                "Meta",
+                                "Unidade de medida",
+                                "Periodicidade",
+                                "Fonte de verificação",
+                                "Responsável"
+                            ]
+
+                            erros = []
+
+                            # --------------------------------------------------
+                            # Validação linha por linha
+                            # --------------------------------------------------
+
+                            for idx, row in df_editado.iterrows():
+
+                                for campo in campos_obrigatorios:
+
+                                    valor = row.get(campo)
+
+                                    # Trata vazio, "-", None, NaN etc
+                                    if (
+                                        valor is None
+                                        or str(valor).strip() == ""
+                                        or str(valor).strip() == "-"
+                                        or str(valor).strip().lower() in ["none", "nan", "nat"]
+                                    ):
+                                        erros.append(
+                                            f"Linha {idx + 1}: o campo '{campo}' é obrigatório."
+                                        )
+
+                            # --------------------------------------------------
+                            # Exibe erros
+                            # --------------------------------------------------
+
+                            if erros:
+
+                                for erro in erros:
+                                    st.error(erro)
+
+                            else:
+
 
                                 # --------------------------------------------------
                                 # Limpa linhas vazias
@@ -3794,6 +3871,21 @@ with monitoramento:
                                     "Responsável": "responsavel",
                                     "Data da coleta": "data_coleta"
                                 })
+
+
+
+                                # --------------------------------------------------
+                                # NORMALIZAÇÃO SEGURA PARA MONGO
+                                # --------------------------------------------------
+
+                                df_para_salvar = df_para_salvar.astype(object)
+
+                                df_para_salvar = df_para_salvar.where(
+                                    pd.notnull(df_para_salvar),
+                                    None
+                                )
+
+
 
                                 # --------------------------------------------------
                                 # Converte para lista de dicionários
