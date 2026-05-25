@@ -2143,7 +2143,6 @@ with cron_desemb:
 
                     data_convertida = pd.to_datetime(
                         data,
-                        format="%d/%m/%Y",
                         errors="coerce"
                     )
 
