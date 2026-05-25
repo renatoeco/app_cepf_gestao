@@ -1134,6 +1134,10 @@ def gerar_recibo_docx(
 
     doc = Document()
 
+
+
+
+
     # ============================
     # TÍTULO
     # ============================
@@ -1144,7 +1148,36 @@ def gerar_recibo_docx(
 
     doc.add_paragraph("")
     doc.add_paragraph("")
+
+
+    # Lista apenas os contatos que assinam documentos
+    nomes_assinantes = [
+        contato.get("nome", "").strip()
+        for contato in contatos
+        if contato.get("assina_docs") is True
+    ]
+
+    # Texto consolidado dos assinantes
+    texto_assinantes = ", ".join(nomes_assinantes)
+
+
+    # Nome(s) do(s) assinante(s)
+    p_assinantes = doc.add_paragraph(texto_assinantes)
+
+    for run in p_assinantes.runs:
+        run.font.size = Pt(12)
+
+    # Nome da organização
+    p_org = doc.add_paragraph(nome_organizacao)
+
+    for run in p_org.runs:
+        run.font.size = Pt(12)
+
     doc.add_paragraph("")
+    doc.add_paragraph("")
+
+
+
 
     # ============================
     # TEXTO PRINCIPAL
@@ -1608,6 +1641,19 @@ def dialog_relatos_fin():
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
+
+# ??????????????
+contatos = projeto.get("contatos", [])
+
+
+# Filtra contatos aptos para assinatura
+contatos_assinam = [
+    c for c in contatos
+    if c.get("assina_docs", False) is True
+]
+
+st.write(contatos_assinam)
+
 
 
 
@@ -3570,6 +3616,7 @@ if usuario_interno:
                         icon=":material/receipt_long:",
                         type="secondary"
                     ):
+
 
                         # --------------------------------------------------
                         # 1. Validação: contatos que assinam
