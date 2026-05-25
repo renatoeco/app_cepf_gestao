@@ -913,6 +913,8 @@ def enviar_email_remanejamento(
 # Efetiva o remanejamento no orçamento
 # (redistribui valores entre as despesas)
 # ==================================================
+
+
 def efetivar_remanejamento(
     col_projetos,
     codigo_projeto_atual,
@@ -921,35 +923,46 @@ def efetivar_remanejamento(
     aumentadas
 ):
     """
-    Aplica o remanejamento diretamente nas linhas do orçamento.
+    Atualiza as despesas do orçamento após aprovação
+    do remanejamento financeiro.
 
-    Regras:
-    • diminui valor_total das despesas reduzidas
-    • aumenta valor_total das despesas aumentadas
-    • NÃO altera financeiro.valor_total (total do projeto)
+    Mantém as demais chaves da despesa.
     """
 
     orcamento_atual = financeiro.get("orcamento", []) or []
 
-    # percorre cada linha do orçamento
+    # --------------------------------------------------
+    # Junta todas as alterações
+    # --------------------------------------------------
+    alteracoes = reduzidas + aumentadas
+
     for item in orcamento_atual:
 
         nome = item.get("nome_despesa")
-        valor_atual = item.get("valor_total", 0) or 0
 
-        # aplicar reduções
-        for r in reduzidas:
-            if r["nome_despesa"] == nome:
-                valor_atual -= float(r["valor_reduzido"])
+        alteracao = next(
+            (
+                x for x in alteracoes
+                if x["nome_despesa"] == nome
+            ),
+            None
+        )
 
-        # aplicar aumentos
-        for a in aumentadas:
-            if a["nome_despesa"] == nome:
-                valor_atual += float(a["valor_aumentado"])
+        if not alteracao:
+            continue
 
-        item["valor_total"] = valor_atual
+        # --------------------------------------------------
+        # Atualiza apenas campos financeiros
+        # --------------------------------------------------
+        item["quantidade"] = alteracao["nova_quantidade"]
 
-    # salva apenas o orçamento atualizado
+        item["valor_unitario"] = alteracao["novo_valor_unitario"]
+
+        item["valor_total"] = alteracao["novo_valor_total"]
+
+    # --------------------------------------------------
+    # Salva orçamento atualizado
+    # --------------------------------------------------
     col_projetos.update_one(
         {"codigo": codigo_projeto_atual},
         {
@@ -958,8 +971,6 @@ def efetivar_remanejamento(
             }
         }
     )
-
-
 
 
 
@@ -1580,23 +1591,26 @@ def dialog_relatos_fin():
                 st.markdown(f"**{id_despesa}** (R{num_relatorio})")
 
             with col_header2:
-                st.markdown(
-                    f"""
-                    <div style="margin-top:6px;">
-                        <span style="
-                            background:{badge['bg']};
-                            color:{badge['color']};
-                            padding:4px 10px;
-                            border-radius:20px;
-                            font-size:12px;
-                            font-weight:600;
-                        ">
-                            {badge['label']}
-                        </span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+
+
+
+                    st.markdown(
+                        f"""
+                        <div style="margin-top:6px; text-align:right;">
+                            <span style="
+                                background:{badge['bg']};
+                                color:{badge['color']};
+                                padding:4px 10px;
+                                border-radius:20px;
+                                font-size:12px;
+                                font-weight:600;
+                            ">
+                                {badge['label']}
+                            </span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
 
             # ==================================================
@@ -2499,17 +2513,9 @@ with cron_desemb:
 
 
 
-
-
-
-
-
-
 # --------------------------------------------------
 # ABA ORÇAMENTO
 # --------------------------------------------------
-
-
 with orcamento:
 
 
@@ -3972,9 +3978,16 @@ with remanejamentos:
                         if o == " " or o == atual or o not in usadas
                     ]
 
-                    c1, c2, c3 = st.columns([3, 1, 1])
+                    # --------------------------------------------------
+                    # Layout da linha
+                    # --------------------------------------------------
+                    c1, c2, c3, c4, c5 = st.columns([3, 1, 1.2, 0.7, 0.7])
 
+                    # --------------------------------------------------
+                    # Despesa
+                    # --------------------------------------------------
                     with c1:
+
                         escolha = st.selectbox(
                             "Despesa",
                             options=opcoes_local,
@@ -3983,38 +3996,205 @@ with remanejamentos:
 
                     lista[i]["despesa"] = escolha
 
+
+                    # --------------------------------------------------
+                    # Atualiza valores pré-carregados ao trocar despesa
+                    # --------------------------------------------------
+                    despesa_key = f"{prefixo}_despesa_anterior_{i}"
+
+                    despesa_anterior = st.session_state.get(despesa_key)
+
+                    if despesa_anterior != escolha:
+
+                        st.session_state[despesa_key] = escolha
+
+                        if escolha != " ":
+
+                            nome_despesa = escolha.split(" (saldo:")[0]
+
+                            despesa_original = next(
+                                (
+                                    x for x in orcamento
+                                    if x.get("nome_despesa") == nome_despesa
+                                ),
+                                None
+                            )
+
+                            if despesa_original:
+
+                                st.session_state[f"{prefixo}_qtd_{i}"] = float(
+                                    despesa_original.get("quantidade", 0) or 0
+                                )
+
+                                st.session_state[f"{prefixo}_unit_{i}"] = float(
+                                    despesa_original.get("valor_unitario", 0) or 0
+                                )
+
+                        st.rerun()
+
+
+                    # --------------------------------------------------
+                    # Recupera dados da despesa selecionada
+                    # --------------------------------------------------
+                    despesa_original = None
+
                     if escolha != " ":
 
-                        saldo = mapa_saldos.get(escolha, 0)
+                        nome_despesa = escolha.split(" (saldo:")[0]
 
+                        despesa_original = next(
+                            (
+                                x for x in orcamento
+                                if x.get("nome_despesa") == nome_despesa
+                            ),
+                            None
+                        )
+
+                    # --------------------------------------------------
+                    # Valores padrão
+                    # --------------------------------------------------
+                    quantidade_original = 0.0
+                    valor_unitario_original = 0.0
+                    valor_total_original = 0.0
+
+                    if despesa_original:
+
+                        quantidade_original = float(
+                            despesa_original.get("quantidade", 0) or 0
+                        )
+
+                        valor_unitario_original = float(
+                            despesa_original.get("valor_unitario", 0) or 0
+                        )
+
+                        valor_total_original = float(
+                            despesa_original.get("valor_total", 0) or 0
+                        )
+
+
+                        # --------------------------------------------------
+                        # Soma valores já executados/aprovados
+                        # --------------------------------------------------
+                        valor_executado = sum(
+                            (
+                                lanc.get("valor_despesa", 0) or 0
+                            )
+                            for lanc in despesa_original.get("lancamentos", [])
+                            if lanc.get("status_despesa") == "aceito"
+                        )
+
+
+
+                    # --------------------------------------------------
+                    # Inputs financeiros
+                    # --------------------------------------------------
+                    if escolha != " ":
 
                         with c2:
-                            label_valor = "Valor reduzido" if tipo == "reduzir" else "Valor aumentado"
 
-                            valor = st.number_input(
-                                label_valor,
+                            quantidade = st.number_input(
+                                "Quantidade",
                                 min_value=0.0,
-                                max_value=float(saldo) if tipo == "reduzir" else None,
-                                step=100.0,
-                                key=f"{prefixo}_val_{i}"
+                                value=st.session_state.get(
+                                    f"{prefixo}_qtd_{i}",
+                                    quantidade_original
+                                ),
+                                step=1.0,
+                                key=f"{prefixo}_qtd_{i}"
                             )
-
-
-
-                        lista[i]["valor"] = valor
 
                         with c3:
-                            saldo_final = saldo - valor if tipo == "reduzir" else saldo + valor
 
-                            st.markdown(
-                                f"Saldo final:  \nR$ {saldo_final:,.2f}"
-                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                            valor_unitario = st.number_input(
+                                "Valor unitário",
+                                min_value=0.0,
+                                value=st.session_state.get(
+                                    f"{prefixo}_unit_{i}",
+                                    valor_unitario_original
+                                ),
+                                step=100.0,
+                                key=f"{prefixo}_unit_{i}"
                             )
 
-                        total += valor
+                        # --------------------------------------------------
+                        # Novo total
+                        # --------------------------------------------------
+                        novo_total = quantidade * valor_unitario
+
+
+
+
+
+
+                        # --------------------------------------------------
+                        # Diferença financeira
+                        # --------------------------------------------------
+                        diferenca = abs(valor_total_original - novo_total)
+
+                        # --------------------------------------------------
+                        # Persistência em memória
+                        # --------------------------------------------------
+                        lista[i]["quantidade_original"] = quantidade_original
+
+                        lista[i]["valor_unitario_original"] = valor_unitario_original
+
+                        lista[i]["valor_total_original"] = valor_total_original
+
+                        lista[i]["nova_quantidade"] = quantidade
+
+                        lista[i]["novo_valor_unitario"] = valor_unitario
+
+                        lista[i]["novo_valor_total"] = novo_total
+
+                        lista[i]["valor"] = diferenca
+
+                        # --------------------------------------------------
+                        # Preview visual
+                        # --------------------------------------------------
+                        with c4:
+
+
+                            st.write("Novo total")
+
+                            st.write(
+                                f"R$ {novo_total:,.2f}"
+                                .replace(",", "X")
+                                .replace(".", ",")
+                                .replace("X", ".")
+                            )
+
+
+
+                        with c5:
+
+                            if tipo == "reduzir":
+
+                                st.write("Reduzido")
+
+                            else:
+
+                                st.write("Aumentado")
+
+                            st.write(
+                                f"R$ {diferenca:,.2f}"
+                                .replace(",", "X")
+                                .replace(".", ",")
+                                .replace("X", ".")
+                            )
+
+                        # if not erro_execucao:
+                        #     total += diferenca
+                        total += diferenca
 
                     else:
+
                         lista[i]["valor"] = 0
+
+
+
+
+
+
 
                 # ==================================================
                 # Botão adicionar linha CENTRALIZADO
@@ -4230,7 +4410,6 @@ with remanejamentos:
                             use_container_width=True
                         ):
 
-   
                             # --------------------------------------
                             # Montar lista de REDUÇÕES
                             # --------------------------------------
@@ -4239,24 +4418,48 @@ with remanejamentos:
                             # • valor_reduzido
                             # Ignora linhas vazias ou valor 0
                             # --------------------------------------
+
+
                             reduzidas = [
                                 {
                                     "nome_despesa": r["despesa"].split(" (")[0],
+
+                                    "quantidade_original": r["quantidade_original"],
+                                    "valor_unitario_original": r["valor_unitario_original"],
+                                    "valor_total_original": r["valor_total_original"],
+
+                                    "nova_quantidade": r["nova_quantidade"],
+                                    "novo_valor_unitario": r["novo_valor_unitario"],
+                                    "novo_valor_total": r["novo_valor_total"],
+
                                     "valor_reduzido": r["valor"]
                                 }
-                                for r in reducoes if r["valor"] > 0
+                                for r in reducoes
+                                if r["valor"] > 0
                             ]
+
 
 
                             # --------------------------------------
                             # Montar lista de AUMENTOS
                             # --------------------------------------
+
                             aumentadas = [
                                 {
                                     "nome_despesa": a["despesa"].split(" (")[0],
+
+                                    "quantidade_original": a["quantidade_original"],
+                                    "valor_unitario_original": a["valor_unitario_original"],
+                                    "valor_total_original": a["valor_total_original"],
+
+                                    "nova_quantidade": a["nova_quantidade"],
+                                    "novo_valor_unitario": a["novo_valor_unitario"],
+                                    "novo_valor_total": a["novo_valor_total"],
+
                                     "valor_aumentado": a["valor"]
                                 }
-                                for a in aumentos if a["valor"] > 0
+                                for a in aumentos
+                                if a["valor"] > 0
                             ]
 
 
@@ -4573,19 +4776,90 @@ with remanejamentos:
                 # ------------------------------------------
                 with col1:
 
-                    st.write("**Despesas reduzidas:**")
+                    st.write("**:material/arrow_downward: Despesas reduzidas:**")
 
                     reduzidas = item.get("reduzidas", [])
 
                     if not reduzidas:
                         st.caption("Nenhuma")
                     else:
+
                         for r in reduzidas:
+
+                            st.write(f"**{r['nome_despesa']}**")
+
                             st.write(
-                                f"- {r['nome_despesa']}: "
-                                + f"R$ {r['valor_reduzido']:,.2f}"
-                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                                (
+                                    f"**Redução:** "
+                                    f"R\$ {r['valor_reduzido']:,.2f}"
+                                )
+                                .replace(",", "X")
+                                .replace(".", ",")
+                                .replace("X", ".")
                             )
+
+
+
+                            # --------------------------------------------------
+                            # Tabela comparativa do remanejamento
+                            # --------------------------------------------------
+                            df_comparativo = pd.DataFrame(
+                                [
+                                    {
+                                        "": "Quantidade",
+                                        "Antes": (
+                                            f"{r['quantidade_original']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        ),
+                                        "Depois": (
+                                            f"{r['nova_quantidade']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        )
+                                    },
+                                    {
+                                        "": "Valor unitário",
+                                        "Antes": (
+                                            f"R$ {r['valor_unitario_original']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        ),
+                                        "Depois": (
+                                            f"R$ {r['novo_valor_unitario']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        )
+                                    },
+                                    {
+                                        "": "Valor total",
+                                        "Antes": (
+                                            f"R$ {r['valor_total_original']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        ),
+                                        "Depois": (
+                                            f"R$ {r['novo_valor_total']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        )
+                                    }
+                                ]
+                            )
+
+                            st.dataframe(
+                                df_comparativo,
+                                hide_index=True,
+                                width="stretch"
+                            )
+
+
 
 
                 # ------------------------------------------
@@ -4593,19 +4867,94 @@ with remanejamentos:
                 # ------------------------------------------
                 with col2:
 
-                    st.write("**Despesas aumentadas:**")
+                    st.write("**:material/arrow_upward: Despesas aumentadas:**")
 
                     aumentadas = item.get("aumentadas", [])
 
                     if not aumentadas:
-                        st.caption("Nenhuma")
+                        st.write("Nenhuma")
                     else:
+
+
                         for a in aumentadas:
+
+                            st.write(f"**{a['nome_despesa']}**")
+
+
                             st.write(
-                                f"- {a['nome_despesa']}: "
-                                + f"R$ {a['valor_aumentado']:,.2f}"
-                                .replace(",", "X").replace(".", ",").replace("X", ".")
+                                (
+                                    f"**Aumento:** "
+                                    f"R$ {a['valor_aumentado']:,.2f}"
+                                )
+                                .replace(",", "X")
+                                .replace(".", ",")
+                                .replace("X", ".")
                             )
+
+                            # --------------------------------------------------
+                            # Tabela comparativa do remanejamento
+                            # --------------------------------------------------
+                            df_comparativo = pd.DataFrame(
+                                [
+                                    {
+                                        "": "Quantidade",
+                                        "Antes": (
+                                            f"{a['quantidade_original']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        ),
+                                        "Depois": (
+                                            f"{a['nova_quantidade']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        )
+                                    },
+                                    {
+                                        "": "Valor unitário",
+                                        "Antes": (
+                                            f"R$ {a['valor_unitario_original']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        ),
+                                        "Depois": (
+                                            f"R$ {a['novo_valor_unitario']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        )
+                                    },
+                                    {
+                                        "": "Valor total",
+                                        "Antes": (
+                                            f"R$ {a['valor_total_original']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        ),
+                                        "Depois": (
+                                            f"R$ {a['novo_valor_total']:,.2f}"
+                                            .replace(",", "X")
+                                            .replace(".", ",")
+                                            .replace("X", ".")
+                                        )
+                                    }
+                                ]
+                            )
+
+                            df_comparativo.index = ["", "", ""]
+
+                            st.dataframe(
+                                df_comparativo,
+                                hide_index=True,
+                                width="stretch"
+                            )
+
+
+
+
 
 
                 # ------------------------------------------
@@ -4754,7 +5103,7 @@ with remanejamentos:
                                         projeto_atualizado,
                                         projeto_atualizado["financeiro"]["remanejamentos_financeiros"][idx]
                                     )
-              
+
                                     st.session_state[recusar_key] = False
                                     st.rerun()
 
@@ -4775,9 +5124,6 @@ with remanejamentos:
                             st.write(item.get("motivo_recusa"))
 
 
-
-
-              
 
 
                 st.write('')
