@@ -1642,19 +1642,6 @@ def dialog_relatos_fin():
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
-# ??????????????
-contatos = projeto.get("contatos", [])
-
-
-# Filtra contatos aptos para assinatura
-contatos_assinam = [
-    c for c in contatos
-    if c.get("assina_docs", False) is True
-]
-
-st.write(contatos_assinam)
-
-
 
 
 # Logo do sidebar
