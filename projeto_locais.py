@@ -232,7 +232,8 @@ def dialog_editar_estados():
     if st.button(
         "Salvar",
         icon=":material/save:",
-        key="salvar_estados_dialogo"
+        key="salvar_estados_dialogo",
+        type="primary"
     ):
 
         estados_para_salvar = [
@@ -295,7 +296,8 @@ def dialog_editar_municipios():
     if st.button(
         "Salvar",
         icon=":material/save:",
-        key="salvar_municipios_dialogo"
+        key="salvar_municipios_dialogo",
+        type="primary"
     ):
 
         municipios_para_salvar = []
@@ -420,7 +422,8 @@ def dialog_editar_localidades():
         if st.button(
             "Salvar",
             icon=":material/save:",
-            key="salvar_localidade_dialogo"
+            key="salvar_localidade_dialogo",
+            type="primary"
         ):
 
             # -----------------------------
@@ -500,7 +503,7 @@ def dialog_editar_localidades():
         if st.button(
             "Excluir",
             icon=":material/delete:",
-            type="secondary",
+            type="primary",
             key="excluir_localidade_dialogo"
         ):
 
@@ -572,7 +575,8 @@ def dialog_editar_areas_protegidas():
         if st.button(
             "Salvar",
             icon=":material/save:",
-            key="salvar_area_protegida"
+            key="salvar_area_protegida",
+            type="primary"
         ):
 
             # -----------------------------
@@ -640,7 +644,7 @@ def dialog_editar_areas_protegidas():
         if st.button(
             "Excluir",
             icon=":material/delete:",
-            type="secondary",
+            type="primary",
             key="excluir_area_protegida"
         ):
 
@@ -707,7 +711,8 @@ def dialog_editar_corredores():
     if st.button(
         "Salvar",
         icon=":material/save:",
-        key="salvar_corredores_dialogo"
+        key="salvar_corredores_dialogo",
+        type="primary"
     ):
 
         corredores_para_salvar = [
@@ -775,7 +780,8 @@ def dialog_editar_kbas():
     if st.button(
         "Salvar",
         icon=":material/save:",
-        key="salvar_kbas_dialogo"
+        key="salvar_kbas_dialogo",
+        type="primary"
     ):
 
         kbas_para_salvar = []
@@ -831,7 +837,7 @@ def dialog_mapas():
             type=["jpg", "png", "pdf", "jpeg", "webp", "docx"]
         )
 
-        if arquivos and st.button(":material/save: Enviar arquivos"):
+        if arquivos and st.button(":material/save: Enviar arquivos", type="primary"):
 
             # Spinner exibido enquanto os arquivos são enviados
             with st.spinner("Enviando arquivos..."):
@@ -907,6 +913,7 @@ def dialog_mapas():
         if st.button(
             "Remover arquivo",
             icon=":material/delete:",
+            type="primary",
         ):
 
             if not mapa_selecionado:
