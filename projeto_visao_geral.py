@@ -1297,131 +1297,134 @@ if not editar_cadastro:
                 contatos_usuario = contatos_local
 
 
+
             if not contatos_usuario:
+
                 st.write("Não há contatos cadastrados por você.")
-                return
-
-            # Mapa amigável para seleção
-            mapa_contatos = {
-                f"{c['nome']} — {c['funcao']}": c
-                for c in contatos_usuario
-            }
-
-
-            # =============================================================================
-            # SELECTBOX COM VALOR VAZIO
-            # =============================================================================
-
-            opcoes_contatos = [""] + list(mapa_contatos.keys())
-
-            contato_label = st.selectbox(
-                "Selecione o contato",
-                options=opcoes_contatos,
-                index=0
-            )
-
-
-            # Se nada foi selecionado, apenas informa
-            if not contato_label:
-
-                st.caption("Selecione um contato para editar.")
 
             else:
 
-                contato_selecionado = mapa_contatos[contato_label]
+                # Mapa amigável para seleção
+                mapa_contatos = {
+                    f"{c['nome']} — {c['funcao']}": c
+                    for c in contatos_usuario
+                }
 
-    
 
+                # =============================================================================
+                # SELECTBOX COM VALOR VAZIO
+                # =============================================================================
 
-                # Campos editáveis
-                nome = st.text_input("Nome", value=contato_selecionado["nome"])
-                funcao = st.text_input("Função no projeto", value=contato_selecionado["funcao"])
-                telefone = st.text_input("Telefone", value=contato_selecionado.get("telefone", ""))
-                email = st.text_input("E-mail", value=contato_selecionado.get("email", ""))
+                opcoes_contatos = [""] + list(mapa_contatos.keys())
 
-                # CHECKBOX PRÉ-CARREGADO DO BANCO
-                assina_docs = st.checkbox(
-                    "Incluir na assinatura de contratos e recibos",
-                    value=contato_selecionado.get("assina_docs", False),
-                    key=f"editar_contato_assina_docs_{contato_selecionado['nome']}"
+                contato_label = st.selectbox(
+                    "Selecione o contato",
+                    options=opcoes_contatos,
+                    index=0
                 )
 
 
-                st.write('')
-                # Botão de salvar alterações
-                if st.button(
-                    "Salvar alterações",
-                    type="primary",
-                    icon=":material/save:",
-                    key="salvar_editar_contato"
-                ):
+                # Se nada foi selecionado, apenas informa
+                if not contato_label:
 
-                    if not nome.strip() or not funcao.strip():
-                        st.warning("Nome e função são obrigatórios.")
-                        return
+                    st.caption("Selecione um contato para editar.")
+
+                else:
+
+                    contato_selecionado = mapa_contatos[contato_label]
+
+        
 
 
-                    filtro = {
-                        "codigo": st.session_state.projeto_atual,
-                        "contatos.nome": contato_selecionado["nome"],
-                        "contatos.funcao": contato_selecionado["funcao"],
-                    }
+                    # Campos editáveis
+                    nome = st.text_input("Nome", value=contato_selecionado["nome"])
+                    funcao = st.text_input("Função no projeto", value=contato_selecionado["funcao"])
+                    telefone = st.text_input("Telefone", value=contato_selecionado.get("telefone", ""))
+                    email = st.text_input("E-mail", value=contato_selecionado.get("email", ""))
 
-                    # Se for beneficiário, adiciona restrição de autor
-                    if st.session_state.get("tipo_usuario") == "beneficiario":
-                        filtro["contatos.autor"] = st.session_state.nome
-
-
-                    resultado = col_projetos.update_one(
-                        filtro,
-                        {
-                            "$set": {
-                                "contatos.$.nome": nome.strip(),
-                                "contatos.$.funcao": funcao.strip(),
-                                "contatos.$.telefone": telefone.strip(),
-                                "contatos.$.email": email.strip(),
-                                "contatos.$.assina_docs": assina_docs,
-                            }
-                        }
+                    # CHECKBOX PRÉ-CARREGADO DO BANCO
+                    assina_docs = st.checkbox(
+                        "Incluir na assinatura de contratos e recibos",
+                        value=contato_selecionado.get("assina_docs", False),
+                        key=f"editar_contato_assina_docs_{contato_selecionado['nome']}"
                     )
 
 
-                    if resultado.modified_count == 1:
+                    st.write('')
+                    # Botão de salvar alterações
+                    if st.button(
+                        "Salvar alterações",
+                        type="primary",
+                        icon=":material/save:",
+                        key="salvar_editar_contato"
+                    ):
 
-                        # Verifica se houve alteração no e-mail
-                        email_antigo = contato_selecionado.get("email", "").strip()
-                        email_novo = email.strip()
+                        if not nome.strip() or not funcao.strip():
+                            st.warning("Nome e função são obrigatórios.")
+                            return
 
-                        if email_novo and email_novo != email_antigo:
 
-                            # Inicializa serviço do Drive sob demanda
-                            servico_drive = obter_servico_drive()
+                        filtro = {
+                            "codigo": st.session_state.projeto_atual,
+                            "contatos.nome": contato_selecionado["nome"],
+                            "contatos.funcao": contato_selecionado["funcao"],
+                        }
 
-                            # Recupera a sigla diretamente do dataframe do projeto
-                            sigla = df_projeto["sigla"].values[0]
+                        # Se for beneficiário, adiciona restrição de autor
+                        if st.session_state.get("tipo_usuario") == "beneficiario":
+                            filtro["contatos.autor"] = st.session_state.nome
 
-                            # Obtém (ou cria) a pasta do projeto
-                            pasta_id = obter_pasta_projeto(
-                                servico_drive,
-                                st.session_state.projeto_atual,
-                                sigla
-                            )
 
-                            # Estrutura mínima do contato para a função
-                            contato_atualizado = {
-                                "email": email_novo
+                        resultado = col_projetos.update_one(
+                            filtro,
+                            {
+                                "$set": {
+                                    "contatos.$.nome": nome.strip(),
+                                    "contatos.$.funcao": funcao.strip(),
+                                    "contatos.$.telefone": telefone.strip(),
+                                    "contatos.$.email": email.strip(),
+                                    "contatos.$.assina_docs": assina_docs,
+                                }
                             }
-
-                            # Aplica permissão apenas para o novo e-mail
-                            add_permissao_drive(servico_drive, pasta_id, contato_atualizado)
-
-                        st.success("Contato atualizado com sucesso!", icon=":material/check:")
-                        time.sleep(3)
-                        st.rerun()
+                        )
 
 
-                    else:
-                        st.error("Erro ao atualizar contato.")
+                        if resultado.modified_count == 1:
+
+                            # Verifica se houve alteração no e-mail
+                            email_antigo = contato_selecionado.get("email", "").strip()
+                            email_novo = email.strip()
+
+                            if email_novo and email_novo != email_antigo:
+
+                                # Inicializa serviço do Drive sob demanda
+                                servico_drive = obter_servico_drive()
+
+                                # Recupera a sigla diretamente do dataframe do projeto
+                                sigla = df_projeto["sigla"].values[0]
+
+                                # Obtém (ou cria) a pasta do projeto
+                                pasta_id = obter_pasta_projeto(
+                                    servico_drive,
+                                    st.session_state.projeto_atual,
+                                    sigla
+                                )
+
+                                # Estrutura mínima do contato para a função
+                                contato_atualizado = {
+                                    "email": email_novo
+                                }
+
+                                # Aplica permissão apenas para o novo e-mail
+                                add_permissao_drive(servico_drive, pasta_id, contato_atualizado)
+
+                            st.success("Contato atualizado com sucesso!", icon=":material/check:")
+                            time.sleep(3)
+                            st.rerun()
+
+
+                        else:
+                            st.error("Erro ao atualizar contato.")
 
 
 
@@ -1453,94 +1456,96 @@ if not editar_cadastro:
 
                 contatos_usuario = contatos_local
 
+
+
             # Sem contatos
             if not contatos_usuario:
 
-                st.write("Não há contatos disponíveis para remoção.")
-                return
-
-            # =========================================================================
-            # MAPA DE CONTATOS
-            # =========================================================================
-
-            mapa_contatos = {
-                f"{c['nome']} — {c['funcao']}": c
-                for c in contatos_usuario
-            }
-
-            # =========================================================================
-            # SELECTBOX VAZIO
-            # =========================================================================
-
-            opcoes_contatos = [""] + list(mapa_contatos.keys())
-
-            contato_label = st.selectbox(
-                "Selecione o contato",
-                options=opcoes_contatos,
-                index=0,
-                key="select_remover_contato"
-            )
-
-            # Nada selecionado
-            if not contato_label:
-
-                st.caption("Selecione um contato para remover.")
+                st.write("Não há contatos cadastrados por você.")
 
             else:
+                # =========================================================================
+                # MAPA DE CONTATOS
+                # =========================================================================
 
-                contato_selecionado = mapa_contatos[contato_label]
+                mapa_contatos = {
+                    f"{c['nome']} — {c['funcao']}": c
+                    for c in contatos_usuario
+                }
 
-                st.write("Você tem certeza que quer remover esse contato?")
-                st.write("Essa remoção não poderá ser desfeita.")
+                # =========================================================================
+                # SELECTBOX VAZIO
+                # =========================================================================
 
-                # =====================================================================
-                # BOTÃO REMOVER
-                # =====================================================================
+                opcoes_contatos = [""] + list(mapa_contatos.keys())
 
-                if st.button(
-                    "Confirmar remoção",
-                    type="primary",
-                    icon=":material/delete:",
-                    key="confirmar_remocao_contato"
-                ):
+                contato_label = st.selectbox(
+                    "Selecione o contato",
+                    options=opcoes_contatos,
+                    index=0,
+                    key="select_remover_contato"
+                )
 
-                    filtro = {
-                        "codigo": st.session_state.projeto_atual
-                    }
+                # Nada selecionado
+                if not contato_label:
 
-                    contato_remover = {
-                        "nome": contato_selecionado["nome"],
-                        "funcao": contato_selecionado["funcao"]
-                    }
+                    st.caption("Selecione um contato para remover.")
 
-                    # Beneficiário só remove os próprios contatos
-                    if st.session_state.get("tipo_usuario") == "beneficiario":
+                else:
 
-                        contato_remover["autor"] = st.session_state.nome
+                    contato_selecionado = mapa_contatos[contato_label]
 
-                    resultado = col_projetos.update_one(
-                        filtro,
-                        {
-                            "$pull": {
-                                "contatos": contato_remover
-                            }
+                    st.write("Você tem certeza que quer remover esse contato?")
+                    st.write("Essa remoção não poderá ser desfeita.")
+
+                    # =====================================================================
+                    # BOTÃO REMOVER
+                    # =====================================================================
+
+                    if st.button(
+                        "Confirmar remoção",
+                        type="primary",
+                        icon=":material/delete:",
+                        key="confirmar_remocao_contato"
+                    ):
+
+                        filtro = {
+                            "codigo": st.session_state.projeto_atual
                         }
-                    )
 
-                    if resultado.modified_count == 1:
+                        contato_remover = {
+                            "nome": contato_selecionado["nome"],
+                            "funcao": contato_selecionado["funcao"]
+                        }
 
-                        st.success(
-                            "Contato removido com sucesso.",
-                            icon=":material/check:"
+                        # Beneficiário só remove os próprios contatos
+                        if st.session_state.get("tipo_usuario") == "beneficiario":
+
+                            contato_remover["autor"] = st.session_state.nome
+
+                        resultado = col_projetos.update_one(
+                            filtro,
+                            {
+                                "$pull": {
+                                    "contatos": contato_remover
+                                }
+                            }
                         )
 
-                        time.sleep(3)
+                        if resultado.modified_count == 1:
 
-                        st.rerun()
+                            st.success(
+                                "Contato removido com sucesso.",
+                                icon=":material/check:"
+                            )
 
-                    else:
+                            time.sleep(3)
 
-                        st.error("Erro ao remover contato.")
+                            st.rerun()
+
+                        else:
+
+                            st.error("Erro ao remover contato.")
 
 
 
