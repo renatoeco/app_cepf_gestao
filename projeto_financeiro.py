@@ -1098,7 +1098,7 @@ def gerar_recibo_docx(
     nome_organizacao,
     cnpj_organizacao,
     contrato_nome,
-    nome_investidor  # NOVO PARÂMETRO
+    nome_investidor
 ):
 
     """
@@ -1161,25 +1161,8 @@ def gerar_recibo_docx(
     doc.add_paragraph("")
 
 
-    # Lista apenas os contatos que assinam documentos
-    nomes_assinantes = [
-        contato.get("nome", "").strip()
-        for contato in contatos
-        if contato.get("assina_docs") is True
-    ]
-
-    # Texto consolidado dos assinantes
-    texto_assinantes = ", ".join(nomes_assinantes)
-
-
-    # Nome(s) do(s) assinante(s)
-    p_assinantes = doc.add_paragraph(texto_assinantes)
-
-    for run in p_assinantes.runs:
-        run.font.size = Pt(12)
-
     # Nome da organização
-    p_org = doc.add_paragraph(nome_organizacao)
+    p_org = doc.add_paragraph(f"Beneficiário: {nome_organizacao}")
 
     for run in p_org.runs:
         run.font.size = Pt(12)

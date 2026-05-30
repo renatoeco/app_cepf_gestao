@@ -2267,7 +2267,7 @@ with aba_corredores:
 
 with aba_kbas:
 
-    st.subheader("KBAs")
+    st.subheader("KBAs - Áreas Chave para Biodiversidade")
     st.write("")
 
     # -----------------------------------
