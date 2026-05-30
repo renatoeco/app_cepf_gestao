@@ -2641,16 +2641,16 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
 
         st.write('')
 
-        with st.container(horizontal=True, horizontal_alignment="right"):
 
-            salvar = st.button(
-                "Salvar relato",
-                type="primary",
-                icon=":material/save:",
-                width=200
-            )
+        salvar = st.button(
+            "Salvar relato",
+            type="primary",
+            icon=":material/save:",
+            width=200
+        )
 
-            area_notif = st.container()
+
+        area_notif = st.container()
 
         # ==================================================
         # SALVAR
