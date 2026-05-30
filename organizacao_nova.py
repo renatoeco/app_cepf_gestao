@@ -241,7 +241,7 @@ if opcao_cadastro == "Cadastro individual":
 
                 # INSCRIÇÃO ESTADUAL
                 inscricao_estadual = st.text_input(
-                    "Inscrição estadual",
+                    "Inscrição estadual / municipal",
                     key="inscricao_estadual_input",
                     width=250
                 )
@@ -456,13 +456,10 @@ elif opcao_cadastro == "Cadastro em massa":
 
     st.write("Preencha os dados diretamente na tabela abaixo:")
 
-    # ---------------------------------------------------------------------------------------------
-    # DATAFRAME INICIAL (VAZIO)
-    # ---------------------------------------------------------------------------------------------
 
-###########################################################################################################
-# DATAFRAME BASE DO CADASTRO EM MASSA
-###########################################################################################################
+    ###########################################################################################################
+    # DATAFRAME BASE DO CADASTRO EM MASSA
+    ###########################################################################################################
 
     df_base = pd.DataFrame({
         "sigla_organizacao": [""],
@@ -496,54 +493,44 @@ elif opcao_cadastro == "Cadastro em massa":
 
             "sigla_organizacao": st.column_config.TextColumn(
                 "Sigla *",
-                width=1
             ),
 
             "nome_organizacao": st.column_config.TextColumn(
                 "Nome da Organização *",
-                width=200
             ),
 
             "cnpj": st.column_config.TextColumn(
                 "CNPJ *",
-                width=1
             ),
 
             "inscricao_estadual": st.column_config.TextColumn(
-                "Inscrição Estadual",
-                width=1
+                "Inscrição estadual / municipal",
             ),
 
             "email_geral": st.column_config.TextColumn(
                 "E-mail Geral *",
-                width=200
             ),
 
             "website_redes_sociais": st.column_config.TextColumn(
                 "Website / Redes Sociais",
-                width=200
             ),
 
             "endereco": st.column_config.TextColumn(
                 "Endereço *",
-                width=200
             ),
 
             "uf": st.column_config.SelectboxColumn(
                 "UF *",
                 options=lista_ufs,
-                width=1
             ),
 
             "municipio": st.column_config.SelectboxColumn(
                 "Município *",
                 options=lista_municipios,
-                width=1
             ),
 
             "cep": st.column_config.TextColumn(
                 "CEP *",
-                width=1
             ),
         }
 
