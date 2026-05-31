@@ -530,8 +530,17 @@ def enviar_email_remanejamento_recusado(
         <p>{motivo_recusa}</p>
 
         <br>
-        <p>Sistema Veredas</p>
 
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
+        
     </div>
 
     </body>
@@ -700,7 +709,16 @@ def enviar_email_remanejamento_aprovado(
         </p>
 
         <br>
-        <p>Sistema Veredas</p>
+        
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -888,7 +906,17 @@ def enviar_email_remanejamento(
                 <p>{mensagem_status}</p>
 
                 <br>
-                <p>Sistema Veredas</p>
+
+                <p>
+                    <a 
+                        href="https://veredas.streamlit.app/" 
+                        target="_blank"
+                        style="text-decoration: none;"
+                    >
+                        Sistema Veredas
+                    </a>
+                </p>
+
 
             </div>
 

@@ -1443,8 +1443,20 @@ def gerar_email_relatorio_aprovado(
 
             <p>
                 Atenciosamente,<br>
-                <strong>Sistema Veredas</strong>
             </p>
+
+            <p>
+                <a 
+                    href="https://veredas.streamlit.app/" 
+                    target="_blank"
+                    style="text-decoration: none;"
+                >
+                    Sistema Veredas
+                </a>
+            </p>
+                
+
+
         </div>
 
         <div class="footer">
@@ -1540,8 +1552,19 @@ def gerar_email_relatorio_reprovado(
 
             <p>
                 Atenciosamente,<br>
-                <strong>Sistema Veredas</strong>
             </p>
+
+            <p>
+                <a 
+                    href="https://veredas.streamlit.app/" 
+                    target="_blank"
+                    style="text-decoration: none;"
+                >
+                    Sistema Veredas
+                </a>
+            </p>
+
+
         </div>
 
         <div class="footer">
@@ -1657,7 +1680,18 @@ def montar_email_relatorio_envio(
             </p>
 
             <p>Atenciosamente,<br>
-            <strong>Sistema Veredas</strong></p>
+            </p>
+                
+            <p>
+                <a 
+                    href="https://veredas.streamlit.app/" 
+                    target="_blank"
+                    style="text-decoration: none;"
+                >
+                    Sistema Veredas
+                </a>
+            </p>
+            
         </div>
 
         <div class="footer">

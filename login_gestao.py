@@ -90,6 +90,8 @@ def enviar_email(destinatario, codigo):
         return False
 
 
+
+
 ##############################################################################################################
 # CAIXA DE DIÁLOGO PARA PRIMEIRO ACESSO
 ##############################################################################################################
@@ -189,7 +191,7 @@ def recuperar_senha_dialog():
             email_default = st.session_state.get("email_para_recuperar", "")
             email = st.text_input("Digite seu e-mail:", value=email_default)
 
-            if st.form_submit_button("Enviar código de verificação", icon=":material/mail:"):
+            if st.form_submit_button("Enviar código de verificação", icon=":material/mail:", type="primary"):
                 if email:
                     nome, verificar_colaboradores = encontrar_usuario_por_email(col_pessoas, email)
                     if verificar_colaboradores:
@@ -220,7 +222,7 @@ def recuperar_senha_dialog():
             st.write(f"Um código foi enviado para: **{email_mask}**")
 
             codigo_input = st.text_input("Informe o código recebido por e-mail", placeholder="000")
-            if st.form_submit_button("Verificar"):
+            if st.form_submit_button("Verificar", type="primary"):
                 if codigo_input == st.session_state.codigo_verificacao:
                     sucesso = st.success("Código verificado com sucesso!")
                     time.sleep(2)

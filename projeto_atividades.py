@@ -838,7 +838,15 @@ def enviar_email_remanejamento_atividade(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1001,7 +1009,15 @@ def enviar_email_remanejamento_atividade_aprovado(
         <p>{justificativa}</p>
 
         <br>
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1170,7 +1186,16 @@ def enviar_email_remanejamento_atividade_recusado(
         <p>{motivo_recusa}</p>
 
         <br>
-        <p>Sistema Veredas</p>
+
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1280,7 +1305,15 @@ def enviar_email_nova_atividade(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1435,7 +1468,15 @@ def enviar_email_nova_atividade_aprovada(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1577,7 +1618,15 @@ def enviar_email_nova_atividade_recusada(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1690,7 +1739,15 @@ def enviar_email_remocao_atividade_solicitada(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1807,7 +1864,15 @@ def enviar_email_remocao_atividade_aprovada(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
@@ -1930,7 +1995,15 @@ def enviar_email_remocao_atividade_recusada(
 
         <br>
 
-        <p>Sistema Veredas</p>
+        <p>
+            <a 
+                href="https://veredas.streamlit.app/" 
+                target="_blank"
+                style="text-decoration: none;"
+            >
+                Sistema Veredas
+            </a>
+        </p>
 
     </div>
 
