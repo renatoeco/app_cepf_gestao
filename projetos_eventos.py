@@ -126,22 +126,33 @@ with col2:
 
     with st.container(horizontal=True, horizontal_alignment="right"):
 
+        # Texto do popover
+        texto_popover = (
+            "Email de lembrete desativado"
+            if intervalo_dias_mail_eventos == 0
+            else f"Lembrete enviado a cada **{intervalo_dias_mail_eventos}** dias"
+        )
+
 
         # Popover de configuração
-        with st.popover(
-            f"Lembrete enviado a cada **{intervalo_dias_mail_eventos}** dias",
-            width=300
-        ):
+        with st.popover(texto_popover):
+
+        # # Popover de configuração
+        # with st.popover(
+        #     f"Lembrete enviado a cada **{intervalo_dias_mail_eventos}** dias",
+        #     width=300
+        # ):
 
             # Input do intervalo
             intervalo_dias_input = st.number_input(
                 "Intervalo de dias entre os e-mails de lembrete de cadastro de eventos",
-                min_value=1,
+                min_value=0,
                 step=1,
                 value=intervalo_dias_mail_eventos,
                 width=300
             )
 
+            st.caption("0 = desativado")
 
 
             # Botão de salvar
@@ -152,7 +163,7 @@ with col2:
             ):
 
                 # Validação do input
-                if not intervalo_dias_input:
+                if intervalo_dias_input is None:
 
                     st.warning(
                         "Insira um número."
