@@ -446,11 +446,14 @@ else:
 
 
     # Define as páginas disponíveis para cada tipo de usuário (com seções)
+
     pags_por_tipo = {
         "home_admin": {
             "Projetos": [
                 st.Page("projetos_home_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
                 st.Page("projetos_lista.py", title="Projetos", icon=":material/list:"),
+                st.Page("projetos_eventos.py", title="Eventos", icon=":material/event:"),
+
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
                 st.Page("projeto_novo.py", title="Novo projeto", icon=":material/add_circle:"),
             ],
