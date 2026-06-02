@@ -732,7 +732,6 @@ def enviar_email_remanejamento_aprovado(
 
 
 
-
 # ==================================================
 # Envia notificação de remanejamento para equipe/admin
 # ==================================================
@@ -742,14 +741,12 @@ def enviar_email_remanejamento(
     sigla,
     nome_projeto,
     organizacao,
-    reduzidas,
-    aumentadas,
     status_remanejamento
 ):
     """
     Envia e-mail para:
-    • tipo_usuario in ["admin", "equipe"]
-    • pessoa vinculada ao projeto
+    tipo_usuario in ["admin", "equipe"]
+    pessoas vinculadas ao projeto
     """
 
     col_pessoas = db["pessoas"]
@@ -768,166 +765,141 @@ def enviar_email_remanejamento(
     if not pessoas:
         return
 
-    emails = [p["e_mail"] for p in pessoas if p.get("e_mail")]
-
-    # --------------------------------------------------
-    # Montar tabelas HTML
-    # --------------------------------------------------
-    def montar_lista_html(itens, campo_valor):
-        if not itens:
-            return "<p>Nenhuma</p>"
-
-        linhas = ""
-        for i in itens:
-            linhas += f"<li>{i['nome_despesa']}: {format_brl(i[campo_valor])}</li>"
-
-        return f"<ul>{linhas}</ul>"
-
-
-
-    lista_reduzidas = montar_lista_html(reduzidas, "valor_reduzido")
-    lista_aumentadas = montar_lista_html(aumentadas, "valor_aumentado")
-
     # --------------------------------------------------
     # Mensagem condicional
     # --------------------------------------------------
     if status_remanejamento == "aceito":
+
         mensagem_status = (
-            "O remanejamento <strong>foi aceito automaticamente</strong> e o orçamento já está atualizado."
+            "O remanejamento "
+            "<strong>foi aceito automaticamente</strong> "
+            "e o orçamento já está atualizado."
         )
+
     else:
+
         mensagem_status = (
-            "<b>AÇÃO NECESSÁRIA: Esse remanejamento depende de análise e aprovação</b><br><br>"
-            "Visite a página de remanejamentos no Sistema de Gestão de Projetos para dar continuidade."
+            "<strong>AÇÃO NECESSÁRIA:</strong> "
+            "Esse remanejamento depende de análise e aprovação.<br><br>"
+            "Visite a página de remanejamentos no "
+            "Sistema Veredas para dar continuidade."
         )
 
     # --------------------------------------------------
     # Assunto
     # --------------------------------------------------
-    assunto = f"Solicitação de remanejamento - {codigo_projeto} - {sigla}"
+    assunto = (
+        f"Solicitação de remanejamento - "
+        f"{codigo_projeto} - {sigla}"
+    )
 
-    # --------------------------------------------------
-    # Enviar para cada pessoa (personalizado)
-    # --------------------------------------------------
     logo = logo_ieb
 
+    # --------------------------------------------------
+    # Enviar e-mails
+    # --------------------------------------------------
     with st.spinner("Enviando..."):
-
 
         for pessoa in pessoas:
 
-            nome = pessoa.get("nome_completo", "").split()[0]
+            nome = (
+                pessoa.get("nome_completo", "")
+                .split()[0]
+            )
 
             corpo_html = f"""
             <!DOCTYPE html>
             <html>
+
             <head>
-            <meta charset="utf-8">
-            <style>
+                <meta charset="utf-8">
 
-            body {{
-                font-family: Arial, Helvetica, sans-serif;
-                background-color: #f5f5f5;
-            }}
+                <style>
 
-            .container {{
-                max-width: 760px;   /* mais largo */
-                margin: 0 auto;
-                background: white;
-                border-top: 6px solid #A0C256;
-                padding: 30px;
-            }}
+                body {{
+                    font-family: Arial, Helvetica, sans-serif;
+                    background-color: #f5f5f5;
+                }}
 
-            .logo {{
-                text-align: center;   /* centraliza imagem */
-                margin-bottom: 20px;
-            }}
+                .container {{
+                    max-width: 760px;
+                    margin: 0 auto;
+                    background: white;
+                    border-top: 6px solid #A0C256;
+                    padding: 30px;
+                }}
 
-            .highlight {{
-                color: #A0C256;
-                font-weight: bold;
-            }}
+                .logo {{
+                    text-align: center;
+                    margin-bottom: 20px;
+                }}
 
-            /* remove bolinhas e espaçamentos */
-            ul {{
-                list-style: none;
-                padding-left: 0;
-                margin: 0;
-            }}
+                .highlight {{
+                    color: #A0C256;
+                    font-weight: bold;
+                }}
 
-            li {{
-                margin: 0;
-                padding: 0;
-            }}
-
-            </style>
+                </style>
             </head>
 
             <body>
 
-            <div class="container">
+                <div class="container">
 
-                <br>
+                    <br>
 
-                <div class="logo">
-                    <img src="{logo}" height="60">
+                    <div class="logo">
+                        <img src="{logo}" height="60">
+                    </div>
+
+                    <br>
+
+                    <p>
+                        Olá <strong>{nome}</strong>,
+                    </p>
+
+                    <p>
+                        O projeto
+                        <span class="highlight">
+                            {codigo_projeto} - {sigla} - {nome_projeto}
+                        </span>,
+                        da organização
+                        <span class="highlight">
+                            {organizacao}
+                        </span>,
+                        enviou uma nova solicitação de remanejamento financeiro.
+                    </p>
+
+                    <br>
+
+                    <p>
+                        {mensagem_status}
+                    </p>
+
+                    <br>
+
+                    <p>
+                        <a
+                            href="https://veredas.streamlit.app/"
+                            target="_blank"
+                            style="text-decoration: none;"
+                        >
+                            Sistema Veredas
+                        </a>
+                    </p>
+
                 </div>
 
-                <br>
-
-                <p>Olá <strong>{nome}</strong>,</p>
-
-                <p>
-                O projeto <span class="highlight">{codigo_projeto} - {sigla} - {nome_projeto}</span>,
-                da organização <span class="highlight">{organizacao}</span>,
-                enviou uma nova solicitação de remanejamento financeiro.
-                </p>
-
-                <br>
-
-                <p><strong>Resumo do remanejamento:</strong></p>
-
-                <table width="100%">
-                <tr>
-                    <td valign="top" width="50%">
-                    <strong>Reduções</strong>
-                    {lista_reduzidas}
-                    </td>
-
-                    <td valign="top" width="50%">
-                    <strong>Aumentos</strong>
-                    {lista_aumentadas}
-                    </td>
-                </tr>
-                </table>
-
-                <br>
-
-                <p>{mensagem_status}</p>
-
-                <br>
-
-                <p>
-                    <a 
-                        href="https://veredas.streamlit.app/" 
-                        target="_blank"
-                        style="text-decoration: none;"
-                    >
-                        Sistema Veredas
-                    </a>
-                </p>
-
-
-            </div>
-
             </body>
+
             </html>
             """
 
-
-            enviar_email(corpo_html, [pessoa["e_mail"]], assunto)
-
-
+            enviar_email(
+                corpo_html,
+                [pessoa["e_mail"]],
+                assunto
+            )
 
 
 
@@ -2705,27 +2677,64 @@ with orcamento:
 
 
 
+
         # --------------------------------------------------
-        # Exibição das métricas em 3 colunas
+        # Exibição das métricas em 4 colunas
         # --------------------------------------------------
 
-        col1, col2, col3 = st.columns(3)
+        # --------------------------------------------------
+        # Calcular valor a receber
+        # Soma das parcelas ainda não pagas
+        # --------------------------------------------------
+        valor_a_receber = sum(
+            p.get("valor", 0)
+            for p in parcelas
+            if p.get("data_realizada") in [None, ""]
+        )
+
+
+        col1, col2, col3, col4 = st.columns(4)
 
         col1.metric(
             label="Valor total do projeto",
-            value=f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            value=(
+                f"R$ {valor_total:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
         )
 
         col2.metric(
             label="Gasto",
-            value=f"R$ {gasto_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            value=(
+                f"R$ {gasto_total:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
         )
 
         col3.metric(
             label="Saldo",
-            value=f"R$ {saldo_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            value=(
+                f"R$ {saldo_total:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            ),
             delta=None if saldo_total >= 0 else "Negativo",
             delta_color="inverse" if saldo_total < 0 else "normal"
+        )
+
+        col4.metric(
+            label="A receber",
+            value=(
+                f"R$ {valor_a_receber:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
         )
 
 
@@ -4103,13 +4112,17 @@ with remanejamentos:
 
                         with c2:
 
+
+                            # -----------------------------------
+                            # Inicializa session_state
+                            # -----------------------------------
+                            if f"{prefixo}_qtd_{i}" not in st.session_state:
+
+                                st.session_state[f"{prefixo}_qtd_{i}"] = quantidade_original
+
                             quantidade = st.number_input(
                                 "Quantidade",
                                 min_value=0.0,
-                                value=st.session_state.get(
-                                    f"{prefixo}_qtd_{i}",
-                                    quantidade_original
-                                ),
                                 step=1.0,
                                 key=f"{prefixo}_qtd_{i}"
                             )
@@ -4558,8 +4571,6 @@ with remanejamentos:
                                 projeto["sigla"],
                                 projeto["nome_do_projeto"],
                                 organizacao_nome,
-                                reduzidas,
-                                aumentadas,
                                 status_remanejamento
                             )
 
