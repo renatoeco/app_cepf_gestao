@@ -114,11 +114,132 @@ sidebar_projeto()
 
 
 ###########################################################################################################
-# INTERFACE PRINCIPAL DA PÁGINA
+# FUNÇÕES 
 ###########################################################################################################
 
 
+###########################################################################################################
+# FUNÇÃO - RENDERIZAÇÃO DO PLANO DE MITIGAÇÃO
+###########################################################################################################
 
+def renderizar_plano_mitigacao(
+    salvaguardas_doc,
+    mapa_politicas,
+    nome_politica,
+    codigo_projeto_atual,
+    col_projetos
+):
+    """
+    Renderiza o link do plano de mitigação e o fluxo de verificação.
+    """
+
+    # Recupera chave da política no MongoDB
+    chave_politica = mapa_politicas[nome_politica]
+
+    # Recupera dados da política
+    dados_politica = salvaguardas_doc.get(
+        chave_politica,
+        {}
+    )
+
+    # Recupera plano salvo
+    dados_plano = dados_politica.get("plano_mitigacao")
+
+    # Não renderiza nada se não existir plano
+    if not dados_plano:
+        return
+
+    nome_arquivo = dados_plano.get("nome")
+    url_arquivo = dados_plano.get("url")
+
+    # Validação de integridade
+    if not nome_arquivo or not url_arquivo:
+        return
+
+    st.write("")
+
+    # Colunas do plano de mitigação
+    col1, col2 = st.columns([3, 2], gap="medium")
+
+    # Coluna 1 — link do arquivo
+    with col1:
+
+        st.markdown(
+            f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+        )
+
+    # Coluna 2 — verificação
+    with col2:
+
+        # Checkbox apenas para equipe/admin
+        if st.session_state.get("tipo_usuario") in ["equipe", "admin"]:
+
+            st.write("")
+
+            # Recupera informação de verificação
+            verificado_por = dados_politica.get("verificado_por")
+
+            # Valor inicial do checkbox
+            valor_checkbox = bool(verificado_por)
+
+            # Checkbox (desabilitado para visitante)
+            checkbox_verificado = st.checkbox(
+                "Verificado",
+                value=valor_checkbox,
+                key=f"checkbox_verificado_{chave_politica}",
+                disabled=st.session_state.get("tipo_usuario") == "visitante"
+            )
+
+
+            # checkbox_verificado = st.checkbox(
+            #     "Verificado",
+            #     value=valor_checkbox,
+            #     key=f"checkbox_verificado_{chave_politica}"
+            # )
+
+            # Caminho MongoDB
+            caminho_politica = f"salvaguardas.{chave_politica}"
+
+            # Salvamento da verificação
+            if checkbox_verificado and not verificado_por:
+
+                data_hoje = datetime.datetime.today().strftime("%d/%m/%Y")
+
+                texto_verificacao = (
+                    f"{st.session_state.nome} em {data_hoje}"
+                )
+
+                col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {
+                        "$set": {
+                            f"{caminho_politica}.verificado_por": texto_verificacao
+                        }
+                    }
+                )
+
+                st.rerun()
+
+            # Remoção da verificação
+            elif not checkbox_verificado and verificado_por:
+
+                col_projetos.update_one(
+                    {"codigo": codigo_projeto_atual},
+                    {
+                        "$unset": {
+                            f"{caminho_politica}.verificado_por": ""
+                        }
+                    }
+                )
+
+                st.rerun()
+
+            # Informação da verificação
+            if verificado_por:
+
+                st.caption(
+                    f"Verificado por {verificado_por}"
+                )
 
 
 
@@ -401,9 +522,43 @@ if st.session_state.tipo_usuario == "beneficiario":
                     key=f"upload_plano_mitigacao_{politica['nome']}"
                 )
 
+
             with col2:
 
-                verificado = st.checkbox("Verificado", key=f"checkbox_verificado_{politica['nome']}", disabled=True)
+                # Recupera chave da política atual
+                chave_politica = mapa_politicas.get(
+                    politica["nome"]
+                )
+
+                # Recupera dados da política
+                dados_politica = salvaguardas_doc.get(
+                    chave_politica,
+                    {}
+                )
+
+                # Recupera informação de verificação
+                verificado_por = dados_politica.get(
+                    "verificado_por"
+                )
+
+                # Define estado inicial do checkbox
+                valor_checkbox = bool(verificado_por)
+
+                # Checkbox somente leitura para beneficiário
+                st.checkbox(
+                    "Verificado",
+                    value=valor_checkbox,
+                    key=f"checkbox_verificado_beneficiario_{chave_politica}",
+                    disabled=True
+                )
+
+                # Exibe informação de verificação
+                if verificado_por:
+
+                    st.caption(
+                        f"Verificado por {verificado_por}"
+                    )
+
 
 
             with col3:
@@ -479,6 +634,26 @@ if st.session_state.tipo_usuario == "beneficiario":
 
                                 # Recupera a chave correspondente da política
                                 chave_politica = mapa_politicas.get(politica["nome"])
+
+
+                                # Atualiza o documento no MongoDB
+                                col_projetos.update_one(
+                                    {"codigo": codigo_projeto_atual},
+                                    {
+                                        "$set": {
+                                            f"salvaguardas.{chave_politica}.plano_mitigacao": {
+                                                "nome": arquivo_upload.name,
+                                                "url": url_arquivo
+                                            }
+                                        },
+
+                                        # Remove verificação anterior ao substituir o arquivo
+                                        "$unset": {
+                                            f"salvaguardas.{chave_politica}.verificado_por": ""
+                                        }
+                                    }
+                                )
+
 
                                 # Atualiza o documento no MongoDB
                                 col_projetos.update_one(
@@ -642,29 +817,20 @@ else:
         "ocupacional, como mergulho ou trabalho como guardas ecológicos."
     )
 
-
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["2. Condições de Trabalho e Trabalhistas"],
-        {}
-    ).get("plano_mitigacao")
-
-    if dados_plano:
-
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
-
+    # Renderiza o link do plano de mitigação e o checkbox de verificado apenas para admin e equipe
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "2. Condições de Trabalho e Trabalhistas",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
+
+
+
 
 
 
@@ -730,27 +896,18 @@ else:
             "liberados por suas atividades serão classificados na Categoria A ou B."
         )
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["3. Eficiência de Recursos e Prevenção de Poluição"],
-        {}
-    ).get("plano_mitigacao")
 
-    if dados_plano:
 
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "3. Eficiência de Recursos e Prevenção de Poluição",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
 
 
 
@@ -838,28 +995,17 @@ else:
     )
 
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["4. Saúde, Segurança e Proteção da Comunidade"],
-        {}
-    ).get("plano_mitigacao")
 
-    if dados_plano:
 
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "4. Saúde, Segurança e Proteção da Comunidade",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
-
 
 
 
@@ -909,27 +1055,19 @@ else:
         )
 
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["5. Restrições de Uso da Terra e Reassentamento Involuntário"],
-        {}
-    ).get("plano_mitigacao")
 
-    if dados_plano:
-
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "5. Restrições de Uso da Terra e Reassentamento Involuntário",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
+
+
 
     # 6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos -------------------
 
@@ -998,27 +1136,21 @@ else:
 
 
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos"],
-        {}
-    ).get("plano_mitigacao")
 
-    if dados_plano:
-
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
+
+
+
+
 
     # 7. Povos Indígenas ----------------------------------------------------------------------------------
 
@@ -1075,27 +1207,19 @@ else:
         )
 
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["7. Povos Indígenas"],
-        {}
-    ).get("plano_mitigacao")
 
-    if dados_plano:
-
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "7. Povos Indígenas",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
+
+
 
 
 
@@ -1146,27 +1270,21 @@ else:
             "serão classificados como Categoria B."
         )
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["8. Patrimônio Cultural"],
-        {}
-    ).get("plano_mitigacao")
 
-    if dados_plano:
 
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
 
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "8. Patrimônio Cultural",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
+
+
 
 
 
@@ -1217,27 +1335,19 @@ else:
 
 
 
-    # Exibe link do plano de mitigação salvo
-    dados_plano = salvaguardas_doc.get(
-        mapa_politicas["9. Igualdade de Gênero"],
-        {}
-    ).get("plano_mitigacao")
-
-    if dados_plano:
-
-        nome_arquivo = dados_plano.get("nome")
-        url_arquivo = dados_plano.get("url")
-
-        if nome_arquivo and url_arquivo:
-
-            st.write("")
-
-            st.markdown(
-                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
-            )
-
+    renderizar_plano_mitigacao(
+        salvaguardas_doc,
+        mapa_politicas,
+        "9. Igualdade de Gênero",
+        codigo_projeto_atual,
+        col_projetos
+    )
 
     st.divider()
+
+
+
+
 
     # 10. Engajamento de Partes Interessadas ---------------------------------------------------------------
 
@@ -1436,21 +1546,67 @@ else:
             }
 
             # Atualiza o documento do projeto no MongoDB
+            
+
+
+            ###########################################################################################################
+            # FUNÇÃO - CONVERTE DICIONÁRIO EM DOT NOTATION PARA MONGODB
+            ###########################################################################################################
+
+            def flatten_dict(d, parent_key=""):
+                """
+                Converte dicionários aninhados em estrutura dot notation.
+
+                Exemplo:
+                {"a": {"b": 1}}
+
+                vira:
+
+                {"a.b": 1}
+                """
+
+                items = []
+
+                for k, v in d.items():
+
+                    new_key = f"{parent_key}.{k}" if parent_key else k
+
+                    if isinstance(v, dict):
+
+                        items.extend(
+                            flatten_dict(v, new_key).items()
+                        )
+
+                    else:
+
+                        items.append((new_key, v))
+
+                return dict(items)
+
+
+            # Converte estrutura aninhada para dot notation
+            dados_flatten = flatten_dict(dados_salvaguardas)
+
+            # Adiciona prefixo "salvaguardas."
+            dados_update = {
+                f"salvaguardas.{k}": v
+                for k, v in dados_flatten.items()
+            }
+
+            # Atualiza apenas os campos editáveis
             resultado = col_projetos.update_one(
                 {"codigo": codigo_projeto_atual},
                 {
-                    "$set": {
-                        "salvaguardas": dados_salvaguardas
-                    }
+                    "$set": dados_update
                 }
             )
+            
 
             # Mostra mensagem de sucesso
             if resultado.modified_count >= 0:
                 st.success("Respostas salvas com sucesso!", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
-
 
 
 
