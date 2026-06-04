@@ -476,17 +476,6 @@ if st.session_state.tipo_usuario == "beneficiario":
                                 # Gera link público do arquivo
                                 url_arquivo = gerar_link_drive(id_drive)
 
-                                # # Mapeamento entre nome da política e chave do MongoDB
-                                # mapa_politicas = {
-                                #     "2. Condições de Trabalho e Trabalhistas": "pol_2_trabalho",
-                                #     "3. Eficiência de Recursos e Prevenção de Poluição": "pol_3_poluicao",
-                                #     "4. Saúde, Segurança e Proteção da Comunidade": "pol_4_comunidade",
-                                #     "5. Restrições de Uso da Terra e Reassentamento Involuntário": "pol_5_reassentamento",
-                                #     "6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos": "pol_6_biodiversidade",
-                                #     "7. Povos Indígenas": "pol_7_indigenas",
-                                #     "8. Patrimônio Cultural": "pol_8_patrimonio",
-                                #     "9. Igualdade de Gênero": "pol_9_genero"
-                                # }
 
                                 # Recupera a chave correspondente da política
                                 chave_politica = mapa_politicas.get(politica["nome"])
@@ -653,6 +642,28 @@ else:
         "ocupacional, como mergulho ou trabalho como guardas ecológicos."
     )
 
+
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["2. Condições de Trabalho e Trabalhistas"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
+
     st.divider()
 
 
@@ -719,8 +730,27 @@ else:
             "liberados por suas atividades serão classificados na Categoria A ou B."
         )
 
-    st.divider()
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["3. Eficiência de Recursos e Prevenção de Poluição"],
+        {}
+    ).get("plano_mitigacao")
 
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
+    st.divider()
 
 
 
@@ -807,8 +837,28 @@ else:
         unsafe_allow_html=True
     )
 
-    st.divider()
 
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["4. Saúde, Segurança e Proteção da Comunidade"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
+    st.divider()
 
 
 
@@ -858,8 +908,28 @@ else:
             "serão classificados como Categoria B."
         )
 
-    st.divider()
 
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["5. Restrições de Uso da Terra e Reassentamento Involuntário"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
+    st.divider()
 
     # 6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos -------------------
 
@@ -926,8 +996,29 @@ else:
         unsafe_allow_html=True
     )
 
-    st.divider()
 
+
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
+    st.divider()
 
     # 7. Povos Indígenas ----------------------------------------------------------------------------------
 
@@ -984,7 +1075,28 @@ else:
         )
 
 
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["7. Povos Indígenas"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
     st.divider()
+
 
 
     # 8. Patrimônio Cultural -------------------------------------------------------------------------------
@@ -1034,7 +1146,28 @@ else:
             "serão classificados como Categoria B."
         )
 
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["8. Patrimônio Cultural"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
     st.divider()
+
 
 
     # 9. Igualdade de Gênero -------------------------------------------------------------------------------
@@ -1082,8 +1215,29 @@ else:
             "existentes relacionadas ao gênero."
         )
 
-    st.divider()
 
+
+    # Exibe link do plano de mitigação salvo
+    dados_plano = salvaguardas_doc.get(
+        mapa_politicas["9. Igualdade de Gênero"],
+        {}
+    ).get("plano_mitigacao")
+
+    if dados_plano:
+
+        nome_arquivo = dados_plano.get("nome")
+        url_arquivo = dados_plano.get("url")
+
+        if nome_arquivo and url_arquivo:
+
+            st.write("")
+
+            st.markdown(
+                f"**Plano de mitigação:** [{nome_arquivo}]({url_arquivo})"
+            )
+
+
+    st.divider()
 
     # 10. Engajamento de Partes Interessadas ---------------------------------------------------------------
 
