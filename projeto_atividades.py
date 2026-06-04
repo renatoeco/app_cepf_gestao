@@ -251,7 +251,7 @@ def renderizar_acoes_remanejamento(item, idx):
                 )
 
 
-            st.success("Remanejamento aprovado.", icon=":material/check:")
+            st.success("Ajuste aprovado.", icon=":material/check:")
             time.sleep(3)
             st.rerun()
 
@@ -546,7 +546,7 @@ def renderizar_card_add(item):
 
 
 # ==================================================
-# Renderiza card de remanejamento do tipo "alterar atividade"
+# Renderiza card de ajuste do tipo "alterar atividade"
 # ==================================================
 
 def renderizar_card_alteracao(
@@ -685,7 +685,7 @@ def renderizar_card_alteracao(
 
 
 # ==================================================
-# Envia e-mail quando há nova solicitação de remanejamento de alteração de atividade
+# Envia e-mail quando há nova solicitação de ajuste de alteração de atividade
 # ==================================================
 def enviar_email_remanejamento_atividade(
     projeto,
@@ -693,7 +693,7 @@ def enviar_email_remanejamento_atividade(
 ):
     """
     Envia e-mail para todos os usuários vinculados ao projeto
-    quando uma nova solicitação de remanejamento de atividade é criada.
+    quando uma nova solicitação de ajuste de atividade é criada.
     """
 
     # --------------------------------------------------
@@ -723,11 +723,10 @@ def enviar_email_remanejamento_atividade(
     nome_projeto = projeto.get("nome_do_projeto")
     organizacao = obter_nome_organizacao(projeto)
     
-    # justificativa = item_remanejamento.get("justificativa", "")
     antes = item_remanejamento.get("antes", {})
     depois = item_remanejamento.get("depois", {})
 
-    atividade_nome = item_remanejamento.get("atividade_nome", "Atividade")
+    # atividade_nome = item_remanejamento.get("atividade_nome", "Atividade")
 
     autor = st.session_state.get("nome", "Usuário")
     data_solic = item_remanejamento.get("data_solicit_remanej")
@@ -815,7 +814,7 @@ def enviar_email_remanejamento_atividade(
 
         <p>
         Foi enviada uma nova solicitação de
-        <span class="highlight"><strong>remanejamento de atividade</strong></span>
+        <span class="highlight"><strong>ajuste de atividade</strong></span>
         no projeto
         <span class="highlight">{codigo} - {nome_projeto}</span>
         da organização
@@ -831,7 +830,7 @@ def enviar_email_remanejamento_atividade(
 
         <p>
         <strong>AÇÃO NECESSÁRIA:</strong><br>
-        Acesse a aba de <strong>Remanejamentos</strong>
+        Acesse a aba de <strong>Ajustes</strong>
         na página de <strong>Atividades</strong>
         para ver os detalhes desta solicitação.
         </p>
@@ -872,7 +871,7 @@ def enviar_email_remanejamento_atividade_aprovado(
     """
     Envia e-mail para todos os contatos cadastrados
     na chave 'contatos' do projeto quando o
-    remanejamento de atividade for aprovado.
+    ajuste de atividade for aprovado.
     """
 
     contatos = projeto.get("contatos", [])
@@ -929,7 +928,7 @@ def enviar_email_remanejamento_atividade_aprovado(
         </tr>
         """
 
-    assunto = "Remanejamento de atividade aprovado"
+    assunto = "Ajuste de atividade aprovado"
 
     logo = logo_ieb
 
@@ -981,7 +980,7 @@ def enviar_email_remanejamento_atividade_aprovado(
 
         <p>
         Foi <span class="highlight"><strong>aprovada</strong></span>
-        uma solicitação de remanejamento de atividade
+        uma solicitação de ajuste de atividade
         no projeto
         <span class="highlight">{codigo} - {nome_projeto}</span>
         da organização
@@ -1041,7 +1040,7 @@ def enviar_email_remanejamento_atividade_recusado(
     """
     Envia e-mail para todos os contatos cadastrados
     na chave 'contatos' do projeto quando o
-    remanejamento de atividade for recusado.
+    ajuste de atividade for recusado.
     """
 
     contatos = projeto.get("contatos", [])
@@ -1101,7 +1100,7 @@ def enviar_email_remanejamento_atividade_recusado(
         </tr>
         """
 
-    assunto = "Remanejamento de atividade recusado"
+    assunto = "Ajuste de atividade recusado"
 
     logo = logo_ieb
 
@@ -1153,7 +1152,7 @@ def enviar_email_remanejamento_atividade_recusado(
 
         <p>
         Foi <span class="highlight"><strong>recusada</strong></span>
-        uma solicitação de remanejamento de atividade
+        uma solicitação de ajuste de atividade
         no projeto
         <span class="highlight">{codigo} - {nome_projeto}</span>
         da organização
@@ -1298,7 +1297,7 @@ def enviar_email_nova_atividade(
 
         <p>
         <strong>AÇÃO NECESSÁRIA:</strong><br>
-        Acesse a aba de <strong>Remanejamentos</strong>
+        Acesse a aba de <strong>Ajustes</strong>
         na página de <strong>Atividades</strong>
         para ver os detalhes desta solicitação.
         </p>
@@ -1732,7 +1731,7 @@ def enviar_email_remocao_atividade_solicitada(
 
         <p>
         <strong>AÇÃO NECESSÁRIA:</strong><br>
-        Acesse a aba de <strong>Remanejamentos</strong>
+        Acesse a aba de <strong>Ajustes</strong>
         na página de <strong>Atividades</strong>
         para analisar esta solicitação.
         </p>
@@ -2300,7 +2299,7 @@ with col_identificacao:
 
 
 
-plano_trabalho, impactos, indicadores, monitoramento, salvaguardas, remanejamentos = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Portfólio", "Plano de Monitoramento", "Salvaguardas", "Remanejamentos"])
+plano_trabalho, impactos, indicadores, monitoramento, salvaguardas, ajustes = st.tabs(["Plano de trabalho", "Impactos", "Indicadores do Portfólio", "Plano de Monitoramento", "Salvaguardas", "Ajustes"])
 
 
 
@@ -4926,9 +4925,9 @@ with salvaguardas:
 
 
 # ###################################################################################################
-# REMANEJAMENTOS
+# AJUSTES
 # ###################################################################################################
-with remanejamentos:
+with ajustes:
 
 
     if "modo_remanejamento" not in st.session_state:
@@ -4938,7 +4937,7 @@ with remanejamentos:
     # ===============================================================================================
     # PERMISSÃO
     # -----------------------------------------------------------------------------------------------
-    # Apenas usuários beneficiários podem solicitar remanejamentos
+    # Apenas usuários beneficiários podem solicitar ajustes
     # ===============================================================================================
 
     usuario_beneficiario = st.session_state.tipo_usuario == "beneficiario"
@@ -5089,9 +5088,9 @@ with remanejamentos:
                     st.rerun()
 
 
-                # Botão de enviar solicitação de remanejamento
+                # Botão de enviar solicitação de ajuste
                 if st.button(
-                    "Enviar solicitação de remanejamento",
+                    "Enviar solicitação de ajuste",
                     icon=":material/outgoing_mail:",
                     type="primary"
                 ):
@@ -5204,7 +5203,7 @@ with remanejamentos:
 
 
     # ===============================================================================================
-    # FRAGMENTO: NOVA SOLICITAÇÃO DE REMANEJAMENTO
+    # FRAGMENTO: NOVA SOLICITAÇÃO DE AJUSTE
     # ===============================================================================================
 
     @st.fragment
@@ -5212,12 +5211,12 @@ with remanejamentos:
 
         with st.container(border=True):
 
-            st.markdown("##### Nova solicitação de remanejamento")
+            st.markdown("##### Nova solicitação de ajuste de atividade")
 
             st.write("")
 
             # ------------------------------------------------------------------
-            # Tipo de remanejamento
+            # Tipo de ajuste
             # ------------------------------------------------------------------
 
             tipo_remanejamento = st.radio(
@@ -5730,7 +5729,7 @@ with remanejamentos:
         )
 
         if st.button(
-            "Solicitar remanejamento",
+            "Solicitar ajuste",
             icon=":material/compare_arrows:",
         ):
 
@@ -5748,22 +5747,22 @@ with remanejamentos:
 
 
     # --------------------------------------------------
-    # Histórico de remanejamentos de atividades
+    # Histórico de ajustes de atividades
     # --------------------------------------------------
 
     st.write("")
     st.write("")
-    st.write("#### Histórico de solicitações de remanejamento")
+    st.write("#### Histórico de solicitações de ajustes de atividades")
 
 
     lista_remanej = plano_trabalho_dict.get("remanejamentos_atividades", [])
 
 
     if not lista_remanej:
-        st.caption("Nenhuma solicitação de remanejamento até o momento.")
+        st.caption("Nenhuma solicitação de ajuste até o momento.")
     else:
 
-        # RENDERIZA CADA CARD DE REMANEJAMENTO, CONDICIONALMENTE
+        # RENDERIZA CADA CARD DE AJUSTE, CONDICIONALMENTE
 
         for idx in range(len(lista_remanej) - 1, -1, -1):
 
