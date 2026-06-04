@@ -158,19 +158,6 @@ def registrar_estatistica_sessao(db):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 def calcular_status_atividade(atividade):
 
     hoje = pd.Timestamp.today().normalize()
@@ -229,18 +216,6 @@ def calcular_status_atividade(atividade):
             return "atrasada"
 
     return "indefinido"
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -317,9 +292,6 @@ def gerar_recibo_docx(
     # SALVAR
     # ============================
     doc.save(caminho_arquivo)
-
-
-
 
 
 
@@ -670,7 +642,27 @@ def obter_pasta_recibos(servico, pasta_projeto_id):
     st.session_state["pasta_recibos_id"] = pasta_id
     return pasta_id
 
+# Função para obter o ID da pasta 'Planos_mitigacao' no Drive.
 
+def obter_pasta_planos_mitigacao(servico, pasta_projeto_id):
+    """
+    Retorna o ID da subpasta 'Planos_mitigacao' dentro da pasta do projeto.
+
+    Também utiliza cache no session_state para evitar múltiplas buscas/criações.
+    """
+
+    if "pasta_planos_mitigacao_id" in st.session_state:
+        return st.session_state["pasta_planos_mitigacao_id"]
+
+    pasta_id = obter_ou_criar_pasta(
+        servico,
+        "Planos_mitigacao",
+        pasta_projeto_id
+    )
+
+    st.session_state["pasta_planos_mitigacao_id"] = pasta_id
+
+    return pasta_id
 
 
 

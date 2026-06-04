@@ -6,10 +6,66 @@ import time
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
     sidebar_projeto,
+    obter_pasta_planos_mitigacao,
+    obter_pasta_projeto,
+    obter_servico_drive,
+    enviar_arquivo_drive,
+    gerar_link_drive
 )
 
 
 st.set_page_config(page_title="Salvaguardas", page_icon=":material/health_and_safety:")
+
+
+
+
+###########################################################################################################
+# CONFIGURAÇÕES DO STREAMLIT
+###########################################################################################################
+
+
+# Traduzindo o texto do st.file_uploader
+# Texto interno
+st.markdown("""
+<style>
+/* Esconde o texto padrão */
+[data-testid="stFileUploaderDropzone"] div div::before {
+    content: "Arraste e solte os arquivos aqui";
+    color: rgba(49, 51, 63, 0.7);
+    font-size: 0.9rem;
+    font-weight: 400;
+    position: absolute;
+    top: 50px;              /* fixa no topo */
+    left: 50%;
+    transform: translate(-50%, 10%);
+    pointer-events: none;
+}
+/* Esconde o texto original */
+[data-testid="stFileUploaderDropzone"] div div span {
+    visibility: hidden !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Traduzindo Botão do file_uploader
+st.markdown("""
+<style>
+/* Alvo: apenas o botão dentro do componente de upload */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
+    font-size: 0px !important;   /* esconde o texto original */
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    min-width: 160px !important;
+}
+/* Insere o texto traduzido */
+section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
+    content: "Selecionar arquivo";
+    font-size: 14px !important;
+    color: inherit;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 
 
@@ -54,6 +110,12 @@ df_projeto = pd.DataFrame(
 
 sidebar_projeto()
 
+
+
+
+###########################################################################################################
+# INTERFACE PRINCIPAL DA PÁGINA
+###########################################################################################################
 
 
 
@@ -209,6 +271,20 @@ if "salv_fortalecimento_capacidades" not in st.session_state:
     st.session_state["salv_fortalecimento_capacidades"] = salvaguardas_doc.get("fortalecimento_capacidades")
 
 
+# Mapeamento entre nome da política e chave do MongoDB
+mapa_politicas = {
+    "2. Condições de Trabalho e Trabalhistas": "pol_2_trabalho",
+    "3. Eficiência de Recursos e Prevenção de Poluição": "pol_3_poluicao",
+    "4. Saúde, Segurança e Proteção da Comunidade": "pol_4_comunidade",
+    "5. Restrições de Uso da Terra e Reassentamento Involuntário": "pol_5_reassentamento",
+    "6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos": "pol_6_biodiversidade",
+    "7. Povos Indígenas": "pol_7_indigenas",
+    "8. Patrimônio Cultural": "pol_8_patrimonio",
+    "9. Igualdade de Gênero": "pol_9_genero"
+}
+
+
+
 
 # COMEÇO DO FORMULÁRIO COM AS POLÍTICAS DE SALVAGUARDAS ###########################################################
 
@@ -316,12 +392,163 @@ if st.session_state.tipo_usuario == "beneficiario":
 
             st.write(f"**{politica['nome']}**")
 
-            st.file_uploader(
-                "Insira o plano de mitigação",
-                key=f"upload_plano_mitigacao_{politica['nome']}"
-            )
+            col1, col2, col3 = st.columns([3,1,1], gap="large")
 
-            st.write("")
+            with col1:
+
+                st.file_uploader(
+                    "Insira o plano de mitigação",
+                    key=f"upload_plano_mitigacao_{politica['nome']}"
+                )
+
+            with col2:
+
+                verificado = st.checkbox("Verificado", key=f"checkbox_verificado_{politica['nome']}", disabled=True)
+
+
+            with col3:
+
+                salvar = st.button(
+                    "Salvar",
+                    key=f"salvar_plano_mitigacao_{politica['nome']}",
+                    icon=":material/save:",
+                    type="primary"
+                )
+
+
+
+                # Chave única de controle de processamento
+                chave_processando = f"processando_upload_{politica['nome']}"
+
+                # Inicializa a flag no session_state
+                if chave_processando not in st.session_state:
+                    st.session_state[chave_processando] = False
+
+
+                if salvar and not st.session_state[chave_processando]:
+
+                    # Ativa trava de processamento
+                    st.session_state[chave_processando] = True
+
+                    # Recupera o arquivo enviado no uploader correspondente
+                    arquivo_upload = st.session_state.get(
+                        f"upload_plano_mitigacao_{politica['nome']}"
+                    )
+
+                    # Validação de arquivo obrigatório
+                    if not arquivo_upload:
+
+                        st.warning("Selecione um arquivo antes de salvar.")
+
+                        # Libera a trava
+                        st.session_state[chave_processando] = False
+
+                    else:
+
+                        with st.spinner("Salvando..."):
+
+                            # Conecta ao Google Drive somente no momento do upload
+                            servico = obter_servico_drive()
+
+                            # Obtém a pasta principal do projeto
+                            pasta_projeto = obter_pasta_projeto(
+                                servico,
+                                projeto["codigo"],
+                                projeto["sigla"]
+                            )
+
+                            # Obtém ou cria a pasta de planos de mitigação
+                            pasta_planos = obter_pasta_planos_mitigacao(
+                                servico,
+                                pasta_projeto
+                            )
+
+                            # Faz upload do arquivo
+                            id_drive = enviar_arquivo_drive(
+                                servico,
+                                pasta_planos,
+                                arquivo_upload
+                            )
+
+                            # Valida sucesso do upload
+                            if id_drive:
+
+                                # Gera link público do arquivo
+                                url_arquivo = gerar_link_drive(id_drive)
+
+                                # # Mapeamento entre nome da política e chave do MongoDB
+                                # mapa_politicas = {
+                                #     "2. Condições de Trabalho e Trabalhistas": "pol_2_trabalho",
+                                #     "3. Eficiência de Recursos e Prevenção de Poluição": "pol_3_poluicao",
+                                #     "4. Saúde, Segurança e Proteção da Comunidade": "pol_4_comunidade",
+                                #     "5. Restrições de Uso da Terra e Reassentamento Involuntário": "pol_5_reassentamento",
+                                #     "6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos": "pol_6_biodiversidade",
+                                #     "7. Povos Indígenas": "pol_7_indigenas",
+                                #     "8. Patrimônio Cultural": "pol_8_patrimonio",
+                                #     "9. Igualdade de Gênero": "pol_9_genero"
+                                # }
+
+                                # Recupera a chave correspondente da política
+                                chave_politica = mapa_politicas.get(politica["nome"])
+
+                                # Atualiza o documento no MongoDB
+                                col_projetos.update_one(
+                                    {"codigo": codigo_projeto_atual},
+                                    {
+                                        "$set": {
+                                            f"salvaguardas.{chave_politica}.plano_mitigacao": {
+                                                "nome": arquivo_upload.name,
+                                                "url": url_arquivo
+                                            }
+                                        }
+                                    }
+                                )
+
+                                st.success(
+                                    "Plano de mitigação salvo com sucesso!",
+                                    icon=":material/check:"
+                                )
+
+                                # Libera a trava antes do rerun
+                                st.session_state[chave_processando] = False
+
+                                time.sleep(3)
+                                st.rerun()
+
+                            else:
+
+                                # Libera a trava em caso de erro
+                                st.session_state[chave_processando] = False
+
+
+
+            # Lista o link do arquivo já salvo, se houver
+
+            # Identifica a chave da política atual
+            chave_politica = mapa_politicas.get(politica["nome"])
+
+            # Recupera os dados salvos no banco
+            dados_plano = salvaguardas_doc.get(chave_politica, {}).get("plano_mitigacao")
+
+            # Exibe link do arquivo salvo
+            if dados_plano:
+
+                nome_arquivo = dados_plano.get("nome")
+                url_arquivo = dados_plano.get("url")
+
+                if nome_arquivo and url_arquivo:
+
+                    st.markdown(
+                        f"[{nome_arquivo}]({url_arquivo})"
+                    )
+
+
+            st.divider()
+
+
+
+
+# Se não for beneficiário
 
 else:
 
