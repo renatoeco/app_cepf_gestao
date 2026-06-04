@@ -2429,6 +2429,7 @@ with plano_trabalho:
     st.write("")
 
 
+
     # ===============================================================================================
     # MODO VISUALIZAÇÃO
     # ===============================================================================================
@@ -2600,6 +2601,34 @@ with plano_trabalho:
     # ===============================================================================================
 
     else:
+
+
+        # Texto explicativo
+        st.write("""
+            Adicione os componentes, resultados esperados e atividades no Plano de Trabalho
+
+            **Observações:**
+
+            • Adicione quantas linhas forem necessárias à tabela abaixo.
+
+            • Incluir ao menos três componentes (objetivos específicos) para o projeto.
+
+            • Cada componente deve entregar um ou mais resultados esperados.
+
+            • Cada resultado esperado (entrega) deve ser produzido por, no mínimo, três atividades.
+
+            • Incluir datas de início e término de cada atividade, utilizando somente mês e ano.
+
+            • As datas de término das atividades não podem ultrapassar a data final do projeto.
+
+            • O IEB exige a inclusão de três componentes no plano de trabalho dos projetos aprovados e eles são padrão e devem permanecer na tabela. Estão relacionados à comunicação, ao monitoramento e aos planos de salvaguarda. Quando finalizar a inserção dos dados relacionados ao projeto na tabela do plano de trabalho, não deixe de preencher a numeração correta destes três componentes.
+            """)
+
+
+        st.write('')
+        st.write('')
+
+
 
         # Escolha do que editar
         opcao_editar_pt = st.radio(
@@ -3138,6 +3167,22 @@ with impactos:
     else:
         modo_edicao = False
 
+    # ============================================================
+    # Texto explicativo
+    # ============================================================
+
+    st.write("""
+    **Impactos de longo prazo:**  
+    A(s) meta(s) final(is) específica(s), mensurável(is), alcançável(is), relevante(s) e com prazo determinado para a qual seu projeto contribui. Esses impactos ocorrerão entre 3 e 5 anos após o encerramento do projeto.
+
+    **Impactos de curto prazo:**  
+    Os impactos específicos, mensuráveis, alcançáveis, relevantes e com prazo determinado que o projeto alcançará durante sua execução ou até o final da subvenção.
+
+    """)
+
+    if modo_edicao:
+        st.write('**Adicione os impactos de longo e curto prazo nas tabelas**:')
+
 
     # ============================================================
     # COLUNAS
@@ -3151,7 +3196,7 @@ with impactos:
 
     with col_lp:
         st.subheader("Impactos de longo prazo")
-        st.write("*Entre 3 a 5 anos após o final do projeto*")
+        # st.write("*Entre 3 a 5 anos após o final do projeto*")
 
         impactos_lp = (
             df_projeto["impactos_longo_prazo"].values[0]
@@ -3226,7 +3271,7 @@ with impactos:
 
     with col_cp:
         st.subheader("Impactos de curto prazo")
-        st.write("*Durante o projeto ou até o final da subvenção*")
+        # st.write("*Durante o projeto ou até o final da subvenção*")
 
         impactos_cp = (
             df_projeto["impactos_curto_prazo"].values[0]
@@ -3319,7 +3364,19 @@ with indicadores:
                 key="editar_indicadores"
             )
 
-    st.subheader("Indicadores de Portfólio")
+    st.subheader("Indicadores do Portfólio")
+
+
+    #######################################################################################################
+    # TEXTO EXPLICATIVO
+    #######################################################################################################
+
+    st.write(
+        """
+        Os projetos que serão financiados devem contribuir para o alcance de alguns dos indicadores listados abaixo.
+        """
+    )
+
 
     #######################################################################################################
     # MODO VISUALIZAÇÃO
@@ -3374,6 +3431,10 @@ with indicadores:
 
         # Texto introdutório da seção
         st.write("*Selecione os indicadores que serão acompanhados no projeto.*")
+
+        st.write("""
+            Insira a contribuição numérica esperada (Exemplo: 50 mulheres capacitadas) e inclua a descrição de como o projeto contribuirá para alcançá-los. Atenção! A proposta não precisa contribuir com todos os indicadores.
+            """)
 
         # Aviso para o usuário lembrar de salvar
         st.markdown(
@@ -3672,6 +3733,51 @@ with monitoramento:
     # Título principal
     # ------------------------------------------------------------------
     st.subheader("Plano de Monitoramento")
+
+
+    # ------------------------------------------------------------------
+    # Texto explicativo
+    # ------------------------------------------------------------------
+    
+    st.write("""
+        O monitoramento de indicadores de resultados de projetos é o processo contínuo de coleta, análise e interpretação de dados para avaliar o progresso e os impactos de um projeto em relação aos seus objetivos.
+
+        Os indicadores de resultados são métricas específicas que medem os efeitos diretos e indiretos das atividades do projeto, permitindo verificar se os objetivos planejados estão sendo atingidos.
+
+        Esse monitoramento possibilita identificar avanços, desafios e ajustes necessários ao longo da execução, garantindo que o projeto esteja no caminho certo para gerar benefícios sociais e ambientais conforme previsto.
+
+        Além disso, facilita a prestação de contas, promovendo transparência e eficiência.
+
+        Adicione as informações de monitoramento de indicadores solicitadas na tabela abaixo.
+
+        **Descrição dos itens**
+
+        • **Indicador do CEPF:** Nome do indicador do CEPF correspondente ao resultado esperado do projeto.
+
+        • **Resultado Esperado:** Resultado esperado da tabela do plano de trabalho do projeto.
+
+        • **Indicador do Projeto:** Nome do indicador que mede o resultado esperado do projeto.
+
+        • **Linha de Base:** Condição inicial antes da implementação das atividades do projeto. Representa o ponto de partida contra o qual o progresso será medido. Exemplo: “0 árvores plantadas”.
+
+        • **Meta:** Valor ou resultado que se espera alcançar para esse indicador ao final do projeto.
+
+        • **Resultado Atual:** Medição mais recente, atualizada periodicamente. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
+
+        • **Unidade de Medida:** Unidade usada para mensurar o indicador (ex: árvores, litros, famílias, etc.).
+
+        • **Periodicidade:** Frequência com que os dados são coletados (ex: mensal, trimestral).
+
+        • **Fonte de Verificação:** Documentos, relatórios ou dados que comprovam o resultado obtido.
+
+        • **Responsável:** Pessoa ou equipe responsável por monitorar e coletar os dados. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
+
+        • **Data de Coleta:** Data da coleta ou última atualização dos dados. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
+
+        • **Observações:** Espaço para notas sobre desafios, contextos ou ajustes necessários.
+        """)
+
+    st.write('')
 
     # ------------------------------------------------------------------
     # NORMALIZAÇÃO SEGURA DO PLANO DE TRABALHO
@@ -5832,9 +5938,17 @@ with ajustes:
 
 
     # --------------------------------------------------
-    # Botão só para beneficiário
+    # Texto explicativo e Botão só para beneficiário
     # --------------------------------------------------
     if usuario_beneficiario:
+
+
+        # Texto explicativo
+        st.write(
+            "Neste campo as organizações poderão solicitar ajustes no plano de trabalho, como adição ou remoção de atividades, modificação de atividades e alteração de prazo de execução. \n\n" \
+            "Confirme a modificação com a pessoa responsável pelo seu projeto antes de solicitar o ajuste."
+        )
+
 
         st.write("")
 
