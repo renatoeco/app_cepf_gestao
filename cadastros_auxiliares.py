@@ -968,57 +968,8 @@ with aba_direcoes:
 
         st.write("")
 
-        # # ======================================================
-        # # RADIO DE MODO (APÓS SELECIONAR EDITAL)
-        # # ======================================================
-
-        # modo_gestao = st.radio(
-        #     "Gerenciar:",
-        #     options=["Direções estratégicas", "Subcategorias"],
-        #     horizontal=True,
-        #     index=0
-        # )
-
-        # st.write("")
-
-        # # ======================================================
-        # # BUSCA DO EDITAL NO BANCO
-        # # ======================================================
-
-        # edital_direcoes = col_editais.find_one(
-        #     {"codigo_edital": edital_selecionado_direcoes}
-        # )
-
-        # direcoes = sorted(
-        #     edital_direcoes.get("direcoes_estrategicas", []),
-        #     key=lambda x: x.get("tema", "")
-        # )
-
-        # # 🔽 AQUI CONTINUA TODO O RESTO DA LÓGICA
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # # Se nenhum edital for selecionado, para execução
-    # if not edital_selecionado_direcoes:
-    #     st.caption("Selecione um edital para continuar.")
-    #     st.stop()
-
-    # st.write("")
 
         # ======================================================
         # RADIO DE MODO (APÓS SELECIONAR EDITAL)
@@ -1026,7 +977,7 @@ with aba_direcoes:
 
         modo_gestao = st.radio(
             "Gerenciar:",
-            options=["Direções estratégicas", "Subcategorias"],
+            options=["Direções estratégicas", "Prioridades de Investimento"],
             horizontal=True,
             index=0
         )
@@ -1247,11 +1198,11 @@ with aba_direcoes:
 
         # ======================================================
         # ======================================================
-        # MODO 2 — SUBCATEGORIAS
+        # MODO 2 — PRIORIDADES DE INVESTIMENTO
         # ======================================================
         # ======================================================
 
-        if modo_gestao == "Subcategorias":
+        if modo_gestao == "Prioridades de Investimento":
 
             if not direcoes:
                 st.warning("Nenhuma direção estratégica cadastrada.")
@@ -1281,11 +1232,11 @@ with aba_direcoes:
             if subcategorias_existentes:
                 df_sub = pd.DataFrame(subcategorias_existentes)
                 df_sub = df_sub.rename(columns={
-                    "nome_subcategoria": "Subcategorias da direção estratégica"
+                    "nome_subcategoria": "Prioridades de investimento da direção estratégica"
                 })
             else:
                 df_sub = pd.DataFrame({
-                    "Subcategorias da direção estratégica": pd.Series(dtype="str")
+                    "Prioridades de investimento da direção estratégica": pd.Series(dtype="str")
                 })
 
             # --------------------------------------------------
@@ -1313,19 +1264,19 @@ with aba_direcoes:
 
                 # Normalização
                 df_editado = df_editado.dropna()
-                df_editado["Subcategorias da direção estratégica"] = (
-                    df_editado["Subcategorias da direção estratégica"]
+                df_editado["Prioridades de investimento da direção estratégica"] = (
+                    df_editado["Prioridades de investimento da direção estratégica"]
                     .astype(str)
                     .str.strip()
                 )
 
                 df_editado = df_editado[
-                    df_editado["Subcategorias da direção estratégica"] != ""
+                    df_editado["Prioridades de investimento da direção estratégica"] != ""
                 ]
 
                 nova_lista_subcategorias = [
                     {"nome_subcategoria": row}
-                    for row in df_editado["Subcategorias da direção estratégica"].tolist()
+                    for row in df_editado["Prioridades de investimento da direção estratégica"].tolist()
                 ]
 
                 # Atualiza apenas a direção selecionada
@@ -1342,7 +1293,7 @@ with aba_direcoes:
                     {"$set": {"direcoes_estrategicas": direcoes_atualizadas}}
                 )
 
-                st.success("Subcategorias atualizadas com sucesso!", icon=":material/check:")
+                st.success("Prioridades de investimento atualizadas com sucesso!", icon=":material/check:")
                 time.sleep(3)
                 st.rerun()
 
