@@ -94,7 +94,6 @@ def editar_organizacao_dialog():
     # SELECTBOX PARA ESCOLHER A ORGANIZAÇÃO
     # ----------------------------------------------------------------------------------------------------
 
-
     # Cria coluna concatenada
     df_organizacoes["org_label"] = (
         df_organizacoes["sigla_organizacao"]
@@ -119,96 +118,144 @@ def editar_organizacao_dialog():
         placeholder="Escolha uma organização"
     )
 
-
-
     # ----------------------------------------------------------------------------------------------------
     # CARREGAMENTO DOS DADOS DA ORGANIZAÇÃO SELECIONADA
     # ----------------------------------------------------------------------------------------------------
 
     if escolha:
 
-        # Extrai apenas a sigla da organização selecionada
-        
         # Recupera o id da organização selecionada
         org_id = mapa_org_label_id.get(escolha)
 
         # Busca no banco pelo _id
         org = col_organizacoes.find_one({"_id": org_id})
-        
-        
 
         if org:
+
+            ################################################################################################
+            # ATUALIZA SESSION STATE AO TROCAR ORGANIZAÇÃO
+            ################################################################################################
+
+            # controla troca da organização selecionada
+            if st.session_state.get("org_edicao_atual") != str(org_id):
+
+                st.session_state.org_edicao_atual = str(org_id)
+
+                # dados principais
+                st.session_state.cnpj_input = org.get("cnpj", "")
+                st.session_state.sigla_organizacao_input = org.get("sigla_organizacao", "")
+                st.session_state.nome_organizacao_input = org.get("nome_organizacao", "")
+
+                # novos campos
+                st.session_state.inscricao_estadual_input = org.get("inscricao_estadual", "")
+                st.session_state.email_geral_input = org.get("email_geral", "")
+                st.session_state.website_redes_input = org.get("website_redes_sociais", "")
+
+                # localização
+                st.session_state.endereco_input = org.get("endereco", "")
+
+                st.session_state.uf_input = (
+                    org.get("uf", {}).get("sigla", "")
+                    if org.get("uf") else ""
+                )
+
+                st.session_state.municipio_input = (
+                    org.get("municipio", {}).get("nome", "")
+                    if org.get("municipio") else ""
+                )
+
+                st.session_state.cep_input = org.get("cep", "")
 
             # ----------------------------------------------------------------------------------------------
             # CAMPOS DE EDIÇÃO
             # ----------------------------------------------------------------------------------------------
 
+            ################################################################################################
+            # CAMPOS PRINCIPAIS DA ORGANIZAÇÃO
+            ################################################################################################
+
+            with st.container(horizontal=True):
+
+                # Campo para edição da sigla
+                st.text_input(
+                    "Sigla da organização *",
+                    key="sigla_organizacao_input"
+                )
+
+                # Campo para edição do nome
+                st.text_input(
+                    "Nome da organização *",
+                    key="nome_organizacao_input"
+                )
+
+            # -------------------------------------------------------------------------------------------------
+            # CNPJ E INSCRIÇÃO ESTADUAL
+            # -------------------------------------------------------------------------------------------------
+
             with st.container(horizontal=True):
 
                 # Campo para edição do CNPJ
                 st.text_input(
-                    "CNPJ",
-                    value=org.get("cnpj", ""),
+                    "CNPJ *",
                     key="cnpj_input"
                 )
 
-
-                # Campo para edição da sigla
+                # Campo para edição da inscrição estadual
                 st.text_input(
-                    "Sigla da organização",
-                    value=org.get("sigla_organizacao", ""),
-                    key="sigla_organizacao_input"
+                    "Inscrição estadual",
+                    key="inscricao_estadual_input"
                 )
 
-            # Campo para edição do nome
-            st.text_input(
-                "Nome da organização",
-                value=org.get("nome_organizacao", ""),
-                key="nome_organizacao_input"
-            )
+            # -------------------------------------------------------------------------------------------------
+            # E-MAIL E WEBSITE / REDES SOCIAIS
+            # -------------------------------------------------------------------------------------------------
 
+            with st.container(horizontal=True):
 
+                # Campo para edição do e-mail geral
+                st.text_input(
+                    "E-mail geral *",
+                    key="email_geral_input"
+                )
+
+                # Campo para edição do website / redes sociais
+                st.text_input(
+                    "Website / Redes sociais",
+                    key="website_redes_input"
+                )
 
             # -------------------------------------------------------------------------------------------------
             # CAMPOS DE LOCALIZAÇÃO
             # -------------------------------------------------------------------------------------------------
 
             st.text_input(
-                "Endereço",
-                value=org.get("endereco", ""),
+                "Endereço *",
                 key="endereco_input"
             )
 
             with st.container(horizontal=True):
 
-
                 st.selectbox(
-                    "UF",
+                    "UF *",
                     options=lista_ufs,
-                    index=lista_ufs.index(org.get("uf", {}).get("sigla", "")) if org.get("uf") else 0,
                     key="uf_input",
                     width=150
                 )
 
                 st.selectbox(
-                    "Município",
+                    "Município *",
                     options=lista_municipios,
-                    index=lista_municipios.index(org.get("municipio", {}).get("nome", "")) if org.get("municipio") else 0,
                     key="municipio_input",
                     width="stretch"
                 )
 
                 st.text_input(
-                    "CEP",
-                    value=org.get("cep", ""),
+                    "CEP *",
                     key="cep_input",
                     width=200
                 )
 
-
-            st.write('')
-
-
+            st.write("")
 
             # ----------------------------------------------------------------------------------------------
             # BOTÃO DE SALVAR ALTERAÇÕES
@@ -225,6 +272,10 @@ def editar_organizacao_dialog():
                 nome_organizacao = st.session_state.nome_organizacao_input.strip()
                 cnpj = st.session_state.cnpj_input.strip()
 
+                inscricao_estadual = st.session_state.inscricao_estadual_input.strip()
+                email_geral = st.session_state.email_geral_input.strip()
+                website_redes_sociais = st.session_state.website_redes_input.strip()
+
                 endereco = st.session_state.endereco_input.strip()
                 uf = st.session_state.uf_input
                 municipio_nome = st.session_state.municipio_input
@@ -232,13 +283,15 @@ def editar_organizacao_dialog():
 
                 cep_limpo, cep_valido = limpar_e_validar_cep(cep_raw)
 
+                # -------------------------------------------------------------------------------------------------
                 # VALIDAÇÕES
-
+                # -------------------------------------------------------------------------------------------------
 
                 if not sigla_organizacao or not nome_organizacao or not cnpj \
-                or not endereco or not uf or not municipio_nome or not cep_raw:
+                or not email_geral or not endereco or not uf \
+                or not municipio_nome or not cep_raw:
 
-                    st.error("Todos os campos devem ser preenchidos.")
+                    st.error("Todos os campos obrigatórios devem ser preenchidos.")
 
                 elif not validar_cnpj(cnpj):
 
@@ -247,8 +300,6 @@ def editar_organizacao_dialog():
                 elif not cep_valido:
 
                     st.error("CEP inválido. Informe um CEP com exatamente 8 números.")
-
-
 
                 else:
 
@@ -259,13 +310,13 @@ def editar_organizacao_dialog():
                     # VERIFICAÇÃO DE DUPLICIDADE
                     # ------------------------------------------------------------------------------------------
 
-                    # Busca outra organização com a mesma sigla (ignorando o documento atual)
+                    # Busca outra organização com a mesma sigla
                     sigla_existente = col_organizacoes.find_one({
                         "sigla_organizacao": sigla_organizacao,
                         "_id": {"$ne": org["_id"]}
                     })
 
-                    # Busca outra organização com o mesmo CNPJ (ignorando o documento atual)
+                    # Busca outra organização com o mesmo CNPJ
                     cnpj_existente = col_organizacoes.find_one({
                         "cnpj": cnpj,
                         "_id": {"$ne": org["_id"]}
@@ -292,7 +343,7 @@ def editar_organizacao_dialog():
                         ###################################################################################################
 
                         # -------------------------------------------------------------------------------------------------
-                        # BUSCA DE UF E MUNICÍPIO, POIS ELE SALVA UM UF E MUNICIPIO COM ALGUNS METADADOS
+                        # BUSCA DE UF E MUNICÍPIO
                         # -------------------------------------------------------------------------------------------------
 
                         uf_doc = df_ufs[df_ufs["sigla_uf"] == uf].iloc[0]
@@ -301,15 +352,20 @@ def editar_organizacao_dialog():
                             df_municipios["nome_municipio"] == municipio_nome
                         ].iloc[0]
 
+                        # -------------------------------------------------------------------------------------------------
+                        # ATUALIZA DOCUMENTO
+                        # -------------------------------------------------------------------------------------------------
 
                         col_organizacoes.update_one(
                             {"_id": org["_id"]},
                             {
-
                                 "$set": {
                                     "sigla_organizacao": sigla_organizacao,
                                     "nome_organizacao": nome_organizacao,
                                     "cnpj": cnpj,
+                                    "inscricao_estadual": inscricao_estadual,
+                                    "email_geral": email_geral,
+                                    "website_redes_sociais": website_redes_sociais,
                                     "endereco": endereco,
                                     "uf": {
                                         "sigla": uf_doc["sigla_uf"],
@@ -322,8 +378,6 @@ def editar_organizacao_dialog():
                                     },
                                     "cep": cep_limpo
                                 }
-
-
                             }
                         )
 
@@ -335,7 +389,6 @@ def editar_organizacao_dialog():
                         time.sleep(3)
 
                         st.rerun()
-
 
 
 
