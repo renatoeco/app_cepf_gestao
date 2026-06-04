@@ -148,8 +148,10 @@ def renderizar_acoes_remanejamento(item, idx):
 
             elif "add_atividade" in item:
 
-                componente_nome = item.get("componente")
-                entrega_nome = item.get("entrega")
+            # elif item.get("tipo_remanejamento") == "adicionar_atividade":
+
+                componente_id = item.get("componente_id")
+                entrega_id = item.get("entrega_id")
 
                 descricao = item.get("add_atividade")
                 data_inicio = item.get("data_inicio")
@@ -162,7 +164,7 @@ def renderizar_acoes_remanejamento(item, idx):
                     "atividade": descricao,
                     "data_inicio": data_inicio,
                     "data_fim": data_fim,
-                    # "status_atividade": "prevista",
+                    "status_atividade": "prevista",
                     "porcentagem_atv": 0
                 }
 
@@ -178,10 +180,55 @@ def renderizar_acoes_remanejamento(item, idx):
                         }
                     },
                     array_filters=[
-                        {"comp.componente": componente_nome},
-                        {"ent.entrega": entrega_nome}
+                        {"comp.id": componente_id},
+                        {"ent.id": entrega_id}
                     ]
                 )
+
+
+
+
+
+            # # ==================================================
+            # # REMANEJAMENTO TIPO ADICIONAR ATIVIDADE
+            # # ==================================================
+
+            # elif "add_atividade" in item:
+
+            #     componente_nome = item.get("componente")
+            #     entrega_nome = item.get("entrega")
+
+            #     descricao = item.get("add_atividade")
+            #     data_inicio = item.get("data_inicio")
+            #     data_fim = item.get("data_fim")
+
+            #     novo_id = str(bson.ObjectId())
+
+            #     nova_atividade = {
+            #         "id": novo_id,
+            #         "atividade": descricao,
+            #         "data_inicio": data_inicio,
+            #         "data_fim": data_fim,
+            #         # "status_atividade": "prevista",
+            #         "porcentagem_atv": 0
+            #     }
+
+            #     col_projetos.update_one(
+            #         {"codigo": codigo_projeto_atual},
+            #         {
+            #             "$push": {
+            #                 "plano_trabalho.componentes.$[comp].entregas.$[ent].atividades": nova_atividade
+            #             },
+            #             "$set": {
+            #                 f"plano_trabalho.remanejamentos_atividades.{idx}.status_remanejamento": "aceito",
+            #                 f"plano_trabalho.remanejamentos_atividades.{idx}.data_aprov_remanej": datetime.datetime.now().strftime("%d/%m/%Y")
+            #             }
+            #         },
+            #         array_filters=[
+            #             {"comp.componente": componente_nome},
+            #             {"ent.entrega": entrega_nome}
+            #         ]
+            #     )
 
 
             # ==================================================
@@ -471,8 +518,42 @@ def renderizar_card_add(item):
     data_aprov = item.get("data_aprov_remanej")
     status = item.get("status_remanejamento")
 
-    componente = item.get("componente")
-    entrega = item.get("entrega")
+
+    # --------------------------------------------------
+    # Recupera IDs gravados no remanejamento
+    # --------------------------------------------------
+
+    componente_id = item.get("componente_id")
+    entrega_id = item.get("entrega_id")
+
+    # Valores padrão
+    componente = "-"
+    entrega = "-"
+
+    # --------------------------------------------------
+    # Busca componente e entrega no plano de trabalho
+    # --------------------------------------------------
+
+    for comp in plano_trabalho_dict.get("componentes", []):
+
+        if comp.get("id") == componente_id:
+
+            componente = comp.get("componente", "-")
+
+            for ent in comp.get("entregas", []):
+
+                if ent.get("id") == entrega_id:
+
+                    entrega = ent.get("entrega", "-")
+                    break
+
+            break
+
+
+
+
+    # componente = item.get("componente")
+    # entrega = item.get("entrega")
 
     atividade = item.get("add_atividade")
     data_inicio = item.get("data_inicio")
@@ -5446,6 +5527,18 @@ with ajustes:
                                 # Criar objeto de solicitação
                                 # --------------------------------------------------
 
+                                # Busca componente completo
+                                componente_obj = next(
+                                    (c for c in componentes if c["componente"] == componente_sel),
+                                    {}
+                                )
+
+                                # Busca entrega completa
+                                entrega_obj = next(
+                                    (e for e in componente_obj.get("entregas", []) if e["entrega"] == entrega_sel),
+                                    {}
+                                )
+
                                 nova_solicitacao = {
 
                                     "tipo_remanejamento": "adicionar_atividade",
@@ -5453,6 +5546,10 @@ with ajustes:
                                     "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
 
                                     "status_remanejamento": "em_analise",
+
+                                    "componente_id": componente_obj.get("id"),
+
+                                    "entrega_id": entrega_obj.get("id"),
 
                                     "add_atividade": descricao,
 
@@ -5464,6 +5561,27 @@ with ajustes:
 
                                     "autor": st.session_state.get("nome")
                                 }
+
+
+
+                                # nova_solicitacao = {
+
+                                #     "tipo_remanejamento": "adicionar_atividade",
+
+                                #     "data_solicit_remanej": datetime.datetime.now().strftime("%d/%m/%Y"),
+
+                                #     "status_remanejamento": "em_analise",
+
+                                #     "add_atividade": descricao,
+
+                                #     "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+
+                                #     "data_fim": data_fim.strftime("%d/%m/%Y"),
+
+                                #     "justificativa": justificativa,
+
+                                #     "autor": st.session_state.get("nome")
+                                # }
 
                                 # --------------------------------------------------
                                 # Salvar no Mongo
