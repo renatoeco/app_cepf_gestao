@@ -453,7 +453,6 @@ else:
                 st.Page("projetos_home_visao_geral.py", title="Visão geral", icon=":material/analytics:"),
                 st.Page("projetos_lista.py", title="Projetos", icon=":material/list:"),
                 st.Page("projetos_eventos.py", title="Eventos", icon=":material/event:"),
-
                 st.Page("mapa.py", title="Mapa", icon=":material/map:"),
                 st.Page("projeto_novo.py", title="Novo projeto", icon=":material/add_circle:"),
             ],
@@ -518,6 +517,8 @@ else:
         "ver_projeto": [
             st.Page("projeto_visao_geral.py", title="Visão geral", icon=":material/home:"),
             st.Page("projeto_atividades.py", title="Atividades", icon=":material/assignment:"),
+            st.Page("projeto_salvaguardas.py", title="Salvaguardas", icon=":material/health_and_safety:"),
+
             st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/payments:"),
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
             st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
