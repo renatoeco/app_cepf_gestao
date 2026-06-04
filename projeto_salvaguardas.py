@@ -2,6 +2,11 @@ import streamlit as st
 import pandas as pd
 import datetime
 import time
+from docx import Document
+from io import BytesIO
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
+from docx.shared import Pt
 
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
@@ -81,6 +86,8 @@ db = conectar_mongo_cepf_gestao()
 # Coleção de projetos
 col_projetos = db["projetos"]
 
+# Coleção de organizações
+col_organizacoes = db["organizacoes"]
 
 ###########################################################################################################
 # CARREGAMENTO DE DADOS
@@ -118,10 +125,24 @@ sidebar_projeto()
 ###########################################################################################################
 
 
-###########################################################################################################
-# FUNÇÃO - RENDERIZAÇÃO DO PLANO DE MITIGAÇÃO
-###########################################################################################################
+def formatar_tabela_docx(tabela):
+    """
+    Aplica formatação padrão em toda a tabela.
+    """
 
+    for row in tabela.rows:
+
+        for cell in row.cells:
+
+            for paragrafo in cell.paragraphs:
+
+                paragrafo.paragraph_format.space_before = Pt(6)
+                paragrafo.paragraph_format.space_after = Pt(6)
+
+
+
+
+# FUNÇÃO - RENDERIZAÇÃO DO PLANO DE MITIGAÇÃO
 def renderizar_plano_mitigacao(
     salvaguardas_doc,
     mapa_politicas,
@@ -191,11 +212,6 @@ def renderizar_plano_mitigacao(
             )
 
 
-            # checkbox_verificado = st.checkbox(
-            #     "Verificado",
-            #     value=valor_checkbox,
-            #     key=f"checkbox_verificado_{chave_politica}"
-            # )
 
             # Caminho MongoDB
             caminho_politica = f"salvaguardas.{chave_politica}"
@@ -410,8 +426,8 @@ mapa_politicas = {
 # COMEÇO DO FORMULÁRIO COM AS POLÍTICAS DE SALVAGUARDAS ###########################################################
 
 
-# Duas colunas para o nome do avaliador e data da última atualização.
-col1, col2 = st.columns(2)
+# Colunas de informações da avaliação
+col1, col2, col3 = st.columns([3, 3, 1])
 
 
 # # Recupera o nome do usuário logado no session_state
@@ -423,19 +439,1196 @@ nome_avaliador = salvaguardas_doc.get("nome_avaliador_risco")
 
 st.write('')
 
+# COLUNA 1
 # Mostra apenas se existir informação no banco
 if nome_avaliador:
     col1.write(f"**Responsável pela última avaliação:** {nome_avaliador}")
 
 
 
-
+# COLUNA 2
 # Recupera a data da última avaliação salva
 data_aval_risco = salvaguardas_doc.get("data_aval_risco")
 
 # Mostra a data apenas se existir no banco
 if data_aval_risco:
     col2.write(f"**Data da última avaliação:** {data_aval_risco}")
+
+
+# COLUNA 3
+# ===============================================================================================
+# EXPORTAÇÃO DO RELATÓRIO
+# ===============================================================================================
+
+with col3:
+
+    with st.popover(
+        "Exportar",
+        icon=":material/print:",
+        width="stretch"
+    ):
+
+        # Geração do documento
+        if st.button(
+            "Gerar relatório",
+            key="gerar_relatorio_salvaguardas",
+            icon=":material/settings:",
+            width="stretch"
+            # type="primary"
+        ):
+
+
+            # ----------------------------------------------------------------------------------
+            # Cria documento Word
+            # ----------------------------------------------------------------------------------
+
+
+            # Cria documento Word
+            doc = Document()
+
+
+            # Recupera organização do projeto
+            organizacao = col_organizacoes.find_one(
+                {"_id": projeto.get("id_organizacao")}
+            )
+
+            # Nome da organização
+            nome_organizacao = ""
+
+            if organizacao:
+
+                nome_organizacao = organizacao.get(
+                    "nome_organizacao",
+                    ""
+                )
+
+
+
+            # ===============================================================================================
+            # TÍTULO PRINCIPAL
+            # ===============================================================================================
+
+            doc.add_heading(
+                "Avaliação de risco",
+                level=1
+            )
+
+
+
+            # ===============================================================================================
+            # SEÇÃO 1 — DETALHES DO PROJETO
+            # ===============================================================================================
+
+            doc.add_heading(
+                "Seção 1: Detalhes do Projeto",
+                level=2
+            )
+
+            # Espaçamento após subtítulo
+            doc.add_paragraph("")
+
+
+            # Código do projeto
+            paragrafo = doc.add_paragraph()
+
+            run_label = paragrafo.add_run(
+                "Código do projeto: "
+            )
+
+            run_label.bold = True
+
+            paragrafo.add_run(
+                f"{projeto.get('codigo', '')}"
+            )
+
+
+            # Título do projeto
+            paragrafo = doc.add_paragraph()
+
+            run_label = paragrafo.add_run(
+                "Título do Projeto: "
+            )
+
+            run_label.bold = True
+
+            paragrafo.add_run(
+                f"{projeto.get('nome_do_projeto', '')}"
+            )
+
+
+            # Organização solicitante
+            paragrafo = doc.add_paragraph()
+
+            run_label = paragrafo.add_run(
+                "Organização Solicitante: "
+            )
+
+            run_label.bold = True
+
+            paragrafo.add_run(
+                nome_organizacao
+            )
+
+
+            # Nome do avaliador
+            paragrafo = doc.add_paragraph()
+
+            run_label = paragrafo.add_run(
+                "Nome da Pessoa que Completa a Avaliação de Risco: "
+            )
+
+            run_label.bold = True
+
+            paragrafo.add_run(
+                f"{salvaguardas_doc.get('nome_avaliador_risco', '')}"
+            )
+
+
+            # Data da avaliação
+            paragrafo = doc.add_paragraph()
+
+            run_label = paragrafo.add_run(
+                "Data da Avaliação de Risco: "
+            )
+
+            run_label.bold = True
+
+            paragrafo.add_run(
+                f"{salvaguardas_doc.get('data_aval_risco', '')}"
+            )
+
+
+            # Espaçamento final da seção
+            doc.add_paragraph("")
+
+
+
+            # ===============================================================================================
+            # SEÇÃO 2 — AVALIAÇÃO DE RISCO
+            # ===============================================================================================
+
+            # Espaçamento antes da seção
+            doc.add_paragraph("")
+
+            doc.add_heading(
+                "Seção 2: Avaliação de Risco",
+                level=2
+            )
+
+            # Espaçamento após subtítulo
+            doc.add_paragraph("")
+
+
+            # ===============================================================================================
+            # TABELA — AVALIAÇÃO DE RISCO
+            # ===============================================================================================
+
+            # Cria tabela com cabeçalho
+            tabela = doc.add_table(
+                rows=1,
+                cols=5
+            )
+
+            # Estilo da tabela
+            tabela.style = "Table Grid"
+
+            # Cabeçalho
+            cabecalho = tabela.rows[0].cells
+
+
+            # Aplica fundo cinza claro no cabeçalho
+            for cell in cabecalho:
+
+                cell._tc.get_or_add_tcPr().append(
+                    parse_xml(
+                        r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                            nsdecls('w')
+                        )
+                    )
+                )
+
+            cabecalho[0].text = "Política de Salvaguardas"
+            cabecalho[1].text = "Aplicável?"
+            cabecalho[2].text = "Avaliação de Risco"
+            cabecalho[3].text = "Categoria de Risco"
+            cabecalho[4].text = (
+                "Notas (os exemplos abaixo são indicativos "
+                "e não preveem todas as eventualidades)"
+            )
+
+
+            # ===============================================================================================
+            # LINHA 1 — AVALIAÇÃO AMBIENTAL E SOCIAL
+            # ===============================================================================================
+
+            linha = tabela.add_row().cells
+
+            linha[0].text = "1. Avaliação Ambiental e Social"
+
+            linha[1].text = (
+                "Sim (Aplica-se a todos os projetos)"
+            )
+
+            linha[2].text = "N/A"
+
+            linha[3].text = "N/A"
+
+            linha[4].text = (
+                "Não é necessário atribuir uma categoria "
+                "de risco individual a esta política."
+            )
+
+            # Fundo cinza claro nas colunas 2, 3 e 4
+            for indice in [1, 2, 3]:
+
+                linha[indice]._tc.get_or_add_tcPr().append(
+                    parse_xml(
+                        r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                            nsdecls('w')
+                        )
+                    )
+                )
+
+
+
+            # ===============================================================================================
+            # LINHA 2 — CONDIÇÕES DE TRABALHO E TRABALHISTAS
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_2 = salvaguardas_doc.get(
+                mapa_politicas["2. Condições de Trabalho e Trabalhistas"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "2. Condições de Trabalho e Trabalhistas"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_2.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "em relação às condições de trabalho e trabalhistas?"
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            detalhes = dados_pol_2.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_2.get("categoria", "")
+            )
+
+            # Coluna 5
+            linha[4].text = (
+                "Projetos geralmente serão atribuídos à Categoria C "
+                "para esta política, a menos que existam riscos elevados "
+                "relacionados à saúde e segurança ocupacional, como "
+                "mergulho ou trabalho como guardas ecológicos."
+            )
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 3 — EFICIÊNCIA DE RECURSOS E PREVENÇÃO DE POLUIÇÃO
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_3 = salvaguardas_doc.get(
+                mapa_politicas["3. Eficiência de Recursos e Prevenção de Poluição"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "3. Eficiência de Recursos e Prevenção de Poluição"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_3.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados a pesticidas?"
+            )
+
+            detalhes_pesticidas = dados_pol_3.get(
+                "detalhes_pesticidas",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes_pesticidas}"
+            )
+
+            paragrafo3 = linha[2].add_paragraph()
+
+            paragrafo3.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados ao uso insustentável de recursos e/ou "
+                "formas de poluição que não sejam pesticidas?"
+            )
+
+            detalhes_poluicao = dados_pol_3.get(
+                "detalhes_poluicao",
+                ""
+            )
+
+            paragrafo4 = linha[2].add_paragraph()
+
+            paragrafo4.add_run(
+                f"Detalhes: {detalhes_poluicao}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_3.get("categoria", "")
+            )
+
+            # Coluna 5
+            paragrafo = linha[4].paragraphs[0]
+
+            paragrafo.add_run(
+                "Projetos que envolvem a aquisição ou uso de "
+                "pesticidas químicos serão atribuídos à Categoria B."
+            )
+
+            paragrafo2 = linha[4].add_paragraph()
+
+            paragrafo2.add_run(
+                "Os projetos com potencial de exposição da comunidade "
+                "a materiais e substâncias perigosos liberados por suas "
+                "atividades serão classificados na Categoria A ou B."
+            )
+
+
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 4 — SAÚDE, SEGURANÇA E PROTEÇÃO DA COMUNIDADE
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_4 = salvaguardas_doc.get(
+                mapa_politicas["4. Saúde, Segurança e Proteção da Comunidade"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "4. Saúde, Segurança e Proteção da Comunidade"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_4.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados à saúde, segurança e proteção da comunidade?"
+            )
+
+            detalhes = dados_pol_4.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_4.get("categoria", "")
+            )
+
+            # Coluna 5
+            paragrafo = linha[4].paragraphs[0]
+
+            paragrafo.add_run(
+                "Projetos que financiam salários e/ou operações de "
+                "guardas florestais, guardas ecológicos ou pessoal "
+                "de segurança similar (armado ou desarmado) serão "
+                "classificados como Categoria B"
+            )
+
+            run_superscript = paragrafo.add_run("1")
+
+            run_superscript.font.superscript = True
+
+            paragrafo.add_run(".")
+
+            paragrafo2 = linha[4].add_paragraph()
+
+            paragrafo2.add_run(
+                "Projetos que envolvem atividades de pesquisa"
+            )
+
+            run_superscript_1 = paragrafo2.add_run("2")
+
+            run_superscript_1.font.superscript = True
+
+            paragrafo2.add_run(
+                " com seres humanos"
+            )
+
+            run_superscript_2 = paragrafo2.add_run("2")
+
+            run_superscript_2.font.superscript = True
+
+            paragrafo2.add_run(
+                " serão classificados como Categoria B."
+            )
+
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 5 — RESTRIÇÕES DE USO DA TERRA E REASSENTAMENTO INVOLUNTÁRIO
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_5 = salvaguardas_doc.get(
+                mapa_politicas["5. Restrições de Uso da Terra e Reassentamento Involuntário"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "5. Restrições de Uso da Terra e Reassentamento Involuntário"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_5.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados a restrições de acesso associadas "
+                "a impactos negativos nos meios de subsistência?"
+            )
+
+            detalhes = dados_pol_5.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_5.get("categoria", "")
+            )
+
+            # Coluna 5
+            linha[4].text = (
+                "Projetos que envolvem a criação ou expansão "
+                "de áreas protegidas serão classificados "
+                "como Categoria B."
+            )
+
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 6 — CONSERVAÇÃO DA BIODIVERSIDADE E GESTÃO SUSTENTÁVEL
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_6 = salvaguardas_doc.get(
+                mapa_politicas["6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "6. Conservação da Biodiversidade e Gestão Sustentável "
+                "de Recursos Naturais Vivos"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_6.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados à degradação ou perda de habitat crítico "
+                "ou outros habitats naturais?"
+            )
+
+            detalhes = dados_pol_6.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_6.get("categoria", "")
+            )
+
+            # Coluna 5
+            paragrafo = linha[4].paragraphs[0]
+
+            paragrafo.add_run(
+                "Projetos que envolvem impactos adversos "
+                "em habitats críticos"
+            )
+
+            run_superscript_3 = paragrafo.add_run("3")
+
+            run_superscript_3.font.superscript = True
+
+            paragrafo.add_run(
+                " serão classificados como Categoria A."
+            )
+
+            paragrafo2 = linha[4].add_paragraph()
+
+            paragrafo2.add_run(
+                "Projetos que envolvem a aquisição de commodities "
+                "de recursos naturais (por exemplo, madeira) que "
+                "possam contribuir para a conversão ou degradação "
+                "significativa de habitats naturais serão "
+                "classificados como Categoria B."
+            )
+
+            paragrafo3 = linha[4].add_paragraph()
+
+            paragrafo3.add_run(
+                "Projetos que envolvem a produção ou colheita "
+                "de recursos naturais vivos de populações "
+                "selvagens de espécies ameaçadas globalmente "
+                "serão classificados como Categoria B."
+            )
+
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 7 — POVOS INDÍGENAS
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_7 = salvaguardas_doc.get(
+                mapa_politicas["7. Povos Indígenas"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "7. Povos Indígenas"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_7.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados aos impactos sobre Povos Indígenas?"
+            )
+
+            detalhes = dados_pol_7.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_7.get("categoria", "")
+            )
+
+            # Coluna 5
+            paragrafo = linha[4].paragraphs[0]
+
+            paragrafo.add_run(
+                "Projetos que possam afetar Povos Indígenas "
+                "em isolamento voluntário ou grupos remotos "
+                "com contato externo limitado serão "
+                "classificados como Categoria A."
+            )
+
+            paragrafo2 = linha[4].add_paragraph()
+
+            paragrafo2.add_run(
+                "Projetos que envolvam o uso de ou restrições "
+                "de acesso a recursos naturais que sejam "
+                "centrais para a identidade, cultura e "
+                "subsistência dos Povos Indígenas serão "
+                "classificados como Categoria B."
+            )
+
+            paragrafo3 = linha[4].add_paragraph()
+
+            paragrafo3.add_run(
+                "Projetos que envolvam o desenvolvimento "
+                "comercial de terras e recursos naturais "
+                "centrais para a identidade e subsistência "
+                "dos Povos Indígenas ou o uso comercial "
+                "de seu patrimônio cultural serão "
+                "classificados como Categoria B."
+            )
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 8 — PATRIMÔNIO CULTURAL
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_8 = salvaguardas_doc.get(
+                mapa_politicas["8. Patrimônio Cultural"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "8. Patrimônio Cultural"
+            )
+
+            # Coluna 2
+            linha[1].text = str(
+                dados_pol_8.get("aplicavel", "")
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados aos impactos sobre o patrimônio cultural "
+                "tangível e/ou intangível?"
+            )
+
+            detalhes = dados_pol_8.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_8.get("categoria", "")
+            )
+
+            # Coluna 5
+            paragrafo = linha[4].paragraphs[0]
+
+            paragrafo.add_run(
+                "Projetos que introduzam restrições ao acesso "
+                "das partes interessadas ao patrimônio cultural "
+                "serão classificados como Categoria B."
+            )
+
+            paragrafo2 = linha[4].add_paragraph()
+
+            paragrafo2.add_run(
+                "Projetos que envolvam o uso comercial de "
+                "patrimônio cultural serão classificados "
+                "como Categoria B."
+            )
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 9 — IGUALDADE DE GÊNERO
+            # ===============================================================================================
+
+            # Recupera dados da política no banco
+            dados_pol_9 = salvaguardas_doc.get(
+                mapa_politicas["9. Igualdade de Gênero"],
+                {}
+            )
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "9. Igualdade de Gênero"
+            )
+
+            # Coluna 2
+            linha[1].text = (
+                "Sim (Aplica-se a todos os projetos)"
+            )
+
+            # Aplica fundo cinza claro somente na coluna 2
+            linha[1]._tc.get_or_add_tcPr().append(
+                parse_xml(
+                    r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                        nsdecls('w')
+                    )
+                )
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run(
+                "O projeto proposto apresenta riscos significativos "
+                "relacionados a impactos na promoção, proteção e "
+                "respeito à igualdade de gênero?"
+            )
+
+            detalhes = dados_pol_9.get(
+                "detalhes",
+                ""
+            )
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                f"Detalhes: {detalhes}"
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                dados_pol_9.get("categoria", "")
+            )
+
+            # Coluna 5
+            linha[4].text = (
+                "Projetos serão tipicamente atribuídos à "
+                "Categoria C para esta política, a menos "
+                "que existam riscos elevados de agravamento "
+                "de desigualdades existentes relacionadas ao gênero."
+            )
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 10 — ENGAJAMENTO DE PARTES INTERESSADAS
+            # ===============================================================================================
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "10. Engajamento de Partes Interessadas"
+            )
+
+            # Coluna 2
+            linha[1].text = (
+                "Sim (Aplica-se a todos os projetos)"
+            )
+
+            # Fundo cinza claro na coluna 2
+            linha[1]._tc.get_or_add_tcPr().append(
+                parse_xml(
+                    r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                        nsdecls('w')
+                    )
+                )
+            )
+
+            # Coluna 3
+            linha[2].text = "N/A"
+
+            # Fundo cinza claro na coluna 3
+            linha[2]._tc.get_or_add_tcPr().append(
+                parse_xml(
+                    r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                        nsdecls('w')
+                    )
+                )
+            )
+
+            # Coluna 4
+            linha[3].text = "N/A"
+
+            # Fundo cinza claro na coluna 4
+            linha[3]._tc.get_or_add_tcPr().append(
+                parse_xml(
+                    r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                        nsdecls('w')
+                    )
+                )
+            )
+
+            # Coluna 5
+            linha[4].text = (
+                "Não é necessário atribuir uma categoria "
+                "de risco individual a esta política."
+            )
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 11 — SEPARADOR VISUAL
+            # ===============================================================================================
+
+            linha = tabela.add_row().cells
+
+            # Aplica fundo cinza escuro em todas as células
+            for cell in linha:
+
+                cell.text = ""
+
+                cell._tc.get_or_add_tcPr().append(
+                    parse_xml(
+                        r'<w:shd {} w:fill="808080"/>'.format(
+                            nsdecls('w')
+                        )
+                    )
+                )
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 12 — CATEGORIA GERAL DE RISCO
+            # ===============================================================================================
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "CATEGORIA GERAL DE RISCO"
+            )
+
+            # Coluna 2
+            linha[1].text = "N/A"
+
+            # Fundo cinza claro na coluna 2
+            linha[1]._tc.get_or_add_tcPr().append(
+                parse_xml(
+                    r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                        nsdecls('w')
+                    )
+                )
+            )
+
+            # Coluna 3
+            paragrafo = linha[2].paragraphs[0]
+
+            paragrafo.add_run("N/A")
+
+            paragrafo2 = linha[2].add_paragraph()
+
+            paragrafo2.add_run(
+                "[A categoria de risco segue a categoria "
+                "de risco mais alta atribuída às "
+                "Políticas de Salvaguarda 2-9.]"
+            )
+
+            # Fundo cinza claro na coluna 3
+            linha[2]._tc.get_or_add_tcPr().append(
+                parse_xml(
+                    r'<w:shd {} w:fill="D9D9D9"/>'.format(
+                        nsdecls('w')
+                    )
+                )
+            )
+
+            # Coluna 4
+            linha[3].text = str(
+                salvaguardas_doc.get(
+                    "categoria_geral_risco",
+                    ""
+                )
+            )
+
+            # Coluna 5
+            linha[4].text = (
+                "A categoria geral de risco para o projeto "
+                "é equivalente à categoria mais alta atribuída "
+                "às políticas individuais de salvaguarda."
+            )
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 13 — SEPARADOR VISUAL
+            # ===============================================================================================
+
+            linha = tabela.add_row().cells
+
+            # Aplica fundo cinza escuro em todas as células
+            for cell in linha:
+
+                cell.text = ""
+
+                cell._tc.get_or_add_tcPr().append(
+                    parse_xml(
+                        r'<w:shd {} w:fill="808080"/>'.format(
+                            nsdecls('w')
+                        )
+                    )
+                )
+
+
+
+
+
+
+
+            # ===============================================================================================
+            # LINHA 14 — FORTALECIMENTO DE CAPACIDADE
+            # ===============================================================================================
+
+            linha = tabela.add_row().cells
+
+            # Coluna 1
+            linha[0].text = (
+                "FORTALECIMENTO DE CAPACIDADE"
+            )
+
+            # Mescla colunas 2 a 5
+            celula_mesclada = linha[1].merge(linha[4])
+
+            # Primeiro parágrafo
+            paragrafo = celula_mesclada.paragraphs[0]
+
+            paragrafo.add_run(
+                "O solicitante necessita de fortalecimento "
+                "de capacidade para gerenciar os riscos "
+                "ambientais e sociais identificados aqui? "
+                "Se sim, descreva as atividades de "
+                "fortalecimento de capacidade que precisam "
+                "ser integradas ao desenho do projeto:"
+            )
+
+            # Segundo parágrafo
+            fortalecimento = salvaguardas_doc.get(
+                "fortalecimento_capacidades",
+                ""
+            )
+
+            paragrafo2 = celula_mesclada.add_paragraph()
+
+            paragrafo2.add_run(
+                str(fortalecimento)
+            )
+
+
+
+
+
+
+
+
+            # Aplica formatação geral da tabela
+            formatar_tabela_docx(tabela)
+
+
+
+
+            # ===============================================================================================
+            # NOTAS
+            # ===============================================================================================
+
+            # Espaçamento após tabela
+            doc.add_paragraph("")
+
+            doc.add_heading(
+                "Notas",
+                level=3
+            )
+
+            # Nota 1
+            paragrafo = doc.add_paragraph()
+
+            run_numero = paragrafo.add_run("1) ")
+
+            run_numero.bold = True
+
+            paragrafo.add_run(
+                "Esta disposição aplica-se independentemente "
+                "de o pessoal de segurança ser empregado "
+                "ou contratado pela entidade beneficiária, "
+                "por uma agência governamental ou por um terceiro."
+            )
+
+            # Nota 2
+            paragrafo = doc.add_paragraph()
+
+            run_numero = paragrafo.add_run("2) ")
+
+            run_numero.bold = True
+
+            paragrafo.add_run(
+                "Pesquisa com Seres Humanos refere-se a qualquer "
+                "forma de investigação disciplinada que visa "
+                "contribuir para um corpo de conhecimento ou teoria "
+                "que envolva a obtenção de (a) dados de indivíduos "
+                "vivos por meio de intervenção ou interação com "
+                "o indivíduo ou (b) informações pessoais identificáveis. "
+                "Projetos de demonstração de campo de conservação "
+                "e/ou desenvolvimento geralmente não são considerados "
+                "pesquisa, nem métodos participativos padrão usados "
+                "para monitorar os impactos desses projetos no "
+                "bem-estar humano (por exemplo, discussões em "
+                "grupos focais)."
+            )
+
+            # Nota 3
+            paragrafo = doc.add_paragraph()
+
+            run_numero = paragrafo.add_run("3) ")
+
+            run_numero.bold = True
+
+            paragrafo.add_run(
+                "Habitats críticos incluem, entre outros, áreas "
+                "protegidas existentes e propostas, áreas "
+                "reconhecidas como protegidas por comunidades "
+                "locais tradicionais, bem como áreas identificadas "
+                "como importantes para a conservação, como "
+                "Áreas-Chave de Biodiversidade (KBAs), "
+                "Sítios da Aliança para Extinção Zero (AZE), "
+                "Áreas Importantes para Aves e Biodiversidade (IBAs), "
+                "sítios Ramsar, etc."
+            )
+
+
+
+
+
+
+
+
+            # Salva documento em memória
+            buffer_docx = BytesIO()
+
+            doc.save(buffer_docx)
+
+            buffer_docx.seek(0)
+
+            # Armazena no session_state
+            st.session_state["relatorio_salvaguardas_docx"] = buffer_docx
+
+
+
+        # Exibe botão de download após gerar o documento
+        if "relatorio_salvaguardas_docx" in st.session_state:
+
+            st.caption(
+                "Relatório gerado. Clique para baixar."
+            )
+
+            st.download_button(
+                "Baixar",
+                data=st.session_state["relatorio_salvaguardas_docx"],
+                file_name=f"{codigo_projeto_atual} - Quadro de avaliação de risco.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                icon=":material/download:",
+                type="primary",
+                width="stretch"
+            )
+
 
 
 st.write("")
@@ -563,12 +1756,14 @@ if st.session_state.tipo_usuario == "beneficiario":
 
             with col3:
 
-                salvar = st.button(
-                    "Salvar",
-                    key=f"salvar_plano_mitigacao_{politica['nome']}",
-                    icon=":material/save:",
-                    type="primary"
-                )
+                with st.container(horizontal=True, horizontal_alignment="right"):
+
+                    salvar = st.button(
+                        "Salvar",
+                        key=f"salvar_plano_mitigacao_{politica['nome']}",
+                        icon=":material/save:",
+                        type="primary"
+                    )
 
 
 
@@ -1588,9 +2783,11 @@ else:
             dados_flatten = flatten_dict(dados_salvaguardas)
 
             # Adiciona prefixo "salvaguardas."
+            # Ignora campos None para evitar sobrescrever dados existentes
             dados_update = {
                 f"salvaguardas.{k}": v
                 for k, v in dados_flatten.items()
+                if v is not None
             }
 
             # Atualiza apenas os campos editáveis
