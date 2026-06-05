@@ -2357,6 +2357,8 @@ lista_indicadores_edital = [
 ]
 
 
+usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
+
 
 
 ###########################################################################################################
@@ -2419,7 +2421,6 @@ with plano_trabalho:
     # Apenas admin/equipe podem editar
     # ===============================================================================================
 
-    usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
     modo_edicao = False
 
     if usuario_interno:
@@ -3783,7 +3784,6 @@ with indicadores:
 # ###################################################################################################
 
 
-
 with monitoramento:
 
     # ------------------------------------------------------------------
@@ -3989,8 +3989,8 @@ with monitoramento:
 
                     df_monitoramento = df_monitoramento[ordem_colunas]
 
-                    # Se for visitante mostra o dataframa, não o data_editor
-                    if "visitante" in st.session_state.tipo_usuario:
+                    # Usuário externo somente visualiza
+                    if not usuario_interno:
 
                         df_editado = st.dataframe(
                             df_monitoramento,
@@ -4080,7 +4080,7 @@ with monitoramento:
                     # usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 
 
-                    if "visitante" not in st.session_state.tipo_usuario:
+                    if usuario_interno:
 
                         with st.container(horizontal=True, horizontal_alignment="right"):
 
@@ -4250,6 +4250,10 @@ with monitoramento:
                                     st.rerun()
                                 else:
                                     st.error("Erro ao salvar indicadores do projeto.")
+
+
+
+
 
 
 
