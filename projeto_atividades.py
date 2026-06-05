@@ -2872,6 +2872,9 @@ with plano_trabalho:
 
             st.write('')
 
+
+
+
             # ============================================================
             # Carregar atividades existentes
             # ============================================================
@@ -2879,19 +2882,27 @@ with plano_trabalho:
             atividades_exist = entrega_sel.get("atividades", [])
 
             lista_atividades = []
+
             for a in atividades_exist:
-                # Agora as datas não serão convertidas aqui.
+
                 lista_atividades.append({
+
+                    # ID oculto para controle interno
+                    "id": a.get("id", ""),
+
                     "atividade": a.get("atividade", ""),
-                    "data_inicio": a.get("data_inicio", ""),  # mantém string
-                    "data_fim": a.get("data_fim", ""),        # mantém string
+                    "data_inicio": a.get("data_inicio", ""),
+                    "data_fim": a.get("data_fim", ""),
                 })
 
             df_atividades = pd.DataFrame(lista_atividades)
 
             # Se estiver vazio, cria colunas vazias
             if df_atividades.empty:
+
                 df_atividades = pd.DataFrame({
+
+                    "id": pd.Series(dtype="str"),
                     "atividade": pd.Series(dtype="str"),
                     "data_inicio": pd.Series(dtype="str"),
                     "data_fim": pd.Series(dtype="str"),
@@ -2899,10 +2910,9 @@ with plano_trabalho:
 
 
             # ============================================================
-            # Data Editor 
+            # Data Editor
             # ============================================================
 
-            # Converte para datetime (se houver valores)
             if not df_atividades.empty:
 
                 df_atividades["data_inicio"] = pd.to_datetime(
@@ -2919,11 +2929,17 @@ with plano_trabalho:
 
 
             df_editado = st.data_editor(
+
                 df_atividades,
+
                 num_rows="dynamic",
                 hide_index=True,
                 key="editor_atividades",
+
                 column_config={
+
+                    # ID oculto
+                    "id": None,
 
                     "atividade": st.column_config.TextColumn(
                         label="Atividade",
@@ -2947,6 +2963,8 @@ with plano_trabalho:
 
 
 
+
+
             # ============================================================
             # Botão salvar
             # ============================================================
@@ -2954,11 +2972,9 @@ with plano_trabalho:
             salvar_ativ = st.button(
                 "Salvar atividades",
                 icon=":material/save:",
-                type="secondary",
+                type="primary",
                 key="btn_salvar_atividades"
             )
-
-
 
 
 
@@ -2980,43 +2996,68 @@ with plano_trabalho:
                 # ----------------------------------------------------------
                 # Função de validação de data
                 # ----------------------------------------------------------
+
                 def valida_data(valor, linha, campo):
 
                     if pd.isna(valor):
-                        erros.append(f"Linha {linha}: {campo} é obrigatória.")
+
+                        erros.append(
+                            f"Linha {linha}: {campo} é obrigatória."
+                        )
+
                         return None
 
                     return valor
 
 
-
                 # ----------------------------------------------------------
                 # Validação linha a linha
                 # ----------------------------------------------------------
+
                 for idx, row in df_editado.iterrows():
 
                     atividade = str(row["atividade"]).strip()
-                    data_inicio_raw = str(row["data_inicio"]).strip()
-                    data_fim_raw = str(row["data_fim"]).strip()
+
+                    data_inicio = valida_data(
+                        row["data_inicio"],
+                        idx + 1,
+                        "Data de início"
+                    )
+
+                    data_fim = valida_data(
+                        row["data_fim"],
+                        idx + 1,
+                        "Data de término"
+                    )
 
                     if atividade == "":
-                        erros.append(f"Linha {idx + 1}: o nome da atividade não pode estar vazio.")
 
-                    data_inicio = valida_data(data_inicio_raw, idx + 1, "Data de início")
-                    data_fim = valida_data(data_fim_raw, idx + 1, "Data de término")
+                        erros.append(
+                            f"Linha {idx + 1}: o nome da atividade não pode estar vazio."
+                        )
 
                     if data_inicio and data_fim and atividade != "":
+
                         atividades_final.append({
+
+                            "id": row.get("id"),
+
                             "atividade": atividade,
-                            "data_inicio": pd.to_datetime(data_inicio).strftime("%d/%m/%Y"),
-                            "data_fim": pd.to_datetime(data_fim).strftime("%d/%m/%Y"),
+
+                            "data_inicio": pd.to_datetime(
+                                data_inicio
+                            ).strftime("%d/%m/%Y"),
+
+                            "data_fim": pd.to_datetime(
+                                data_fim
+                            ).strftime("%d/%m/%Y"),
                         })
-                    
 
 
                 # ----------------------------------------------------------
-                # Se houver erros → apenas exibe
+                # Se houver erros
                 # ----------------------------------------------------------
+
                 if erros:
 
                     for e in erros:
@@ -3024,44 +3065,69 @@ with plano_trabalho:
 
                 else:
 
-                    atividades_antigas = {
-                        a["atividade"]: a for a in atividades_exist
-                    }
+                    # ------------------------------------------------------
+                    # Mapa por ID
+                    # ------------------------------------------------------
 
-                    # ------------------------------------------------------
-                    # Cria nova lista de atividades (sempre novos IDs)
-                    # ------------------------------------------------------
+                    atividades_antigas = {
+
+                        a.get("id"): a
+                        for a in atividades_exist
+                    }
 
                     nova_lista = []
 
+                    # ------------------------------------------------------
+                    # Preserva TODOS os dados antigos
+                    # ------------------------------------------------------
+
                     for a in atividades_final:
 
-                        atividade_antiga = atividades_antigas.get(a["atividade"])
+                        atividade_id = a.get("id")
+
+                        atividade_antiga = atividades_antigas.get(atividade_id)
+
+                        # --------------------------------------------------
+                        # Já existia
+                        # --------------------------------------------------
 
                         if atividade_antiga:
-                            # Já existia → preserva dados
-                            nova_lista.append({
-                                "id": atividade_antiga.get("id"),
+
+                            atividade_atualizada = {
+
+                                # preserva tudo
+                                **atividade_antiga,
+
+                                # atualiza apenas estes campos
                                 "atividade": a["atividade"],
                                 "data_inicio": a["data_inicio"],
                                 "data_fim": a["data_fim"],
+                            }
 
-                                # preservados
-                                "porcentagem_atv": atividade_antiga.get("porcentagem_atv", 0),
-                                "status_atividade": atividade_antiga.get("status_atividade"),
-                                "relatos": atividade_antiga.get("relatos", [])
-                            })
+                            nova_lista.append(
+                                atividade_atualizada
+                            )
+
+                        # --------------------------------------------------
+                        # Nova atividade
+                        # --------------------------------------------------
 
                         else:
-                            # Nova atividade
+
                             nova_lista.append({
+
                                 "id": str(bson.ObjectId()),
+
                                 "atividade": a["atividade"],
+
                                 "data_inicio": a["data_inicio"],
+
                                 "data_fim": a["data_fim"],
 
-                                # padrão inicial
+                                "status_atividade": "prevista",
+
                                 "porcentagem_atv": 0,
+
                                 "relatos": []
                             })
 
@@ -3069,46 +3135,76 @@ with plano_trabalho:
                     # ------------------------------------------------------
                     # Atualiza apenas a entrega selecionada
                     # ------------------------------------------------------
+
                     entregas_atualizadas = []
 
                     for e in componente_sel["entregas"]:
+
                         if e["id"] == entrega_sel["id"]:
+
                             entregas_atualizadas.append({
+
                                 **e,
+
                                 "atividades": nova_lista
                             })
+
                         else:
+
                             entregas_atualizadas.append(e)
 
+
                     # ------------------------------------------------------
-                    # Atualiza apenas o componente correspondente
+                    # Atualiza componente
                     # ------------------------------------------------------
+
                     componentes_atualizados = []
 
                     for c in componentes:
+
                         if c["id"] == componente_sel["id"]:
+
                             componentes_atualizados.append({
+
                                 **c,
+
                                 "entregas": entregas_atualizadas
                             })
+
                         else:
+
                             componentes_atualizados.append(c)
 
+
                     # ------------------------------------------------------
-                    # Persistência no MongoDB
+                    # Persistência
                     # ------------------------------------------------------
+
                     resultado = col_projetos.update_one(
+
                         {"codigo": codigo_projeto_atual},
-                        {"$set": {"plano_trabalho.componentes": componentes_atualizados}}
+
+                        {
+                            "$set": {
+                                "plano_trabalho.componentes": componentes_atualizados
+                            }
+                        }
                     )
 
                     if resultado.matched_count == 1:
-                        st.success("Atividades atualizadas com sucesso!", icon=":material/check:")
-                        time.sleep(3)
-                        st.rerun()
-                    else:
-                        st.error("Erro ao atualizar atividades.")
 
+                        st.success(
+                            "Atividades atualizadas com sucesso!",
+                            icon=":material/check:"
+                        )
+
+                        time.sleep(3)
+
+                        st.rerun()
+
+                    else:
+
+                        st.error("Erro ao atualizar atividades.")
 
 
 
@@ -3171,7 +3267,7 @@ with plano_trabalho:
             salvar = st.button(
                 "Salvar entregas",
                 icon=":material/save:",
-                type="secondary"
+                type="primary"
             )
 
 
@@ -3272,7 +3368,7 @@ with plano_trabalho:
             salvar = st.button(
                 "Salvar componentes",
                 icon=":material/save:",
-                type="secondary"
+                type="primary"
             )
 
 
