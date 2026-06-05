@@ -3805,7 +3805,6 @@ with monitoramento:
 
         Além disso, facilita a prestação de contas, promovendo transparência e eficiência.
 
-        Adicione as informações de monitoramento de indicadores solicitadas na tabela abaixo.
 
         **Descrição dos itens**
 
@@ -3833,6 +3832,11 @@ with monitoramento:
 
         • **Observações:** Espaço para notas sobre desafios, contextos ou ajustes necessários.
         """)
+
+    if usuario_interno:
+        st.write('**Adicione as informações de monitoramento de indicadores solicitadas na tabela abaixo.**')
+        st.write('**As três últimas colunas serão preechidas pelos beneficiários junto com o Relatório.**')
+
 
     st.write('')
 
