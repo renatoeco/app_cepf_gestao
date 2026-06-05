@@ -1870,8 +1870,8 @@ with cron_desemb:
             "O que deseja editar?",
             [
                 "Valor do projeto",
+                "Parcelas",
                 "Relatórios",
-                "Parcelas"
             ],
             horizontal=True
         )
