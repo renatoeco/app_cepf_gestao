@@ -1791,9 +1791,6 @@ with cron_desemb:
                 {
                     "evento": f"Relatório {numero}",
                     "Entregas": " / ".join(entregas) if entregas else "",
-
-                    # "Entregas": "\n".join(entregas) if entregas else "",
-                    # "Entregas": "<br>".join(entregas) if entregas else "",
                     "Valor R$": "",
                     # "Percentual": "",
                     "Data prevista": pd.to_datetime(
@@ -1832,13 +1829,15 @@ with cron_desemb:
                 lambda x: x.strftime("%d/%m/%Y") if pd.notnull(x) else "sem data definida"
             )
 
-            # df_cronograma["Data prevista"] = df_cronograma["Data prevista"].dt.strftime(
-            #     "%d/%m/%Y"
-            # )
 
-            # Renomear a coluna evento
+            # -----------------------------------
+            # Renomear colunas para exibição
+            # -----------------------------------
             df_cronograma = df_cronograma.rename(
-                columns={"evento": "Evento"}
+                columns={
+                    "evento": "Evento",
+                    "Entregas": "Entregas (resultados esperados)"
+                }
             )
 
 
