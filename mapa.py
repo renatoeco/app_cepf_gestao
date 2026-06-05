@@ -187,45 +187,79 @@ for _, projeto in df_filtrado.iterrows():
 
 
 
+
+
 # ============================================
 # RENDERIZAÇÃO DO MAPA
 # ============================================
 
 if not pontos_mapa:
     st.info("Nenhuma localidade com coordenadas válidas foi encontrada.")
+
 else:
+
     df_mapa = pd.DataFrame(pontos_mapa)
 
-    centro_lat = df_mapa["latitude"].mean()
-    centro_lon = df_mapa["longitude"].mean()
-
-    mapa = folium.Map(
-        location=[centro_lat, centro_lon],
-        zoom_start=4,
-        tiles="OpenStreetMap"
+    # Identificador utilizado para reconstruir o mapa
+    # apenas quando os dados mudarem.
+    hash_mapa = hash(
+        tuple(
+            (
+                row["codigo"],
+                row["latitude"],
+                row["longitude"]
+            )
+            for _, row in df_mapa.iterrows()
+        )
     )
 
-    for _, row in df_mapa.iterrows():
+    # Cria o mapa somente quando necessário.
+    if (
+        "mapa_projetos" not in st.session_state
+        or st.session_state.get("hash_mapa") != hash_mapa
+    ):
 
-        popup_html = f"""
-        <div style="width:300px">
-            <b>{row.get('localidade', '')}</b><br><br>
-            <b>{row.get('codigo', '')} - {row.get('sigla', '')}</b><br><br>
-            
-            <b>Organização:</b> {row.get('organizacao', '')}<br>
-            <b>Projeto:</b> {row.get('nome_projeto', '')}<br>
-            <b>Município:</b> {row.get('municipio', '')}<br>
-        </div>
-        """
+        centro_lat = df_mapa["latitude"].mean()
+        centro_lon = df_mapa["longitude"].mean()
 
-        folium.Marker(
-            location=[row["latitude"], row["longitude"]],
-            popup=folium.Popup(popup_html, max_width=500),
-            icon=folium.Icon(color="red", prefix="fa"),
-        ).add_to(mapa)
+        mapa = folium.Map(
+            location=[centro_lat, centro_lon],
+            zoom_start=4,
+            tiles="OpenStreetMap",
+            prefer_canvas=True,
+        )
 
-    st_folium(mapa, width="100%", height=600)
+        # Adiciona os marcadores
+        for _, row in df_mapa.iterrows():
 
+            popup_html = f"""
+            <div style="width:300px">
+                <b>{row.get('localidade', '')}</b><br><br>
 
+                <b>{row.get('codigo', '')} - {row.get('sigla', '')}</b><br><br>
 
+                <b>Organização:</b> {row.get('organizacao', '')}<br>
+                <b>Projeto:</b> {row.get('nome_projeto', '')}<br>
+                <b>Município:</b> {row.get('municipio', '')}<br>
+            </div>
+            """
+
+            folium.Marker(
+                location=[row["latitude"], row["longitude"]],
+                popup=folium.Popup(popup_html, max_width=500),
+                icon=folium.Icon(color="red", prefix="fa"),
+            ).add_to(mapa)
+
+        # Salva mapa em memória
+        st.session_state.mapa_projetos = mapa
+        st.session_state.hash_mapa = hash_mapa
+
+    # Renderiza o mapa sem capturar eventos de interação.
+    st_folium(
+        st.session_state.mapa_projetos,
+        width="100%",
+        height=600,
+        key="mapa_projetos_render",
+        returned_objects=[],
+    )
 
