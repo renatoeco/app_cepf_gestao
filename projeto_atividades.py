@@ -630,6 +630,7 @@ def renderizar_card_add(item):
 # Renderiza card de ajuste do tipo "alterar atividade"
 # ==================================================
 
+
 def renderizar_card_alteracao(
     item,
     idx,
@@ -690,16 +691,58 @@ def renderizar_card_alteracao(
     for comp in plano_trabalho_dict.get("componentes", []):
         for ent in comp.get("entregas", []):
             for atv in ent.get("atividades", []):
+
                 if atv.get("id") == atividade_id:
                     atividade_bd = atv
                     break
 
+            if atividade_bd:
+                break
+
+        if atividade_bd:
+            break
+
     antes = item.get("antes", {})
     depois = item.get("depois", {})
 
-    atividade_nome = atividade_bd.get("atividade")
-    data_inicio = atividade_bd.get("data_inicio")
-    data_fim = atividade_bd.get("data_fim")
+    # --------------------------------------------------
+    # Atividade encontrada no banco
+    # --------------------------------------------------
+
+    if atividade_bd and isinstance(atividade_bd, dict):
+
+        atividade_nome = atividade_bd.get("atividade", "-")
+        data_inicio = atividade_bd.get("data_inicio", "-")
+        data_fim = atividade_bd.get("data_fim", "-")
+
+    # --------------------------------------------------
+    # Atividade removida
+    # --------------------------------------------------
+
+    else:
+
+        st.warning(
+            "A atividade foi removida.",
+            icon=":material/warning:"
+        )
+
+        atividade_nome = (
+            depois.get("atividade")
+            or antes.get("atividade")
+            or "-"
+        )
+
+        data_inicio = (
+            depois.get("data_inicio")
+            or antes.get("data_inicio")
+            or "-"
+        )
+
+        data_fim = (
+            depois.get("data_fim")
+            or antes.get("data_fim")
+            or "-"
+        )
 
     def highlight(valor):
         return f"<span style='background-color:#FFF3CD;padding:2px 4px;border-radius:3px'>{valor}</span>"
@@ -753,11 +796,140 @@ def renderizar_card_alteracao(
 
             if item.get("motivo_recusa"):
                 st.caption(f"Motivo: {item['motivo_recusa']}")
-    
-
 
     st.write("")
     st.write(f"**Justificativa:** {item.get('justificativa','')}")
+
+
+
+# def renderizar_card_alteracao(
+#     item,
+#     idx,
+#     plano_trabalho_dict
+# ):
+
+#     data_solic = item.get("data_solicit_remanej")
+#     data_aprov = item.get("data_aprov_remanej")
+#     status = item.get("status_remanejamento", "-")
+
+#     dist_colunas = [2,2,1]
+
+#     st.markdown("##### :material/compare_arrows: Alterar atividade")
+
+#     col1, col2, col3 = st.columns(dist_colunas)
+
+#     with col1:
+#         st.write(f"**Data da solicitação:** {data_solic}")
+
+#     with col2:
+#         if data_aprov:
+#             st.write(f"**Data de aceite:** {data_aprov}")
+
+#     with col3:
+
+#         if status == "aceito":
+#             badge = {"label":"Aceito","bg":"#D4EDDA","color":"#155724"}
+
+#         elif status == "em_analise":
+#             badge = {"label":"Em análise","bg":"#FFF3CD","color":"#856404"}
+
+#         elif status == "recusado":
+#             badge = {"label":"Recusado","bg":"#F8D7DA","color":"#721C24"}
+
+#         st.markdown(
+#             f"""
+#             <span style="
+#                 background:{badge['bg']};
+#                 color:{badge['color']};
+#                 padding:4px 10px;
+#                 border-radius:20px;
+#                 font-size:12px;
+#                 font-weight:600;
+#             ">
+#                 {badge['label']}
+#             </span>
+#             """,
+#             unsafe_allow_html=True
+#         )
+
+#     st.write("")
+
+#     # localizar atividade no plano de trabalho
+#     atividade_id = item.get("atividade_id")
+
+#     atividade_bd = None
+
+#     for comp in plano_trabalho_dict.get("componentes", []):
+#         for ent in comp.get("entregas", []):
+#             for atv in ent.get("atividades", []):
+#                 if atv.get("id") == atividade_id:
+#                     atividade_bd = atv
+#                     break
+
+#     antes = item.get("antes", {})
+#     depois = item.get("depois", {})
+
+#     atividade_nome = atividade_bd.get("atividade")
+#     data_inicio = atividade_bd.get("data_inicio")
+#     data_fim = atividade_bd.get("data_fim")
+
+#     def highlight(valor):
+#         return f"<span style='background-color:#FFF3CD;padding:2px 4px;border-radius:3px'>{valor}</span>"
+
+#     col1, col2, col3 = st.columns(dist_colunas)
+
+#     with col1:
+
+#         st.write("ANTES")
+
+#         atividade_antes = antes.get("atividade", atividade_nome)
+#         data_inicio_antes = antes.get("data_inicio", data_inicio)
+#         data_fim_antes = antes.get("data_fim", data_fim)
+
+#         atividade_md = highlight(atividade_antes) if "atividade" in antes else atividade_antes
+#         inicio_md = highlight(data_inicio_antes) if "data_inicio" in antes else data_inicio_antes
+#         fim_md = highlight(data_fim_antes) if "data_fim" in antes else data_fim_antes
+
+#         st.markdown(f"**Atividade:** {atividade_md}", unsafe_allow_html=True)
+#         st.markdown(f"**Data de início:** {inicio_md}", unsafe_allow_html=True)
+#         st.markdown(f"**Data de fim:** {fim_md}", unsafe_allow_html=True)
+
+#     with col2:
+
+#         st.write("DEPOIS")
+
+#         atividade_depois = depois.get("atividade", atividade_nome)
+#         data_inicio_depois = depois.get("data_inicio", data_inicio)
+#         data_fim_depois = depois.get("data_fim", data_fim)
+
+#         atividade_md = highlight(atividade_depois) if "atividade" in depois else atividade_depois
+#         inicio_md = highlight(data_inicio_depois) if "data_inicio" in depois else data_inicio_depois
+#         fim_md = highlight(data_fim_depois) if "data_fim" in depois else data_fim_depois
+
+#         st.markdown(f"**Atividade:** {atividade_md}", unsafe_allow_html=True)
+#         st.markdown(f"**Data de início:** {inicio_md}", unsafe_allow_html=True)
+#         st.markdown(f"**Data de fim:** {fim_md}", unsafe_allow_html=True)
+
+#     with col3:
+
+#         renderizar_acoes_remanejamento(item, idx)
+
+#         # --------------------------------------------------
+#         # Mostrar motivo da recusa
+#         # --------------------------------------------------
+
+#         if status == "recusado":
+
+#             if item.get("log_recusa"):
+#                 st.caption(item["log_recusa"])
+
+#             if item.get("motivo_recusa"):
+#                 st.caption(f"Motivo: {item['motivo_recusa']}")
+    
+
+
+#     st.write("")
+#     st.write(f"**Justificativa:** {item.get('justificativa','')}")
 
 
 
