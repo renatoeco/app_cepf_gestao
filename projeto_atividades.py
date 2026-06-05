@@ -2096,18 +2096,21 @@ def enviar_email_remocao_atividade_recusada(
 
 
 
-
 # Função auxiliar que salva lista de impactos no banco
 def salvar_impactos(chave, impactos, codigo_projeto):
     """
     Salva lista de impactos no banco.
     """
+
     resultado = col_projetos.update_one(
         {"codigo": codigo_projeto},
         {"$set": {chave: impactos}}
     )
 
-    return resultado.modified_count == 1
+    # True se encontrou o projeto
+    return resultado.matched_count == 1
+
+
 
 
 
@@ -3240,29 +3243,7 @@ with impactos:
                 }
             )
 
-            if st.button("Salvar", key="save_lp", icon=":material/save:"):
-                impactos_salvar = []
 
-                for i, row in df_editado_lp.iterrows():
-                    texto = str(row["texto"]).strip()
-                    if texto:
-                        impacto_id = (
-                            impactos_lp[i]["id"]
-                            if i < len(impactos_lp)
-                            else str(bson.ObjectId())
-                        )
-
-                        impactos_salvar.append({
-                            "id": impacto_id,
-                            "texto": texto
-                        })
-
-                if salvar_impactos("impactos_longo_prazo", impactos_salvar, st.session_state.projeto_atual):
-                    st.success("Impactos de longo prazo salvos com sucesso!", icon=":material/check:")
-                    time.sleep(3)
-                    st.rerun()
-                else:
-                    st.error("Erro ao salvar impactos.")
 
 
     # ============================================================
@@ -3315,32 +3296,108 @@ with impactos:
                 }
             )
 
-            if st.button("Salvar", key="save_cp", icon=":material/save:"):
-                impactos_salvar = []
-
-                for i, row in df_editado_cp.iterrows():
-                    texto = str(row["texto"]).strip()
-                    if texto:
-                        impacto_id = (
-                            impactos_cp[i]["id"]
-                            if i < len(impactos_cp)
-                            else str(bson.ObjectId())
-                        )
-
-                        impactos_salvar.append({
-                            "id": impacto_id,
-                            "texto": texto
-                        })
-
-                if salvar_impactos("impactos_curto_prazo", impactos_salvar, st.session_state.projeto_atual):
-                    st.success("Impactos de curto prazo salvos com sucesso!", icon=":material/check:")
-                    time.sleep(3)
-                    st.rerun()
-                else:
-                    st.error("Erro ao salvar impactos.")
 
 
 
+    # ============================================================
+    # BOTÃO ÚNICO DE SALVAR
+    # ============================================================
+
+    if modo_edicao:
+
+        st.write("")
+
+        if st.button(
+            "Salvar impactos",
+            key="save_impactos",
+            icon=":material/save:",
+            type="primary"
+        ):
+
+            # ========================================================
+            # IMPACTOS DE LONGO PRAZO
+            # ========================================================
+
+            impactos_lp_salvar = []
+
+            for i, row in df_editado_lp.iterrows():
+
+                texto = str(row["texto"]).strip()
+
+                if texto:
+
+                    impacto_id = (
+                        impactos_lp[i]["id"]
+                        if i < len(impactos_lp)
+                        else str(bson.ObjectId())
+                    )
+
+                    impactos_lp_salvar.append({
+                        "id": impacto_id,
+                        "texto": texto
+                    })
+
+            # ========================================================
+            # IMPACTOS DE CURTO PRAZO
+            # ========================================================
+
+            impactos_cp_salvar = []
+
+            for i, row in df_editado_cp.iterrows():
+
+                texto = str(row["texto"]).strip()
+
+                if texto:
+
+                    impacto_id = (
+                        impactos_cp[i]["id"]
+                        if i < len(impactos_cp)
+                        else str(bson.ObjectId())
+                    )
+
+                    impactos_cp_salvar.append({
+                        "id": impacto_id,
+                        "texto": texto
+                    })
+
+            # ========================================================
+            # SALVAR LONGO PRAZO
+            # ========================================================
+
+            ok_lp = salvar_impactos(
+                "impactos_longo_prazo",
+                impactos_lp_salvar,
+                st.session_state.projeto_atual
+            )
+
+            # ========================================================
+            # SALVAR CURTO PRAZO
+            # ========================================================
+
+            ok_cp = salvar_impactos(
+                "impactos_curto_prazo",
+                impactos_cp_salvar,
+                st.session_state.projeto_atual
+            )
+
+            # ========================================================
+            # FEEDBACK FINAL
+            # ========================================================
+
+            if ok_lp and ok_cp:
+
+                st.success(
+                    "Impactos de longo e curto prazo salvos com sucesso!",
+                    icon=":material/check:"
+                )
+
+                time.sleep(3)
+
+                st.rerun()
+
+            else:
+
+                st.error("Erro ao salvar impactos.")
 
 
 
