@@ -1919,7 +1919,14 @@ with cron_desemb:
 
                     "Data Aprovação": "",
 
-                    "Data Desembolso": ""
+                    "Data Desembolso": (
+                        pd.to_datetime(
+                            parcela.get("data_realizada"),
+                            errors="coerce"
+                        ).strftime("%d/%m/%Y :material/check:")
+                        if parcela.get("data_realizada")
+                        else ""
+                    )
                 }
             )
 
@@ -1953,7 +1960,7 @@ with cron_desemb:
             h1.write("**Parcela**")
 
             h2.write(
-                "**Descrição de Resultados (Entregas)**"
+                "**Entregas (resultados esperados)**"
             )
 
             h3.write("**Valor (R$)**")
