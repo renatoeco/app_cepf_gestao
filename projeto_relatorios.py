@@ -3163,21 +3163,21 @@ st.write('')
 if tipo_usuario in ["admin", "equipe"]:
     steps_relatorio = [
         "Atividades",
-        "Despesas",
         "Resultados",
         "Beneficiários",
         "Pesquisas",
         "Formulário",
+        "Despesas",
         "Avaliação"
     ]
 else:
     steps_relatorio = [
         "Atividades",
-        "Despesas",
         "Resultados",
         "Beneficiários",
         "Pesquisas",
         "Formulário",
+        "Despesas",
         "Enviar"
     ]
 
