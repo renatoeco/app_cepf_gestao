@@ -336,7 +336,7 @@ def login():
     for _ in range(7):
         st.write('')
 
-    esq, centro, dir = st.columns([3, 2, 3])
+    esq, centro, dir = st.columns([4, 2, 4])
 
     with centro.form("login_form", border=False):
         # Campo de e-mail
