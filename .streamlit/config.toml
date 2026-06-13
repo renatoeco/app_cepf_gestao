@@ -10,8 +10,5 @@ primaryColor = "#2F5AA1"
 [theme.dark]
 primaryColor = "#2F5AA1"
 
-#[theme]
-#primaryColor = "#2F5AA1"
-
-#[client]
-#toolbarMode="minimal"
+[client]
+toolbarMode="viewer"
