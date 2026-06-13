@@ -2393,10 +2393,6 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
 
-
-
-
-
 elif opcao_relatorio == "Lista de comunidades":
 
     st.subheader("Lista de comunidades")
@@ -2429,7 +2425,10 @@ elif opcao_relatorio == "Lista de comunidades":
         ###################################################################################################
         if edital_selecionado_obj:
 
-            gerar = st.button("Gerar relatório", icon=":material/list_alt_add:")
+            gerar = st.button(
+                "Gerar relatório",
+                icon=":material/list_alt_add:"
+            )
 
             if gerar:
 
@@ -2437,18 +2436,22 @@ elif opcao_relatorio == "Lista de comunidades":
                 # VALIDAÇÃO
                 ###################################################################################################
                 if not projetos:
-                    st.warning("Nenhum projeto encontrado para o edital selecionado.", icon=":material/warning:")
+
+                    st.warning(
+                        "Nenhum projeto encontrado para o edital selecionado.",
+                        icon=":material/warning:"
+                    )
+
                     st.session_state.arquivo_lista_comunidades = None
+
                     time.sleep(3)
 
                 else:
 
                     with st.spinner("Gerando relatório..."):
 
-
-
                         ###################################################################################################
-                        # MONTAGEM DOS DADOS (1 LINHA POR LOCALIDADE)
+                        # MONTAGEM DOS DADOS
                         ###################################################################################################
                         dados = []
 
@@ -2461,14 +2464,21 @@ elif opcao_relatorio == "Lista de comunidades":
                             sigla = p.get("sigla", "")
 
                             id_org = p.get("id_organizacao")
-                            org_info = mapa_organizacoes.get(str(id_org), {}) if id_org else {}
+
+                            org_info = (
+                                mapa_organizacoes.get(str(id_org), {})
+                                if id_org else {}
+                            )
+
                             nome_organizacao = org_info.get("nome", "")
 
 
                             ###################################################################################################
                             # LOCALIDADES
                             ###################################################################################################
-                            localidades = p.get("locais", {}).get("localidades", [])
+                            locais = p.get("locais", {})
+
+                            localidades = locais.get("localidades", [])
 
 
                             ###################################################################################################
@@ -2483,10 +2493,14 @@ elif opcao_relatorio == "Lista de comunidades":
                             ###################################################################################################
                             for loc in localidades:
 
+                                ###################################################################################################
+                                # DADOS DA LOCALIDADE
+                                ###################################################################################################
                                 nome_localidade = loc.get("nome_localidade", "")
                                 municipio = loc.get("municipio", "")
                                 latitude = loc.get("latitude", "")
                                 longitude = loc.get("longitude", "")
+
 
                                 ###################################################################################################
                                 # BENEFICIÁRIOS
@@ -2503,9 +2517,45 @@ elif opcao_relatorio == "Lista de comunidades":
 
 
                                 ###################################################################################################
-                                # LINHA DA TABELA (ORDEM DAS COLUNAS DEFINIDA AQUI)
+                                # QUANTITATIVOS DE BENEFICIÁRIOS
                                 ###################################################################################################
-                                dados.append({
+                                beneficiarios_quant = loc.get("beneficiarios_quant", {})
+
+
+                                ###################################################################################################
+                                # MULHERES
+                                ###################################################################################################
+                                mulheres = beneficiarios_quant.get("mulheres", {})
+
+                                mulheres_jovens = mulheres.get("jovens", 0)
+                                mulheres_adultas = mulheres.get("adultas", 0)
+                                mulheres_idosas = mulheres.get("idosas", 0)
+
+
+                                ###################################################################################################
+                                # HOMENS
+                                ###################################################################################################
+                                homens = beneficiarios_quant.get("homens", {})
+
+                                homens_jovens = homens.get("jovens", 0)
+                                homens_adultos = homens.get("adultos", 0)
+                                homens_idosos = homens.get("idosos", 0)
+
+
+                                ###################################################################################################
+                                # NÃO-BINÁRIOS
+                                ###################################################################################################
+                                nao_binarios = beneficiarios_quant.get("nao_binarios", {})
+
+                                nao_binarios_jovens = nao_binarios.get("jovens", 0)
+                                nao_binarios_adultos = nao_binarios.get("adultos", 0)
+                                nao_binarios_idosos = nao_binarios.get("idosos", 0)
+
+
+                                ###################################################################################################
+                                # LINHA DA TABELA
+                                ###################################################################################################
+                                linha = {
                                     "Nome da localidade": nome_localidade,
                                     "Código do projeto": codigo,
                                     "Sigla do projeto": sigla,
@@ -2514,34 +2564,66 @@ elif opcao_relatorio == "Lista de comunidades":
                                     "Latitude": latitude,
                                     "Longitude": longitude,
                                     "Beneficiários": beneficiarios_str,
-                                })
 
+                                    "Mulheres jovens": mulheres_jovens,
+                                    "Mulheres adultas": mulheres_adultas,
+                                    "Mulheres idosas": mulheres_idosas,
 
+                                    "Homens jovens": homens_jovens,
+                                    "Homens adultos": homens_adultos,
+                                    "Homens idosos": homens_idosos,
+
+                                    "Não-binários jovens": nao_binarios_jovens,
+                                    "Não-binários adultos": nao_binarios_adultos,
+                                    "Não-binários idosos": nao_binarios_idosos,
+                                }
+
+                                dados.append(linha)
 
 
                         ###################################################################################################
-                        # DATAFRAME E EXCEL
+                        # DATAFRAME
                         ###################################################################################################
                         df = pd.DataFrame(dados)
 
+
+                        ###################################################################################################
+                        # EXPORTAÇÃO EXCEL
+                        ###################################################################################################
                         buffer = io.BytesIO()
 
-                        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-                            df.to_excel(writer, index=False, sheet_name="Lista de comunidades")
+                        with pd.ExcelWriter(
+                            buffer,
+                            engine="openpyxl"
+                        ) as writer:
+
+                            df.to_excel(
+                                writer,
+                                index=False,
+                                sheet_name="Lista de comunidades"
+                            )
 
                         buffer.seek(0)
 
+
+                        ###################################################################################################
+                        # SALVA ARQUIVO
+                        ###################################################################################################
                         st.session_state.arquivo_lista_comunidades = buffer
 
                         st.rerun()
 
 
         ###################################################################################################
-        # BOTÃO DOWNLOAD (PRIMARY)
+        # BOTÃO DOWNLOAD
         ###################################################################################################
         if st.session_state.arquivo_lista_comunidades:
 
-            nome_edital = edital_selecionado_obj.get("nome_edital", "") if edital_selecionado_obj else ""
+            nome_edital = (
+                edital_selecionado_obj.get("nome_edital", "")
+                if edital_selecionado_obj else ""
+            )
+
             nome_edital_arquivo = nome_edital.replace(" ", "_")
 
             download_clicado = st.download_button(
@@ -2554,25 +2636,23 @@ elif opcao_relatorio == "Lista de comunidades":
             )
 
             ###################################################################################################
-            # LIMPA APÓS DOWNLOAD
+            # LIMPA SESSION STATE APÓS DOWNLOAD
             ###################################################################################################
             if download_clicado:
+
                 st.session_state.arquivo_lista_comunidades = None
+
                 st.rerun()
-
-
-
-
-
-
-
 
 
     ###################################################################################################
     # MENSAGEM FINAL
     ###################################################################################################
     if st.session_state.arquivo_lista_comunidades:
-        st.caption("Relatório gerado. Clique para baixar.")
+
+        st.caption(
+            "Relatório gerado. Clique para baixar."
+        )
 
 
 
