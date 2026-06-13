@@ -366,13 +366,19 @@ def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
         with smtplib.SMTP(smtp_server, port) as server:
             server.starttls()
             server.login(endereco_email, senha_email)
-            server.send_message(msg)
+
+            server.sendmail(
+                endereco_email,
+                destinatarios,
+                msg.as_string()
+            )
 
         return True
 
     except Exception as e:
         st.error(f"Erro ao enviar e-mail: {e}")
         return False
+
 
 
 
