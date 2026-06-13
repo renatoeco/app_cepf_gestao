@@ -1368,6 +1368,158 @@ def atualizar_datas_parcelas(col_projetos, codigo_projeto):
 
 
 
+# def criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto):
+#     """
+#     Atualiza parcelas automaticamente com base nos relatórios.
+
+#     Regra:
+#     - Nº parcelas = nº relatórios + 1
+#     - Parcela 1 mantém data existente
+#     - Parcela N (N >= 2): relatório N-1 + 15 dias
+
+#     A função preserva todos os demais campos existentes
+#     das parcelas já cadastradas.
+#     """
+
+#     projeto = col_projetos.find_one({
+#         "codigo": codigo_projeto
+#     })
+
+#     if not projeto:
+#         return
+
+#     relatorios = projeto.get("relatorios", [])
+
+#     financeiro = projeto.get("financeiro", {})
+#     parcelas_existentes = financeiro.get("parcelas", [])
+
+#     if not relatorios:
+#         return
+
+#     ###################################################################################################
+#     # ORDENA RELATÓRIOS
+#     ###################################################################################################
+#     relatorios = sorted(
+#         [
+#             r for r in relatorios
+#             if r.get("numero") is not None
+#         ],
+#         key=lambda x: x["numero"]
+#     )
+
+#     ###################################################################################################
+#     # MAPA DE PARCELAS EXISTENTES
+#     ###################################################################################################
+#     mapa_existente = {
+#         p.get("numero"): p
+#         for p in parcelas_existentes
+#         if p.get("numero") is not None
+#     }
+
+#     total_parcelas = len(relatorios) + 1
+
+#     ###################################################################################################
+#     # PRESERVA PARCELAS EXISTENTES
+#     ###################################################################################################
+#     parcelas_atualizadas = []
+
+#     for i in range(1, total_parcelas + 1):
+
+#         ###################################################################################################
+#         # RECUPERA PARCELA EXISTENTE
+#         ###################################################################################################
+#         parcela_existente = mapa_existente.get(i, {}).copy()
+
+#         parcela_existente["numero"] = i
+
+#         ###################################################################################################
+#         # PARCELA 1
+#         ###################################################################################################
+#         if i == 1:
+
+#             data_existente = parcela_existente.get("data_prevista")
+
+#             if data_existente:
+
+#                 data_dt = pd.to_datetime(
+#                     data_existente,
+#                     format="%d/%m/%Y",
+#                     errors="coerce"
+#                 )
+
+#             else:
+#                 data_dt = None
+
+#         ###################################################################################################
+#         # DEMAIS PARCELAS
+#         ###################################################################################################
+#         else:
+
+#             relatorio_ref = relatorios[i - 2]
+
+#             data_relatorio = relatorio_ref.get("data_prevista")
+
+#             if data_relatorio:
+
+#                 data_dt = pd.to_datetime(
+#                     data_relatorio,
+#                     format="%d/%m/%Y",
+#                     errors="coerce"
+#                 )
+
+#                 if pd.notnull(data_dt):
+#                     data_dt = data_dt + datetime.timedelta(days=15)
+
+#                 else:
+#                     data_dt = None
+
+#             else:
+#                 data_dt = None
+
+#         ###################################################################################################
+#         # ATUALIZA SOMENTE DATA_PREVISTA
+#         ###################################################################################################
+#         parcela_existente["data_prevista"] = (
+#             data_dt.strftime("%d/%m/%Y")
+#             if data_dt is not None and pd.notnull(data_dt)
+#             else None
+#         )
+
+#         parcelas_atualizadas.append(parcela_existente)
+
+#     ###################################################################################################
+#     # MANTÉM PARCELAS EXTRAS NÃO MAPEADAS
+#     ###################################################################################################
+#     numeros_validos = set(range(1, total_parcelas + 1))
+
+#     for parcela in parcelas_existentes:
+
+#         numero = parcela.get("numero")
+
+#         if numero not in numeros_validos:
+#             parcelas_atualizadas.append(parcela)
+
+#     ###################################################################################################
+#     # ORDENA PARCELAS
+#     ###################################################################################################
+#     parcelas_atualizadas = sorted(
+#         parcelas_atualizadas,
+#         key=lambda x: x.get("numero", 0)
+#     )
+
+#     ###################################################################################################
+#     # SALVA NO MONGO
+#     ###################################################################################################
+#     col_projetos.update_one(
+#         {"codigo": codigo_projeto},
+#         {
+#             "$set": {
+#                 "financeiro.parcelas": parcelas_atualizadas
+#             }
+#         }
+#     )
+
+
 
 
 def criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto):
@@ -2653,23 +2805,62 @@ with cron_desemb:
                         by="numero"
                     ).reset_index(drop=True)
 
+
+
+                    ###################################################################################################
+                    # MAPA DE RELATÓRIOS EXISTENTES
+                    ###################################################################################################
+                    mapa_relatorios_existentes = {
+                        r.get("numero"): r
+                        for r in relatorios_existentes
+                        if r.get("numero") is not None
+                    }
+
                     relatorios_salvar = []
 
                     for _, row in df_salvar.iterrows():
 
-                        # entregas = [e for e in row["entregas"] if e]
+                        numero = int(row["numero"])
 
-                        relatorios_salvar.append(
-                            {
-                                "numero": int(row["numero"]),
-                                # "entregas": entregas,
-                                "data_prevista": (
-                                    None
-                                    if pd.isna(row["data_prevista"])
-                                    else pd.to_datetime(row["data_prevista"]).strftime("%d/%m/%Y")
-                                ),
-                            }
+                        ###################################################################################################
+                        # RECUPERA RELATÓRIO EXISTENTE
+                        ###################################################################################################
+                        relatorio_existente = mapa_relatorios_existentes.get(numero, {}).copy()
+
+                        ###################################################################################################
+                        # ATUALIZA SOMENTE CAMPOS EDITÁVEIS
+                        ###################################################################################################
+                        relatorio_existente["numero"] = numero
+
+                        relatorio_existente["data_prevista"] = (
+                            None
+                            if pd.isna(row["data_prevista"])
+                            else pd.to_datetime(
+                                row["data_prevista"]
+                            ).strftime("%d/%m/%Y")
                         )
+
+                        relatorios_salvar.append(relatorio_existente)
+
+
+
+                    # relatorios_salvar = []
+
+                    # for _, row in df_salvar.iterrows():
+
+                    #     # entregas = [e for e in row["entregas"] if e]
+
+                    #     relatorios_salvar.append(
+                    #         {
+                    #             "numero": int(row["numero"]),
+                    #             # "entregas": entregas,
+                    #             "data_prevista": (
+                    #                 None
+                    #                 if pd.isna(row["data_prevista"])
+                    #                 else pd.to_datetime(row["data_prevista"]).strftime("%d/%m/%Y")
+                    #             ),
+                    #         }
+                    #     )
 
                     col_projetos.update_one(
                         {"codigo": codigo_projeto_atual},
@@ -5060,7 +5251,7 @@ with remanejamentos:
                             st.write(
                                 (
                                     f"**Redução:** "
-                                    f"R\$ {r['valor_reduzido']:,.2f}"
+                                    f"R\\$ {r['valor_reduzido']:,.2f}"
                                 )
                                 .replace(",", "X")
                                 .replace(".", ",")

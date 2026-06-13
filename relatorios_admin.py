@@ -2028,6 +2028,8 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         # PARCELA 2
                         ###################################################################################################
                         valor_parcela_2 = ""
+                        data_pagto_2 = ""
+
 
                         # busca parcela com numero = 2
                         for parcela in parcelas:
@@ -2036,13 +2038,15 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                                 valor_parcela_2 = parcela.get("valor", "")
 
+                                data_pagto_2 = parcela.get("data_realizada", "")
+
                                 break  # interrompe ao encontrar
 
 
                         ###################################################################################################
                         # RELATÓRIOS (REGRAS ESPECÍFICAS)
                         ###################################################################################################
-                        data_solicitacao_pagto_p02 = ""
+                        # data_pagto_2 = ""
                         data_programada_r02 = ""
                         data_entrega_r02 = ""
 
@@ -2050,12 +2054,6 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                             numero_rel = rel.get("numero")
 
-                            # P02 usa relatório 1
-                            # regra de negócio: P02 usa aprovação do R01, mas datas operacionais do R02
-                            if numero_rel == 1:
-                                data_solicitacao_pagto_p02 = rel.get("data_aprovacao", "")
-
-                            # demais campos usam relatório 2
                             if numero_rel == 2:
                                 data_programada_r02 = rel.get("data_prevista", "")
                                 data_entrega_r02 = rel.get("data_envio", "")
@@ -2069,6 +2067,8 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         # PARCELA 3
                         ###################################################################################################
                         valor_parcela_3 = ""
+                        data_pagto_3 = ""
+
 
                         # busca parcela com numero = 3
                         for parcela in parcelas:
@@ -2077,23 +2077,19 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
                                 valor_parcela_3 = parcela.get("valor", "")
 
-                                break  # interrompe ao encontrar
+                                data_pagto_3 = parcela.get("data_realizada", "")
 
+                                break  # interrompe ao encontrar
 
                         ###################################################################################################
                         # RELATÓRIOS (REGRAS ESPECÍFICAS)
                         ###################################################################################################
-                        data_solicitacao_pagto_p03 = ""
                         data_programada_r03 = ""
                         data_entrega_r03 = ""
 
                         for rel in relatorios:
 
                             numero_rel = rel.get("numero")
-
-                            # regra de negócio: P03 usa aprovação do R02
-                            if numero_rel == 2:
-                                data_solicitacao_pagto_p03 = rel.get("data_aprovacao", "")
 
                             # datas operacionais do R03
                             if numero_rel == 3:
@@ -2109,20 +2105,20 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         # PARCELA 4
                         ###################################################################################################
                         valor_parcela_4 = ""
-                        data_solicitacao_pagto_p04 = ""
+                        data_pagto_4 = ""
                         data_programada_r04 = ""
                         data_entrega_r04 = ""
 
                         for parcela in parcelas:
                             if parcela.get("numero") == 4:
                                 valor_parcela_4 = parcela.get("valor", "")
+
+                                data_pagto_4 = parcela.get("data_realizada", "")
+                                
                                 break
 
                         for rel in relatorios:
                             numero_rel = rel.get("numero")
-
-                            if numero_rel == 3:
-                                data_solicitacao_pagto_p04 = rel.get("data_aprovacao", "")
 
                             if numero_rel == 4:
                                 data_programada_r04 = rel.get("data_prevista", "")
@@ -2133,20 +2129,20 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         # PARCELA 5
                         ###################################################################################################
                         valor_parcela_5 = ""
-                        data_solicitacao_pagto_p05 = ""
+                        data_pagto_5 = ""
                         data_programada_r05 = ""
                         data_entrega_r05 = ""
 
                         for parcela in parcelas:
                             if parcela.get("numero") == 5:
                                 valor_parcela_5 = parcela.get("valor", "")
+
+                                data_pagto_5 = parcela.get("data_realizada", "")
+
                                 break
 
                         for rel in relatorios:
                             numero_rel = rel.get("numero")
-
-                            if numero_rel == 4:
-                                data_solicitacao_pagto_p05 = rel.get("data_aprovacao", "")
 
                             if numero_rel == 5:
                                 data_programada_r05 = rel.get("data_prevista", "")
@@ -2157,19 +2153,15 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                         # PARCELA 6
                         ###################################################################################################
                         valor_parcela_6 = ""
-                        data_solicitacao_pagto_p06 = ""
+                        data_pagto_6 = ""
 
                         for parcela in parcelas:
                             if parcela.get("numero") == 6:
                                 valor_parcela_6 = parcela.get("valor", "")
+
+                                data_pagto_6 = parcela.get("data_realizada", "")
+
                                 break
-
-                        for rel in relatorios:
-                            numero_rel = rel.get("numero")
-
-                            if numero_rel == 5:
-                                data_solicitacao_pagto_p06 = rel.get("data_aprovacao", "")
-
 
 
 
@@ -2277,44 +2269,43 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
                             "Status": status_projeto,
 
                             "RISK ASSESSMENT": "",	
-                            "FINANCIAL RISK ASSESSMENT (Low, Medium, High)": "",
                             "FINANCIAL RISK ASSESSMENT (NOTA GERAL (/100))": "",
+                            "FINANCIAL RISK ASSESSMENT (Low, Medium, High)": "",
 
 
                             "Valor Entrada": valor_entrada,
-                            "P01_Data da Solicitação_Pagto": "",
-                            "Data de Pagto_Entrada": data_pagto_entrada,
+                            "Data de Pagto_Entrada_P01": data_pagto_entrada,
                             "Data Programada_R01": data_programada_r01,
                             "Data de Entrega_R01": data_entrega_r01,
 
-                            "P02_Data da Solicitação_Pagto": data_solicitacao_pagto_p02,
+                            "Data de Pgto P02": data_pagto_2,
                             "Valor (R$) P02": valor_parcela_2,
                             "Data Programada_R02": data_programada_r02,
                             "Data de Entrega_R02": data_entrega_r02,
 
-                            "P03_Data da Solicitação_Pagto": data_solicitacao_pagto_p03,
+                            "Data de Pgto P03": data_pagto_3,
                             "Valor (R$) P03": valor_parcela_3,
                             "Data Programada_R03": data_programada_r03,
                             "Data de Entrega_R03": data_entrega_r03,
 
-                            "P04_Data da Solicitação_Pagto": data_solicitacao_pagto_p04,
+                            "Data de Pgto P04": data_pagto_4,
                             "Valor (R$) P04": valor_parcela_4,
                             "Data Programada_R04": data_programada_r04,
                             "Data de Entrega_R04": data_entrega_r04,
 
-                            "P05_Data da Solicitação_Pagto": data_solicitacao_pagto_p05,
+                            "Data de Pgto P05": data_pagto_5,
                             "Valor (R$) P05": valor_parcela_5,
                             "Data Programada_R05": data_programada_r05,
                             "Data de Entrega_R05": data_entrega_r05,
 
-                            "P06_Data da Solicitação_Pagto": data_solicitacao_pagto_p06,
+                            "Data de Pgto P06": data_pagto_6,
                             "Valor (R$) P06": valor_parcela_6,
 
                             "Upload no CG": "",
 
                             "ADITIVOS": valor_aditivo,
                             "Valor Total Desembolsado (soma das parcelas) R$": valor_total_desembolsado,
-         
+
                             "Valor Total Desembolsado (soma das parcelas)_U$": "",
 
                             # A última coluna "Valor residual R$" será preenchida posteriormente com fórmula
