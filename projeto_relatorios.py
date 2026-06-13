@@ -994,7 +994,7 @@ def gerar_docx_relatorio(relatorio, projeto):
         # SUBSEÇÃO: TIPOS DE BENEFICIÁRIOS
         # ------------------------------
         doc.add_heading(
-            "Tipos de Beneficiários e Benefício",
+            "Beneficiários e Benefício",
             level=2
         )
 
@@ -6397,7 +6397,7 @@ if step_selecionado == "Beneficiários":
     # ============================================================================================================
 
     st.write('')
-    st.markdown("##### Tipos de Beneficiários e Benefícios")
+    st.markdown("##### Beneficiários e Benefícios")
 
     if usuario_beneficiario:
 
@@ -6748,56 +6748,56 @@ if step_selecionado == "Beneficiários":
 
                 st.write("")
 
-                if st.button(
-                    f"Atualizar {nome_localidade}",
-                    # "Atualizar beneficiários",
-                    type="primary",
-                    key=f"salvar_benef_{nome_localidade}",
-                    icon=":material/save:"
-                ):
+                # if st.button(
+                #     f"Atualizar {nome_localidade}",
+                #     # "Atualizar beneficiários",
+                #     type="primary",
+                #     key=f"salvar_benef_{nome_localidade}",
+                #     icon=":material/save:"
+                # ):
 
-                    novo_quant = {
-                        "mulheres": {
-                            "jovens": mulheres_jovens,
-                            "adultas": mulheres_adultas,
-                            "idosas": mulheres_idosas
-                        },
-                        "homens": {
-                            "jovens": homens_jovens,
-                            "adultos": homens_adultos,
-                            "idosos": homens_idosos
-                        },
-                        "nao_binarios": {
-                            "jovens": nb_jovens,
-                            "adultos": nb_adultos,
-                            "idosos": nb_idosos
-                        }
-                    }
+                #     novo_quant = {
+                #         "mulheres": {
+                #             "jovens": mulheres_jovens,
+                #             "adultas": mulheres_adultas,
+                #             "idosas": mulheres_idosas
+                #         },
+                #         "homens": {
+                #             "jovens": homens_jovens,
+                #             "adultos": homens_adultos,
+                #             "idosos": homens_idosos
+                #         },
+                #         "nao_binarios": {
+                #             "jovens": nb_jovens,
+                #             "adultos": nb_adultos,
+                #             "idosos": nb_idosos
+                #         }
+                #     }
 
-                    # -------------------------------------------------
-                    # Atualiza somente a chave beneficiarios_quant
-                    # sem recriar objetos da localidade
-                    # -------------------------------------------------
+                #     # -------------------------------------------------
+                #     # Atualiza somente a chave beneficiarios_quant
+                #     # sem recriar objetos da localidade
+                #     # -------------------------------------------------
 
-                    col_projetos.update_one(
-                        {
-                            "codigo": projeto["codigo"],
-                            "locais.localidades.nome_localidade": nome_localidade
-                        },
-                        {
-                            "$set": {
-                                "locais.localidades.$.beneficiarios_quant": novo_quant
-                            }
-                        }
-                    )
+                #     col_projetos.update_one(
+                #         {
+                #             "codigo": projeto["codigo"],
+                #             "locais.localidades.nome_localidade": nome_localidade
+                #         },
+                #         {
+                #             "$set": {
+                #                 "locais.localidades.$.beneficiarios_quant": novo_quant
+                #             }
+                #         }
+                #     )
 
-                    st.success(
-                        "Beneficiários atualizados com sucesso.",
-                        icon=":material/check:"
-                    )
+                #     st.success(
+                #         "Beneficiários atualizados com sucesso.",
+                #         icon=":material/check:"
+                #     )
 
-                    time.sleep(3)
-                    st.rerun()
+                #     time.sleep(3)
+                #     st.rerun()
 
             # =====================================================
             # MODO VISUALIZAÇÃO
@@ -6839,73 +6839,73 @@ if step_selecionado == "Beneficiários":
 
                 with col_m:
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Mulheres jovens")
                     v.write(str(dados["mulheres"]["jovens"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Mulheres adultas")
                     v.write(str(dados["mulheres"]["adultas"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Mulheres idosas")
                     v.write(str(dados["mulheres"]["idosas"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total de mulheres**")
                     v.markdown(f"**{total_mulheres}**")
 
                 with col_h:
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Homens jovens")
                     v.write(str(dados["homens"]["jovens"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Homens adultos")
                     v.write(str(dados["homens"]["adultos"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Homens idosos")
                     v.write(str(dados["homens"]["idosos"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total de homens**")
                     v.markdown(f"**{total_homens}**")
 
                 with col_nb:
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Não-binários jovens")
                     v.write(str(dados["nao_binarios"]["jovens"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Não-binários adultos")
                     v.write(str(dados["nao_binarios"]["adultos"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.write("Não-binários idosos")
                     v.write(str(dados["nao_binarios"]["idosos"]))
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total de não-binários**")
                     v.markdown(f"**{total_nb}**")
 
                 with col_totais:
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total de jovens**")
                     v.markdown(f"**{total_jovens}**")
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total de adultos**")
                     v.markdown(f"**{total_adultos}**")
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total de idosos**")
                     v.markdown(f"**{total_idosos}**")
 
-                    l, v = st.columns(2)
+                    l, v = st.columns([2,1])
                     l.markdown("**Total geral**")
                     v.markdown(f"**{total_geral}**")
 
@@ -6913,22 +6913,46 @@ if step_selecionado == "Beneficiários":
 
 
 
-
-
-
-
+        direita = st.container(horizontal=True, horizontal_alignment="right")
 
         # =================================================
         # BOTÃO SALVAR
         # =================================================
-        if houve_alteracao:
+        # if houve_alteracao:
+        if modo_edicao_benef:
+
+
+
+
+            # =================================================
+            # MATRIZ DE QUANTITATIVOS DA COMUNIDADE
+            # =================================================
+
+            novo_quant = {
+                "mulheres": {
+                    "jovens": mulheres_jovens,
+                    "adultas": mulheres_adultas,
+                    "idosas": mulheres_idosas
+                },
+                "homens": {
+                    "jovens": homens_jovens,
+                    "adultos": homens_adultos,
+                    "idosos": homens_idosos
+                },
+                "nao_binarios": {
+                    "jovens": nb_jovens,
+                    "adultos": nb_adultos,
+                    "idosos": nb_idosos
+                }
+            }
+
 
             st.write("")
 
             erros = []
 
             # with st.container(horizontal=True, horizontal_alignment="right"):
-            clicou_salvar = st.button(
+            clicou_salvar = direita.button(
                 f"Atualizar {nome_localidade}",
                 type="primary",
                 key=f"salvar_{projeto['codigo']}_{nome_localidade}",
@@ -6979,9 +7003,19 @@ if step_selecionado == "Beneficiários":
                     {
                         "$set": {
                             "locais.localidades.$.beneficiarios":
-                                beneficiarios_para_salvar
+                                beneficiarios_para_salvar,
+
+                            "locais.localidades.$.beneficiarios_quant":
+                                novo_quant
                         }
                     }
+
+                    # {
+                    #     "$set": {
+                    #         "locais.localidades.$.beneficiarios":
+                    #             beneficiarios_para_salvar
+                    #     }
+                    # }
                 )
 
                 st.success(
