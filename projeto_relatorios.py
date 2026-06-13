@@ -2661,7 +2661,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
                 )
 
                 fotografo = st.text_input(
-                    "Fotógrafo *",
+                    "Autoria da Foto *",
                     key=f"autor_{foto_id}"
                 )
 
@@ -4262,7 +4262,7 @@ if step_selecionado == "Atividades":
 
                                     # fotógrafo
                                     fotografo = st.text_input(
-                                        "Fotógrafo *",
+                                        "Autoria da foto *",
                                         key=f"autor_inline_{foto_id}"
                                     )
 
@@ -4347,7 +4347,7 @@ if step_selecionado == "Atividades":
                                             erros.append(f"Descrição da fotografia {i}")
 
                                         if not foto.get("fotografo", "").strip():
-                                            erros.append(f"Fotógrafo da fotografia {i}")
+                                            erros.append(f"Autor(a) da fotografia {i}")
 
 
 
@@ -6203,300 +6203,194 @@ if step_selecionado == "Beneficiários":
 
 
 
+
+
+
+
     # ======================================================
-    # INICIALIZAÇÃO DO ESTADO DA MATRIZ DE BENEFICIÁRIOS
+    # TOTALIZADOR GERAL DE BENEFICIÁRIOS
     # ======================================================
 
+    projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
+    localidades = projeto.get("locais", {}).get("localidades", [])
 
-    key_benef_quant = f"beneficiarios_quant_rel_{relatorio_numero}"
 
-    if key_benef_quant not in st.session_state:
-        st.session_state[key_benef_quant] = (
-            relatorio.get("beneficiarios_quant") or {
-                "mulheres": {"jovens": 0, "adultas": 0, "idosas": 0},
-                "homens": {"jovens": 0, "adultos": 0, "idosos": 0},
-                "nao_binarios": {"jovens": 0, "adultos": 0, "idosos": 0}
-            }
+    totais = {
+        "mulheres": {
+            "jovens": 0,
+            "adultas": 0,
+            "idosas": 0
+        },
+        "homens": {
+            "jovens": 0,
+            "adultos": 0,
+            "idosos": 0
+        },
+        "nao_binarios": {
+            "jovens": 0,
+            "adultos": 0,
+            "idosos": 0
+        }
+    }
+
+    for localidade in localidades:
+
+        dados = localidade.get("beneficiarios_quant") or {}
+
+        totais["mulheres"]["jovens"] += (
+            dados.get("mulheres", {}).get("jovens", 0)
         )
 
+        totais["mulheres"]["adultas"] += (
+            dados.get("mulheres", {}).get("adultas", 0)
+        )
 
+        totais["mulheres"]["idosas"] += (
+            dados.get("mulheres", {}).get("idosas", 0)
+        )
 
+        totais["homens"]["jovens"] += (
+            dados.get("homens", {}).get("jovens", 0)
+        )
 
-    # ======================================================
-    # TÍTULO DO BLOCO
-    # ======================================================
+        totais["homens"]["adultos"] += (
+            dados.get("homens", {}).get("adultos", 0)
+        )
 
-    st.markdown("##### Número de beneficiários por gênero e faixa etária")
+        totais["homens"]["idosos"] += (
+            dados.get("homens", {}).get("idosos", 0)
+        )
+
+        totais["nao_binarios"]["jovens"] += (
+            dados.get("nao_binarios", {}).get("jovens", 0)
+        )
+
+        totais["nao_binarios"]["adultos"] += (
+            dados.get("nao_binarios", {}).get("adultos", 0)
+        )
+
+        totais["nao_binarios"]["idosos"] += (
+            dados.get("nao_binarios", {}).get("idosos", 0)
+        )
+
+    st.markdown(
+        "##### Total geral de beneficiários"
+    )
 
     st.write("")
 
+    dados = totais
 
-    # ======================================================
-    # MODO EDIÇÃO
-    # ======================================================
-
-    if pode_editar_relatorio:
-
-
-        # Coluna à esquerda para diminuir a largura dos inputs de beneficiários
-        content, vazio_d = st.columns([8, 4])
-
-        # -------------------------------
-        # LINHA: JOVENS
-        # -------------------------------
-        col_m, col_h, col_nb = content.columns(3)
-
-        with col_m:
-            st.session_state[key_benef_quant]["mulheres"]["jovens"] = st.number_input(
-                "Mulheres – Jovens (até 24 anos)",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["mulheres"]["jovens"],
-                key="bq_mulheres_jovens"
-            )
-
-        with col_h:
-            st.session_state[key_benef_quant]["homens"]["jovens"] = st.number_input(
-                "Homens – Jovens (até 24 anos)",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["homens"]["jovens"],
-                key="bq_homens_jovens"
-            )
-
-        with col_nb:
-            st.session_state[key_benef_quant]["nao_binarios"]["jovens"] = st.number_input(
-                "Não-binários – Jovens (até 24 anos)",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["nao_binarios"]["jovens"],
-                key="bq_nb_jovens"
-            )
-
-        # -------------------------------
-        # LINHA: ADULTOS
-        # -------------------------------
-        col_m, col_h, col_nb = content.columns(3)
-
-        with col_m:
-            st.session_state[key_benef_quant]["mulheres"]["adultas"] = st.number_input(
-                "Mulheres – Adultas",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["mulheres"]["adultas"],
-                key="bq_mulheres_adultas"
-            )
-
-        with col_h:
-            st.session_state[key_benef_quant]["homens"]["adultos"] = st.number_input(
-                "Homens – Adultos",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["homens"]["adultos"],
-                key="bq_homens_adultos"
-            )
-
-        with col_nb:
-            st.session_state[key_benef_quant]["nao_binarios"]["adultos"] = st.number_input(
-                "Não-binários – Adultos",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["nao_binarios"]["adultos"],
-                key="bq_nb_adultos"
-            )
-
-        # -------------------------------
-        # LINHA: IDOSOS
-        # -------------------------------
-        col_m, col_h, col_nb = content.columns(3)
-
-        with col_m:
-            st.session_state[key_benef_quant]["mulheres"]["idosas"] = st.number_input(
-                "Mulheres – Idosas (60+ anos)",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["mulheres"]["idosas"],
-                key="bq_mulheres_idosas"
-            )
-
-        with col_h:
-            st.session_state[key_benef_quant]["homens"]["idosos"] = st.number_input(
-                "Homens – Idosos (60+ anos)",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["homens"]["idosos"],
-                key="bq_homens_idosos"
-            )
-
-        with col_nb:
-            st.session_state[key_benef_quant]["nao_binarios"]["idosos"] = st.number_input(
-                "Não-binários – Idosos (60+ anos)",
-                min_value=0,
-                step=1,
-                value=st.session_state[key_benef_quant]["nao_binarios"]["idosos"],
-                key="bq_nb_idosos"
-            )
+    total_mulheres = sum(dados["mulheres"].values())
+    total_homens = sum(dados["homens"].values())
+    total_nb = sum(dados["nao_binarios"].values())
 
+    total_jovens = (
+        dados["mulheres"]["jovens"]
+        + dados["homens"]["jovens"]
+        + dados["nao_binarios"]["jovens"]
+    )
 
+    total_adultos = (
+        dados["mulheres"]["adultas"]
+        + dados["homens"]["adultos"]
+        + dados["nao_binarios"]["adultos"]
+    )
 
+    total_idosos = (
+        dados["mulheres"]["idosas"]
+        + dados["homens"]["idosos"]
+        + dados["nao_binarios"]["idosos"]
+    )
 
-        # ======================================================
-        # BOTÃO DE SALVAR EXCLUSIVO DA MATRIZ
-        # ======================================================
-        # Este botão salva SOMENTE a matriz de quantitativos
+    total_geral = (
+        total_mulheres
+        + total_homens
+        + total_nb
+    )
 
-        if pode_editar_relatorio:
+    col_m, col_h, col_nb, col_totais = st.columns(4)
 
-            st.write("")
+    with col_m:
 
-            salvar_matriz = st.button(
-                "Atualizar beneficiários",
-                type="primary",
-                key=f"salvar_beneficiarios_quant_{relatorio_numero}",
-                icon=":material/save:"
-            )
+        l, v = st.columns(2)
+        l.write("Mulheres jovens")
+        v.write(str(dados["mulheres"]["jovens"]))
 
-            if salvar_matriz:
+        l, v = st.columns(2)
+        l.write("Mulheres adultas")
+        v.write(str(dados["mulheres"]["adultas"]))
 
-                # Atualiza apenas a chave 'beneficiarios_quant' no relatório correto
-                col_projetos.update_one(
-                    {
-                        "codigo": projeto["codigo"],
-                        "relatorios.numero": relatorio_numero
-                    },
-                    {
-                        "$set": {
-                            "relatorios.$.beneficiarios_quant":
-                                st.session_state[key_benef_quant]
-                        }
-                    }
-                )
+        l, v = st.columns(2)
+        l.write("Mulheres idosas")
+        v.write(str(dados["mulheres"]["idosas"]))
 
-                st.success("Beneficiários salvos com sucesso.", icon=":material/check:")
-                time.sleep(3)
-                st.rerun()
+        l, v = st.columns(2)
+        l.markdown("**Total de mulheres**")
+        v.markdown(f"**{total_mulheres}**")
 
+    with col_h:
 
+        l, v = st.columns(2)
+        l.write("Homens jovens")
+        v.write(str(dados["homens"]["jovens"]))
 
+        l, v = st.columns(2)
+        l.write("Homens adultos")
+        v.write(str(dados["homens"]["adultos"]))
 
+        l, v = st.columns(2)
+        l.write("Homens idosos")
+        v.write(str(dados["homens"]["idosos"]))
 
+        l, v = st.columns(2)
+        l.markdown("**Total de homens**")
+        v.markdown(f"**{total_homens}**")
 
+    with col_nb:
 
+        l, v = st.columns(2)
+        l.write("Não-binários jovens")
+        v.write(str(dados["nao_binarios"]["jovens"]))
 
+        l, v = st.columns(2)
+        l.write("Não-binários adultos")
+        v.write(str(dados["nao_binarios"]["adultos"]))
 
+        l, v = st.columns(2)
+        l.write("Não-binários idosos")
+        v.write(str(dados["nao_binarios"]["idosos"]))
 
+        l, v = st.columns(2)
+        l.markdown("**Total de não-binários**")
+        v.markdown(f"**{total_nb}**")
 
-    # ======================================================
-    # MODO VISUALIZAÇÃO
-    # ======================================================
+    with col_totais:
 
-    else:
+        l, v = st.columns(2)
+        l.markdown("**Total de jovens**")
+        v.markdown(f"**{total_jovens}**")
 
+        l, v = st.columns(2)
+        l.markdown("**Total de adultos**")
+        v.markdown(f"**{total_adultos}**")
 
-        dados = st.session_state[key_benef_quant]
+        l, v = st.columns(2)
+        l.markdown("**Total de idosos**")
+        v.markdown(f"**{total_idosos}**")
 
-
-        # -------------------------------
-        # Totais por gênero
-        # -------------------------------
-        total_mulheres = sum(dados["mulheres"].values())
-        total_homens = sum(dados["homens"].values())
-        total_nb = sum(dados["nao_binarios"].values())
-
-        # -------------------------------
-        # Totais por faixa etária
-        # -------------------------------
-        total_jovens = (
-            dados["mulheres"]["jovens"]
-            + dados["homens"]["jovens"]
-            + dados["nao_binarios"]["jovens"]
-        )
-
-        total_adultos = (
-            dados["mulheres"]["adultas"]
-            + dados["homens"]["adultos"]
-            + dados["nao_binarios"]["adultos"]
-        )
-
-        total_idosos = (
-            dados["mulheres"]["idosas"]
-            + dados["homens"]["idosos"]
-            + dados["nao_binarios"]["idosos"]
-        )
-
-        total_geral = total_mulheres + total_homens + total_nb
-
-        st.write("")
-
-        # -------------------------------
-        # LAYOUT EM 4 COLUNAS
-        # -------------------------------
-        col_m, col_h, col_nb, col_totais = st.columns(4)
-
-        # -------- MULHERES --------
-        with col_m:
-            l, v = st.columns(2)
-            l.write("Mulheres jovens"); v.write(str(dados["mulheres"]["jovens"]))
-
-            l, v = st.columns(2)
-            l.write("Mulheres adultas"); v.write(str(dados["mulheres"]["adultas"]))
-
-            l, v = st.columns(2)
-            l.write("Mulheres idosas"); v.write(str(dados["mulheres"]["idosas"]))
-
-            l, v = st.columns(2)
-            l.markdown("**Total de mulheres**"); v.markdown(f"**{total_mulheres}**")
-
-        # -------- HOMENS --------
-        with col_h:
-            l, v = st.columns(2)
-            l.write("Homens jovens"); v.write(str(dados["homens"]["jovens"]))
-
-            l, v = st.columns(2)
-            l.write("Homens adultos"); v.write(str(dados["homens"]["adultos"]))
-
-            l, v = st.columns(2)
-            l.write("Homens idosos"); v.write(str(dados["homens"]["idosos"]))
-
-            l, v = st.columns(2)
-            l.markdown("**Total de homens**"); v.markdown(f"**{total_homens}**")
-
-        # -------- NÃO-BINÁRIOS --------
-        with col_nb:
-            l, v = st.columns(2)
-            l.write("Não-binários jovens"); v.write(str(dados["nao_binarios"]["jovens"]))
-
-            l, v = st.columns(2)
-            l.write("Não-binários adultos"); v.write(str(dados["nao_binarios"]["adultos"]))
-
-            l, v = st.columns(2)
-            l.write("Não-binários idosos"); v.write(str(dados["nao_binarios"]["idosos"]))
-
-            l, v = st.columns(2)
-            l.markdown("**Total de não-binários**"); v.markdown(f"**{total_nb}**")
-
-        # -------- TOTAIS GERAIS (NEGRITO) --------
-        with col_totais:
-            l, v = st.columns(2)
-            l.markdown("**Total de jovens**"); v.markdown(f"**{total_jovens}**")
-
-            l, v = st.columns(2)
-            l.markdown("**Total de adultos**"); v.markdown(f"**{total_adultos}**")
-
-            l, v = st.columns(2)
-            l.markdown("**Total de idosos**"); v.markdown(f"**{total_idosos}**")
-
-            l, v = st.columns(2)
-            l.markdown("**Total geral**"); v.markdown(f"**{total_geral}**")
-
-
-
-
-
-
-
+        l, v = st.columns(2)
+        l.markdown("**Total geral**")
+        v.markdown(f"**{total_geral}**")
 
     st.divider()
+
+
+
+
+
+
+
 
     # ============================================================================================================
     # PARTE 2 - TIPOS DE BENEFICIÁRIOS E BENEFICIOS 
@@ -6520,8 +6414,6 @@ if step_selecionado == "Beneficiários":
     st.write("")
 
 
-    projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
-    localidades = projeto.get("locais", {}).get("localidades", [])
 
     if not localidades:
         st.info(
@@ -6566,7 +6458,7 @@ if step_selecionado == "Beneficiários":
         # -------- COLUNA 1 --------
 
         with col1:
-            st.markdown(f"**{nome_localidade}**")
+            st.markdown(f"#### {nome_localidade}")
 
             municipio = localidade.get("municipio")
 
@@ -6702,6 +6594,329 @@ if step_selecionado == "Beneficiários":
 
                     if novo_tipo and novos_beneficios:
                         houve_alteracao = True
+
+
+
+
+            # =====================================================
+            # QUANTITATIVO DE BENEFICIÁRIOS POR COMUNIDADE
+            # =====================================================
+
+            st.write("")
+
+            beneficiarios_quant = (
+                localidade.get("beneficiarios_quant") or {
+                    "mulheres": {
+                        "jovens": 0,
+                        "adultas": 0,
+                        "idosas": 0
+                    },
+                    "homens": {
+                        "jovens": 0,
+                        "adultos": 0,
+                        "idosos": 0
+                    },
+                    "nao_binarios": {
+                        "jovens": 0,
+                        "adultos": 0,
+                        "idosos": 0
+                    }
+                }
+            )
+
+            st.write(
+                "**Número de beneficiários por gênero e faixa etária**"
+            )
+
+            st.write("")
+
+            # =====================================================
+            # MODO EDIÇÃO
+            # =====================================================
+
+            if modo_edicao_benef:
+
+                # content, vazio_d = st.columns([8, 4])
+
+                # -------------------------------------------------
+                # LINHA JOVENS
+                # -------------------------------------------------
+
+                col_m, col_h, col_nb = st.columns(3)
+
+                with col_m:
+
+                    mulheres_jovens = st.number_input(
+                        "Mulheres – Jovens (até 24 anos)",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["mulheres"]["jovens"],
+                        key=f"{nome_localidade}_mulheres_jovens"
+                    )
+
+                with col_h:
+
+                    homens_jovens = st.number_input(
+                        "Homens – Jovens (até 24 anos)",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["homens"]["jovens"],
+                        key=f"{nome_localidade}_homens_jovens"
+                    )
+
+                with col_nb:
+
+                    nb_jovens = st.number_input(
+                        "Não-binários – Jovens (até 24 anos)",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["nao_binarios"]["jovens"],
+                        key=f"{nome_localidade}_nb_jovens"
+                    )
+
+                # -------------------------------------------------
+                # LINHA ADULTOS
+                # -------------------------------------------------
+
+                col_m, col_h, col_nb = st.columns(3)
+
+                with col_m:
+
+                    mulheres_adultas = st.number_input(
+                        "Mulheres – Adultas",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["mulheres"]["adultas"],
+                        key=f"{nome_localidade}_mulheres_adultas"
+                    )
+
+                with col_h:
+
+                    homens_adultos = st.number_input(
+                        "Homens – Adultos",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["homens"]["adultos"],
+                        key=f"{nome_localidade}_homens_adultos"
+                    )
+
+                with col_nb:
+
+                    nb_adultos = st.number_input(
+                        "Não-binários – Adultos",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["nao_binarios"]["adultos"],
+                        key=f"{nome_localidade}_nb_adultos"
+                    )
+
+                # -------------------------------------------------
+                # LINHA IDOSOS
+                # -------------------------------------------------
+
+                col_m, col_h, col_nb = st.columns(3)
+
+                with col_m:
+
+                    mulheres_idosas = st.number_input(
+                        "Mulheres – Idosas (60+ anos)",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["mulheres"]["idosas"],
+                        key=f"{nome_localidade}_mulheres_idosas"
+                    )
+
+                with col_h:
+
+                    homens_idosos = st.number_input(
+                        "Homens – Idosos (60+ anos)",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["homens"]["idosos"],
+                        key=f"{nome_localidade}_homens_idosos"
+                    )
+
+                with col_nb:
+
+                    nb_idosos = st.number_input(
+                        "Não-binários – Idosos (60+ anos)",
+                        min_value=0,
+                        step=1,
+                        value=beneficiarios_quant["nao_binarios"]["idosos"],
+                        key=f"{nome_localidade}_nb_idosos"
+                    )
+
+                st.write("")
+
+                if st.button(
+                    f"Atualizar {nome_localidade}",
+                    # "Atualizar beneficiários",
+                    type="primary",
+                    key=f"salvar_benef_{nome_localidade}",
+                    icon=":material/save:"
+                ):
+
+                    novo_quant = {
+                        "mulheres": {
+                            "jovens": mulheres_jovens,
+                            "adultas": mulheres_adultas,
+                            "idosas": mulheres_idosas
+                        },
+                        "homens": {
+                            "jovens": homens_jovens,
+                            "adultos": homens_adultos,
+                            "idosos": homens_idosos
+                        },
+                        "nao_binarios": {
+                            "jovens": nb_jovens,
+                            "adultos": nb_adultos,
+                            "idosos": nb_idosos
+                        }
+                    }
+
+                    # -------------------------------------------------
+                    # Atualiza somente a chave beneficiarios_quant
+                    # sem recriar objetos da localidade
+                    # -------------------------------------------------
+
+                    col_projetos.update_one(
+                        {
+                            "codigo": projeto["codigo"],
+                            "locais.localidades.nome_localidade": nome_localidade
+                        },
+                        {
+                            "$set": {
+                                "locais.localidades.$.beneficiarios_quant": novo_quant
+                            }
+                        }
+                    )
+
+                    st.success(
+                        "Beneficiários atualizados com sucesso.",
+                        icon=":material/check:"
+                    )
+
+                    time.sleep(3)
+                    st.rerun()
+
+            # =====================================================
+            # MODO VISUALIZAÇÃO
+            # =====================================================
+
+            else:
+
+                dados = beneficiarios_quant
+
+                total_mulheres = sum(dados["mulheres"].values())
+                total_homens = sum(dados["homens"].values())
+                total_nb = sum(dados["nao_binarios"].values())
+
+                total_jovens = (
+                    dados["mulheres"]["jovens"]
+                    + dados["homens"]["jovens"]
+                    + dados["nao_binarios"]["jovens"]
+                )
+
+                total_adultos = (
+                    dados["mulheres"]["adultas"]
+                    + dados["homens"]["adultos"]
+                    + dados["nao_binarios"]["adultos"]
+                )
+
+                total_idosos = (
+                    dados["mulheres"]["idosas"]
+                    + dados["homens"]["idosos"]
+                    + dados["nao_binarios"]["idosos"]
+                )
+
+                total_geral = (
+                    total_mulheres
+                    + total_homens
+                    + total_nb
+                )
+
+                col_m, col_h, col_nb, col_totais = st.columns(4)
+
+                with col_m:
+
+                    l, v = st.columns(2)
+                    l.write("Mulheres jovens")
+                    v.write(str(dados["mulheres"]["jovens"]))
+
+                    l, v = st.columns(2)
+                    l.write("Mulheres adultas")
+                    v.write(str(dados["mulheres"]["adultas"]))
+
+                    l, v = st.columns(2)
+                    l.write("Mulheres idosas")
+                    v.write(str(dados["mulheres"]["idosas"]))
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total de mulheres**")
+                    v.markdown(f"**{total_mulheres}**")
+
+                with col_h:
+
+                    l, v = st.columns(2)
+                    l.write("Homens jovens")
+                    v.write(str(dados["homens"]["jovens"]))
+
+                    l, v = st.columns(2)
+                    l.write("Homens adultos")
+                    v.write(str(dados["homens"]["adultos"]))
+
+                    l, v = st.columns(2)
+                    l.write("Homens idosos")
+                    v.write(str(dados["homens"]["idosos"]))
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total de homens**")
+                    v.markdown(f"**{total_homens}**")
+
+                with col_nb:
+
+                    l, v = st.columns(2)
+                    l.write("Não-binários jovens")
+                    v.write(str(dados["nao_binarios"]["jovens"]))
+
+                    l, v = st.columns(2)
+                    l.write("Não-binários adultos")
+                    v.write(str(dados["nao_binarios"]["adultos"]))
+
+                    l, v = st.columns(2)
+                    l.write("Não-binários idosos")
+                    v.write(str(dados["nao_binarios"]["idosos"]))
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total de não-binários**")
+                    v.markdown(f"**{total_nb}**")
+
+                with col_totais:
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total de jovens**")
+                    v.markdown(f"**{total_jovens}**")
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total de adultos**")
+                    v.markdown(f"**{total_adultos}**")
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total de idosos**")
+                    v.markdown(f"**{total_idosos}**")
+
+                    l, v = st.columns(2)
+                    l.markdown("**Total geral**")
+                    v.markdown(f"**{total_geral}**")
+
+
+
+
+
+
+
+
+
 
         # =================================================
         # BOTÃO SALVAR
