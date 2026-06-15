@@ -46,47 +46,47 @@ st.set_page_config(page_title="Visão Geral", page_icon=":material/home:")
 
 
 
-# Traduzindo o texto do st.file_uploader
-# Texto interno
-st.markdown("""
-<style>
-/* Esconde o texto padrão */
-[data-testid="stFileUploaderDropzone"] div div::before {
-    content: "Arraste e solte os arquivos aqui";
-    color: rgba(49, 51, 63, 0.7);
-    font-size: 0.9rem;
-    font-weight: 400;
-    position: absolute;
-    top: 50px;              /* fixa no topo */
-    left: 50%;
-    transform: translate(-50%, 10%);
-    pointer-events: none;
-}
-/* Esconde o texto original */
-[data-testid="stFileUploaderDropzone"] div div span {
-    visibility: hidden !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# # Traduzindo o texto do st.file_uploader
+# # Texto interno
+# st.markdown("""
+# <style>
+# /* Esconde o texto padrão */
+# [data-testid="stFileUploaderDropzone"] div div::before {
+#     content: "Arraste e solte os arquivos aqui";
+#     color: rgba(49, 51, 63, 0.7);
+#     font-size: 0.9rem;
+#     font-weight: 400;
+#     position: absolute;
+#     top: 50px;              /* fixa no topo */
+#     left: 50%;
+#     transform: translate(-50%, 10%);
+#     pointer-events: none;
+# }
+# /* Esconde o texto original */
+# [data-testid="stFileUploaderDropzone"] div div span {
+#     visibility: hidden !important;
+# }
+# </style>
+# """, unsafe_allow_html=True)
 
-# Traduzindo Botão do file_uploader
-st.markdown("""
-<style>
-/* Alvo: apenas o botão dentro do componente de upload */
-section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
-    font-size: 0px !important;   /* esconde o texto original */
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-    min-width: 160px !important;
-}
-/* Insere o texto traduzido */
-section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
-    content: "Selecionar arquivo";
-    font-size: 14px !important;
-    color: inherit;
-}
-</style>
-""", unsafe_allow_html=True)
+# # Traduzindo Botão do file_uploader
+# st.markdown("""
+# <style>
+# /* Alvo: apenas o botão dentro do componente de upload */
+# section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
+#     font-size: 0px !important;   /* esconde o texto original */
+#     padding-left: 14px !important;
+#     padding-right: 14px !important;
+#     min-width: 160px !important;
+# }
+# /* Insere o texto traduzido */
+# section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
+#     content: "Selecionar arquivo";
+#     font-size: 14px !important;
+#     color: inherit;
+# }
+# </style>
+# """, unsafe_allow_html=True)
 
 
 
