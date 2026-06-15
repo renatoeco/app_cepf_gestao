@@ -8554,129 +8554,153 @@ if step_selecionado == "Enviar":
 
         if enviar:
 
-            # Gera a data de envio
-            data_envio = datetime.datetime.now().strftime("%d/%m/%Y")
+            # ==================================================
+            # VALIDAÇÃO DOS EXTRATOS BANCÁRIOS
+            # ==================================================
 
-            with st.spinner("Enviando relatório ..."):
+            extratos_bancarios = relatorio.get(
+                "extratos_bancarios",
+                []
+            )
 
-                # --------------------------------------------------
-                # 1. ATUALIZA STATUS E DATA DO RELATÓRIO
-                # --------------------------------------------------
-                col_projetos.update_one(
-                    {
-                        "codigo": projeto_codigo,
-                        "relatorios.numero": relatorio_numero
-                    },
-                    {
-                        "$set": {
-                            "relatorios.$.status_relatorio": "em_analise",
-                            "relatorios.$.data_envio": data_envio
-                        }
-                    }
+            # --------------------------------------------------
+            # Impede envio sem extratos
+            # --------------------------------------------------
+            if not extratos_bancarios:
+
+                st.warning(
+                    "Insira ao menos um extrato bancário na aba de Despesas."
                 )
 
-                # --------------------------------------------------
-                # 2. ATUALIZA STATUS DOS RELATOS ABERTOS
-                #    (somente os relatos deste relatório)
-                # --------------------------------------------------
-                projeto_atualizado = col_projetos.find_one(
-                    {"codigo": projeto_codigo}
-                )
-
-                componentes = projeto_atualizado["plano_trabalho"]["componentes"]
-
-                houve_alteracao = False
+            # --------------------------------------------------
+            # CONTINUA FLUXO NORMAL DE ENVIO
+            # --------------------------------------------------
+            else:
 
 
-                # ------------------------------------------------------
-                # Percorre componentes do plano de trabalho
-                # ------------------------------------------------------
-                for componente in componentes:
+                # Gera a data de envio
+                data_envio = datetime.datetime.now().strftime("%d/%m/%Y")
 
-                    # Recupera entregas de forma segura
-                    entregas = componente.get("entregas", [])
-
-                    # Se não houver entregas, pula o componente
-                    if not entregas:
-                        continue
+                with st.spinner("Enviando relatório ..."):
 
                     # --------------------------------------------------
-                    # Percorre entregas
+                    # 1. ATUALIZA STATUS E DATA DO RELATÓRIO
                     # --------------------------------------------------
-                    for entrega in entregas:
-
-                        # Recupera atividades de forma segura
-                        atividades = entrega.get("atividades", [])
-
-                        # --------------------------------------------------
-                        # Se não houver atividades, apenas continua
-                        # (não quebra o código)
-                        # --------------------------------------------------
-                        if not atividades:
-                            continue
-
-                        # --------------------------------------------------
-                        # Percorre atividades
-                        # --------------------------------------------------
-                        for atividade in atividades:
-
-                            # Recupera relatos de forma segura
-                            relatos = atividade.get("relatos", [])
-
-                            # Se não houver relatos, continua
-                            if not relatos:
-                                continue
-
-                            # --------------------------------------------------
-                            # Percorre relatos
-                            # --------------------------------------------------
-                            for relato in relatos:
-
-                                # ----------------------------------------------
-                                # Apenas relatos do relatório atual
-                                # e que ainda estejam abertos
-                                # ----------------------------------------------
-                                if (
-                                    relato.get("relatorio_numero") == relatorio_numero
-                                    and relato.get("status_relato") == "aberto"
-                                ):
-                                    relato["status_relato"] = "em_analise"
-                                    houve_alteracao = True
-
-
-
-                # Salva no Mongo apenas se houve mudança
-                if houve_alteracao:
                     col_projetos.update_one(
-                        {"codigo": projeto_codigo},
+                        {
+                            "codigo": projeto_codigo,
+                            "relatorios.numero": relatorio_numero
+                        },
                         {
                             "$set": {
-                                "plano_trabalho.componentes": componentes
+                                "relatorios.$.status_relatorio": "em_analise",
+                                "relatorios.$.data_envio": data_envio
                             }
                         }
                     )
 
+                    # --------------------------------------------------
+                    # 2. ATUALIZA STATUS DOS RELATOS ABERTOS
+                    #    (somente os relatos deste relatório)
+                    # --------------------------------------------------
+                    projeto_atualizado = col_projetos.find_one(
+                        {"codigo": projeto_codigo}
+                    )
 
-                # --------------------------------------------------
-                # ENVIA E-MAIL PARA PADRINHOS
-                # --------------------------------------------------
-                
-                
-                notificar_padrinhos_relatorio(
-                    col_pessoas=col_pessoas,
-                    numero_relatorio=relatorio_numero,
-                    projeto=projeto_atualizado,
-                    logo_url=logo_ieb
-                )
+                    componentes = projeto_atualizado["plano_trabalho"]["componentes"]
+
+                    houve_alteracao = False
 
 
-            st.success("Relatório enviado para análise.", icon=":material/check:")
+                    # ------------------------------------------------------
+                    # Percorre componentes do plano de trabalho
+                    # ------------------------------------------------------
+                    for componente in componentes:
 
-            # Reseta para o rerun não se perder.
-            st.session_state.step_relatorio = "Atividades"
+                        # Recupera entregas de forma segura
+                        entregas = componente.get("entregas", [])
 
-            time.sleep(3)
-            st.rerun()
+                        # Se não houver entregas, pula o componente
+                        if not entregas:
+                            continue
+
+                        # --------------------------------------------------
+                        # Percorre entregas
+                        # --------------------------------------------------
+                        for entrega in entregas:
+
+                            # Recupera atividades de forma segura
+                            atividades = entrega.get("atividades", [])
+
+                            # --------------------------------------------------
+                            # Se não houver atividades, apenas continua
+                            # (não quebra o código)
+                            # --------------------------------------------------
+                            if not atividades:
+                                continue
+
+                            # --------------------------------------------------
+                            # Percorre atividades
+                            # --------------------------------------------------
+                            for atividade in atividades:
+
+                                # Recupera relatos de forma segura
+                                relatos = atividade.get("relatos", [])
+
+                                # Se não houver relatos, continua
+                                if not relatos:
+                                    continue
+
+                                # --------------------------------------------------
+                                # Percorre relatos
+                                # --------------------------------------------------
+                                for relato in relatos:
+
+                                    # ----------------------------------------------
+                                    # Apenas relatos do relatório atual
+                                    # e que ainda estejam abertos
+                                    # ----------------------------------------------
+                                    if (
+                                        relato.get("relatorio_numero") == relatorio_numero
+                                        and relato.get("status_relato") == "aberto"
+                                    ):
+                                        relato["status_relato"] = "em_analise"
+                                        houve_alteracao = True
+
+
+
+                    # Salva no Mongo apenas se houve mudança
+                    if houve_alteracao:
+                        col_projetos.update_one(
+                            {"codigo": projeto_codigo},
+                            {
+                                "$set": {
+                                    "plano_trabalho.componentes": componentes
+                                }
+                            }
+                        )
+
+
+                    # --------------------------------------------------
+                    # ENVIA E-MAIL PARA PADRINHOS
+                    # --------------------------------------------------
+                    
+                    
+                    notificar_padrinhos_relatorio(
+                        col_pessoas=col_pessoas,
+                        numero_relatorio=relatorio_numero,
+                        projeto=projeto_atualizado,
+                        logo_url=logo_ieb
+                    )
+
+
+                st.success("Relatório enviado para análise.", icon=":material/check:")
+
+                # Reseta para o rerun não se perder.
+                st.session_state.step_relatorio = "Atividades"
+
+                time.sleep(3)
+                st.rerun()
 
     # --------------------------------------------------
     # CASO 4: USUÁRIO NÃO PODE EDITAR
