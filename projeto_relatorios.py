@@ -26,6 +26,7 @@ from funcoes_auxiliares import (
     obter_pasta_pesquisas,
     obter_pasta_projeto,
     obter_pasta_relatos_financeiros,
+    obter_pasta_extratos_bancarios,
     obter_pasta_relatorios,
     enviar_arquivo_drive,
     gerar_link_drive,
@@ -4538,6 +4539,243 @@ if step_selecionado == "Atividades":
 if step_selecionado == "Despesas":
 
 
+
+    # ==================================================
+    # FUNÇÃO QUE RENDERIZA LINKS DOS EXTRATOS BANCÁRIOS
+    # ==================================================
+    def render_links_extratos_bancarios(
+        projeto,
+        relatorio_numero
+    ):
+        """
+        Renderiza os links dos extratos bancários
+        já enviados para o relatório.
+        """
+
+        # --------------------------------------------------
+        # Obtém relatório atual
+        # --------------------------------------------------
+        relatorio = next(
+            (
+                r for r in projeto["relatorios"]
+                if r["numero"] == relatorio_numero
+            ),
+            None
+        )
+
+        if not relatorio:
+            st.warning("Relatório não encontrado.")
+            return
+
+        # --------------------------------------------------
+        # Lista de extratos
+        # --------------------------------------------------
+        extratos = relatorio.get(
+            "extratos_bancarios",
+            []
+        )
+
+        # --------------------------------------------------
+        # Sem extratos
+        # --------------------------------------------------
+        if not extratos:
+
+            st.caption(
+                "Nenhum extrato bancário enviado."
+            )
+
+            return
+
+        # --------------------------------------------------
+        # Renderiza links
+        # --------------------------------------------------
+        for extrato in extratos:
+
+            nome = extrato.get(
+                "nome_arquivo",
+                "arquivo"
+            )
+
+            id_arquivo = extrato.get(
+                "id_arquivo"
+            )
+
+            link = gerar_link_drive(
+                id_arquivo
+            )
+
+            st.markdown(
+                f"- [{nome}]({link})"
+            )
+
+
+
+
+    # --------------------------------------------------
+    # Extratos bancários do período
+    # --------------------------------------------------
+
+    st.write("")
+
+    st.markdown("#### Extratos bancários do período")
+
+    # ==================================================
+    # MODO EDIÇÃO
+    # ==================================================
+    if status_atual_db == "modo_edicao":
+
+        col_upload, col_links = st.columns([1, 1], gap="large")
+
+        # --------------------------------------------------
+        # COLUNA UPLOAD
+        # --------------------------------------------------
+        with col_upload:
+
+            extratos_bancarios = st.file_uploader(
+                "Carregue aqui os extratos bancários do período",
+                accept_multiple_files=True,
+                key=f"extratos_bancarios_{relatorio_numero}"
+            )
+
+            with st.container(horizontal=True):
+
+                if st.button(
+                    "Salvar extratos bancários",
+                    type="primary",
+                    icon=":material/save:",
+                    key=f"btn_salvar_extratos_{relatorio_numero}"
+                ):
+
+                    # ------------------------------------------
+                    # VALIDAÇÃO
+                    # ------------------------------------------
+
+                    if not extratos_bancarios:
+
+                        st.warning(
+                            "Carregue ao menos um extrato bancário."
+                        )
+
+                    else:
+
+
+
+                        # ------------------------------------------
+                        # SALVAMENTO
+                        # ------------------------------------------
+                        with st.spinner(
+                            "Salvando extratos bancários..."
+                        ):
+
+                            servico = obter_servico_drive()
+
+                            # --------------------------------------
+                            # Pasta do projeto
+                            # --------------------------------------
+                            pasta_projeto = obter_pasta_projeto(
+                                servico,
+                                projeto["codigo"],
+                                projeto["sigla"]
+                            )
+
+                            # --------------------------------------
+                            # Pasta de extratos
+                            # --------------------------------------
+                            pasta_extratos = (
+                                obter_pasta_extratos_bancarios(
+                                    servico,
+                                    pasta_projeto
+                                )
+                            )
+
+                            lista_extratos = []
+
+                            # --------------------------------------
+                            # Upload dos arquivos
+                            # --------------------------------------
+                            for arq in extratos_bancarios:
+
+                                id_drive = enviar_arquivo_drive(
+                                    servico,
+                                    pasta_extratos,
+                                    arq
+                                )
+
+                                if not id_drive:
+                                    continue
+
+                                lista_extratos.append({
+                                    "nome_arquivo": arq.name,
+                                    "id_arquivo": id_drive
+                                })
+
+                            # --------------------------------------
+                            # Atualiza relatório
+                            # --------------------------------------
+                            for r in projeto["relatorios"]:
+
+                                if r["numero"] == relatorio_numero:
+
+                                    r.setdefault(
+                                        "extratos_bancarios",
+                                        []
+                                    ).extend(lista_extratos)
+
+                                    break
+
+                            # --------------------------------------
+                            # Persistência Mongo
+                            # --------------------------------------
+                            col_projetos.update_one(
+                                {"codigo": projeto["codigo"]},
+                                {
+                                    "$set": {
+                                        "relatorios": projeto["relatorios"]
+                                    }
+                                }
+                            )
+
+                        st.success(
+                            "Extratos bancários salvos com sucesso!",
+                            icon=":material/check:"
+                        )
+
+                        time.sleep(3)
+
+                        st.rerun()
+
+        # --------------------------------------------------
+        # COLUNA LINKS
+        # --------------------------------------------------
+        with col_links:
+
+            render_links_extratos_bancarios(
+                projeto,
+                relatorio_numero
+            )
+
+    # ==================================================
+    # SOMENTE VISUALIZAÇÃO
+    # ==================================================
+    else:
+
+        render_links_extratos_bancarios(
+            projeto,
+            relatorio_numero
+        )
+
+
+
+
+
+
+
+    # --------------------------------------------------
+    # Despesas
+    # --------------------------------------------------
+
+
+    st.write("")
     st.write("")
     st.write("")
 
