@@ -11,6 +11,7 @@ from docx import Document
 import tempfile
 import os
 from st_rsuite import date_picker
+import copy
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -5542,7 +5543,6 @@ if step_selecionado == "Despesas":
                                 # ==================================================
                                 with st.spinner("Salvando alterações..."):
 
-                                    import copy
 
                                     # --------------------------------------------------
                                     # Guarda a despesa antiga e a nova
