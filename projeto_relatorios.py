@@ -5533,7 +5533,7 @@ if step_selecionado == "Despesas":
                                     # Botão inicial (ícone de lixeira)
                                     if not st.session_state[confirm_delete_key]:
                                         if st.button(
-                                            "",
+                                            "Excluir despesa",
                                             key=f"btn_delete_{id_despesa}",
                                             icon=":material/delete:",
                                             type="secondary"
@@ -5563,13 +5563,19 @@ if step_selecionado == "Despesas":
                                                 with st.spinner("Excluindo despesa..."):
 
                                                     # Remove o lançamento da estrutura
+                                                    id_despesa_orcamento = lanc.get("id_despesa")
+
                                                     for d in projeto["financeiro"]["orcamento"]:
-                                                        if d["categoria"] == categoria and d["nome_despesa"] == nome_despesa:
+
+                                                        if d.get("id_despesa") == id_despesa_orcamento:
+
                                                             d["lancamentos"] = [
                                                                 l for l in d.get("lancamentos", [])
                                                                 if l.get("id_lanc_despesa") != id_despesa
                                                             ]
+
                                                             break
+
 
                                                     # Salva no Mongo
                                                     col_projetos.update_one(
