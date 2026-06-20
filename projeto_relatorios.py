@@ -1840,59 +1840,6 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
             str(despesa_selecionada["categoria"])
         )
 
-        nome_despesa = despesa_selecionada["nome_despesa"]
-
-
-
-
-
-        # # -----------------------------------
-        # # Montar opções do selectbox
-        # # -----------------------------------
-        # opcoes = []
-
-        # for o in orcamento:
-
-        #     # Categoria salva como ID
-        #     id_categoria = str(o.get("categoria"))
-
-        #     # Converter ID -> nome
-        #     nome_categoria = mapa_categoria_id_nome.get(
-        #         id_categoria,
-        #         id_categoria
-        #     )
-
-        #     # Texto exibido
-        #     texto_opcao = (
-        #         f"{nome_categoria} | "
-        #         f"{o['nome_despesa']}"
-        #     )
-
-        #     opcoes.append(texto_opcao)
-
-        # # -----------------------------------
-        # # Ordenar opções
-        # # -----------------------------------
-        # opcoes = sorted(
-        #     opcoes,
-        #     key=lambda x: x.lower()
-        # )
-
-        # # -----------------------------------
-        # # Selectbox
-        # # -----------------------------------
-        # escolha = st.selectbox(
-        #     "Categoria / Despesa *",
-        #     options=opcoes,
-        #     key=f"desp_categoria_{form_key}"
-        # )
-
-        # # -----------------------------------
-        # # Separar valores
-        # # -----------------------------------
-        # categoria_nome, nome_despesa = (
-        #     escolha.split(" | ", 1)
-        # )
 
 
         # ==================================================
@@ -2089,19 +2036,7 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
                 }
 
 
-                # novo_lancamento = {
-                #     "id_lanc_despesa": id_despesa,
-                #     "relatorio_numero": relatorio_numero,
-                #     "data_despesa": data_despesa.strftime("%d/%m/%Y"),
-                #     "descricao_despesa": descricao,
-                #     "fornecedor": fornecedor,
-                #     "cpf_cnpj": cpf_cnpj_formatado,
-                #     "quantidade": quantidade,
-                #     "valor_unitario": valor_unitario,
-                #     "valor_despesa": valor,
-                #     "status_despesa": "aberto",
-                #     "anexos": []
-                # }
+
 
                 # -------------------------------
                 # Upload de arquivos para o Drive
@@ -2146,28 +2081,6 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
                         ).append(novo_lancamento)
 
                         break
-
-
-
-                # for d in projeto["financeiro"]["orcamento"]:
-
-                #     # Converter ID -> nome
-                #     nome_categoria_item = mapa_categoria_id_nome.get(
-                #         str(d["categoria"]),
-                #         str(d["categoria"])
-                #     )
-
-                #     if (
-                #         nome_categoria_item == categoria_nome and
-                #         d["nome_despesa"] == nome_despesa
-                #     ):
-                #         d.setdefault(
-                #             "lancamentos",
-                #             []
-                #         ).append(novo_lancamento)
-
-                #         break
-
 
 
                 # -------------------------------
@@ -5645,7 +5558,7 @@ if step_selecionado == "Despesas":
                                         "data_despesa": data.strftime("%d/%m/%Y"),
                                         "descricao_despesa": descricao,
                                         "fornecedor": fornecedor,
-                                        "cpf_cnpj": cpf_cnpj,
+                                        "cpf_cnpj": cpf_cnpj_formatado,
                                         "quantidade": quantidade,
                                         "valor_unitario": valor_unitario,
                                         "valor_despesa": valor
