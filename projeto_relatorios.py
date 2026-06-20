@@ -5188,9 +5188,70 @@ if step_selecionado == "Despesas":
                 # ==================================================
                 # MODO EDIÇÃO INLINE DA DESPESA
                 # ==================================================
+
                 if editando:
 
                     st.markdown(f"**Editando {id_despesa.upper()}**")
+
+                    # ==================================================
+                    # DESPESA
+                    # ==================================================
+
+                    orcamento = projeto["financeiro"]["orcamento"]
+
+                    opcoes = []
+                    mapa_opcoes = {}
+
+                    for d in orcamento:
+
+                        id_categoria = str(d["categoria"])
+
+                        nome_categoria = mapa_categoria_id_nome.get(
+                            id_categoria,
+                            id_categoria
+                        )
+
+                        texto = f"{nome_categoria} | {d['nome_despesa']}"
+
+                        opcoes.append(texto)
+
+                        mapa_opcoes[texto] = d
+
+                    opcoes = sorted(opcoes, key=str.lower)
+
+                    # Descobre a despesa atual
+                    despesa_atual = next(
+                        (
+                            d for d in orcamento
+                            if d["id_despesa"] == lanc["id_despesa"]
+                        ),
+                        None
+                    )
+
+                    texto_atual = ""
+
+                    if despesa_atual:
+
+                        nome_categoria = mapa_categoria_id_nome.get(
+                            str(despesa_atual["categoria"]),
+                            str(despesa_atual["categoria"])
+                        )
+
+                        texto_atual = (
+                            f"{nome_categoria} | "
+                            f"{despesa_atual['nome_despesa']}"
+                        )
+
+                    indice = opcoes.index(texto_atual)
+
+                    escolha = st.selectbox(
+                        "Categoria / Despesa",
+                        options=opcoes,
+                        index=indice,
+                        key=f"edit_despesa_{id_despesa}"
+                    )
+
+                    despesa_selecionada = mapa_opcoes[escolha]
 
                     # --------------------------------------------------
                     # CAMPOS PRINCIPAIS
@@ -5409,7 +5470,6 @@ if step_selecionado == "Despesas":
                                         )
 
 
-
                                 # ==================================================
                                 # VALIDAÇÃO DE ANEXOS (COM REMOÇÃO + NOVOS)
                                 # ==================================================
@@ -5417,7 +5477,15 @@ if step_selecionado == "Despesas":
                                 # Regra:
                                 # - Se NÃO for taxa bancária → precisa ter pelo menos 1 anexo no final
 
-                                categoria_lower = categoria.lower()
+                                id_categoria = str(despesa_selecionada["categoria"])
+
+                                categoria_nome = mapa_categoria_id_nome.get(
+                                    id_categoria,
+                                    id_categoria
+                                )
+
+                                categoria_lower = categoria_nome.lower()
+
                                 is_taxa_bancaria = "taxas bancárias" in categoria_lower
 
                                 if not is_taxa_bancaria:
@@ -5438,6 +5506,7 @@ if step_selecionado == "Despesas":
 
 
 
+
                                 # ==================================================
                                 # EXIBE ERROS
                                 # ==================================================
@@ -5452,55 +5521,140 @@ if step_selecionado == "Despesas":
                                 if erros_campos or erro_consistencia:
                                     st.stop()
 
+                                
+
+
+
+
+
+
+
+
+
+
+
                                 # ==================================================
                                 # SALVAR
                                 # ==================================================
                                 with st.spinner("Salvando alterações..."):
 
+                                    import copy
+
+                                    # --------------------------------------------------
+                                    # Guarda a despesa antiga e a nova
+                                    # --------------------------------------------------
+                                    id_despesa_antiga = lanc["id_despesa"]
+                                    id_despesa_nova = despesa_selecionada["id_despesa"]
+
+                                    # --------------------------------------------------
+                                    # Atualiza os dados do lançamento
+                                    # --------------------------------------------------
                                     lanc.update({
+                                        "id_despesa": id_despesa_nova,
                                         "data_despesa": data.strftime("%d/%m/%Y"),
                                         "descricao_despesa": descricao,
                                         "fornecedor": fornecedor,
-                                        "cpf_cnpj": cpf_cnpj_formatado,
+                                        "cpf_cnpj": cpf_cnpj,
                                         "quantidade": quantidade,
                                         "valor_unitario": valor_unitario,
                                         "valor_despesa": valor
                                     })
 
-
-
+                                    # --------------------------------------------------
                                     # Remove anexos marcados
+                                    # --------------------------------------------------
                                     if anexos_remover:
+
                                         lanc["anexos"] = [
-                                            a for a in lanc.get("anexos", [])
+                                            a
+                                            for a in lanc.get("anexos", [])
                                             if a not in anexos_remover
                                         ]
 
+                                    # --------------------------------------------------
                                     # Upload de novos anexos
+                                    # --------------------------------------------------
                                     if novos_anexos:
+
                                         servico = obter_servico_drive()
+
                                         pasta_proj = obter_pasta_projeto(
                                             servico,
                                             projeto["codigo"],
                                             projeto["sigla"]
                                         )
-                                        pasta_fin = obter_pasta_relatos_financeiros(servico, pasta_proj)
-                                        pasta_lanc = obter_ou_criar_pasta(servico, id_despesa, pasta_fin)
+
+                                        pasta_fin = obter_pasta_relatos_financeiros(
+                                            servico,
+                                            pasta_proj
+                                        )
+
+                                        pasta_lanc = obter_ou_criar_pasta(
+                                            servico,
+                                            id_despesa,
+                                            pasta_fin
+                                        )
 
                                         lanc.setdefault("anexos", [])
 
                                         for arq in novos_anexos:
-                                            id_drive = enviar_arquivo_drive(servico, pasta_lanc, arq)
+
+                                            id_drive = enviar_arquivo_drive(
+                                                servico,
+                                                pasta_lanc,
+                                                arq
+                                            )
+
                                             lanc["anexos"].append({
                                                 "nome_arquivo": arq.name,
                                                 "id_arquivo": id_drive
                                             })
 
+                                    # --------------------------------------------------
+                                    # Move o lançamento para outra despesa (se necessário)
+                                    # --------------------------------------------------
+                                    if id_despesa_antiga != id_despesa_nova:
+
+                                        # Faz uma cópia completa do lançamento já atualizado
+                                        novo_lanc = copy.deepcopy(lanc)
+
+                                        # Adiciona primeiro na nova despesa
+                                        for d in projeto["financeiro"]["orcamento"]:
+
+                                            if d["id_despesa"] == id_despesa_nova:
+
+                                                d.setdefault("lancamentos", []).append(
+                                                    novo_lanc
+                                                )
+
+                                                break
+
+                                        # Remove da despesa antiga
+                                        for d in projeto["financeiro"]["orcamento"]:
+
+                                            if d["id_despesa"] == id_despesa_antiga:
+
+                                                d["lancamentos"] = [
+                                                    x
+                                                    for x in d.get("lancamentos", [])
+                                                    if x["id_lanc_despesa"] != id_despesa
+                                                ]
+
+                                                break
+
+                                    # --------------------------------------------------
                                     # Persistência no Mongo
+                                    # --------------------------------------------------
                                     col_projetos.update_one(
                                         {"codigo": projeto["codigo"]},
-                                        {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
+                                        {
+                                            "$set": {
+                                                "financeiro.orcamento": projeto["financeiro"]["orcamento"]
+                                            }
+                                        }
                                     )
+
+
 
                                 # Limpa estado
                                 st.session_state["despesa_editando_id"] = None
