@@ -4530,7 +4530,7 @@ with remanejamentos:
                     with col_add:
 
                         if st.button(
-                            "+ Adicionar linha",
+                            "Adicionar linha",
                             key=f"{prefixo}_add",
                             icon=":material/add:",
                             type="tertiary"
@@ -4554,7 +4554,7 @@ with remanejamentos:
                         with col_remove:
 
                             if st.button(
-                                "- Remover linha",
+                                "Remover linha",
                                 key=f"{prefixo}_remove",
                                 icon=":material/remove:",
                                 type="tertiary"
