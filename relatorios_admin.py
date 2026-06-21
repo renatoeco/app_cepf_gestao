@@ -221,7 +221,8 @@ opcao_relatorio = st.radio(
         "Relatório de acompanhamento de desembolsos",
         "Relatório de acompanhamento de desembolsos por parcela",
         "Relatório de acompanhamento completo",
-        "Lista de comunidades"
+        "Relatório de Indicadores e Resultados",
+        "Lista de comunidades",
     ]
 )
 
@@ -531,13 +532,6 @@ if opcao_relatorio == "Relatório de salvaguardas":
 
 
 
-
-
-
-
-###########################################################################################################
-# RELATÓRIO DE ACOMPANHAMENTO DE DESEMBOLSOS
-###########################################################################################################
 
 
 
@@ -2385,6 +2379,218 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
     ###################################################################################################
     if st.session_state.arquivo_acompanhamento_completo:
         st.caption("Relatório gerado. Clique para baixar.")
+
+
+
+
+
+
+
+
+
+
+
+###########################################################################################################
+# RELATÓRIO DE INDICADORES E RESULTADOS
+###########################################################################################################
+
+
+
+###########################################################################################################
+# RELATÓRIO DE INDICADORES E RESULTADOS
+###########################################################################################################
+
+if opcao_relatorio == "Relatório de Indicadores e Resultados":
+
+    if "arquivo_indicadores_resultados" not in st.session_state:
+        st.session_state.arquivo_indicadores_resultados = None
+
+    st.subheader("Relatório de Indicadores e Resultados")
+
+    projetos, edital_selecionado_obj = filtro_editais()
+
+    st.write(f"{len(projetos)} projetos")
+
+    st.write("")
+
+    with st.container(horizontal=True):
+
+        ###################################################################################################
+        # BOTÃO GERAR
+        ###################################################################################################
+        if st.button(
+            "Gerar relatório",
+            icon=":material/list_alt_add:",
+            key="btn_relatorio_indicadores"
+        ):
+
+            ###################################################################################################
+            # VALIDAÇÃO
+            ###################################################################################################
+            if not projetos:
+
+                st.warning(
+                    "Nenhum projeto encontrado para o edital selecionado.",
+                    icon=":material/warning:"
+                )
+
+                st.session_state.arquivo_indicadores_resultados = None
+                time.sleep(3)
+
+            else:
+
+                with st.spinner("Gerando relatório..."):
+
+                    ###################################################################################################
+                    # CÁLCULO DO STATUS DOS PROJETOS
+                    ###################################################################################################
+                    df_projetos = calcular_status_projetos(
+                        pd.DataFrame(projetos)
+                    )
+
+                    mapa_status = {
+                        row["codigo"]: row["status"]
+                        for _, row in df_projetos.iterrows()
+                    }
+
+                    ###################################################################################################
+                    # MAPA DE INDICADORES DO EDITAL
+                    ###################################################################################################
+                    mapa_indicadores = {}
+
+                    for indicador in edital_selecionado_obj.get("indicadores", []):
+
+                        mapa_indicadores[
+                            indicador.get("codigo_indicador")
+                        ] = indicador.get("indicador", "")
+
+                    ###################################################################################################
+                    # MONTAGEM DOS DADOS
+                    ###################################################################################################
+                    dados = []
+
+                    for projeto in projetos:
+
+                        org_info = mapa_organizacoes.get(
+                            str(projeto.get("id_organizacao")),
+                            {}
+                        )
+
+                        status = mapa_status.get(
+                            projeto.get("codigo"),
+                            ""
+                        )
+
+                        for indicador in projeto.get("indicadores", []):
+
+                            codigo = indicador.get("id_indicador", "")
+
+                            dados.append({
+
+                                "Código do Projeto":
+                                    projeto.get("codigo", ""),
+
+                                "Organização":
+                                    org_info.get("nome", ""),
+
+                                "Sigla da Organização":
+                                    org_info.get("sigla", ""),
+
+                                "Status do Projeto":
+                                    status,
+
+                                "Código do Indicador":
+                                    codigo,
+
+                                "Indicador de Portfólio":
+                                    mapa_indicadores.get(codigo, ""),
+
+                                "Descrição da Contribuição":
+                                    indicador.get("descricao_contribuicao", ""),
+
+                                "Expectativa [Contribuição Esperada]":
+                                    indicador.get("valor", ""),
+
+                                "Resultado Intermediário":
+                                    indicador.get("resultado_intermediario", ""),
+
+                                "Resultado Final":
+                                    indicador.get("resultado_final", "")
+
+                            })
+
+                    ###################################################################################################
+                    # EXPORTAÇÃO
+                    ###################################################################################################
+                    df = pd.DataFrame(dados)
+
+                    output = io.BytesIO()
+
+                    with pd.ExcelWriter(
+                        output,
+                        engine="openpyxl"
+                    ) as writer:
+
+                        df.to_excel(
+                            writer,
+                            index=False,
+                            sheet_name="Indicadores"
+                        )
+
+                    st.session_state.arquivo_indicadores_resultados = output.getvalue()
+
+        ###################################################################################################
+        # BOTÃO DOWNLOAD
+        ###################################################################################################
+        if st.session_state.arquivo_indicadores_resultados:
+
+            nome_edital = (
+                edital_selecionado_obj.get("nome_edital", "")
+                if edital_selecionado_obj else ""
+            )
+
+            nome_edital_arquivo = nome_edital.replace(" ", "_")
+
+            download_clicado = st.download_button(
+                label="Baixar relatório",
+                icon=":material/download:",
+                data=st.session_state.arquivo_indicadores_resultados,
+                file_name=f"Relatorio_de_Indicadores_e_Resultados_{nome_edital_arquivo}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary"
+            )
+
+            ###################################################################################################
+            # LIMPEZA DO ARQUIVO APÓS DOWNLOAD
+            ###################################################################################################
+            if download_clicado:
+
+                st.session_state.arquivo_indicadores_resultados = None
+
+                st.rerun()
+
+    ###################################################################################################
+    # MENSAGEM FINAL
+    ###################################################################################################
+    if st.session_state.arquivo_indicadores_resultados:
+
+        st.caption(
+            "Relatório gerado. Clique para baixar."
+        )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
