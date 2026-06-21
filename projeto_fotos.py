@@ -213,7 +213,7 @@ with st.container(border=False, horizontal=True, width="stretch"):
             st.divider()
 
             st.write(f"**Descrição:** {foto.get('descricao', '')}")
-            st.write(f"**Fotógrafo:** {foto.get('fotografo', '')}")
+            st.write(f"**Autoria da foto:** {foto.get('fotografo', '')}")
             st.write(f"**Arquivo:** {foto.get('nome_arquivo', '')}")
 
 
