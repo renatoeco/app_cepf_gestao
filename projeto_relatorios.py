@@ -4594,7 +4594,9 @@ if step_selecionado == "Despesas":
         # --------------------------------------------------
         # Renderiza links
         # --------------------------------------------------
-        for extrato in extratos:
+
+
+        for i, extrato in enumerate(extratos):
 
             nome = extrato.get(
                 "nome_arquivo",
@@ -4605,13 +4607,60 @@ if step_selecionado == "Despesas":
                 "id_arquivo"
             )
 
-            link = gerar_link_drive(
-                id_arquivo
-            )
+            link = gerar_link_drive(id_arquivo)
 
-            st.markdown(
-                f"- [{nome}]({link})"
-            )
+            col_link, col_excluir = st.columns([10, 1])
+
+            with col_link:
+
+                st.markdown(
+                    f"[{nome}]({link})"
+                )
+
+            with col_excluir:
+
+                with st.popover(
+                    "",
+                    icon=":material/delete:"
+                ):
+
+                    st.write(
+                        "Tem certeza que deseja excluir esse arquivo?"
+                    )
+
+                    with st.container(horizontal=True):
+
+                        # --------------------------------------------------
+                        # CONFIRMAR EXCLUSÃO
+                        # --------------------------------------------------
+                        if st.button(
+                            "Sim, excluir",
+                            type="primary",
+                            icon=":material/delete:",
+                            key=f"btn_confirmar_excluir_extrato_{relatorio_numero}_{i}"
+                        ):
+
+                            # Remove o extrato da lista
+                            relatorio["extratos_bancarios"].pop(i)
+
+                            # Salva no MongoDB
+                            col_projetos.update_one(
+                                {"codigo": projeto["codigo"]},
+                                {
+                                    "$set": {
+                                        "relatorios": projeto["relatorios"]
+                                    }
+                                }
+                            )
+
+                            st.success(
+                                "Extrato bancário removido com sucesso!",
+                                icon=":material/check:"
+                            )
+
+                            time.sleep(3)
+
+                            st.rerun()
 
 
 
