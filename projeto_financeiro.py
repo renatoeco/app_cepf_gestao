@@ -1864,8 +1864,11 @@ with cron_desemb:
 
 
 
+
             # --------------------------------------------------
             # Datas do relatório associado à parcela
+            # As datas já estão armazenadas no banco no formato
+            # DD/MM/AAAA. Portanto, basta reutilizar a string.
             # --------------------------------------------------
             relatorio = mapa_relatorios.get(numero, {})
 
@@ -1875,24 +1878,20 @@ with cron_desemb:
             if data_envio_relatorio:
 
                 data_entrega_relatorio = (
-                    pd.to_datetime(
-                        data_envio_relatorio,
-                        errors="coerce"
-                    ).strftime("%d/%m/%Y :material/check:")
+                    f"{data_envio_relatorio} :material/check:"
                 )
 
             elif data_prevista_relatorio:
 
                 data_entrega_relatorio = (
-                    pd.to_datetime(
-                        data_prevista_relatorio,
-                        errors="coerce"
-                    ).strftime("%d/%m/%Y :material/schedule:")
+                    f"{data_prevista_relatorio} :material/schedule:"
                 )
 
             else:
 
                 data_entrega_relatorio = ""
+
+
 
 
 
