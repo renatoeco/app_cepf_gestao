@@ -979,13 +979,13 @@ with aba_cadastro:
 
     st.write('')
 
-    # Colunas para Estados e Municípios
-    col_estados, col_municipios = st.columns(2)
+
+    col_1, col_2 = st.columns(2)
 
     # -------------------------------------------------------------------------------
     # SEÇÃO — ESTADOS
     # -------------------------------------------------------------------------------
-    with col_estados.container(border=True):
+    with col_1.container(border=True):
 
 
         col_botao, col_titulo = st.columns([1, 30])
@@ -1025,7 +1025,7 @@ with aba_cadastro:
     # SEÇÃO — MUNICÍPIOS
     # -------------------------------------------------------------------------------
 
-    with col_municipios.container(border=True):
+    with col_2.container(border=True):
 
         col_botao, col_titulo = st.columns([1, 30])
 
@@ -1058,14 +1058,11 @@ with aba_cadastro:
 
 
 
-    # Colunas para Localidades e Áreas Protegidas
-    col_localidade, col_area_protegida = st.columns(2)
-
     # -------------------------------------------------------------------------------
     # SEÇÃO — LOCALIDADES
     # -------------------------------------------------------------------------------
 
-    with col_localidade.container(border=True):
+    with col_1.container(border=True):
 
         col_botao, col_titulo = st.columns([1, 30])
 
@@ -1103,7 +1100,7 @@ with aba_cadastro:
     # SEÇÃO - ÁREAS PROTEGIDAS
     # -------------------------------------------------------------------------------
 
-    with col_area_protegida.container(border=True):
+    with col_2.container(border=True):
 
         col_botao, col_titulo = st.columns([1, 30])
 
@@ -1139,14 +1136,10 @@ with aba_cadastro:
 
 
 
-    # Colunas para Corredores e KBAs
-    col_corredores, col_kbas = st.columns(2)
-
-
     # -------------------------------------------------------------------------------
     # SEÇÃO — CORREDORES
     # -------------------------------------------------------------------------------
-    with col_corredores.container(border=True):
+    with col_1.container(border=True):
 
         col_botao, col_titulo = st.columns([1, 30])
 
@@ -1179,7 +1172,7 @@ with aba_cadastro:
     # -------------------------------------------------------------------------------
     # SEÇÃO — KBAs
     # -------------------------------------------------------------------------------
-    with col_kbas.container(border=True):
+    with col_2.container(border=True):
 
         col_botao, col_titulo = st.columns([1, 30])
 
