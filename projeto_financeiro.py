@@ -1303,221 +1303,70 @@ def gerar_recibo_docx(
 
 
 
-# Atualiza datas das parcelas, que devem ser 15 dias após o relatório anterior
-def atualizar_datas_parcelas(col_projetos, codigo_projeto):
-    # Busca o projeto no MongoDB
-    projeto = col_projetos.find_one({"codigo": codigo_projeto})
+# # Atualiza datas das parcelas, que devem ser 15 dias após o relatório anterior
+# def atualizar_datas_parcelas(col_projetos, codigo_projeto):
+#     # Busca o projeto no MongoDB
+#     projeto = col_projetos.find_one({"codigo": codigo_projeto})
 
-    parcelas = projeto.get("financeiro", {}).get("parcelas", [])
-    relatorios = projeto.get("relatorios", [])
-
-    # Se não houver dados suficientes, sai
-    if not parcelas or not relatorios:
-        return
-
-    # Mapeia relatórios por número (1, 2, 3...)
-    mapa_relatorios = {
-        r["numero"]: r
-        for r in relatorios
-        if r.get("numero") is not None
-    }
-
-    novas_parcelas = []
-
-    for p in parcelas:
-        numero = p.get("numero")
-
-        # Parcela 1 não muda
-        if numero == 1:
-            novas_parcelas.append(p)
-            continue
-
-        # Relatório anterior (parcela 2 → relatório 1, etc)
-        relatorio_ref = mapa_relatorios.get(numero - 1)
-
-        if relatorio_ref and relatorio_ref.get("data_prevista"):
-            data_relatorio = pd.to_datetime(
-                relatorio_ref["data_prevista"],
-                format="%d/%m/%Y",
-                errors="coerce"
-            )
-
-            if pd.notnull(data_relatorio):
-                nova_data = (
-                    data_relatorio + datetime.timedelta(days=15)
-                ).strftime("%d/%m/%Y")
-            else:
-                nova_data = None
-        else:
-            nova_data = None
-
-        # Copia a parcela original
-        parcela_atualizada = p.copy()
-
-        # Atualiza apenas a data_prevista
-        parcela_atualizada["data_prevista"] = nova_data
-
-        novas_parcelas.append(parcela_atualizada)
-
-    # Atualiza no MongoDB
-    col_projetos.update_one(
-        {"codigo": codigo_projeto},
-        {"$set": {"financeiro.parcelas": novas_parcelas}}
-    )
-
-
-
-
-# def criar_parcelas_a_partir_relatorios(col_projetos, codigo_projeto):
-#     """
-#     Atualiza parcelas automaticamente com base nos relatórios.
-
-#     Regra:
-#     - Nº parcelas = nº relatórios + 1
-#     - Parcela 1 mantém data existente
-#     - Parcela N (N >= 2): relatório N-1 + 15 dias
-
-#     A função preserva todos os demais campos existentes
-#     das parcelas já cadastradas.
-#     """
-
-#     projeto = col_projetos.find_one({
-#         "codigo": codigo_projeto
-#     })
-
-#     if not projeto:
-#         return
-
+#     parcelas = projeto.get("financeiro", {}).get("parcelas", [])
 #     relatorios = projeto.get("relatorios", [])
 
-#     financeiro = projeto.get("financeiro", {})
-#     parcelas_existentes = financeiro.get("parcelas", [])
-
-#     if not relatorios:
+#     # Se não houver dados suficientes, sai
+#     if not parcelas or not relatorios:
 #         return
 
-#     ###################################################################################################
-#     # ORDENA RELATÓRIOS
-#     ###################################################################################################
-#     relatorios = sorted(
-#         [
-#             r for r in relatorios
-#             if r.get("numero") is not None
-#         ],
-#         key=lambda x: x["numero"]
-#     )
-
-#     ###################################################################################################
-#     # MAPA DE PARCELAS EXISTENTES
-#     ###################################################################################################
-#     mapa_existente = {
-#         p.get("numero"): p
-#         for p in parcelas_existentes
-#         if p.get("numero") is not None
+#     # Mapeia relatórios por número (1, 2, 3...)
+#     mapa_relatorios = {
+#         r["numero"]: r
+#         for r in relatorios
+#         if r.get("numero") is not None
 #     }
 
-#     total_parcelas = len(relatorios) + 1
+#     novas_parcelas = []
 
-#     ###################################################################################################
-#     # PRESERVA PARCELAS EXISTENTES
-#     ###################################################################################################
-#     parcelas_atualizadas = []
+#     for p in parcelas:
+#         numero = p.get("numero")
 
-#     for i in range(1, total_parcelas + 1):
+#         # Parcela 1 não muda
+#         if numero == 1:
+#             novas_parcelas.append(p)
+#             continue
 
-#         ###################################################################################################
-#         # RECUPERA PARCELA EXISTENTE
-#         ###################################################################################################
-#         parcela_existente = mapa_existente.get(i, {}).copy()
+#         # Relatório anterior (parcela 2 → relatório 1, etc)
+#         relatorio_ref = mapa_relatorios.get(numero - 1)
 
-#         parcela_existente["numero"] = i
+#         if relatorio_ref and relatorio_ref.get("data_prevista"):
+#             data_relatorio = pd.to_datetime(
+#                 relatorio_ref["data_prevista"],
+#                 format="%d/%m/%Y",
+#                 errors="coerce"
+#             )
 
-#         ###################################################################################################
-#         # PARCELA 1
-#         ###################################################################################################
-#         if i == 1:
-
-#             data_existente = parcela_existente.get("data_prevista")
-
-#             if data_existente:
-
-#                 data_dt = pd.to_datetime(
-#                     data_existente,
-#                     format="%d/%m/%Y",
-#                     errors="coerce"
-#                 )
-
+#             if pd.notnull(data_relatorio):
+#                 nova_data = (
+#                     data_relatorio + datetime.timedelta(days=15)
+#                 ).strftime("%d/%m/%Y")
 #             else:
-#                 data_dt = None
-
-#         ###################################################################################################
-#         # DEMAIS PARCELAS
-#         ###################################################################################################
+#                 nova_data = None
 #         else:
+#             nova_data = None
 
-#             relatorio_ref = relatorios[i - 2]
+#         # Copia a parcela original
+#         parcela_atualizada = p.copy()
 
-#             data_relatorio = relatorio_ref.get("data_prevista")
+#         # Atualiza apenas a data_prevista
+#         parcela_atualizada["data_prevista"] = nova_data
 
-#             if data_relatorio:
+#         novas_parcelas.append(parcela_atualizada)
 
-#                 data_dt = pd.to_datetime(
-#                     data_relatorio,
-#                     format="%d/%m/%Y",
-#                     errors="coerce"
-#                 )
-
-#                 if pd.notnull(data_dt):
-#                     data_dt = data_dt + datetime.timedelta(days=15)
-
-#                 else:
-#                     data_dt = None
-
-#             else:
-#                 data_dt = None
-
-#         ###################################################################################################
-#         # ATUALIZA SOMENTE DATA_PREVISTA
-#         ###################################################################################################
-#         parcela_existente["data_prevista"] = (
-#             data_dt.strftime("%d/%m/%Y")
-#             if data_dt is not None and pd.notnull(data_dt)
-#             else None
-#         )
-
-#         parcelas_atualizadas.append(parcela_existente)
-
-#     ###################################################################################################
-#     # MANTÉM PARCELAS EXTRAS NÃO MAPEADAS
-#     ###################################################################################################
-#     numeros_validos = set(range(1, total_parcelas + 1))
-
-#     for parcela in parcelas_existentes:
-
-#         numero = parcela.get("numero")
-
-#         if numero not in numeros_validos:
-#             parcelas_atualizadas.append(parcela)
-
-#     ###################################################################################################
-#     # ORDENA PARCELAS
-#     ###################################################################################################
-#     parcelas_atualizadas = sorted(
-#         parcelas_atualizadas,
-#         key=lambda x: x.get("numero", 0)
-#     )
-
-#     ###################################################################################################
-#     # SALVA NO MONGO
-#     ###################################################################################################
+#     # Atualiza no MongoDB
 #     col_projetos.update_one(
 #         {"codigo": codigo_projeto},
-#         {
-#             "$set": {
-#                 "financeiro.parcelas": parcelas_atualizadas
-#             }
-#         }
+#         {"$set": {"financeiro.parcelas": novas_parcelas}}
 #     )
+
+
+
 
 
 
@@ -2369,6 +2218,19 @@ with cron_desemb:
         if opcao_editar_cron == "Parcelas":
 
 
+            if opcao_editar_cron == "Parcelas":
+
+                # -----------------------------------
+                # Validação das entregas do plano de trabalho
+                # -----------------------------------
+                if not opcoes_entregas:
+
+                    st.warning(
+                        "Antes de cadastrar as parcelas, cadastre as entregas no Plano de Trabalho.",
+                        icon=":material/warning:"
+                    )
+
+                st.markdown("#### Parcelas")
 
 
 
@@ -2405,10 +2267,27 @@ with cron_desemb:
                     errors="coerce"
                 )
 
-                # Garantir colunas essenciais
-                for col in ["numero", "valor", "entregas"]:
-                    if col not in df_parcelas.columns:
-                        df_parcelas[col] = None
+
+                # -----------------------------------
+                # Garantir colunas utilizadas pelo editor
+                # -----------------------------------
+                colunas_padrao = {
+                    "numero": None,
+                    "valor": 0.0,
+                    "entregas": [],
+                    "data_prevista": pd.NaT,
+                }
+
+                for coluna, valor_padrao in colunas_padrao.items():
+
+                    if coluna not in df_parcelas.columns:
+
+                        if isinstance(valor_padrao, list):
+                            df_parcelas[coluna] = [[] for _ in range(len(df_parcelas))]
+                        else:
+                            df_parcelas[coluna] = valor_padrao
+
+
 
             else:
                 df_parcelas = pd.DataFrame(
@@ -2432,6 +2311,26 @@ with cron_desemb:
             # Garantir coluna valor
             # -----------------------------------
             df_parcelas["valor"] = df_parcelas["valor"].fillna(0.0)
+
+
+            # -----------------------------------
+            # Garantir coluna de entregas
+            # -----------------------------------
+            if "entregas" not in df_parcelas.columns:
+                df_parcelas["entregas"] = pd.Series(dtype="object")
+
+            # -----------------------------------
+            # Garantir listas na coluna
+            # -----------------------------------
+            if not df_parcelas.empty:
+                df_parcelas["entregas"] = (
+                    df_parcelas["entregas"]
+                    .apply(lambda x: x if isinstance(x, list) else [])
+                    .astype("object")
+                )
+            else:
+                df_parcelas["entregas"] = df_parcelas["entregas"].astype("object")
+
 
 
             # -----------------------------------
@@ -2477,7 +2376,7 @@ with cron_desemb:
                     ]
                 ],
                 num_rows="dynamic",
-                width=800,
+                # width=800,
                 column_config={
                     "numero": st.column_config.NumberColumn(
                         "Número",
