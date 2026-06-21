@@ -520,6 +520,8 @@ else:
             st.Page("projeto_salvaguardas.py", title="Salvaguardas", icon=":material/health_and_safety:"),
 
             st.Page("projeto_financeiro.py", title="Financeiro", icon=":material/payments:"),
+            st.Page("projeto_eventos.py", title="Eventos", icon=":material/event:"),
+
             st.Page("projeto_locais.py", title="Locais", icon=":material/map:"),
             st.Page("projeto_relatorios.py", title="Relatórios", icon=":material/edit_note:"),
             st.Page("projeto_fotos.py", title="Fotos", icon=":material/image:"),
@@ -530,7 +532,6 @@ else:
         "ben_selec_projeto": [
                 st.Page("ben_selec_projeto.py", title="Selecione o projeto", icon=":material/assignment:"),
             ],
-       
 
         
     }

@@ -2,6 +2,8 @@ import re
 import streamlit as st
 from bson import ObjectId
 import time
+from streamlit_calendar import calendar
+
 
 from funcoes_auxiliares import (
     conectar_mongo_cepf_gestao,
