@@ -1861,6 +1861,41 @@ with cron_desemb:
 
             percentual = parcela.get("percentual") or 0
 
+
+
+
+            # --------------------------------------------------
+            # Datas do relatório associado à parcela
+            # --------------------------------------------------
+            relatorio = mapa_relatorios.get(numero, {})
+
+            data_prevista_relatorio = relatorio.get("data_prevista")
+            data_envio_relatorio = relatorio.get("data_envio")
+
+            if data_envio_relatorio:
+
+                data_entrega_relatorio = (
+                    pd.to_datetime(
+                        data_envio_relatorio,
+                        errors="coerce"
+                    ).strftime("%d/%m/%Y :material/check:")
+                )
+
+            elif data_prevista_relatorio:
+
+                data_entrega_relatorio = (
+                    pd.to_datetime(
+                        data_prevista_relatorio,
+                        errors="coerce"
+                    ).strftime("%d/%m/%Y :material/schedule:")
+                )
+
+            else:
+
+                data_entrega_relatorio = ""
+
+
+
             # --------------------------------------------------
             # Relatório associado à parcela
             # Regra atual: número da parcela = número relatório
@@ -1916,7 +1951,7 @@ with cron_desemb:
 
                     "Percentual (%)": percentual_fmt,
 
-                    "Data Entrega": "",
+                    "Data Entrega do Relatório": data_entrega_relatorio,
 
                     "Data Aprovação": "",
 
@@ -1968,7 +2003,8 @@ with cron_desemb:
 
             h4.write("**Percentual (%)**")
 
-            h5.write("**Data Entrega**")
+            # h5.write("**Data Entrega**")
+            h5.write("**Data de entrega do relatório**")
 
             h6.write("**Data Aprovação**")
 
@@ -2026,7 +2062,7 @@ with cron_desemb:
                 # Datas
                 # -----------------------------------
                 c5.write(
-                    row["Data Entrega"]
+                    row["Data Entrega do Relatório"]
                 )
 
                 c6.write(
