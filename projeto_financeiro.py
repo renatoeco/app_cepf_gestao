@@ -1862,7 +1862,29 @@ with cron_desemb:
             percentual = parcela.get("percentual") or 0
 
 
+            # --------------------------------------------------
+            # Data do desembolso
+            # Se ainda não houve desembolso, utiliza a data
+            # prevista da parcela.
+            # --------------------------------------------------
+            data_prevista_parcela = parcela.get("data_prevista")
+            data_realizada_parcela = parcela.get("data_realizada")
 
+            if data_realizada_parcela:
+
+                data_desembolso = (
+                    f"{data_realizada_parcela} :material/check:"
+                )
+
+            elif data_prevista_parcela:
+
+                data_desembolso = (
+                    f"{data_prevista_parcela} :material/schedule:"
+                )
+
+            else:
+
+                data_desembolso = ""
 
 
             # --------------------------------------------------
@@ -1981,14 +2003,8 @@ with cron_desemb:
 
                     "Data de aprovação do relatório": data_aprovacao,
 
-                    "Data Desembolso": (
-                        pd.to_datetime(
-                            parcela.get("data_realizada"),
-                            errors="coerce"
-                        ).strftime("%d/%m/%Y :material/check:")
-                        if parcela.get("data_realizada")
-                        else ""
-                    )
+                    "Data do desembolso": data_desembolso
+
                 }
             )
 
@@ -2034,7 +2050,7 @@ with cron_desemb:
 
             h6.write("**Data de aprovação do relatório**")
 
-            h7.write("**Data Desembolso**")
+            h7.write("**Data do desembolso**")
 
             st.write("")
 
@@ -2096,7 +2112,7 @@ with cron_desemb:
                 )
 
                 c7.write(
-                    row["Data Desembolso"]
+                    row["Data do desembolso"]
                 )
 
                 st.divider()
