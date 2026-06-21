@@ -3207,7 +3207,6 @@ aba_selecionada = sac.tabs(
     align="left",
     variant="outline",
     key="tabs_relatorios"
-    # size="xl"
 )
 
 idx = labels_relatorios.index(aba_selecionada)

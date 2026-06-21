@@ -4,6 +4,8 @@ from st_rsuite import date_picker
 import datetime
 from bson import ObjectId
 import time
+from streamlit_calendar import calendar
+import streamlit_antd_components as sac
 
 
 from funcoes_auxiliares import (
@@ -34,6 +36,9 @@ db = conectar_mongo_cepf_gestao()
 
 # Coleção de projetos
 col_projetos = db["projetos"]
+
+# Coleção de organizações
+col_organizacoes = db["organizacoes"]
 
 
 
@@ -68,6 +73,183 @@ projeto = col_projetos.find_one(
 
 
 
+###################################################################################################
+# CARREGA TODOS OS PROJETOS DO EDITAL
+###################################################################################################
+
+codigo_edital = df_projeto["edital"].iloc[0]
+projetos_edital = list(
+    col_projetos.find(
+        {
+            "edital": codigo_edital
+        },
+        {
+            "codigo": 1,
+            "sigla": 1,
+            "id_organizacao": 1,
+            "eventos": 1
+        }
+    )
+)
+
+
+###################################################################################################
+# CARREGA AS ORGANIZAÇÕES
+###################################################################################################
+
+organizacoes = {
+    organizacao["_id"]: organizacao["nome_organizacao"]
+    for organizacao in col_organizacoes.find(
+        {},
+        {
+            "nome_organizacao": 1
+        }
+    )
+}
+
+
+
+###########################################################################################################
+# FUNÇÕES
+###########################################################################################################
+
+
+# Função para montar os eventos do calendário
+def montar_eventos_calendario():
+
+    eventos_calendario = []
+
+    for projeto in projetos_edital:
+
+        codigo_projeto = projeto.get("codigo")
+        sigla = projeto.get("sigla", codigo_projeto)
+
+
+        id_organizacao = projeto.get("id_organizacao")
+
+        nome_organizacao = organizacoes.get(
+            id_organizacao,
+            ""
+        )
+
+        cor = "#2E7D32" if codigo_projeto == codigo_projeto_atual else "#E0C85C"
+
+        for evento in projeto.get("eventos", []):
+
+            data_inicio = evento.get("data_inicio")
+            data_fim = evento.get("data_fim")
+
+            if not data_inicio or not data_fim:
+                continue
+
+            eventos_calendario.append({
+
+                "id": evento["id"],
+
+                "title": f"{sigla} - {evento['nome_evento']}",
+
+                "start": data_inicio.date().isoformat(),
+
+                # FullCalendar utiliza data final exclusiva
+                "end": (
+                    data_fim + datetime.timedelta(days=1)
+                ).date().isoformat(),
+
+                "allDay": True,
+
+                "backgroundColor": cor,
+                "borderColor": cor,
+
+                "extendedProps": {
+
+                    "codigo_projeto": codigo_projeto,
+                    "sigla": sigla,
+
+                    "organizacao": nome_organizacao,
+
+                    "nome_evento": evento.get("nome_evento"),
+                    "descricao": evento.get("descricao"),
+
+                    "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+                    "data_fim": data_fim.strftime("%d/%m/%Y"),
+
+                    "local": evento.get("local"),
+                    "municipio_uf": evento.get("municipio_uf"),
+
+                    "links_divulgacao": evento.get("links_divulgacao", []),
+
+                    "data_cadastro": evento.get("data_cadastro").strftime("%d/%m/%Y %H:%M")
+                    if evento.get("data_cadastro")
+                    else ""
+                }
+
+            })
+
+    return eventos_calendario
+
+
+
+
+
+
+###################################################################################################
+# DIÁLOGO DE DETALHES DO EVENTO
+###################################################################################################
+
+@st.dialog("Detalhes do evento", width="large")
+def dialog_evento(evento):
+
+    props = evento["extendedProps"]
+
+    st.subheader(props["nome_evento"])
+
+    
+
+    col1, col2 = st.columns(2)
+
+    col1.write(f"**Projeto:** {props['sigla']}")
+
+    col2.write(f"**Organização:** {props['organizacao']}")
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    col1.write(
+        f"**Período:** {props['data_inicio']} a {props['data_fim']}"
+    )
+
+    col1, col2 = st.columns(2)
+
+
+    col1.write(f"**Local:** {props['local']}")
+
+    col2.write(f"**Município / UF:** {props['municipio_uf']}")
+    
+    
+
+    st.write("**Descrição**")
+
+    st.write(props["descricao"])
+
+    if props["links_divulgacao"]:
+
+        st.write("**Links de divulgação**")
+
+        for link in props["links_divulgacao"]:
+
+            st.link_button(
+                label=link,
+                url=link,
+                icon=":material/link:",
+                type="tertiary"
+            )
+
+    
+
+    st.caption(
+        f"Cadastrado em {props['data_cadastro']}"
+    )
 
 
 
@@ -97,25 +279,73 @@ with col_identificacao:
 st.write('')
 
 
-
-
-aba_calendario, aba_eventos = st.tabs(
-    ["Agenda", "Divulgar eventos"]
+aba_selecionada = sac.tabs(
+    items=[
+        sac.TabsItem(label="Agenda"),
+        sac.TabsItem(label="Divulgar eventos")
+    ],
+    align="left",
+    variant="outline",
+    key="tabs_eventos"
 )
 
 
 
+if aba_selecionada == "Agenda":
 
-with aba_calendario:
 
-    st.write('')
+
+    st.write("")
 
     st.subheader("Agenda de eventos do edital")
 
+    eventos = montar_eventos_calendario()
+
+    calendar_options = {
+
+        "locale": "pt-br",
+
+        "headerToolbar": {
+            "left": "today prev,next",
+            "center": "title",
+            "right": "dayGridMonth,timeGridWeek,listMonth"
+        },
+
+        "buttonText": {
+            "today": "Hoje",
+            "month": "Mês",
+            "week": "Semana",
+            "list": "Lista"
+        },
+
+        "initialView": "dayGridMonth",
+
+        "editable": False,
+
+        "selectable": False,
+
+        "height": 700
+    }
+
+
+    estado = calendar(
+        events=eventos,
+        options=calendar_options,
+    )
+
+    if estado.get("eventClick"):
+
+        dialog_evento(
+            estado["eventClick"]["event"]
+        )
 
 
 
-with aba_eventos:
+
+
+
+elif aba_selecionada == "Divulgar eventos":
+
 
     st.write("")
 
