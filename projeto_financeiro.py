@@ -1892,7 +1892,34 @@ with cron_desemb:
                 data_entrega_relatorio = ""
 
 
+            # --------------------------------------------------
+            # Data de aprovação do relatório
+            # Se ainda não houver aprovação, considera a data
+            # prevista acrescida de 14 dias.
+            # --------------------------------------------------
+            data_aprovacao_relatorio = relatorio.get("data_aprovacao")
 
+            if data_aprovacao_relatorio:
+
+                data_aprovacao = (
+                    f"{data_aprovacao_relatorio} :material/check:"
+                )
+
+            elif data_prevista_relatorio:
+
+                data_base = datetime.datetime.strptime(
+                    data_prevista_relatorio,
+                    "%d/%m/%Y"
+                )
+
+                data_aprovacao = (
+                    f"{(data_base + datetime.timedelta(days=14)).strftime('%d/%m/%Y')} "
+                    ":material/schedule:"
+                )
+
+            else:
+
+                data_aprovacao = ""
 
 
             # --------------------------------------------------
@@ -1952,7 +1979,7 @@ with cron_desemb:
 
                     "Data Entrega do Relatório": data_entrega_relatorio,
 
-                    "Data Aprovação": "",
+                    "Data de aprovação do relatório": data_aprovacao,
 
                     "Data Desembolso": (
                         pd.to_datetime(
@@ -2005,7 +2032,7 @@ with cron_desemb:
             # h5.write("**Data Entrega**")
             h5.write("**Data de entrega do relatório**")
 
-            h6.write("**Data Aprovação**")
+            h6.write("**Data de aprovação do relatório**")
 
             h7.write("**Data Desembolso**")
 
@@ -2065,7 +2092,7 @@ with cron_desemb:
                 )
 
                 c6.write(
-                    row["Data Aprovação"]
+                    row["Data de aprovação do relatório"]
                 )
 
                 c7.write(
