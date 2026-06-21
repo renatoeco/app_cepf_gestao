@@ -486,11 +486,6 @@ with tab4:
             codigo_edital = col1.text_input("Codigo do edital: *")
             nome_edital = st.text_input("Nome do edital: *")
 
-            # Campo para código iframe da agenda Google
-            eventos_iframe = st.text_input(
-                "Código <iframe> para incorporar a agenda Google: *",
-            )
-
             codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
             codigos_ciclos.insert(0, "")  # adiciona uma opção vazia
 
@@ -517,7 +512,7 @@ with tab4:
             if submit:
 
                 # Validação de campos obrigatórios
-                if not codigo_edital or not nome_edital or not data_lancamento or not ciclo or not eventos_iframe:
+                if not codigo_edital or not nome_edital or not data_lancamento or not ciclo:
                     st.error("Todos os campos devem ser preenchidos.")
 
                 else:
@@ -538,7 +533,6 @@ with tab4:
                             "nome_edital": nome_edital,
                             "data_lancamento": data_lancamento_dt,
                             "ciclo_investimento": ciclo,
-                            "eventos_iframe": eventos_iframe
 
                         }
                         col_editais.insert_one(novo_edital)
@@ -585,12 +579,6 @@ with tab4:
                     nome_edital = st.text_input(
                         "Nome do edital: *",
                         value=edital.get("nome_edital", "")
-                    )
-
-                    # Campo para código iframe da agenda Google
-                    eventos_iframe = st.text_input(
-                        "Código <iframe> para incorporar a agenda Google: *",
-                        value=edital.get("eventos_iframe", ""),
                     )
 
                     # Ciclo de investimento vinculado
@@ -640,7 +628,7 @@ with tab4:
 
                     if submit_editar:
                         # Validação de campos obrigatórios
-                        if not nome_edital or not ciclo or not eventos_iframe:
+                        if not nome_edital or not ciclo:
                             st.error("Todos os campos obrigatórios devem ser preenchidos.")
 
                         else:
@@ -653,7 +641,6 @@ with tab4:
                                     "ciclo_investimento": ciclo,
                                     "investidores": investidor,
                                     "doadores": doador,
-                                    "eventos_iframe": eventos_iframe,
 
                                 }}
                             )
