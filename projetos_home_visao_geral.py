@@ -1,5 +1,5 @@
 import streamlit as st
-from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao
+from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_projetos, registrar_estatistica_sessao, verificar_envio_lembrete_eventos
 import plotly.express as px
 import pandas as pd
 import datetime
@@ -41,7 +41,8 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
 
-
+# Variáveis 
+col_variaveis = db.variaveis
 
 
 
@@ -160,8 +161,14 @@ if not df_projetos.empty:
 
 
 
+###########################################################################################################
+# VERIFICA O ENVIO AUTOMÁTICO DOS LEMBRETES DE EVENTOS
+###########################################################################################################
 
-
+verificar_envio_lembrete_eventos(
+    col_variaveis=col_variaveis,
+    db=db
+)
 
 
 

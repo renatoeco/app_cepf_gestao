@@ -5,6 +5,9 @@ import pandas as pd
 import io
 import re
 from num2words import num2words
+from pymongo import ReturnDocument
+import time
+
 
 # Google Drive API
 from google.oauth2.service_account import Credentials
@@ -16,6 +19,522 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
+
+
+
+
+
+
+###########################################################################################################
+# GERA O E-MAIL DE LEMBRETE DE CADASTRO DE EVENTOS
+###########################################################################################################
+
+def gerar_email_lembrete_eventos(
+    logo_url: str
+):
+    """
+    Gera o corpo HTML do e-mail de lembrete para cadastro de eventos.
+    """
+
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }}
+
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-top: 6px solid #A0C256;
+            padding: 30px;
+        }}
+
+        .logo {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+
+        .content {{
+            color: #333;
+            font-size: 15px;
+            line-height: 1.6;
+        }}
+
+        .footer {{
+            margin-top: 40px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }}
+
+        .highlight {{
+            color: #A0C256;
+            font-weight: bold;
+        }}
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="logo">
+            <img src="{logo_url}" height="70" alt="IEB">
+        </div>
+
+        <div class="content">
+
+            <p>
+                Olá,
+            </p>
+
+            <p>
+                Esta é uma mensagem automática para lembrar que é necessário cadastrar os
+                <span class="highlight">Eventos</span> relacionados ao projeto apoiado pelo IEB
+                na página de Eventos do Sistema Veredas.
+            </p>
+
+            <p>
+                Quando os eventos são divulgados, todas as organizações apoiadas têm acesso às
+                informações por meio da agenda compartilhada do sistema.
+            </p>
+
+            <p>
+                Atenciosamente,
+            </p>
+
+            <p>
+                <a
+                    href="https://veredas.streamlit.app/"
+                    target="_blank"
+                    style="text-decoration: none;"
+                >
+                    Sistema Veredas
+                </a>
+            </p>
+
+        </div>
+
+        <div class="footer">
+            Este é um e-mail automático. Não responda.
+        </div>
+
+    </div>
+
+</body>
+
+</html>
+"""
+
+
+
+
+###########################################################################################################
+# VERIFICA A NECESSIDADE DE ENVIO DOS LEMBRETES DE EVENTOS
+###########################################################################################################
+
+def verificar_envio_lembrete_eventos(
+    db,
+    col_variaveis
+):
+    """
+    Verifica se já passou o intervalo configurado para envio do
+    lembrete de cadastro de eventos e, quando necessário,
+    adquire um lock atômico para impedir envios simultâneos.
+    """
+
+
+    ###################################################################################################
+    # CARREGA A CONFIGURAÇÃO
+    ###################################################################################################
+
+    config = col_variaveis.find_one(
+        {
+            "nome_variavel": "intervalo_dias_mail_eventos"
+        }
+    )
+
+    if not config:
+        return
+
+    intervalo_dias = int(
+        config.get(
+            "dias",
+            0
+        )
+    )
+
+    ###################################################################################################
+    # LEMBRETE DESATIVADO
+    ###################################################################################################
+
+    if intervalo_dias == 0:
+        return
+
+    ###################################################################################################
+    # VERIFICA SE JÁ EXISTE UM ENVIO EM ANDAMENTO
+    ###################################################################################################
+
+    if config.get("envio_em_andamento"):
+        return
+
+    ###################################################################################################
+    # VERIFICA O INTERVALO DESDE O ÚLTIMO ENVIO
+    ###################################################################################################
+
+    # agora = datetime.datetime.now()
+
+    # Data fixa para testes
+    agora = datetime.datetime(
+        2026,
+        6,
+        20
+    )
+
+
+
+    ultimo_envio = config.get(
+        "email_enviado_em"
+    )
+
+    if ultimo_envio:
+
+        dias_desde_ultimo_envio = (
+            agora - ultimo_envio
+        ).days
+
+        if dias_desde_ultimo_envio < intervalo_dias:
+            return
+
+    ###################################################################################################
+    # ADQUIRE O LOCK ATÔMICO
+    ###################################################################################################
+
+
+    filtro = {
+
+        "nome_variavel": "intervalo_dias_mail_eventos",
+
+        "dias": {
+            "$gt": 0
+        },
+
+        "envio_em_andamento": {
+            "$exists": False
+        }
+
+    }
+
+
+
+
+    limite = (
+        agora -
+        datetime.timedelta(
+            days=intervalo_dias
+        )
+    )
+
+    filtro["$or"] = [
+
+        {
+            "email_enviado_em": {
+                "$exists": False
+            }
+        },
+
+        {
+            "email_enviado_em": {
+                "$lte": limite
+            }
+        }
+
+    ]
+
+
+
+
+    config_lock = col_variaveis.find_one_and_update(
+
+        filtro,
+
+        {
+            "$set": {
+                "envio_em_andamento": agora
+            }
+        },
+
+        return_document=ReturnDocument.AFTER
+
+    )
+
+    ###################################################################################################
+    # OUTRO USUÁRIO JÁ ADQUIRIU O LOCK
+    ###################################################################################################
+
+    if config_lock is None:
+        return
+
+    ###################################################################################################
+    # ENVIO DOS E-MAILS
+    ###################################################################################################
+
+    with st.spinner(
+        "Enviando e-mails de lembrete de Eventos. Aguarde, não recarregue a página."
+    ):
+
+
+        ###################################################################################################
+        # CARREGA OS PROJETOS NECESSÁRIOS PARA O CÁLCULO DOS STATUS
+        ###################################################################################################
+
+        projetos = list(
+
+            db.projetos.find(
+
+                {},
+
+                {
+
+                    "codigo": 1,
+                    "sigla": 1,
+                    "status": 1,
+                    "financeiro.parcelas": 1,
+                    "relatorios": 1,
+                    "contatos": 1
+
+                }
+
+            )
+
+        )
+
+
+
+        if not projetos:
+
+            col_variaveis.update_one(
+                {
+                    "nome_variavel": "intervalo_dias_mail_eventos"
+                },
+                {
+                    "$unset": {
+                        "envio_em_andamento": ""
+                    }
+                }
+            )
+
+            return
+
+        ###################################################################################################
+        # CALCULA O STATUS DOS PROJETOS
+        ###################################################################################################
+
+        df_projetos = pd.DataFrame(projetos)
+
+        df_projetos = calcular_status_projetos(
+            df_projetos
+        )
+
+        ###################################################################################################
+        # FILTRA APENAS PROJETOS EM DIA E ATRASADOS
+        ###################################################################################################
+
+        df_projetos = df_projetos[
+            df_projetos["status"].isin(
+                [
+                    "Em dia",
+                    "Atrasado"
+                ]
+            )
+        ]
+
+        if df_projetos.empty:
+
+            col_variaveis.update_one(
+                {
+                    "nome_variavel": "intervalo_dias_mail_eventos"
+                },
+                {
+                    "$unset": {
+                        "envio_em_andamento": ""
+                    }
+                }
+            )
+
+            return
+
+        ###################################################################################################
+        # MONTA A LISTA DE DESTINATÁRIOS DOS PROJETOS
+        ###################################################################################################
+
+        destinatarios = set()
+
+        for _, projeto in df_projetos.iterrows():
+
+            contatos = projeto.get("contatos")
+
+            if not isinstance(contatos, list):
+                continue
+
+            for contato in contatos:
+
+                if not isinstance(contato, dict):
+                    continue
+
+                email = (
+                    contato.get("email", "")
+                    .strip()
+                    .lower()
+                )
+
+                if not email:
+                    continue
+
+                destinatarios.add(email)
+
+        ###################################################################################################
+        # ADICIONA OS ADMINISTRADORES ATIVOS
+        ###################################################################################################
+
+        administradores = db.pessoas.find(
+            {
+                "status": "ativo",
+                "tipo_usuario": "admin"
+            },
+            {
+                "nome_completo": 1,
+                "e_mail": 1
+            }
+        )
+
+        for admin in administradores:
+
+            email = (
+                admin.get("e_mail", "")
+                .strip()
+                .lower()
+            )
+
+            if not email:
+                continue
+
+            destinatarios.add(email)
+
+        ###################################################################################################
+        # VERIFICA SE EXISTEM DESTINATÁRIOS
+        ###################################################################################################
+
+        if not destinatarios:
+
+            col_variaveis.update_one(
+                {
+                    "nome_variavel": "intervalo_dias_mail_eventos"
+                },
+                {
+                    "$unset": {
+                        "envio_em_andamento": ""
+                    }
+                }
+            )
+
+            return
+
+
+        ###################################################################################################
+        # ENVIA O E-MAIL
+        ###################################################################################################
+
+        assunto = (
+            "Lembrete de cadastro de Eventos - Sistema Veredas"
+        )
+
+        logo_url = "https://iieb.org.br/wp-content/uploads/2021/02/IEB-logo.svg"
+
+        corpo_html = gerar_email_lembrete_eventos(
+            logo_url=logo_url
+        )
+
+        envio_ok = enviar_email(
+
+            corpo_html=corpo_html,
+
+            destinatarios=sorted(
+                destinatarios
+            ),
+
+            assunto=assunto,
+
+            copia_oculta=True
+
+        )
+
+
+        ###################################################################################################
+        # FINALIZA O PROCESSAMENTO
+        ###################################################################################################
+
+
+        if envio_ok:
+
+            col_variaveis.update_one(
+
+                {
+                    "_id": config_lock["_id"]
+                },
+
+                {
+                    "$set": {
+                        "email_enviado_em": agora
+                    },
+
+                    "$unset": {
+                        "envio_em_andamento": ""
+                    }
+
+                }
+
+            )
+
+            st.success(
+                "E-mails de lembrete de Eventos enviados com sucesso."
+            )
+
+            time.sleep(3)
+
+        else:
+
+            col_variaveis.update_one(
+
+                {
+                    "_id": config_lock["_id"]
+                },
+
+                {
+                    "$unset": {
+                        "envio_em_andamento": ""
+                    }
+
+                }
+
+            )
+
+            st.error(
+                "Ocorreu um erro durante o envio dos e-mails."
+            )
+
+            time.sleep(3)
+
+
 
 
 
@@ -335,15 +854,24 @@ def numero_ordinal_pt(numero: int) -> str:
 # FUNÇÃO PARA ENVIAR E-MAIL
 ###########################################################################################################
 
+###########################################################################################################
+# FUNÇÃO PARA ENVIAR E-MAIL
+###########################################################################################################
 
-def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
+def enviar_email(
+    corpo_html: str,
+    destinatarios: list[str],
+    assunto: str,
+    copia_oculta: bool = False
+):
     """
-    Envia e-mail em HTML usando configurações do st.secrets
-    
+    Envia e-mail em HTML usando configurações do st.secrets.
+
     Parâmetros:
-        corpo_html (str): Conteúdo do e-mail em HTML
-        destinatarios (list[str]): Lista de e-mails de destino
-        assunto (str): Assunto do e-mail
+        corpo_html (str): Conteúdo do e-mail em HTML.
+        destinatarios (list[str]): Lista de destinatários.
+        assunto (str): Assunto do e-mail.
+        copia_oculta (bool): Quando True, envia utilizando BCC.
     """
 
     # Lendo segredos
@@ -354,30 +882,116 @@ def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
 
     # Criando mensagem
     msg = MIMEMultipart()
-    # msg["From"] = endereco_email
-    msg["From"] = formataddr(("Sistema Veredas", endereco_email))
-    msg["To"] = ", ".join(destinatarios)
+
+    msg["From"] = formataddr(
+        (
+            "Sistema Veredas",
+            endereco_email
+        )
+    )
+
+    # Define destinatários visíveis
+    if copia_oculta:
+
+        msg["To"] = endereco_email
+
+    else:
+
+        msg["To"] = ", ".join(destinatarios)
+
     msg["Subject"] = assunto
 
-    msg.attach(MIMEText(corpo_html, "html"))
+    msg.attach(
+        MIMEText(
+            corpo_html,
+            "html"
+        )
+    )
 
     # Enviando
     try:
-        with smtplib.SMTP(smtp_server, port) as server:
-            server.starttls()
-            server.login(endereco_email, senha_email)
 
-            server.sendmail(
+        with smtplib.SMTP(
+            smtp_server,
+            port
+        ) as server:
+
+            server.starttls()
+
+            server.login(
                 endereco_email,
-                destinatarios,
-                msg.as_string()
+                senha_email
             )
+
+            if copia_oculta:
+
+                server.sendmail(
+                    endereco_email,
+                    destinatarios,
+                    msg.as_string()
+                )
+
+            else:
+
+                server.sendmail(
+                    endereco_email,
+                    destinatarios,
+                    msg.as_string()
+                )
 
         return True
 
     except Exception as e:
-        st.error(f"Erro ao enviar e-mail: {e}")
+
+        st.error(
+            f"Erro ao enviar e-mail: {e}"
+        )
+
         return False
+
+
+# def enviar_email(corpo_html: str, destinatarios: list[str], assunto: str):
+#     """
+#     Envia e-mail em HTML usando configurações do st.secrets
+    
+#     Parâmetros:
+#         corpo_html (str): Conteúdo do e-mail em HTML
+#         destinatarios (list[str]): Lista de e-mails de destino
+#         assunto (str): Assunto do e-mail
+#     """
+
+#     # Lendo segredos
+#     smtp_server = st.secrets["senhas"]["smtp_server"]
+#     port = st.secrets["senhas"]["port"]
+#     endereco_email = st.secrets["senhas"]["endereco_email"]
+#     senha_email = st.secrets["senhas"]["senha_email"]
+
+#     # Criando mensagem
+#     msg = MIMEMultipart()
+#     # msg["From"] = endereco_email
+#     msg["From"] = formataddr(("Sistema Veredas", endereco_email))
+#     msg["To"] = ", ".join(destinatarios)
+#     msg["Subject"] = assunto
+
+#     msg.attach(MIMEText(corpo_html, "html"))
+
+#     # Enviando
+#     try:
+#         with smtplib.SMTP(smtp_server, port) as server:
+#             server.starttls()
+#             server.login(endereco_email, senha_email)
+
+#             server.sendmail(
+#                 endereco_email,
+#                 destinatarios,
+#                 msg.as_string()
+#             )
+
+#         return True
+
+#     except Exception as e:
+#         st.error(f"Erro ao enviar e-mail: {e}")
+#         return False
 
 
 
