@@ -299,7 +299,7 @@ if submit:
             "data_fim_contrato": data_fim.strftime("%d/%m/%Y"),
             # "direcoes_estrategicas": direcoes,
             "publicos": publicos,
-            "status": "Em dia"
+            # "status": "Em dia"
         })
 
         ###################################################################################################

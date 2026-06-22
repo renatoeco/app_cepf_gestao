@@ -187,55 +187,6 @@ def dialog_evento(evento):
         )
 
 
-# @st.dialog(
-#     "Detalhes do evento",
-#     width="large"
-# )
-# def dialog_evento(evento):
-
-#     props = evento["extendedProps"]
-
-#     st.subheader(props["nome_evento"])
-
-#     st.caption(props["sigla"])
-
-#     st.write(f"**Edital:** {props['edital']}")
-
-#     st.write(f"**Organização:** {props['organizacao']}")
-
-#     col1, col2 = st.columns(2)
-
-#     col1.write(
-#         f"**Período:** {props['data_inicio']} a {props['data_fim']}"
-#     )
-
-#     col2.write(
-#         f"**Município / UF:** {props['municipio_uf']}"
-#     )
-
-#     st.write(f"**Local:** {props['local']}")
-
-#     st.write("**Descrição**")
-
-#     st.write(props["descricao"])
-
-#     if props["links_divulgacao"]:
-
-#         st.write("**Links de divulgação**")
-
-#         for link in props["links_divulgacao"]:
-
-#             st.link_button(
-#                 label=link,
-#                 url=link,
-#                 icon=":material/link:"
-#             )
-
-#     if props["data_cadastro"]:
-
-#         st.caption(
-#             f"Cadastrado em {props['data_cadastro']}"
-#         )
 
 
 ###########################################################################################################
@@ -332,26 +283,6 @@ def montar_eventos_calendario(projetos):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
@@ -433,11 +364,7 @@ with col2:
         # Popover de configuração
         with st.popover(texto_popover):
 
-        # # Popover de configuração
-        # with st.popover(
-        #     f"Lembrete enviado a cada **{intervalo_dias_mail_eventos}** dias",
-        #     width=300
-        # ):
+
 
             # Input do intervalo
             intervalo_dias_input = st.number_input(
