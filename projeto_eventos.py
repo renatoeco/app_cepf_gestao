@@ -232,20 +232,32 @@ def dialog_evento(evento):
 
     st.write(props["descricao"])
 
+
+    # RENDERIZA OS LINKS DE DIVULGAÇÃO
     if props["links_divulgacao"]:
 
         st.write("**Links de divulgação**")
 
         for link in props["links_divulgacao"]:
 
+            link_exibicao = link.strip()
+
+            url = link_exibicao
+
+            if (
+                url
+                and not url.startswith("http://")
+                and not url.startswith("https://")
+            ):
+
+                url = f"https://{url}"
+
             st.link_button(
-                label=link,
-                url=link,
+                label=link_exibicao,
+                url=url,
                 icon=":material/link:",
                 type="tertiary"
             )
-
-    
 
     st.caption(
         f"Cadastrado em {props['data_cadastro']}"
