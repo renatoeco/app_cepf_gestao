@@ -231,12 +231,12 @@ st.write('')
 # EDITAIS ------------------------------------------------------
 st.subheader(pluralizar(len(df_editais_filtrado), "edital", "editais"))
 
-# Formata a coluna para dd/mm/yyyy
-if "Data de Lançamento" in df_editais_filtrado.columns:
-    df_editais_filtrado["Data de Lançamento"] = (
-        pd.to_datetime(df_editais_filtrado["Data de Lançamento"])
-        .dt.strftime("%d/%m/%Y")
-    )
+# # Formata a coluna para dd/mm/yyyy
+# if "Data de Lançamento" in df_editais_filtrado.columns:
+#     df_editais_filtrado["Data de Lançamento"] = (
+#         pd.to_datetime(df_editais_filtrado["Data de Lançamento"])
+#         .dt.strftime("%d/%m/%Y")
+#     )
 
 st.dataframe(
     df_editais_filtrado,

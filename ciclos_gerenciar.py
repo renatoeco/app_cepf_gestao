@@ -517,8 +517,6 @@ with tab4:
 
                 else:
 
-                    # Converte para datetime com hora zero
-                    data_lancamento_dt = datetime.datetime.combine(data_lancamento, datetime.datetime.min.time())
 
                     # Verifica se codigo já existe
                     codigo_existente = col_editais.find_one({"codigo_edital": codigo_edital})
@@ -531,7 +529,7 @@ with tab4:
                         novo_edital = {
                             "codigo_edital": codigo_edital,
                             "nome_edital": nome_edital,
-                            "data_lancamento": data_lancamento_dt,
+                            "data_lancamento": data_lancamento.strftime("%d/%m/%Y"),                            
                             "ciclo_investimento": ciclo,
 
                         }
@@ -596,16 +594,13 @@ with tab4:
                     with col3:
 
                         # Data de lançamento
-                        data_lancamento = edital.get("data_lancamento")
-                        if isinstance(data_lancamento, str):
-                            try:
-                                from datetime import datetime
-                                data_lancamento = datetime.strptime(data_lancamento, "%d/%m/%Y").date()
-                            except:
-                                data_lancamento = None
-                        elif data_lancamento:
-                            data_lancamento = data_lancamento.date()
-                        
+
+                        data_lancamento = datetime.datetime.strptime(
+                            edital["data_lancamento"],
+                            "%d/%m/%Y"
+                        ).date()
+
+
                         
                         data_lancamento = date_picker(
                             label="Data de lançamento",
