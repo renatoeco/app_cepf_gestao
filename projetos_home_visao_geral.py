@@ -41,8 +41,6 @@ df_projetos = pd.DataFrame(list(col_projetos.find()))
 col_editais = db["editais"]
 df_editais = pd.DataFrame(list(col_editais.find()))
 
-# Variáveis 
-col_variaveis = db.variaveis
 
 
 
@@ -165,12 +163,11 @@ if not df_projetos.empty:
 # VERIFICA O ENVIO AUTOMÁTICO DOS LEMBRETES DE EVENTOS
 ###########################################################################################################
 
+
+
 verificar_envio_lembrete_eventos(
-    col_variaveis=col_variaveis,
     db=db
 )
-
-
 
 
 ###########################################################################################################

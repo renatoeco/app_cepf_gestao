@@ -37,24 +37,26 @@ db = conectar_mongo_cepf_gestao()
 # CARREGAMENTO DOS EDITAIS
 ###########################################################################################################
 
-# Obtém todos os editais cadastrados
 editais = list(
     db.editais.find(
         {},
         {
-            "codigo_edital": 1
+            "_id": 1,
+            "codigo_edital": 1,
+            "dias_intervalo_lembrete_eventos": 1
         }
     ).sort("codigo_edital", 1)
 )
 
 
-# Mapeamento do código do edital para o ID
+###########################################################################################################
+# MAPEAMENTO DOS EDITAIS
+###########################################################################################################
+
 mapa_editais = {
-    edital["codigo_edital"]: str(edital["_id"])
+    edital["codigo_edital"]: edital
     for edital in editais
 }
-
-
 
 
 
@@ -329,97 +331,110 @@ with col1:
 
 with col2:
 
-    st.write('')
-
-
-    ###########################################################################################################
-    # CONFIGURAÇÃO DO INTERVALO DE E-MAILS
-    ###########################################################################################################
-
-    # Obtém configuração salva
-    config_intervalo = db.variaveis.find_one(
-        {
-            "nome_variavel": "intervalo_dias_mail_eventos"
-        }
-    )
-
-
-    # Valor atual do intervalo
-    intervalo_dias_mail_eventos = 0
-
-    if config_intervalo:
-        intervalo_dias_mail_eventos = config_intervalo.get(
-            "dias",
-            0
-        )
-
+    st.write("")
 
     with st.container(horizontal=True, horizontal_alignment="right"):
 
-        # Texto do popover
-        texto_popover = (
-            "Email de lembrete desativado"
-            if intervalo_dias_mail_eventos == 0
-            else f"Lembrete enviado a cada **{intervalo_dias_mail_eventos}** dias"
-        )
+        ###################################################################################################
+        # POPOVER DE CONFIGURAÇÃO
+        ###################################################################################################
 
+        with st.popover(
+            "Gerenciar lembretes",
+            icon=":material/email:"
+        ):
 
-        # Popover de configuração
-        with st.popover(texto_popover):
+            ###################################################################################################
+            # SELEÇÃO DO EDITAL
+            ###################################################################################################
 
+            codigo_edital_lembrete = st.selectbox(
+                "Edital",
+                options=sorted(mapa_editais.keys()),
+                key="selectbox_edital_lembrete"
+            )
 
+            edital_selecionado = mapa_editais[
+                codigo_edital_lembrete
+            ]
 
-            # Input do intervalo
+            ###################################################################################################
+            # CARREGA A CONFIGURAÇÃO DO EDITAL
+            ###################################################################################################
+
+            valor_intervalo = edital_selecionado.get(
+                "dias_intervalo_lembrete_eventos",
+                0
+            )
+
+            ###################################################################################################
+            # SINCRONIZA O SESSION STATE
+            ###################################################################################################
+
+            if (
+                st.session_state.get("edital_lembrete_atual")
+                != codigo_edital_lembrete
+            ):
+
+                st.session_state["edital_lembrete_atual"] = (
+                    codigo_edital_lembrete
+                )
+
+                st.session_state["intervalo_dias_mail_eventos"] = (
+                    valor_intervalo
+                )
+
+            ###################################################################################################
+            # INPUT DO INTERVALO
+            ###################################################################################################
+
             intervalo_dias_input = st.number_input(
                 "Intervalo de dias entre os e-mails de lembrete de cadastro de eventos",
                 min_value=0,
                 step=1,
-                value=intervalo_dias_mail_eventos,
+                key="intervalo_dias_mail_eventos",
                 width=300
             )
 
             st.caption("0 = desativado")
 
+            ###################################################################################################
+            # SALVA A CONFIGURAÇÃO
+            ###################################################################################################
 
-            # Botão de salvar
             if st.button(
                 "Salvar intervalo",
                 type="primary",
                 width=200
             ):
 
-                # Validação do input
-                if intervalo_dias_input is None:
+                db.editais.update_one(
 
-                    st.warning(
-                        "Insira um número."
-                    )
+                    {
+                        "_id": edital_selecionado["_id"]
+                    },
 
-                else:
+                    {
+                        "$set": {
 
-                    # Atualiza configuração no banco
-                    db.variaveis.update_one(
-                        {
-                            "nome_variavel": "intervalo_dias_mail_eventos"
-                        },
-                        {
-                            "$set": {
-                                "nome_variavel": "intervalo_dias_mail_eventos",
-                                "dias": int(intervalo_dias_input)
-                            }
-                        },
-                        upsert=True
-                    )
+                            "dias_intervalo_lembrete_eventos": int(
+                                intervalo_dias_input
+                            )
 
-                    st.success(
-                        "Intervalo salvo com sucesso.",
-                        icon=":material/check:"
-                    )
+                        }
 
-                    time.sleep(3)
+                    }
 
-                    st.rerun()
+                )
 
+                st.success(
+                    "Intervalo salvo com sucesso.",
+                    icon=":material/check:"
+                )
+
+                time.sleep(3)
+
+                st.rerun()
 
 
 

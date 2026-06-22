@@ -365,7 +365,7 @@ elif aba_selecionada == "Divulgar eventos":
 
         st.subheader("Divulgar evento")
 
-        with st.form("form_cadastro_evento", border=False, clear_on_submit=True):
+        with st.form("form_cadastro_evento", border=False):
 
             nome_evento = st.text_input(
                 "Nome do evento: *"
