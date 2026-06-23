@@ -4531,12 +4531,6 @@ if step_selecionado == "Atividades":
 
 
 
-
-
-
-
-
-
 # ==================================================
 # ---------- DESPESAS ----------
 # ==================================================
@@ -4616,51 +4610,61 @@ if step_selecionado == "Despesas":
                     f"[{nome}]({link})"
                 )
 
+
             with col_excluir:
 
-                with st.popover(
-                    "",
-                    icon=":material/delete:"
-                ):
+                # --------------------------------------------------
+                # Permissão para excluir extratos bancários
+                # --------------------------------------------------
+                pode_excluir_extrato = (
+                    status_atual_db == "modo_edicao"
+                    and st.session_state.get("tipo_usuario") == "beneficiario"
+                )
 
-                    st.write(
-                        "Tem certeza que deseja excluir esse arquivo?"
-                    )
+                if pode_excluir_extrato:
 
-                    with st.container(horizontal=True):
+                    with st.popover(
+                        "",
+                        icon=":material/delete:"
+                    ):
 
-                        # --------------------------------------------------
-                        # CONFIRMAR EXCLUSÃO
-                        # --------------------------------------------------
-                        if st.button(
-                            "Sim, excluir",
-                            type="primary",
-                            icon=":material/delete:",
-                            key=f"btn_confirmar_excluir_extrato_{relatorio_numero}_{i}"
-                        ):
+                        st.write(
+                            "Tem certeza que deseja excluir esse arquivo?"
+                        )
 
-                            # Remove o extrato da lista
-                            relatorio["extratos_bancarios"].pop(i)
+                        with st.container(horizontal=True):
 
-                            # Salva no MongoDB
-                            col_projetos.update_one(
-                                {"codigo": projeto["codigo"]},
-                                {
-                                    "$set": {
-                                        "relatorios": projeto["relatorios"]
+                            # --------------------------------------------------
+                            # CONFIRMAR EXCLUSÃO
+                            # --------------------------------------------------
+                            if st.button(
+                                "Sim, excluir",
+                                type="primary",
+                                icon=":material/delete:",
+                                key=f"btn_confirmar_excluir_extrato_{relatorio_numero}_{i}"
+                            ):
+
+                                # Remove o extrato da lista
+                                relatorio["extratos_bancarios"].pop(i)
+
+                                # Salva no MongoDB
+                                col_projetos.update_one(
+                                    {"codigo": projeto["codigo"]},
+                                    {
+                                        "$set": {
+                                            "relatorios": projeto["relatorios"]
+                                        }
                                     }
-                                }
-                            )
+                                )
 
-                            st.success(
-                                "Extrato bancário removido com sucesso!",
-                                icon=":material/check:"
-                            )
+                                st.success(
+                                    "Extrato bancário removido com sucesso!",
+                                    icon=":material/check:"
+                                )
 
-                            time.sleep(3)
+                                time.sleep(3)
 
-                            st.rerun()
-
+                                st.rerun()
 
 
 
@@ -4672,135 +4676,157 @@ if step_selecionado == "Despesas":
 
     st.markdown("#### Extratos bancários do período")
 
+
     # ==================================================
     # MODO EDIÇÃO
     # ==================================================
     if status_atual_db == "modo_edicao":
 
-        col_upload, col_links = st.columns([1, 1], gap="large")
-
         # --------------------------------------------------
-        # COLUNA UPLOAD
+        # Beneficiário: mostra upload + lista de arquivos
         # --------------------------------------------------
-        with col_upload:
+        if st.session_state.get("tipo_usuario") == "beneficiario":
 
-            extratos_bancarios = st.file_uploader(
-                "Carregue aqui os extratos bancários do período",
-                accept_multiple_files=True,
-                key=f"extratos_bancarios_{relatorio_numero}"
-            )
+            col_upload, col_links = st.columns([1, 1], gap="large")
 
-            with st.container(horizontal=True):
+            # --------------------------------------------------
+            # COLUNA UPLOAD
+            # --------------------------------------------------
+            with col_upload:
 
-                if st.button(
-                    "Salvar extratos bancários",
-                    type="primary",
-                    icon=":material/save:",
-                    key=f"btn_salvar_extratos_{relatorio_numero}"
-                ):
+                extratos_bancarios = st.file_uploader(
+                    "Carregue aqui os extratos bancários do período",
+                    accept_multiple_files=True,
+                    key=f"extratos_bancarios_{relatorio_numero}"
+                )
 
-                    # ------------------------------------------
-                    # VALIDAÇÃO
-                    # ------------------------------------------
+                with st.container(horizontal=True):
 
-                    if not extratos_bancarios:
-
-                        st.warning(
-                            "Carregue ao menos um extrato bancário."
-                        )
-
-                    else:
+                    if st.button(
+                        "Salvar extratos bancários",
+                        type="primary",
+                        icon=":material/save:",
+                        key=f"btn_salvar_extratos_{relatorio_numero}"
+                    ):
 
 
 
                         # ------------------------------------------
-                        # SALVAMENTO
+                        # VALIDAÇÃO
                         # ------------------------------------------
-                        with st.spinner(
-                            "Salvando extratos bancários..."
-                        ):
 
-                            servico = obter_servico_drive()
+                        if not extratos_bancarios:
 
-                            # --------------------------------------
-                            # Pasta do projeto
-                            # --------------------------------------
-                            pasta_projeto = obter_pasta_projeto(
-                                servico,
-                                projeto["codigo"],
-                                projeto["sigla"]
+                            st.warning(
+                                "Carregue ao menos um extrato bancário."
                             )
 
-                            # --------------------------------------
-                            # Pasta de extratos
-                            # --------------------------------------
-                            pasta_extratos = (
-                                obter_pasta_extratos_bancarios(
+                        else:
+
+
+
+                            # ------------------------------------------
+                            # SALVAMENTO
+                            # ------------------------------------------
+                            with st.spinner(
+                                "Salvando extratos bancários..."
+                            ):
+
+                                servico = obter_servico_drive()
+
+                                # --------------------------------------
+                                # Pasta do projeto
+                                # --------------------------------------
+                                pasta_projeto = obter_pasta_projeto(
                                     servico,
-                                    pasta_projeto
-                                )
-                            )
-
-                            lista_extratos = []
-
-                            # --------------------------------------
-                            # Upload dos arquivos
-                            # --------------------------------------
-                            for arq in extratos_bancarios:
-
-                                id_drive = enviar_arquivo_drive(
-                                    servico,
-                                    pasta_extratos,
-                                    arq
+                                    projeto["codigo"],
+                                    projeto["sigla"]
                                 )
 
-                                if not id_drive:
-                                    continue
+                                # --------------------------------------
+                                # Pasta de extratos
+                                # --------------------------------------
+                                pasta_extratos = (
+                                    obter_pasta_extratos_bancarios(
+                                        servico,
+                                        pasta_projeto
+                                    )
+                                )
 
-                                lista_extratos.append({
-                                    "nome_arquivo": arq.name,
-                                    "id_arquivo": id_drive
-                                })
+                                lista_extratos = []
 
-                            # --------------------------------------
-                            # Atualiza relatório
-                            # --------------------------------------
-                            for r in projeto["relatorios"]:
+                                # --------------------------------------
+                                # Upload dos arquivos
+                                # --------------------------------------
+                                for arq in extratos_bancarios:
 
-                                if r["numero"] == relatorio_numero:
+                                    id_drive = enviar_arquivo_drive(
+                                        servico,
+                                        pasta_extratos,
+                                        arq
+                                    )
 
-                                    r.setdefault(
-                                        "extratos_bancarios",
-                                        []
-                                    ).extend(lista_extratos)
+                                    if not id_drive:
+                                        continue
 
-                                    break
+                                    lista_extratos.append({
+                                        "nome_arquivo": arq.name,
+                                        "id_arquivo": id_drive
+                                    })
 
-                            # --------------------------------------
-                            # Persistência Mongo
-                            # --------------------------------------
-                            col_projetos.update_one(
-                                {"codigo": projeto["codigo"]},
-                                {
-                                    "$set": {
-                                        "relatorios": projeto["relatorios"]
+                                # --------------------------------------
+                                # Atualiza relatório
+                                # --------------------------------------
+                                for r in projeto["relatorios"]:
+
+                                    if r["numero"] == relatorio_numero:
+
+                                        r.setdefault(
+                                            "extratos_bancarios",
+                                            []
+                                        ).extend(lista_extratos)
+
+                                        break
+
+                                # --------------------------------------
+                                # Persistência Mongo
+                                # --------------------------------------
+                                col_projetos.update_one(
+                                    {"codigo": projeto["codigo"]},
+                                    {
+                                        "$set": {
+                                            "relatorios": projeto["relatorios"]
+                                        }
                                     }
-                                }
+                                )
+
+                            st.success(
+                                "Extratos bancários salvos com sucesso!",
+                                icon=":material/check:"
                             )
 
-                        st.success(
-                            "Extratos bancários salvos com sucesso!",
-                            icon=":material/check:"
-                        )
+                            time.sleep(3)
 
-                        time.sleep(3)
+                            st.rerun()
 
-                        st.rerun()
+
+
+
+
+            # --------------------------------------------------
+            # COLUNA LINKS
+            # --------------------------------------------------
+            with col_links:
+
+                render_links_extratos_bancarios(
+                    projeto,
+                    relatorio_numero
+                )
 
         # --------------------------------------------------
-        # COLUNA LINKS
+        # Demais perfis: mostra somente os links
         # --------------------------------------------------
-        with col_links:
+        else:
 
             render_links_extratos_bancarios(
                 projeto,
@@ -4816,6 +4842,7 @@ if step_selecionado == "Despesas":
             projeto,
             relatorio_numero
         )
+
 
 
 

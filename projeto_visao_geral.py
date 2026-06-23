@@ -725,7 +725,7 @@ if not editar_cadastro:
             st.markdown(f"##### {qtd} {titulo}")
 
             if st.session_state.get("tipo_usuario") == "beneficiario":
-               st.write("Relate o avanço da atividade ou solicite um **remanejamento de prazos** na página de 'Atividades'.")
+               st.write("Relate o avanço da atividade ou solicite um **ajuste** de prazos na página de 'Atividades'.")
 
             for atv in atividades_criticas:
 
