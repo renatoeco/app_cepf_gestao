@@ -2847,10 +2847,10 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     Regras de sincronização dos relatos:
 
     A) Se o relatório voltar de 'em_analise' ou 'aprovado' para 'modo_edicao':
-       - relatos deste relatório com status 'em_analise' voltam para 'aberto'
+        - relatos deste relatório com status 'em_analise' voltam para 'aberto'
 
     B) Se o relatório sair de 'modo_edicao' para 'em_analise' ou 'aprovado':
-       - relatos deste relatório com status 'aberto' passam para 'em_analise'
+        - relatos deste relatório com status 'aberto' passam para 'em_analise'
     """
 
     # --------------------------------------------------
@@ -2881,8 +2881,28 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     relatorio = projeto["relatorios"][0]
     status_anterior = relatorio.get("status_relatorio")
 
+
+
+
     # --------------------------------------------------
-    # 3. ATUALIZA STATUS DO RELATÓRIO
+    # 3. PREPARA CAMPOS A ATUALIZAR
+    # --------------------------------------------------
+    atualizacoes = {
+        "relatorios.$.status_relatorio": status_novo
+    }
+
+    # --------------------------------------------------
+    # Se acabou de ser aprovado, registra data e usuário
+    # --------------------------------------------------
+    if (
+        status_novo == "aprovado"
+        and status_anterior != "aprovado"
+    ):
+        atualizacoes["relatorios.$.data_aprovacao"] = datetime.datetime.now().strftime("%d/%m/%Y")
+        atualizacoes["relatorios.$.aprovado_por"] = st.session_state.get("nome")
+
+    # --------------------------------------------------
+    # 4. ATUALIZA STATUS DO RELATÓRIO
     # --------------------------------------------------
     col_projetos.update_one(
         {
@@ -2890,11 +2910,30 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
             "relatorios.numero": relatorio_numero
         },
         {
-            "$set": {
-                "relatorios.$.status_relatorio": status_novo
-            }
+            "$set": atualizacoes
         }
     )
+
+
+
+
+
+
+
+    # # --------------------------------------------------
+    # # 3. ATUALIZA STATUS DO RELATÓRIO
+    # # --------------------------------------------------
+    # col_projetos.update_one(
+    #     {
+    #         "codigo": projeto_codigo,
+    #         "relatorios.numero": relatorio_numero
+    #     },
+    #     {
+    #         "$set": {
+    #             "relatorios.$.status_relatorio": status_novo
+    #         }
+    #     }
+    # )
 
     # --------------------------------------------------
     # 4. VERIFICA SE ALGUMA REGRA DE RELATOS SE APLICA

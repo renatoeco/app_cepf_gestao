@@ -1920,14 +1920,28 @@ with cron_desemb:
             # prevista acrescida de 14 dias.
             # --------------------------------------------------
             data_aprovacao_relatorio = relatorio.get("data_aprovacao")
+            status_relatorio = relatorio.get("status_relatorio")
 
-            if data_aprovacao_relatorio:
+
+            if (
+                data_aprovacao_relatorio
+                and status_relatorio == "aprovado"
+            ):
 
                 data_aprovacao = (
                     f"{data_aprovacao_relatorio} :material/check:"
                 )
 
             elif data_prevista_relatorio:
+
+
+            # if data_aprovacao_relatorio:
+
+            #     data_aprovacao = (
+            #         f"{data_aprovacao_relatorio} :material/check:"
+            #     )
+
+            # elif data_prevista_relatorio:
 
                 data_base = datetime.datetime.strptime(
                     data_prevista_relatorio,
