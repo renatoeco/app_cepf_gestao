@@ -107,16 +107,22 @@ organizacoes = {
     )
 }
 
+###################################################################################################
+# CARREGAMENTO DOS EVENTOS DO IEB
+###################################################################################################
 
+eventos_ieb = list(
+    db.eventos_ieb.find()
+)
 
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
 
-
 # Função para montar os eventos do calendário
-def montar_eventos_calendario():
-
+def montar_eventos_calendario(
+    eventos_ieb
+):
     eventos_calendario = []
 
     for projeto in projetos_edital:
@@ -132,7 +138,7 @@ def montar_eventos_calendario():
             ""
         )
 
-        cor = "#2E7D32" if codigo_projeto == codigo_projeto_atual else "#E0C85C"
+        cor = "#2F5BA1B2" if codigo_projeto == codigo_projeto_atual else "#8fad4dff"
 
         for evento in projeto.get("eventos", []):
 
@@ -185,6 +191,75 @@ def montar_eventos_calendario():
 
             })
 
+
+    ###################################################################################################
+    # EVENTOS DO IEB
+    ###################################################################################################
+
+    for evento in eventos_ieb:
+
+        data_inicio = evento.get("data_inicio")
+        data_fim = evento.get("data_fim")
+
+        if not data_inicio or not data_fim:
+            continue
+
+        eventos_calendario.append({
+
+            "id": str(evento["_id"]),
+
+            "title": evento["nome_evento"],
+
+            "start": data_inicio.date().isoformat(),
+
+            "end": (
+                data_fim +
+                datetime.timedelta(days=1)
+            ).date().isoformat(),
+
+            "allDay": True,
+
+            "backgroundColor": cor_evento_ieb,
+
+            "borderColor": cor_evento_ieb,
+
+            "extendedProps": {
+
+                "codigo_projeto": "",
+
+                "sigla": "IEB",
+
+                "organizacao": "Instituto Internacional de Educação do Brasil",
+
+                "nome_evento": evento.get("nome_evento"),
+
+                "descricao": evento.get("descricao"),
+
+                "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+
+                "data_fim": data_fim.strftime("%d/%m/%Y"),
+
+                "local": evento.get("local"),
+
+                "municipio_uf": evento.get("municipio_uf"),
+
+                "links_divulgacao": evento.get(
+                    "links_divulgacao",
+                    []
+                ),
+
+                "data_cadastro": (
+                    evento.get("data_cadastro").strftime(
+                        "%d/%m/%Y %H:%M"
+                    )
+                    if evento.get("data_cadastro")
+                    else ""
+                )
+
+            }
+
+        })
+
     return eventos_calendario
 
 
@@ -205,11 +280,30 @@ def dialog_evento(evento):
 
     
 
-    col1, col2 = st.columns(2)
+    ###################################################################################################
+    # INFORMAÇÕES DO PROJETO
+    ###################################################################################################
 
-    col1.write(f"**Projeto:** {props['sigla']}")
+    if props.get("codigo_projeto"):
 
-    col2.write(f"**Organização:** {props['organizacao']}")
+        col1, col2 = st.columns(2)
+
+        col1.write(
+            f"**Projeto:** {props['sigla']}"
+        )
+
+        col2.write(
+            f"**Organização:** {props['organizacao']}"
+        )
+
+    else:
+
+        st.write(
+            f"**Organização:** {props['organizacao']}"
+        )
+
+
+
 
     st.divider()
 
@@ -267,6 +361,19 @@ def dialog_evento(evento):
 
 
 ###########################################################################################################
+# TRATAMENTO DE DADOS
+###########################################################################################################
+
+
+# Cor do evento IEB
+cor_evento_ieb = "#6B6B6B"
+
+
+
+
+
+
+###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
 
@@ -290,6 +397,7 @@ with col_identificacao:
 
 st.write('')
 
+# Abas
 
 aba_selecionada = sac.tabs(
     items=[
@@ -311,7 +419,9 @@ if aba_selecionada == "Agenda":
 
     st.subheader("Agenda de eventos do edital")
 
-    eventos = montar_eventos_calendario()
+    eventos = montar_eventos_calendario(
+        eventos_ieb
+    )
 
     calendar_options = {
 

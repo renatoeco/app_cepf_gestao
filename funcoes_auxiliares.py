@@ -247,14 +247,14 @@ def verificar_envio_lembrete_eventos(
         # VERIFICA O INTERVALO DESDE O ÚLTIMO ENVIO
         ###################################################################################################
 
-        # agora = datetime.datetime.now()
+        agora = datetime.datetime.now()
 
-        # Data fixa para testes
-        agora = datetime.datetime(
-            2026,
-            6,
-            22
-        )
+        # # Data fixa para testes
+        # agora = datetime.datetime(
+        #     2026,
+        #     6,
+        #     22
+        # )
 
 
 
