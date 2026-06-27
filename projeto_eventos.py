@@ -107,22 +107,30 @@ organizacoes = {
     )
 }
 
+
 ###################################################################################################
-# CARREGAMENTO DOS EVENTOS DO IEB
+# CARREGA O EDITAL DO PROJETO
 ###################################################################################################
 
-eventos_ieb = list(
-    db.eventos_ieb.find()
-)
+edital = db.editais.find_one(
+    {
+        "codigo_edital": codigo_edital
+    },
+    {
+        "codigo_edital": 1,
+        "eventos_ieb": 1
+    }
+) or {}
+
+
 
 ###########################################################################################################
 # FUNÇÕES
 ###########################################################################################################
 
 # Função para montar os eventos do calendário
-def montar_eventos_calendario(
-    eventos_ieb
-):
+def montar_eventos_calendario():
+
     eventos_calendario = []
 
     for projeto in projetos_edital:
@@ -196,17 +204,25 @@ def montar_eventos_calendario(
     # EVENTOS DO IEB
     ###################################################################################################
 
-    for evento in eventos_ieb:
+    for evento in edital.get(
+        "eventos_ieb",
+        []
+    ):
 
-        data_inicio = evento.get("data_inicio")
-        data_fim = evento.get("data_fim")
+        data_inicio = evento.get(
+            "data_inicio"
+        )
+
+        data_fim = evento.get(
+            "data_fim"
+        )
 
         if not data_inicio or not data_fim:
             continue
 
         eventos_calendario.append({
 
-            "id": str(evento["_id"]),
+            "id": evento["id"],
 
             "title": evento["nome_evento"],
 
@@ -225,23 +241,25 @@ def montar_eventos_calendario(
 
             "extendedProps": {
 
-                "codigo_projeto": "",
-
                 "sigla": "IEB",
 
                 "organizacao": "Instituto Internacional de Educação do Brasil",
 
-                "nome_evento": evento.get("nome_evento"),
+                "nome_evento": evento["nome_evento"],
 
-                "descricao": evento.get("descricao"),
+                "descricao": evento["descricao"],
 
-                "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+                "data_inicio": data_inicio.strftime(
+                    "%d/%m/%Y"
+                ),
 
-                "data_fim": data_fim.strftime("%d/%m/%Y"),
+                "data_fim": data_fim.strftime(
+                    "%d/%m/%Y"
+                ),
 
-                "local": evento.get("local"),
+                "local": evento["local"],
 
-                "municipio_uf": evento.get("municipio_uf"),
+                "municipio_uf": evento["municipio_uf"],
 
                 "links_divulgacao": evento.get(
                     "links_divulgacao",
@@ -249,7 +267,7 @@ def montar_eventos_calendario(
                 ),
 
                 "data_cadastro": (
-                    evento.get("data_cadastro").strftime(
+                    evento["data_cadastro"].strftime(
                         "%d/%m/%Y %H:%M"
                     )
                     if evento.get("data_cadastro")
@@ -259,6 +277,7 @@ def montar_eventos_calendario(
             }
 
         })
+
 
     return eventos_calendario
 
@@ -419,9 +438,7 @@ if aba_selecionada == "Agenda":
 
     st.subheader("Agenda de eventos do edital")
 
-    eventos = montar_eventos_calendario(
-        eventos_ieb
-    )
+    eventos = montar_eventos_calendario()
 
     calendar_options = {
 

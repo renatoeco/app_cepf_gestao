@@ -403,69 +403,6 @@ def montar_eventos_calendario(
 
 
 
-    # for evento in eventos_ieb:
-
-    #     data_inicio = evento.get("data_inicio")
-    #     data_fim = evento.get("data_fim")
-
-    #     if not data_inicio or not data_fim:
-    #         continue
-
-    #     eventos.append({
-
-    #         "id": str(evento["_id"]),
-
-    #         "title": evento["nome_evento"],
-
-    #         "start": data_inicio.date().isoformat(),
-
-    #         "end": (
-    #             data_fim +
-    #             datetime.timedelta(days=1)
-    #         ).date().isoformat(),
-
-    #         "allDay": True,
-
-    #         "backgroundColor": cor_evento_ieb,
-
-    #         "borderColor": cor_evento_ieb,
-
-    #         "extendedProps": {
-
-    #             "sigla": "IEB",
-
-    #             "organizacao": "Instituto Internacional de Educação do Brasil",
-
-    #             "nome_evento": evento["nome_evento"],
-
-    #             "descricao": evento["descricao"],
-
-    #             "data_inicio": data_inicio.strftime("%d/%m/%Y"),
-
-    #             "data_fim": data_fim.strftime("%d/%m/%Y"),
-
-    #             "local": evento["local"],
-
-    #             "municipio_uf": evento["municipio_uf"],
-
-    #             "links_divulgacao": evento.get(
-    #                 "links_divulgacao",
-    #                 []
-    #             ),
-
-    #             "data_cadastro": (
-    #                 evento["data_cadastro"].strftime(
-    #                     "%d/%m/%Y %H:%M"
-    #                 )
-    #                 if evento.get("data_cadastro")
-    #                 else ""
-    #             )
-
-    #         }
-
-    #     })
-
-
 
 
     return eventos
