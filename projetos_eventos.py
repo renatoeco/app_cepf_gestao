@@ -52,12 +52,6 @@ editais = list(
 )
 
 
-###################################################################################################
-# CARREGAMENTO DE EVENTOS DO IEB
-###################################################################################################
-
-col_eventos_ieb = db.eventos_ieb
-
 
 ###########################################################################################################
 # MAPEAMENTO DOS EDITAIS
@@ -240,7 +234,7 @@ def dialog_evento(evento):
 
 def montar_eventos_calendario(
     projetos,
-    eventos_ieb
+    editais
 ):
 
     eventos = []
@@ -325,72 +319,151 @@ def montar_eventos_calendario(
             })
 
 
+
+
     ###################################################################################################
     # EVENTOS DO IEB
     ###################################################################################################
 
+    for edital in editais:
 
-    for evento in eventos_ieb:
+        for evento in edital.get(
+            "eventos_ieb",
+            []
+        ):
 
-        data_inicio = evento.get("data_inicio")
-        data_fim = evento.get("data_fim")
+            data_inicio = evento.get(
+                "data_inicio"
+            )
 
-        if not data_inicio or not data_fim:
-            continue
+            data_fim = evento.get(
+                "data_fim"
+            )
 
-        eventos.append({
+            if not data_inicio or not data_fim:
+                continue
 
-            "id": str(evento["_id"]),
+            eventos.append({
 
-            "title": evento["nome_evento"],
+                "id": evento["id"],
 
-            "start": data_inicio.date().isoformat(),
+                "title": evento["nome_evento"],
 
-            "end": (
-                data_fim +
-                datetime.timedelta(days=1)
-            ).date().isoformat(),
+                "start": data_inicio.date().isoformat(),
 
-            "allDay": True,
+                "end": (
+                    data_fim +
+                    datetime.timedelta(days=1)
+                ).date().isoformat(),
 
-            "backgroundColor": cor_evento_ieb,
+                "allDay": True,
 
-            "borderColor": cor_evento_ieb,
+                "backgroundColor": cor_evento_ieb,
 
-            "extendedProps": {
+                "borderColor": cor_evento_ieb,
 
-                "sigla": "IEB",
+                "extendedProps": {
 
-                "organizacao": "Instituto Internacional de Educação do Brasil",
+                    "sigla": "IEB",
 
-                "nome_evento": evento["nome_evento"],
+                    "organizacao": "Instituto Internacional de Educação do Brasil",
 
-                "descricao": evento["descricao"],
+                    "nome_evento": evento["nome_evento"],
 
-                "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+                    "descricao": evento["descricao"],
 
-                "data_fim": data_fim.strftime("%d/%m/%Y"),
+                    "data_inicio": data_inicio.strftime(
+                        "%d/%m/%Y"
+                    ),
 
-                "local": evento["local"],
+                    "data_fim": data_fim.strftime(
+                        "%d/%m/%Y"
+                    ),
 
-                "municipio_uf": evento["municipio_uf"],
+                    "local": evento["local"],
 
-                "links_divulgacao": evento.get(
-                    "links_divulgacao",
-                    []
-                ),
+                    "municipio_uf": evento["municipio_uf"],
 
-                "data_cadastro": (
-                    evento["data_cadastro"].strftime(
-                        "%d/%m/%Y %H:%M"
+                    "links_divulgacao": evento.get(
+                        "links_divulgacao",
+                        []
+                    ),
+
+                    "data_cadastro": (
+                        evento["data_cadastro"].strftime(
+                            "%d/%m/%Y %H:%M"
+                        )
+                        if evento.get("data_cadastro")
+                        else ""
                     )
-                    if evento.get("data_cadastro")
-                    else ""
-                )
 
-            }
+                }
 
-        })
+            })
+
+
+
+    # for evento in eventos_ieb:
+
+    #     data_inicio = evento.get("data_inicio")
+    #     data_fim = evento.get("data_fim")
+
+    #     if not data_inicio or not data_fim:
+    #         continue
+
+    #     eventos.append({
+
+    #         "id": str(evento["_id"]),
+
+    #         "title": evento["nome_evento"],
+
+    #         "start": data_inicio.date().isoformat(),
+
+    #         "end": (
+    #             data_fim +
+    #             datetime.timedelta(days=1)
+    #         ).date().isoformat(),
+
+    #         "allDay": True,
+
+    #         "backgroundColor": cor_evento_ieb,
+
+    #         "borderColor": cor_evento_ieb,
+
+    #         "extendedProps": {
+
+    #             "sigla": "IEB",
+
+    #             "organizacao": "Instituto Internacional de Educação do Brasil",
+
+    #             "nome_evento": evento["nome_evento"],
+
+    #             "descricao": evento["descricao"],
+
+    #             "data_inicio": data_inicio.strftime("%d/%m/%Y"),
+
+    #             "data_fim": data_fim.strftime("%d/%m/%Y"),
+
+    #             "local": evento["local"],
+
+    #             "municipio_uf": evento["municipio_uf"],
+
+    #             "links_divulgacao": evento.get(
+    #                 "links_divulgacao",
+    #                 []
+    #             ),
+
+    #             "data_cadastro": (
+    #                 evento["data_cadastro"].strftime(
+    #                     "%d/%m/%Y %H:%M"
+    #                 )
+    #                 if evento.get("data_cadastro")
+    #                 else ""
+    #             )
+
+    #         }
+
+    #     })
 
 
 
@@ -609,12 +682,35 @@ if aba_selecionada == "Agenda":
 
 
     ###################################################################################################
-    # CARREGAMENTO DOS EVENTOS DO IEB
+    # CARREGAMENTO DOS EDITAIS
     ###################################################################################################
 
-    eventos_ieb = list(
-        db.eventos_ieb.find()
+    filtro_editais = {}
+
+    if codigo_edital_selecionado != "Todos os editais":
+
+        filtro_editais["codigo_edital"] = (
+            codigo_edital_selecionado
+        )
+
+    editais = list(
+
+        db.editais.find(
+
+            filtro_editais,
+
+            {
+
+                "codigo_edital": 1,
+
+                "eventos_ieb": 1
+
+            }
+
+        )
+
     )
+
 
 
     ###################################################################################################
@@ -673,8 +769,8 @@ if aba_selecionada == "Agenda":
 
     eventos = montar_eventos_calendario(
         projetos,
-        eventos_ieb
-        )
+        editais
+    )
 
     ###################################################################################################
     # CONFIGURAÇÃO DO CALENDÁRIO
@@ -778,6 +874,21 @@ elif aba_selecionada == "Divulgar eventos":
                 "Nome do evento: *"
             )
 
+
+            # SELEÇÃO DO(S) EDITAL(IS)
+
+            codigos_editais = sorted(
+                mapa_editais.keys()
+            )
+
+            editais_selecionados = st.multiselect(
+                "Editais: *",
+                options=codigos_editais,
+                width=400
+            )
+
+
+
             descricao_evento = st.text_area(
                 "Descrição do evento: *",
                 max_chars=800,
@@ -842,6 +953,7 @@ elif aba_selecionada == "Divulgar eventos":
                     or not data_fim
                     or not local
                     or not municipio_uf
+                    or not editais_selecionados
                 ):
                     st.error("Todos os campos obrigatórios devem ser preenchidos.")
 
@@ -870,25 +982,61 @@ elif aba_selecionada == "Divulgar eventos":
                         if link.strip()
                     ]
 
+                    ###################################################################################################
+                    # PREPARAÇÃO DOS DADOS DO EVENTO
+                    ###################################################################################################
+
                     novo_evento = {
+
+                        "id": str(ObjectId()),
+
                         "nome_evento": f"[EVENTO DO IEB] {nome_evento}",
+
                         "descricao": descricao_evento,
+
                         "data_inicio": data_inicio_dt,
+
                         "data_fim": data_fim_dt,
+
                         "local": local,
+
                         "municipio_uf": municipio_uf,
+
                         "links_divulgacao": lista_links,
+
                         "registrado_por": st.session_state["id_usuario"],
+
                         "data_cadastro": datetime.datetime.now()
+
                     }
 
+
                     ###################################################################################################
-                    # GRAVAÇÃO DO EVENTO NO PROJETO
+                    # GRAVAÇÃO DO EVENTO NOS EDITAIS
                     ###################################################################################################
 
-                    col_eventos_ieb.insert_one(
-                        novo_evento
-                    )
+                    for codigo_edital in editais_selecionados:
+
+                        edital = mapa_editais[
+                            codigo_edital
+                        ]
+
+                        db.editais.update_one(
+
+                            {
+                                "_id": edital["_id"]
+                            },
+
+                            {
+                                "$push": {
+
+                                    "eventos_ieb": novo_evento
+
+                                }
+
+                            }
+
+                        )
 
                     st.success(
                         "Evento cadastrado com sucesso!",
@@ -919,9 +1067,54 @@ elif aba_selecionada == "Divulgar eventos":
         # CARREGAMENTO DOS EVENTOS DO IEB
         ###################################################################################################
 
-        eventos = list(
-            col_eventos_ieb.find()
+        editais = list(
+
+            db.editais.find(
+
+                {},
+
+                {
+
+                    "codigo_edital": 1,
+
+                    "eventos_ieb": 1
+
+                }
+
+            )
+
         )
+
+
+        ###################################################################################################
+        # MONTA A LISTA DE EVENTOS
+        ###################################################################################################
+
+        eventos = []
+
+        for edital in editais:
+
+            for evento_original in edital.get(
+                "eventos_ieb",
+                []
+            ):
+
+                evento = evento_original.copy()
+
+                evento["codigo_edital"] = edital[
+                    "codigo_edital"
+                ]
+
+                evento["id_edital"] = edital[
+                    "_id"
+                ]
+
+                eventos.append(
+                    evento
+                )
+
+
+
 
         # Ordena os eventos pela data de início
         eventos = sorted(
@@ -943,6 +1136,9 @@ elif aba_selecionada == "Divulgar eventos":
                 col_nome, col_excluir = st.columns([8, 1])
 
                 col_nome.write(f"**{evento["nome_evento"]}**")
+
+                # Adiciona o edital
+                col_nome.write(f"Edital: {evento['codigo_edital']}")
 
                 col_nome.write(f"{evento['data_inicio'].strftime('%d/%m/%Y')} a {evento['data_fim'].strftime('%d/%m/%Y')}")
 
@@ -967,7 +1163,7 @@ elif aba_selecionada == "Divulgar eventos":
 
                         excluir = st.button(
                             "Sim, excluir",
-                            key=f"excluir_evento_{str(evento['_id'])}",
+                            key=f"excluir_evento_{evento['id']}",
                             type="primary",
                             icon=":material/delete:"
                         )
@@ -980,10 +1176,28 @@ elif aba_selecionada == "Divulgar eventos":
                             # EXCLUSÃO DO EVENTO
                             ###################################################################################################
 
-                            col_eventos_ieb.delete_one(
+                            db.editais.update_one(
+
                                 {
-                                    "_id": evento["_id"]
+
+                                    "_id": evento["id_edital"]
+
+                                },
+
+                                {
+
+                                    "$pull": {
+
+                                        "eventos_ieb": {
+
+                                            "id": evento["id"]
+
+                                        }
+
+                                    }
+
                                 }
+
                             )
 
                             st.success(
