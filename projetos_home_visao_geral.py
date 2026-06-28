@@ -57,7 +57,7 @@ registrar_estatistica_sessao(db)
 
 
 # ============================================
-# ÁREA DE NOTIFICAÇÕES
+# TABELA DE DEMANDAS DE MONITORAMENTO
 # ============================================
 
 
@@ -65,6 +65,12 @@ if "notificacoes" not in st.session_state:
     st.session_state.notificacoes = []
 
 
+
+
+
+
+# Lista utilizada para consolidar todas as demandas exibidas na página
+lista_demandas = []
 
 
 ###########################################################################################################
@@ -183,14 +189,6 @@ st.logo("images/ieb_logo.svg", size='large')
 st.header("Projetos")
 
 
-# Área de notificações
-
-if st.session_state.notificacoes:
-    with st.expander("Notificações", expanded=False, icon=":material/warning:"):
-        for msg in st.session_state.notificacoes:
-            st.warning(msg)
-
-
 
 
 # ============================================
@@ -235,6 +233,15 @@ with st.container(horizontal=True):
 
 
 
+
+
+df_filtrado = df_projetos.copy()
+
+
+
+
+
+
 # ============================================
 # APLICAÇÃO DOS FILTROS
 # ============================================
@@ -243,8 +250,6 @@ with st.container(horizontal=True):
 # -------------------------------------------------
 # FILTRO POR EDITAL
 # -------------------------------------------------
-
-df_filtrado = df_projetos.copy()
 
 
 if edital_selecionado != "Todos":
@@ -295,206 +300,467 @@ if df_filtrado.empty:
 
 
 
+
+
+# ------------------------------------------------------------------------------
+# Adiciona pendências cadastrais
+# ------------------------------------------------------------------------------
+
+for _, projeto in df_filtrado.iterrows():
+
+    notificacao = projeto.get("notificacao")
+
+    if not notificacao:
+        continue
+
+    lista_demandas.append({
+        "codigo": projeto["codigo"],
+        "sigla": projeto["sigla"],
+        "padrinho": (
+            projeto["padrinho"]
+            if isinstance(projeto["padrinho"], str)
+            else ""
+        ),
+        "tipo": "pendencia_cadastral",
+        "demanda": notificacao
+    })
+
+
+
+# ------------------------------------------------------------------------------
+# Adiciona projetos atrasados
+# ------------------------------------------------------------------------------
+
+for _, projeto in df_filtrado.iterrows():
+
+    if projeto["status"] != "Atrasado":
+        continue
+
+    lista_demandas.append({
+        "codigo": projeto["codigo"],
+        "sigla": projeto["sigla"],
+        "padrinho": (
+            projeto["padrinho"]
+            if isinstance(projeto["padrinho"], str)
+            else ""
+        ),
+        "tipo": "projeto_atrasado",
+        "demanda": (
+            f"Projeto atrasado há {projeto['dias_atraso']} dias."
+        )
+    })
+
+
+
+
+
+
+# ------------------------------------------------------------------------------
+# Adiciona relatórios aguardando análise
+# ------------------------------------------------------------------------------
+
+for _, projeto in df_filtrado.iterrows():
+
+    relatorios = projeto.get("relatorios")
+
+    if not isinstance(relatorios, list):
+        continue
+
+    for relatorio in relatorios:
+
+        if not isinstance(relatorio, dict):
+            continue
+
+        if relatorio.get("status_relatorio") != "em_analise":
+            continue
+
+        lista_demandas.append({
+            "codigo": projeto["codigo"],
+            "sigla": projeto["sigla"],
+            "padrinho": (
+                projeto["padrinho"]
+                if isinstance(projeto["padrinho"], str)
+                else ""
+            ),
+            "tipo": "relatorio",
+            "demanda": (
+                f"Relatório {relatorio.get('numero')} aguardando análise."
+            )
+        })
+
+
+
+
+
+# ------------------------------------------------------------------------------
+# Adiciona remanejamentos aguardando análise
+# ------------------------------------------------------------------------------
+
+for _, projeto in df_filtrado.iterrows():
+
+    plano_trabalho = projeto.get("plano_trabalho")
+
+    if not isinstance(plano_trabalho, dict):
+        continue
+
+    remanejamentos = plano_trabalho.get("remanejamentos_atividades")
+
+    if not isinstance(remanejamentos, list):
+        continue
+
+    for remanejamento in remanejamentos:
+
+        if not isinstance(remanejamento, dict):
+            continue
+
+        if remanejamento.get("status_remanejamento") != "em_analise":
+            continue
+
+        lista_demandas.append({
+            "codigo": projeto["codigo"],
+            "sigla": projeto["sigla"],
+            "padrinho": (
+                projeto["padrinho"]
+                if isinstance(projeto["padrinho"], str)
+                else ""
+            ),
+            "tipo": "ajuste",
+            "demanda": "Ajuste aguardando análise."
+        })
+
+
+
+
+
+# ------------------------------------------------------------------------------
+# Adiciona remanejamentos financeiros aguardando análise
+# ------------------------------------------------------------------------------
+
+for _, projeto in df_filtrado.iterrows():
+
+    financeiro = projeto.get("financeiro")
+
+    if not isinstance(financeiro, dict):
+        continue
+
+    remanejamentos = financeiro.get("remanejamentos_financeiros")
+
+    if not isinstance(remanejamentos, list):
+        continue
+
+    for remanejamento in remanejamentos:
+
+        if not isinstance(remanejamento, dict):
+            continue
+
+        if remanejamento.get("status_remanejamento") != "em_analise":
+            continue
+
+        lista_demandas.append({
+            "codigo": projeto["codigo"],
+            "sigla": projeto["sigla"],
+            "padrinho": (
+                projeto["padrinho"]
+                if isinstance(projeto["padrinho"], str)
+                else ""
+            ),
+            "tipo": "remanejamento_financeiro",
+            "demanda": "Remanejamento aguardando análise."
+        })
+
+
+
+
+# ------------------------------------------------------------------------------
+# Painel de demandas
+# ------------------------------------------------------------------------------
+
+st.write("")
+
+if lista_demandas:
+
+    lista_demandas = sorted(
+        lista_demandas,
+        key=lambda x: x["padrinho"] or ""
+    )
+
+    st.markdown(
+    "<p style='font-size:22px; font-weight:600;'>Demandas de monitoramento</p>",
+    unsafe_allow_html=True
+    )
+
+    st.write('')
+
+    larguras_colunas = [3, 3, 3, 8, 2]
+
+    col_labels = [
+        "Código",
+        "Sigla",
+        "Padrinho/Madrinha",
+        "Demanda",
+        "Ações"
+    ]
+
+    cols = st.columns(larguras_colunas)
+
+    for i, label in enumerate(col_labels):
+        cols[i].markdown(f"**{label}**")
+
+    st.write("")
+
+    for idx, demanda in enumerate(lista_demandas):
+
+        cols = st.columns(larguras_colunas)
+
+        cols[0].write(demanda["codigo"])
+        cols[1].write(demanda["sigla"])
+        cols[2].write(demanda["padrinho"])
+
+
+        # ------------------------------------------------------------------------------
+        # Formatação da descrição da demanda
+        # ------------------------------------------------------------------------------
+
+        texto_demanda = demanda["demanda"]
+        icone = ""
+
+
+        if demanda["tipo"] == "pendencia_cadastral":
+
+            icone = ":material/warning:"
+
+        elif demanda["tipo"] == "projeto_atrasado":
+
+            icone = ":material/schedule:"
+
+        elif demanda["tipo"] == "relatorio":
+
+            icone = ":material/description:"
+
+        elif demanda["tipo"] == "ajuste":
+
+            icone = ":material/tune:"
+
+        elif demanda["tipo"] == "remanejamento_financeiro":
+
+            icone = ":material/currency_exchange:"
+
+
+
+        cols[3].markdown(
+            f"{icone} {texto_demanda}"
+        )
+
+
+        if cols[4].button(
+            "Ver projeto",
+            key=f"demanda_{demanda['codigo']}_{idx}"
+        ):
+            st.session_state.pagina_atual = "ver_projeto"
+            st.session_state.projeto_atual = demanda["codigo"]
+            st.rerun()
+
+
+
+
+# ============================================
+# INTERFACE
+# ============================================
+
+st.divider()
+
+sobre_col1, sobre_col2 = st.columns([7, 3])
+
+sobre_col1.write("**Projetos atrasados**")
+sobre_col2.write("**Status dos projetos**")
+
+# -------------------------------------------------
+# FILTRO DE PROJETOS ATRASADOS (ÚNICO PONTO)
+# -------------------------------------------------
+if edital_selecionado == "Todos":
+    projetos_atrasados = df_filtrado[df_filtrado["status"] == "Atrasado"]
 else:
+    projetos_atrasados = df_filtrado[
+        (df_filtrado["edital"] == edital_selecionado) &
+        (df_filtrado["status"] == "Atrasado")
+    ]
 
-    # ============================================
-    # INTERFACE
-    # ============================================
+# -------------------------------------------------
+# COLUNAS
+# -------------------------------------------------
+col1, col2, col3 = st.columns([1, 6, 3], gap="large")
 
-    st.divider()
+# -------------------------------------------------
+# COLUNA 1 — MÉTRICA
+# -------------------------------------------------
+with col1:
+    total_atrasados = len(projetos_atrasados)
+    st.metric("", total_atrasados)
+    st.write("")
 
-    sobre_col1, sobre_col2 = st.columns([7, 3])
+# -------------------------------------------------
+# COLUNA 2 — LISTA DE PROJETOS ATRASADOS
+# -------------------------------------------------
+with col2:
+    st.write("")
 
-    sobre_col1.write("**Projetos atrasados**")
-    sobre_col2.write("**Status dos projetos**")
+    if not projetos_atrasados.empty:
+        df_exibir = projetos_atrasados.copy()
 
-    # -------------------------------------------------
-    # FILTRO DE PROJETOS ATRASADOS (ÚNICO PONTO)
-    # -------------------------------------------------
-    if edital_selecionado == "Todos":
-        projetos_atrasados = df_filtrado[df_filtrado["status"] == "Atrasado"]
-    else:
-        projetos_atrasados = df_filtrado[
-            (df_filtrado["edital"] == edital_selecionado) &
-            (df_filtrado["status"] == "Atrasado")
+        df_exibir = df_exibir[
+            ["codigo", "sigla", "padrinho", "edital", "dias_atraso"]
         ]
 
-    # -------------------------------------------------
-    # COLUNAS
-    # -------------------------------------------------
-    col1, col2, col3 = st.columns([1, 6, 3], gap="large")
+        df_exibir = df_exibir.rename(columns={
+            "codigo": "Código",
+            "sigla": "Sigla",
+            "padrinho": "Padrinho/Madrinha",
+            "dias_atraso": "Dias de atraso",
+            "edital": "Edital"
+        })
 
-    # -------------------------------------------------
-    # COLUNA 1 — MÉTRICA
-    # -------------------------------------------------
-    with col1:
-        total_atrasados = len(projetos_atrasados)
-        st.metric("", total_atrasados)
-        st.write("")
-
-    # -------------------------------------------------
-    # COLUNA 2 — LISTA DE PROJETOS ATRASADOS
-    # -------------------------------------------------
-    with col2:
-        st.write("")
-
-        if not projetos_atrasados.empty:
-            df_exibir = projetos_atrasados.copy()
-
-            df_exibir = df_exibir[
-                ["codigo", "sigla", "padrinho", "edital", "dias_atraso"]
-            ]
-
-            df_exibir = df_exibir.rename(columns={
-                "codigo": "Código",
-                "sigla": "Sigla",
-                "padrinho": "Padrinho/Madrinha",
-                "dias_atraso": "Dias de atraso",
-                "edital": "Edital"
-            })
-
-            df_exibir = df_exibir.sort_values(
-                by="Dias de atraso",
-                ascending=False
-            )
-
-            st.dataframe(df_exibir, hide_index=True)
-
-        else:
-            st.write("Não há projetos atrasados.")
-
-
-
-
-
-
-    # Gráfico de pizza do status
-    with col3:
-
-        mapa_cores_status = {
-            'Concluído': 'rgba(0, 122, 211, 0.4)',   # Azul 50%
-            'Em dia': 'rgba(160, 194, 86, 0.4)',     # Verde 50%
-            'Atrasado': 'rgba(226, 101, 12, 0.4)',   # Laranja 50%
-            'Cancelado': '#bbb',
-            'Sem cronograma': '#fff099'
-        }
-
-
-
-        contagens = df_filtrado['status'].value_counts(dropna=True)
-        status = contagens.index.tolist()
-        contagem_status = contagens.values.tolist()
-
-
-
-        fig = px.pie(
-            names=status,
-            values=contagem_status,
-            color=status,
-            color_discrete_map=mapa_cores_status,
-            height=300
+        df_exibir = df_exibir.sort_values(
+            by="Dias de atraso",
+            ascending=False
         )
 
-        # Customização do tooltip (hover)
-        # Exibe apenas o status e a quantidade de projetos
-        fig.update_traces(
-            hovertemplate=(
-                '<b>Status:</b> %{label}<br>' +
-                '<b>Projetos:</b> %{value}<br>' +
-                '<extra></extra>'  # remove informações adicionais padrão
-            )
-        )
+        st.dataframe(df_exibir, hide_index=True)
 
-        st.plotly_chart(fig)
+    else:
+        st.write("Não há projetos atrasados.")
 
 
 
 
 
-    # Cronograma de contratos
-    st.write("**Cronograma de contratos**")
+
+# Gráfico de pizza do status
+with col3:
+
+    mapa_cores_status = {
+        'Concluído': 'rgba(0, 122, 211, 0.4)',   # Azul 50%
+        'Em dia': 'rgba(160, 194, 86, 0.4)',     # Verde 50%
+        'Atrasado': 'rgba(226, 101, 12, 0.4)',   # Laranja 50%
+        'Cancelado': '#bbb',
+        'Sem cronograma': '#fff099'
+    }
 
 
 
-
-    # Criando uma nova coluna com a data de fim no formato datetime, pra poder usar o sort por data
-    df_filtrado['data_fim_contrato_dt'] = pd.to_datetime(
-        df_filtrado['data_fim_contrato'],
-        format='%d/%m/%Y',
-        errors='coerce'
-    )
-
-    # Sort pela data de fim
-    df_filtrado_sorted = df_filtrado.sort_values(
-        by='data_fim_contrato_dt',
-        ascending=False
-    )
+    contagens = df_filtrado['status'].value_counts(dropna=True)
+    status = contagens.index.tolist()
+    contagem_status = contagens.values.tolist()
 
 
-    altura_base = 400
-    altura_extra = sum([10 / (1 + i * 0.01) for i in range(len(df_filtrado_sorted))])
-    altura = int(altura_base + altura_extra)
 
-
-    fig = px.timeline(
-        df_filtrado_sorted.assign(
-            _texto_barra=(
-                df_filtrado_sorted['codigo'].astype(str)
-                + ' - '
-                + df_filtrado_sorted['sigla'].astype(str)
-            )
-        ),
-        x_start='data_inicio_contrato_dtime',
-        x_end='data_fim_contrato_dtime',
-        y='_texto_barra',
-        text='_texto_barra',  # inline: codigo - sigla
-        color='status',
+    fig = px.pie(
+        names=status,
+        values=contagem_status,
+        color=status,
         color_discrete_map=mapa_cores_status,
-        height=altura,
+        height=300
     )
 
-
-
+    # Customização do tooltip (hover)
+    # Exibe apenas o status e a quantidade de projetos
     fig.update_traces(
         hovertemplate=(
-            '<b>Projeto:</b> %{y}<br>' +
-            '<b>Início:</b> %{customdata[0]}<br>' +
-            '<b>Fim:</b> %{customdata[1]}<br>' +
-            '<extra></extra>'
-        ),
-        textposition='inside',
-        insidetextanchor='middle',
-        textfont=dict(size=14),
-        cliponaxis=False,
-        customdata=df_filtrado_sorted[['data_inicio_contrato', 'data_fim_contrato']].values
-    )
-
-    fig.update_yaxes(
-        visible=False,
-        showticklabels=False
-    )
-
-
-    fig.add_vline(
-        x=datetime.datetime.today(),
-        line_width=2,
-        line_dash="dash",
-        line_color="red",
-    )
-
-    fig.update_layout(
-        
-        showlegend=False,
-        yaxis=dict(title=None, side="right"),
-        xaxis=dict(
-            showgrid=True,
-            gridcolor='lightgray',
-            tickmode='linear',
-            dtick="M1",
-            tickformat="%m/%Y"
+            '<b>Status:</b> %{label}<br>' +
+            '<b>Projetos:</b> %{value}<br>' +
+            '<extra></extra>'  # remove informações adicionais padrão
         )
     )
 
     st.plotly_chart(fig)
+
+
+
+
+
+# Cronograma de contratos
+st.write("**Cronograma de contratos**")
+
+
+
+
+# Criando uma nova coluna com a data de fim no formato datetime, pra poder usar o sort por data
+df_filtrado['data_fim_contrato_dt'] = pd.to_datetime(
+    df_filtrado['data_fim_contrato'],
+    format='%d/%m/%Y',
+    errors='coerce'
+)
+
+# Sort pela data de fim
+df_filtrado_sorted = df_filtrado.sort_values(
+    by='data_fim_contrato_dt',
+    ascending=False
+)
+
+
+altura_base = 400
+altura_extra = sum([10 / (1 + i * 0.01) for i in range(len(df_filtrado_sorted))])
+altura = int(altura_base + altura_extra)
+
+
+fig = px.timeline(
+    df_filtrado_sorted.assign(
+        _texto_barra=(
+            df_filtrado_sorted['codigo'].astype(str)
+            + ' - '
+            + df_filtrado_sorted['sigla'].astype(str)
+        )
+    ),
+    x_start='data_inicio_contrato_dtime',
+    x_end='data_fim_contrato_dtime',
+    y='_texto_barra',
+    text='_texto_barra',  # inline: codigo - sigla
+    color='status',
+    color_discrete_map=mapa_cores_status,
+    height=altura,
+)
+
+
+
+fig.update_traces(
+    hovertemplate=(
+        '<b>Projeto:</b> %{y}<br>' +
+        '<b>Início:</b> %{customdata[0]}<br>' +
+        '<b>Fim:</b> %{customdata[1]}<br>' +
+        '<extra></extra>'
+    ),
+    textposition='inside',
+    insidetextanchor='middle',
+    textfont=dict(size=14),
+    cliponaxis=False,
+    customdata=df_filtrado_sorted[['data_inicio_contrato', 'data_fim_contrato']].values
+)
+
+fig.update_yaxes(
+    visible=False,
+    showticklabels=False
+)
+
+
+fig.add_vline(
+    x=datetime.datetime.today(),
+    line_width=2,
+    line_dash="dash",
+    line_color="red",
+)
+
+fig.update_layout(
+    
+    showlegend=False,
+    yaxis=dict(title=None, side="right"),
+    xaxis=dict(
+        showgrid=True,
+        gridcolor='lightgray',
+        tickmode='linear',
+        dtick="M1",
+        tickformat="%m/%Y"
+    )
+)
+
+st.plotly_chart(fig)
 
 

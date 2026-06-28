@@ -1500,14 +1500,13 @@ def ajustar_altura_data_editor(df, linhas_adicionais=1):
     return altura
 
 
-# Envia mensagem para a área de notificação
-def notificar(mensagem: str):
+# # Envia mensagem para a área de notificação
+# def notificar(mensagem: str):
 
-    if "notificacoes" not in st.session_state:
-        st.session_state.notificacoes = []
+#     if "notificacoes" not in st.session_state:
+#         st.session_state.notificacoes = []
         
-    st.session_state.notificacoes.append(mensagem)
-
+#     st.session_state.notificacoes.append(mensagem)
 
 
 
@@ -1530,7 +1529,13 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         return df_projetos
 
     # Garante colunas necessárias
-    for col in ["status", "dias_atraso", "proximo_evento", "data_proximo_evento"]:
+    for col in [
+        "status",
+        "dias_atraso",
+        "proximo_evento",
+        "data_proximo_evento",
+        "notificacao"
+    ]:
         if col not in df_projetos.columns:
             df_projetos[col] = None
 
@@ -1555,6 +1560,9 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
 
         codigo = projeto.get("codigo")
         sigla = projeto.get("sigla")
+
+        # Limpa a notificação do projeto antes do processamento
+        df_projetos.at[idx, "notificacao"] = None
 
         # ----------------------------------------------------------
         # MANTÉM STATUS CANCELADO
@@ -1585,9 +1593,12 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         # REGRA: precisa ter parcelas E relatórios
         # ----------------------------------------------------------
         if not parcelas or not relatorios:
-            notificar(
-                f"O projeto {codigo} - {sigla} não possui parcelas e/ou relatórios cadastrados. Não é possível determinar o status."
+
+            df_projetos.at[idx, "notificacao"] = (
+                "O projeto não possui parcelas e/ou relatórios cadastrados. "
+                # "Não é possível determinar o status."
             )
+
 
             df_projetos.at[idx, "status"] = "Sem cronograma"
             df_projetos.at[idx, "dias_atraso"] = None
@@ -1622,8 +1633,8 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         eventos = [e for e in eventos if pd.notna(e["data_prevista"])]
 
         if not eventos:
-            notificar(
-                f"O projeto {codigo} - {sigla} não possui eventos com data válida."
+            df_projetos.at[idx, "notificacao"] = (
+                "O projeto não possui eventos com data válida."
             )
 
             df_projetos.at[idx, "status"] = "Sem cronograma"
@@ -1660,7 +1671,6 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
         df_projetos.at[idx, "data_proximo_evento"] = data_prevista
 
     return df_projetos
-
 
 
 
