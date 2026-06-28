@@ -191,52 +191,41 @@ st.header("Projetos")
 
 
 
-# ============================================
-# SELEÇÃO DO EDITAL
-# ============================================
-
-
-lista_editais = ["Todos"] + df_editais['codigo_edital'].tolist()
-edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
+col1, col2 = st.columns([4, 1])
 
 
 
+with col1:
 
 
-# ============================================
-# TÍTULO + TOGGLE NO MESMO CONTAINER
-# ============================================
+    # ============================================
+    # SELEÇÃO DO EDITAL
+    # ============================================
 
 
-with st.container(horizontal=True):
+    lista_editais = ["Todos"] + df_editais['codigo_edital'].tolist()
+    edital_selecionado = st.selectbox("Selecione o edital", lista_editais, width=300)
 
-    col_titulo, col_toggle = st.columns([4, 1])
-
-    with col_titulo:
-        if edital_selecionado == "Todos":
-            st.subheader("Todos os editais")
-        else:
-            nome_edital = df_editais.loc[
-                df_editais["codigo_edital"] == edital_selecionado,
-                "nome_edital"
-            ].values[0]
-
-            st.subheader(f"{edital_selecionado} - {nome_edital}")
-
-    with col_toggle:
-        st.write("")
-        ver_meus_projetos = st.toggle(
-            "Ver meus projetos",
-            False
-        )
+    df_filtrado = df_projetos.copy()
 
 
 
+    if edital_selecionado == "Todos":
+        st.subheader("Todos os editais")
+    else:
+        nome_edital = df_editais.loc[
+            df_editais["codigo_edital"] == edital_selecionado,
+            "nome_edital"
+        ].values[0]
+
+        st.subheader(f"{edital_selecionado} - {nome_edital}")
 
 
-
-df_filtrado = df_projetos.copy()
-
+    st.write("")
+    ver_meus_projetos = st.toggle(
+        "Ver meus projetos",
+        False
+    )
 
 
 
@@ -297,6 +286,54 @@ if df_filtrado.empty:
     st.divider()
     st.warning("Nenhum projeto encontrado.")
     st.stop()
+
+
+
+
+with col2:
+
+    # Gráfico de pizza do status dos projetos
+
+    st.write("**Status dos projetos**")
+
+    mapa_cores_status = {
+        'Concluído': 'rgba(0, 122, 211, 0.4)',   # Azul 50%
+        'Em dia': 'rgba(160, 194, 86, 0.4)',     # Verde 50%
+        'Atrasado': 'rgba(226, 101, 12, 0.4)',   # Laranja 50%
+        'Cancelado': '#bbb',
+        'Sem cronograma': '#fff099'
+    }
+
+
+    contagens = df_filtrado['status'].value_counts(dropna=True)
+    status = contagens.index.tolist()
+    contagem_status = contagens.values.tolist()
+
+
+
+    fig = px.pie(
+        names=status,
+        values=contagem_status,
+        color=status,
+        color_discrete_map=mapa_cores_status,
+        height=280
+    )
+
+    # Customização do tooltip (hover)
+    # Exibe apenas o status e a quantidade de projetos
+    fig.update_traces(
+        hovertemplate=(
+            '<b>Status:</b> %{label}<br>' +
+            '<b>Projetos:</b> %{value}<br>' +
+            '<extra></extra>'  # remove informações adicionais padrão
+        )
+    )
+
+
+
+
+    st.plotly_chart(fig)
+
 
 
 
@@ -475,7 +512,6 @@ for _, projeto in df_filtrado.iterrows():
 # Painel de demandas
 # ------------------------------------------------------------------------------
 
-st.write("")
 
 if lista_demandas:
 
@@ -563,122 +599,17 @@ if lista_demandas:
 
 
 
-# ============================================
-# INTERFACE
-# ============================================
-
-st.divider()
-
-sobre_col1, sobre_col2 = st.columns([7, 3])
-
-sobre_col1.write("**Projetos atrasados**")
-sobre_col2.write("**Status dos projetos**")
-
-# -------------------------------------------------
-# FILTRO DE PROJETOS ATRASADOS (ÚNICO PONTO)
-# -------------------------------------------------
-if edital_selecionado == "Todos":
-    projetos_atrasados = df_filtrado[df_filtrado["status"] == "Atrasado"]
-else:
-    projetos_atrasados = df_filtrado[
-        (df_filtrado["edital"] == edital_selecionado) &
-        (df_filtrado["status"] == "Atrasado")
-    ]
-
-# -------------------------------------------------
-# COLUNAS
-# -------------------------------------------------
-col1, col2, col3 = st.columns([1, 6, 3], gap="large")
-
-# -------------------------------------------------
-# COLUNA 1 — MÉTRICA
-# -------------------------------------------------
-with col1:
-    total_atrasados = len(projetos_atrasados)
-    st.metric("", total_atrasados)
-    st.write("")
-
-# -------------------------------------------------
-# COLUNA 2 — LISTA DE PROJETOS ATRASADOS
-# -------------------------------------------------
-with col2:
-    st.write("")
-
-    if not projetos_atrasados.empty:
-        df_exibir = projetos_atrasados.copy()
-
-        df_exibir = df_exibir[
-            ["codigo", "sigla", "padrinho", "edital", "dias_atraso"]
-        ]
-
-        df_exibir = df_exibir.rename(columns={
-            "codigo": "Código",
-            "sigla": "Sigla",
-            "padrinho": "Padrinho/Madrinha",
-            "dias_atraso": "Dias de atraso",
-            "edital": "Edital"
-        })
-
-        df_exibir = df_exibir.sort_values(
-            by="Dias de atraso",
-            ascending=False
-        )
-
-        st.dataframe(df_exibir, hide_index=True)
-
-    else:
-        st.write("Não há projetos atrasados.")
-
-
-
-
-
-
-# Gráfico de pizza do status
-with col3:
-
-    mapa_cores_status = {
-        'Concluído': 'rgba(0, 122, 211, 0.4)',   # Azul 50%
-        'Em dia': 'rgba(160, 194, 86, 0.4)',     # Verde 50%
-        'Atrasado': 'rgba(226, 101, 12, 0.4)',   # Laranja 50%
-        'Cancelado': '#bbb',
-        'Sem cronograma': '#fff099'
-    }
-
-
-
-    contagens = df_filtrado['status'].value_counts(dropna=True)
-    status = contagens.index.tolist()
-    contagem_status = contagens.values.tolist()
-
-
-
-    fig = px.pie(
-        names=status,
-        values=contagem_status,
-        color=status,
-        color_discrete_map=mapa_cores_status,
-        height=300
-    )
-
-    # Customização do tooltip (hover)
-    # Exibe apenas o status e a quantidade de projetos
-    fig.update_traces(
-        hovertemplate=(
-            '<b>Status:</b> %{label}<br>' +
-            '<b>Projetos:</b> %{value}<br>' +
-            '<extra></extra>'  # remove informações adicionais padrão
-        )
-    )
-
-    st.plotly_chart(fig)
-
-
-
-
-
 # Cronograma de contratos
-st.write("**Cronograma de contratos**")
+st.write('')
+st.write('')
+st.write('')
+
+
+st.markdown(
+"<p style='font-size:22px; font-weight:600;'>Cronograma de contratos</p>",
+unsafe_allow_html=True
+)
+
 
 
 
