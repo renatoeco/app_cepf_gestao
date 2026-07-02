@@ -1589,6 +1589,17 @@ def notificar_padrinhos_relatorio(
     projeto,
     logo_url
 ):
+
+    # Mantém somente padrinhos com cadastro ativo
+    padrinhos = [
+        padrinho
+        for padrinho in buscar_padrinhos_do_projeto(
+            col_pessoas,
+            projeto["codigo"]
+        )
+        if padrinho.get("status") == "ativo"
+    ]
+
     padrinhos = buscar_padrinhos_do_projeto(col_pessoas, projeto["codigo"])
 
     if not padrinhos:

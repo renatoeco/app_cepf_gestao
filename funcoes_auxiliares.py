@@ -1572,7 +1572,7 @@ def calcular_status_projetos(df_projetos: pd.DataFrame) -> pd.DataFrame:
             df_projetos.at[idx, "dias_atraso"] = None
             df_projetos.at[idx, "proximo_evento"] = None
             df_projetos.at[idx, "data_proximo_evento"] = None
-            continue
+            continueverificar_envio_lembrete_eventos
 
         # ----------------------------------------------------------
         # COLETA SEGURA DOS DADOS

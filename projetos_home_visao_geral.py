@@ -537,7 +537,7 @@ if lista_demandas:
         "Ações"
     ]
 
-    cols = st.columns(larguras_colunas)
+    cols = st.columns(larguras_colunas, gap="medium")
 
     for i, label in enumerate(col_labels):
         cols[i].markdown(f"**{label}**")
@@ -546,7 +546,7 @@ if lista_demandas:
 
     for idx, demanda in enumerate(lista_demandas):
 
-        cols = st.columns(larguras_colunas)
+        cols = st.columns(larguras_colunas, gap="medium")
 
         cols[0].write(demanda["codigo"])
         cols[1].write(demanda["sigla"])
