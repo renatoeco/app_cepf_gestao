@@ -21,7 +21,24 @@ col_ciclos = db["ciclos_investimento"]
 df_ciclos = pd.DataFrame(list(col_ciclos.find()))
 
 col_editais = db["editais"]
-df_editais = pd.DataFrame(list(col_editais.find()))
+
+# Carrega somente algumas colunas da coleção de editais
+df_editais = pd.DataFrame(
+    list(
+        col_editais.find(
+            {},
+            {
+                "codigo_edital": 1,
+                "nome_edital": 1,
+                "data_lancamento": 1,
+                "ciclo_investimento": 1
+            }
+        )
+    )
+)
+
+
+
 
 col_investidores = db["investidores"]
 df_investidores = pd.DataFrame(list(col_investidores.find()))
@@ -53,6 +70,19 @@ df_editais = df_editais.rename(columns={
     "data_lancamento": "Data de Lançamento",
     "ciclo_investimento": "Ciclo de investimento",
 })
+
+
+# # Mantém somente as colunas utilizadas nesta página
+# df_editais = df_editais[
+#     [
+#         "Código",
+#         "Nome",
+#         "Data de Lançamento",
+#         "Ciclo de investimento"
+#     ]
+# ]
+
+
 
 # Renomear as colunas de df_investidores
 df_investidores = df_investidores.rename(columns={
@@ -231,12 +261,7 @@ st.write('')
 # EDITAIS ------------------------------------------------------
 st.subheader(pluralizar(len(df_editais_filtrado), "edital", "editais"))
 
-# # Formata a coluna para dd/mm/yyyy
-# if "Data de Lançamento" in df_editais_filtrado.columns:
-#     df_editais_filtrado["Data de Lançamento"] = (
-#         pd.to_datetime(df_editais_filtrado["Data de Lançamento"])
-#         .dt.strftime("%d/%m/%Y")
-#     )
+
 
 st.dataframe(
     df_editais_filtrado,

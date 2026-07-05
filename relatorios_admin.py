@@ -682,8 +682,8 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos":
                 "Cotação": st.column_config.NumberColumn(
                     "Cotação",
                     min_value=0.0,
-                    step=0.01,
-                    format="%.2f"
+                    step=0.0001,
+                    format="%.4f"
                 )
             },
             key="data_editor_cambio"
@@ -1217,8 +1217,8 @@ elif opcao_relatorio == "Relatório de acompanhamento de desembolsos por parcela
                 "Cotação US$": st.column_config.NumberColumn(
                     "Cotação US$",
                     min_value=0.0,
-                    step=0.01,
-                    format="%.2f"
+                    step=0.0001,
+                    format="%.4f"
                 )
             },
             key="data_editor_cambio_parcelas"
@@ -2390,10 +2390,6 @@ elif opcao_relatorio == "Relatório de acompanhamento completo":
 
 
 
-###########################################################################################################
-# RELATÓRIO DE INDICADORES E RESULTADOS
-###########################################################################################################
-
 
 
 ###########################################################################################################
@@ -2411,6 +2407,7 @@ if opcao_relatorio == "Relatório de Indicadores e Resultados":
 
     st.write(f"{len(projetos)} projetos")
 
+    st.write("")
     st.write("")
 
     with st.container(horizontal=True):
