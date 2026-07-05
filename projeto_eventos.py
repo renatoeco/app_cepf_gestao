@@ -146,7 +146,15 @@ def montar_eventos_calendario():
             ""
         )
 
-        cor = "#2F5BA1B2" if codigo_projeto == codigo_projeto_atual else "#8fad4dff"
+        ###################################################################################################
+        # DEFINE A COR DO EVENTO
+        ###################################################################################################
+
+        cor = (
+            cor_meu_projeto
+            if codigo_projeto == codigo_projeto_atual
+            else cor_demais_projetos
+        )
 
         for evento in projeto.get("eventos", []):
 
@@ -383,10 +391,14 @@ def dialog_evento(evento):
 # TRATAMENTO DE DADOS
 ###########################################################################################################
 
-
-# Cor do evento IEB
+# Cores dos eventos do calendário
 cor_evento_ieb = "#6B6B6B"
 
+# Meu projeto (agora verde)
+cor_meu_projeto = "#8fad4dff"
+
+# Demais projetos (agora azul)
+cor_demais_projetos = "#2F5BA1B2"
 
 
 
@@ -448,6 +460,7 @@ if aba_selecionada == "Agenda":
 
     with st.container(horizontal=True):
 
+        # Eventos do IEB
         st.markdown(
             f"""
             <div style="display:flex;align-items:center;margin-right:24px;">
@@ -464,14 +477,16 @@ if aba_selecionada == "Agenda":
             unsafe_allow_html=True
         )
 
+
+        # Eventos do meu projeto
         st.markdown(
-            """
+            f"""
             <div style="display:flex;align-items:center;margin-right:24px;">
                 <div style="
                     width:14px;
                     height:14px;
                     border-radius:50%;
-                    background:#2F5BA1B2;
+                    background:{cor_meu_projeto};
                     margin-right:8px;">
                 </div>
                 Eventos do Meu Projeto
@@ -480,14 +495,16 @@ if aba_selecionada == "Agenda":
             unsafe_allow_html=True
         )
 
+
+        # Eventos dos demais projetos
         st.markdown(
-            """
+            f"""
             <div style="display:flex;align-items:center;">
                 <div style="
                     width:14px;
                     height:14px;
                     border-radius:50%;
-                    background:#8fad4dff;
+                    background:{cor_demais_projetos};
                     margin-right:8px;">
                 </div>
                 Eventos dos Demais Projetos
