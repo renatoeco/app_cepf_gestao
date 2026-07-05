@@ -527,7 +527,8 @@ def verificar_envio_lembrete_eventos(
                     )
 
                     st.success(
-                        "E-mails de lembrete de Eventos enviados com sucesso."
+                        "E-mails de lembrete de Eventos enviados com sucesso.",
+                        icon=":material/mail:"
                     )
 
                     time.sleep(3)
