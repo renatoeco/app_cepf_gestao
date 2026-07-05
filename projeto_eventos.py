@@ -438,6 +438,70 @@ if aba_selecionada == "Agenda":
 
     st.subheader("Agenda de eventos do edital")
 
+
+
+    ###################################################################################################
+    # LEGENDA DOS EVENTOS
+    ###################################################################################################
+
+    st.write("")
+
+    with st.container(horizontal=True):
+
+        st.markdown(
+            f"""
+            <div style="display:flex;align-items:center;margin-right:24px;">
+                <div style="
+                    width:14px;
+                    height:14px;
+                    border-radius:50%;
+                    background:{cor_evento_ieb};
+                    margin-right:8px;">
+                </div>
+                Eventos do IEB
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div style="display:flex;align-items:center;margin-right:24px;">
+                <div style="
+                    width:14px;
+                    height:14px;
+                    border-radius:50%;
+                    background:#2F5BA1B2;
+                    margin-right:8px;">
+                </div>
+                Eventos do Meu Projeto
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div style="display:flex;align-items:center;">
+                <div style="
+                    width:14px;
+                    height:14px;
+                    border-radius:50%;
+                    background:#8fad4dff;
+                    margin-right:8px;">
+                </div>
+                Eventos dos Demais Projetos
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.write("")
+    st.write("")
+
+
+
+
     eventos = montar_eventos_calendario()
 
     calendar_options = {
