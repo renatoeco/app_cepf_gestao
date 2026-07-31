@@ -1807,35 +1807,7 @@ with cron_desemb:
             - (financeiro.get("valor_devolucao") or 0)
         )
 
-        # ==================================================
-        # SOMA DE DESPESAS ACEITAS
-        # ==================================================
-        orcamento = financeiro.get("orcamento", [])
 
-        gasto_total_aceito = 0
-
-        for despesa in orcamento:
-
-            lancamentos = despesa.get("lancamentos", [])
-
-            for lanc in lancamentos:
-
-                if lanc.get("status_despesa") == "aceito":
-
-                    gasto_total_aceito += (
-                        lanc.get("valor_despesa") or 0
-                    )
-
-        # ==================================================
-        # PERCENTUAL EXECUTADO
-        # ==================================================
-        percentual_executado = 0
-
-        if valor_total_projeto > 0:
-
-            percentual_executado = (
-                gasto_total_aceito / valor_total_projeto
-            ) * 100
 
         # ==================================================
         # RELATÓRIOS
@@ -1935,14 +1907,6 @@ with cron_desemb:
             elif data_prevista_relatorio:
 
 
-            # if data_aprovacao_relatorio:
-
-            #     data_aprovacao = (
-            #         f"{data_aprovacao_relatorio} :material/check:"
-            #     )
-
-            # elif data_prevista_relatorio:
-
                 data_base = datetime.datetime.strptime(
                     data_prevista_relatorio,
                     "%d/%m/%Y"
@@ -1993,10 +1957,16 @@ with cron_desemb:
                 .replace("X", ".")
             )
 
+
+            # --------------------------------------------------
+            # Formatação do percentual da parcela
+            # --------------------------------------------------
             percentual_fmt = (
-                f"{percentual_executado:.2f}%"
+                f"{percentual:.2f}%"
                 .replace(".", ",")
             )
+
+
 
             # --------------------------------------------------
             # Linha da tabela
