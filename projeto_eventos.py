@@ -428,17 +428,29 @@ with col_identificacao:
 
 st.write('')
 
-# Abas
+
+
+###################################################################################################
+# ABAS DA PÁGINA
+###################################################################################################
+
+abas = [
+    sac.TabsItem(label="Agenda")
+]
+
+if st.session_state.get("tipo_usuario") != "visitante":
+
+    abas.append(
+        sac.TabsItem(label="Divulgar eventos")
+    )
 
 aba_selecionada = sac.tabs(
-    items=[
-        sac.TabsItem(label="Agenda"),
-        sac.TabsItem(label="Divulgar eventos")
-    ],
+    items=abas,
     align="left",
     variant="outline",
     key="tabs_eventos"
 )
+
 
 
 
