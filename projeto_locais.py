@@ -1278,47 +1278,77 @@ with aba_mapas:
 
         if not pontos_mapa:
             st.info("Este projeto não possui localidades com coordenadas cadastradas.")
+
+
         else:
+
             df_mapa = pd.DataFrame(pontos_mapa)
 
-            # Centraliza o mapa
-            centro_lat = df_mapa["latitude"].mean()
-            centro_lon = df_mapa["longitude"].mean()
-
-            mapa = folium.Map(
-                location=[centro_lat, centro_lon],
-                zoom_start=6,
-                tiles="OpenStreetMap"
+            # Identifica quando os dados do mapa foram alterados.
+            hash_mapa = hash(
+                tuple(
+                    (
+                        row["codigo"],
+                        row["localidade"],
+                        row["latitude"],
+                        row["longitude"],
+                    )
+                    for _, row in df_mapa.iterrows()
+                )
             )
 
-            # Adiciona os marcadores
-            for _, row in df_mapa.iterrows():
+            # Reconstrói o mapa somente quando houver alteração
+            # nas localidades do projeto.
+            if (
+                "mapa_projeto" not in st.session_state
+                or st.session_state.get("hash_mapa_projeto") != hash_mapa
+            ):
 
-                popup_html = f"""
-                <div style="width:300px">
-                    <b>Organização:</b> {row['organizacao']}<br>
-                    <b>Sigla:</b> {row['sigla']}<br>
-                    <b>Código:</b> {row['codigo']}<br>
-                    <b>Projeto:</b> {row['nome_projeto']}<br>
-                    <b>Município:</b> {row['municipio']}<br>
-                    <b>Localidade:</b> {row['localidade']}<br>
-                    <b>Latitude:</b> {row['latitude']}<br>
-                    <b>Longitude:</b> {row['longitude']}<br>
+                centro_lat = df_mapa["latitude"].mean()
+                centro_lon = df_mapa["longitude"].mean()
 
-                </div>
-                """
+                mapa = folium.Map(
+                    location=[centro_lat, centro_lon],
+                    zoom_start=6,
+                    tiles="OpenStreetMap",
+                    prefer_canvas=True,
+                )
 
-                folium.Marker(
-                    location=[row["latitude"], row["longitude"]],
-                    popup=folium.Popup(popup_html, max_width=500),
-                    icon=folium.Icon(
-                        color="red",
-                        prefix="fa"
-                    ),
-                ).add_to(mapa)
+                # Adiciona os marcadores
+                for _, row in df_mapa.iterrows():
 
-            # Renderiza o mapa ocupando toda a largura
-            st_folium(mapa, width="100%", height=600)
+                    popup_html = f"""
+                    <div style="width:300px">
+                        <b>Organização:</b> {row['organizacao']}<br>
+                        <b>Sigla:</b> {row['sigla']}<br>
+                        <b>Código:</b> {row['codigo']}<br>
+                        <b>Projeto:</b> {row['nome_projeto']}<br>
+                        <b>Município:</b> {row['municipio']}<br>
+                        <b>Localidade:</b> {row['localidade']}<br>
+                        <b>Latitude:</b> {row['latitude']}<br>
+                        <b>Longitude:</b> {row['longitude']}<br>
+                    </div>
+                    """
 
+                    folium.Marker(
+                        location=[row["latitude"], row["longitude"]],
+                        popup=folium.Popup(popup_html, max_width=500),
+                        icon=folium.Icon(
+                            color="red",
+                            prefix="fa",
+                        ),
+                    ).add_to(mapa)
+
+                st.session_state.mapa_projeto = mapa
+                st.session_state.hash_mapa_projeto = hash_mapa
+
+            # Renderiza o mapa sem retornar eventos de navegação
+            st_folium(
+                st.session_state.mapa_projeto,
+                width="100%",
+                height=600,
+                key="mapa_projeto_render",
+                returned_objects=[],
+            )
 
 
