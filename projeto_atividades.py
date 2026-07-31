@@ -95,7 +95,7 @@ def renderizar_acoes_remanejamento(item, idx):
 
     status = item.get("status_remanejamento")
 
-    if st.session_state.get("tipo_usuario") in ["admin", "equipe"] and status != "aceito":
+    if st.session_state.get("tipo_usuario") in ["admin", "equipe"] and status == "em_analise":
 
         # ==================================================
         # BOTÃO APROVAR
@@ -186,49 +186,6 @@ def renderizar_acoes_remanejamento(item, idx):
                 )
 
 
-
-
-
-            # # ==================================================
-            # # REMANEJAMENTO TIPO ADICIONAR ATIVIDADE
-            # # ==================================================
-
-            # elif "add_atividade" in item:
-
-            #     componente_nome = item.get("componente")
-            #     entrega_nome = item.get("entrega")
-
-            #     descricao = item.get("add_atividade")
-            #     data_inicio = item.get("data_inicio")
-            #     data_fim = item.get("data_fim")
-
-            #     novo_id = str(bson.ObjectId())
-
-            #     nova_atividade = {
-            #         "id": novo_id,
-            #         "atividade": descricao,
-            #         "data_inicio": data_inicio,
-            #         "data_fim": data_fim,
-            #         # "status_atividade": "prevista",
-            #         "porcentagem_atv": 0
-            #     }
-
-            #     col_projetos.update_one(
-            #         {"codigo": codigo_projeto_atual},
-            #         {
-            #             "$push": {
-            #                 "plano_trabalho.componentes.$[comp].entregas.$[ent].atividades": nova_atividade
-            #             },
-            #             "$set": {
-            #                 f"plano_trabalho.remanejamentos_atividades.{idx}.status_remanejamento": "aceito",
-            #                 f"plano_trabalho.remanejamentos_atividades.{idx}.data_aprov_remanej": datetime.datetime.now().strftime("%d/%m/%Y")
-            #             }
-            #         },
-            #         array_filters=[
-            #             {"comp.componente": componente_nome},
-            #             {"ent.entrega": entrega_nome}
-            #         ]
-            #     )
 
 
             # ==================================================
