@@ -3892,46 +3892,48 @@ with monitoramento:
     # Texto explicativo
     # ------------------------------------------------------------------
     
-    st.write("""
-        O monitoramento de indicadores de resultados de projetos é o processo contínuo de coleta, análise e interpretação de dados para avaliar o progresso e os impactos de um projeto em relação aos seus objetivos.
+    with st.expander("Orientações", expanded=False):
 
-        Os indicadores de resultados são métricas específicas que medem os efeitos diretos e indiretos das atividades do projeto, permitindo verificar se os objetivos planejados estão sendo atingidos.
+        st.write("""
+            O monitoramento de indicadores de resultados de projetos é o processo contínuo de coleta, análise e interpretação de dados para avaliar o progresso e os impactos de um projeto em relação aos seus objetivos.
 
-        Esse monitoramento possibilita identificar avanços, desafios e ajustes necessários ao longo da execução, garantindo que o projeto esteja no caminho certo para gerar benefícios sociais e ambientais conforme previsto.
+            Os indicadores de resultados são métricas específicas que medem os efeitos diretos e indiretos das atividades do projeto, permitindo verificar se os objetivos planejados estão sendo atingidos.
 
-        Além disso, facilita a prestação de contas, promovendo transparência e eficiência.
+            Esse monitoramento possibilita identificar avanços, desafios e ajustes necessários ao longo da execução, garantindo que o projeto esteja no caminho certo para gerar benefícios sociais e ambientais conforme previsto.
+
+            Além disso, facilita a prestação de contas, promovendo transparência e eficiência.
 
 
-        **Descrição dos itens**
+            **Descrição dos itens**
 
-        • **Indicador do CEPF:** Nome do indicador do CEPF correspondente ao resultado esperado do projeto.
+            • **Indicador do CEPF:** Nome do indicador do CEPF correspondente ao resultado esperado do projeto.
 
-        • **Resultado Esperado:** Resultado esperado da tabela do plano de trabalho do projeto.
+            • **Resultado Esperado:** Resultado esperado da tabela do plano de trabalho do projeto.
 
-        • **Indicador do Projeto:** Nome do indicador que mede o resultado esperado do projeto.
+            • **Indicador do Projeto:** Nome do indicador que mede o resultado esperado do projeto.
 
-        • **Linha de Base:** Condição inicial antes da implementação das atividades do projeto. Representa o ponto de partida contra o qual o progresso será medido. Exemplo: “0 árvores plantadas”.
+            • **Linha de Base:** Condição inicial antes da implementação das atividades do projeto. Representa o ponto de partida contra o qual o progresso será medido. Exemplo: “0 árvores plantadas”.
 
-        • **Meta:** Valor ou resultado que se espera alcançar para esse indicador ao final do projeto.
+            • **Meta:** Valor ou resultado que se espera alcançar para esse indicador ao final do projeto.
 
-        • **Resultado Atual:** Medição mais recente, atualizada periodicamente. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
+            • **Resultado Atual:** Medição mais recente, atualizada periodicamente. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
 
-        • **Unidade de Medida:** Unidade usada para mensurar o indicador (ex: árvores, litros, famílias, etc.).
+            • **Unidade de Medida:** Unidade usada para mensurar o indicador (ex: árvores, litros, famílias, etc.).
 
-        • **Periodicidade:** Frequência com que os dados são coletados (ex: mensal, trimestral).
+            • **Periodicidade:** Frequência com que os dados são coletados (ex: mensal, trimestral).
 
-        • **Fonte de Verificação:** Documentos, relatórios ou dados que comprovam o resultado obtido.
+            • **Fonte de Verificação:** Documentos, relatórios ou dados que comprovam o resultado obtido.
 
-        • **Responsável:** Pessoa ou equipe responsável por monitorar e coletar os dados. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
+            • **Responsável:** Pessoa ou equipe responsável por monitorar e coletar os dados. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
 
-        • **Data de Coleta:** Data da coleta ou última atualização dos dados. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
+            • **Data de Coleta:** Data da coleta ou última atualização dos dados. Atenção: esta coluna deve ser preenchida apenas a partir do 1º relatório técnico de progresso.
 
-        • **Observações:** Espaço para notas sobre desafios, contextos ou ajustes necessários.
-        """)
+            • **Observações:** Espaço para notas sobre desafios, contextos ou ajustes necessários.
+            """)
 
-    if usuario_interno:
-        st.write('**Adicione as informações de monitoramento de indicadores solicitadas na tabela abaixo.**')
-        st.write('**As três últimas colunas serão preechidas pelos beneficiários junto com o Relatório.**')
+        if usuario_interno:
+            st.write('**Adicione as informações de monitoramento de indicadores solicitadas na tabela abaixo.**')
+            st.write('**As três últimas colunas serão preechidas pelos beneficiários junto com o Relatório.**')
 
 
     st.write('')
