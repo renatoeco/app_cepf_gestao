@@ -488,7 +488,7 @@ with tab4:
 
             col1, col2, col3 = st.columns(3)
 
-            codigo_edital = col1.text_input("Codigo do edital: *")
+            codigo_edital = col1.text_input("Código do edital: *")
             nome_edital = st.text_input("Nome do edital: *")
 
             codigos_ciclos = sorted(col_ciclos.distinct("codigo_ciclo"))
