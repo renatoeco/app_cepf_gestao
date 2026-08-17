@@ -105,6 +105,7 @@ with tab1:
     # CADASTRAR INVESTIDOR
     # ----------------------------------------
     if opcao_investidores == "Cadastrar Investidor":
+
         with st.form(key="investidor_cadastro_form", border=False):
             st.write("")
 
@@ -226,11 +227,15 @@ with tab2:
         with st.form(key="doador_cadastro_form", border=False):
             st.write("")
 
-            sigla_doador = st.text_input("Sigla: *")
-            nome_doador = st.text_input("Nome do doador: *")
+            col1, col2 = st.columns([1, 5])
+
+            sigla_doador = col1.text_input("Sigla: *")
+            nome_doador = col2.text_input("Nome do doador: *")
 
             st.write("")
-            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary")
+            submit = st.form_submit_button("Salvar novo doador", 
+                                            icon=":material/save:", 
+                                            type="primary")
 
             if submit:
                 # Validação
@@ -354,7 +359,7 @@ with tab3:
 
             st.write('')
 
-            submit = st.form_submit_button("Cadastrar Ciclo de Investimento", icon=":material/save:", type="primary", key="btn_cadastrar_ciclo")
+            submit = st.form_submit_button("Salvar Ciclo de Investimento", icon=":material/save:", type="primary", key="btn_cadastrar_ciclo")
 
 
             if submit:
@@ -507,7 +512,7 @@ with tab4:
 
             st.write('')
 
-            submit = st.form_submit_button("Salvar", icon=":material/save:", type="primary", key="btn_cadastrar_edital")
+            submit = st.form_submit_button("Salvar novo edital", icon=":material/save:", type="primary", key="btn_cadastrar_edital")
 
             if submit:
 
