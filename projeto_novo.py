@@ -189,7 +189,8 @@ with st.form(key=f"form_novo_projeto_{st.session_state.form_key}", border=False)
             format="dd/MM/yyyy",
             locale="pt_BR",
             one_tap=True,
-            key="data_fim"
+            key="data_fim",
+            placeholder="dd/mm/aaaa",
         )
 
 
