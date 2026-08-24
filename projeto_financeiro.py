@@ -5160,24 +5160,24 @@ with remanejamentos:
                         }
 
 
-
-                    st.markdown(
-                        f"""
-                        <div style="margin-bottom:6px;">
-                            <span style="
-                                background:{badge['bg']};
-                                color:{badge['color']};
-                                padding:4px 10px;
-                                border-radius:20px;
-                                font-size:12px;
-                                font-weight:600;
-                            ">
-                                {badge['label']}
-                            </span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    with st.container(horizontal=True, horizontal_alignment="right"):
+                        st.markdown(
+                            f"""
+                            <div style="margin-bottom:6px;">
+                                <span style="
+                                    background:{badge['bg']};
+                                    color:{badge['color']};
+                                    padding:4px 10px;
+                                    border-radius:20px;
+                                    font-size:12px;
+                                    font-weight:600;
+                                ">
+                                    {badge['label']}
+                                </span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
 
                 st.write('')
