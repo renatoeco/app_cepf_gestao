@@ -5116,7 +5116,7 @@ with remanejamentos:
                 # ==================================================
                 # LINHA 1 — DATAS + STATUS
                 # ==================================================
-                col1, col2, col3 = st.columns(dist_colunas)
+                col1, col2, col3 = st.columns(dist_colunas, gap="medium")
 
                 # ------------------------------------------
                 # Coluna 1 — Data solicitação
@@ -5189,7 +5189,7 @@ with remanejamentos:
                 # ==================================================
                 # LINHA 2 — REDUÇÕES | AUMENTOS | AÇÕES
                 # ==================================================
-                col1, col2, col3 = st.columns(dist_colunas)
+                col1, col2, col3 = st.columns(dist_colunas, gap="medium")
 
 
                 # ------------------------------------------
@@ -5394,7 +5394,12 @@ with remanejamentos:
                     # Mostrar ações somente para admin/equipe
                     # e somente se ainda NÃO aceito
                     # --------------------------------------------------
-                    if st.session_state.get("tipo_usuario") in ["admin", "equipe"] and status != "aceito":
+
+                    if (
+                        st.session_state.get("tipo_usuario") in ["admin", "equipe"]
+                        and status not in ["aceito", "recusado"]
+                    ):
+                    # if st.session_state.get("tipo_usuario") in ["admin", "equipe"] and status != "aceito":
 
                         # ==================================================
                         # PRE-CARREGAR estados a partir do banco
