@@ -2280,20 +2280,16 @@ with cron_desemb:
         if opcao_editar_cron == "Parcelas":
 
 
-            if opcao_editar_cron == "Parcelas":
 
-                # -----------------------------------
-                # Validação das entregas do plano de trabalho
-                # -----------------------------------
-                if not opcoes_entregas:
+            # -----------------------------------
+            # Validação das entregas do plano de trabalho
+            # -----------------------------------
+            if not opcoes_entregas:
 
-                    st.warning(
-                        "Antes de cadastrar as parcelas, cadastre as entregas no Plano de Trabalho.",
-                        icon=":material/warning:"
-                    )
-
-                st.markdown("#### Parcelas")
-
+                st.warning(
+                    "Antes de cadastrar as parcelas, cadastre as entregas no Plano de Trabalho.",
+                    icon=":material/warning:"
+                )
 
 
 
