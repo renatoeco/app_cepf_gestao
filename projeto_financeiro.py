@@ -2539,7 +2539,7 @@ with cron_desemb:
             # -----------------------------------
             # Salvar
             # -----------------------------------
-            if st.button("Salvar parcelas", icon=":material/save:"):
+            if st.button("Salvar parcelas", icon=":material/save:", type="primary"):
 
                 df_salvar = df_parcelas.dropna(
                     subset=["valor", "data_prevista"],
