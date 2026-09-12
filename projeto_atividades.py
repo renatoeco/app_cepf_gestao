@@ -2557,22 +2557,22 @@ with plano_trabalho:
 
                             "Atividade": st.column_config.TextColumn(
                                 "Atividade",
-                                width=700
+                                # width=700
                             ),
 
                             "Data de início": st.column_config.TextColumn(
                                 "Data de início",
-                                width=20
+                                # width=20
                             ),
 
                             "Data de fim": st.column_config.TextColumn(
                                 "Data de fim",
-                                width=20
+                                # width=20
                             ),
 
                             "Status": st.column_config.TextColumn(
                                 "Status",
-                                width=20
+                                # width=20
                             ),
 
                             "Porcentagem": st.column_config.ProgressColumn(
@@ -2580,7 +2580,7 @@ with plano_trabalho:
                                 min_value=0,
                                 max_value=100,
                                 format="%d%%",
-                                width=20
+                                # width=20
                             )
                         }
                     )
