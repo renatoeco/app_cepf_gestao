@@ -60,15 +60,52 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
         msg['To'] = email_destino
         msg['Subject'] = "Convite para o sistema Veredas"
 
+
+
         corpo_html = f"""
         <p>Olá {nome_completo},</p>
+
         <p>Você foi convidado para utilizar o <strong>Sistema Veredas</strong>, a plataforma de gestão de projetos do IEB.</p>
-        <p>Para realizar seu cadastro, acesse o link abaixo e clique no botão <strong>"Primeiro acesso"</strong>:</p>
-        <p><a href="https://valid-veredas.streamlit.app/">Acesse aqui a Plataforma</a></p>
-        <p>Insira o seu <strong>e-mail</strong> e o <strong>código</strong> que te enviamos abaixo:</p>
-        <h2>{codigo}</h2>
+
+        <p><strong>Para se cadastrar na plataforma, siga os seguintes passos:</strong></p>
+
+        <ol>
+            <li>
+                Acesse a plataforma pelo link:
+                
+                <a href="https://valid-veredas.streamlit.app/">
+                    https://valid-veredas.streamlit.app
+                </a>
+            </li>
+            <br>
+            <li>
+                Clique no botão <strong>"Primeiro acesso"</strong>.
+            </li>
+            <br>
+            <li>
+                Insira o seu <strong>e-mail</strong> e o código de verificação abaixo:
+                <br>
+                <h2>{codigo}</h2>
+            </li>
+        </ol>
+
         <p>Se tiver alguma dúvida, entre em contato com a equipe do IEB.</p>
         """
+
+
+
+
+
+
+        # corpo_html = f"""
+        # <p>Olá {nome_completo},</p>
+        # <p>Você foi convidado para utilizar o <strong>Sistema Veredas</strong>, a plataforma de gestão de projetos do IEB.</p>
+        # <p>Para realizar seu cadastro, acesse o link abaixo e clique no botão <strong>"Primeiro acesso"</strong>:</p>
+        # <p><a href="https://valid-veredas.streamlit.app/">Acesse aqui a Plataforma</a></p>
+        # <p>Insira o seu <strong>e-mail</strong> e o <strong>código</strong> que te enviamos abaixo:</p>
+        # <h2>{codigo}</h2>
+        # <p>Se tiver alguma dúvida, entre em contato com a equipe do IEB.</p>
+        # """
 
         msg.attach(MIMEText(corpo_html, 'html'))
 
