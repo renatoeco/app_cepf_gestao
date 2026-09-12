@@ -73,8 +73,8 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
             <li>
                 Acesse a plataforma pelo link:
                 
-                <a href="https://valid-veredas.streamlit.app/">
-                    https://valid-veredas.streamlit.app
+                <a href="https://veredas.streamlit.app/">
+                    https://veredas.streamlit.app
                 </a>
             </li>
             <br>
