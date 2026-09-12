@@ -83,7 +83,7 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
             </li>
             <br>
             <li>
-                Insira o seu <strong>e-mail</strong> e o código de verificação abaixo:
+                Insira o seu <strong>e-mail</strong> e o <strong>código de verificação</strong> abaixo:
                 <br>
                 <h2>{codigo}</h2>
             </li>
