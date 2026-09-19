@@ -3249,6 +3249,7 @@ with orcamento_tab:
             ],
             num_rows="dynamic",
             height="content",
+            hide_index=True,
             column_config={
                 "id_despesa": None,
                 "categoria_nome": st.column_config.SelectboxColumn(
@@ -3328,30 +3329,87 @@ with orcamento_tab:
 
 
 
+
+
+
+
+
         # -----------------------------------
         # BOTÃO ATUALIZAR
         # -----------------------------------
         with st.container(horizontal=True, horizontal_alignment="right"):
 
-            if st.button("Atualizar tabela", icon=":material/sync:", width=200):
+            if st.button(
+                "Atualizar tabela",
+                icon=":material/sync:",
+                width=200
+            ):
 
+                # -----------------------------------
+                # Copiar os dados atualmente editados
+                # -----------------------------------
                 df_temp = df_editado_orc.copy()
 
-                df_temp["quantidade"] = df_temp["quantidade_fmt"].apply(parse_decimal)
-                df_temp["valor_unitario"] = df_temp["valor_unitario_fmt"].apply(parse_brl)
+                # -----------------------------------
+                # Recriar o índice padrão do DataFrame
+                # A operação remove qualquer índice anterior
+                # que possa ter sido carregado pelo data_editor.
+                # -----------------------------------
+                df_temp = df_temp.reset_index(drop=True)
 
-                df_temp["valor_total"] = (
-                    df_temp["quantidade"] * df_temp["valor_unitario"]
+                # -----------------------------------
+                # Converter quantidade
+                # -----------------------------------
+                df_temp["quantidade"] = (
+                    df_temp["quantidade_fmt"].apply(parse_decimal)
                 )
 
-                df_temp["valor_total_fmt"] = df_temp["valor_total"].apply(format_brl)
+                # -----------------------------------
+                # Converter valor unitário
+                # -----------------------------------
+                df_temp["valor_unitario"] = (
+                    df_temp["valor_unitario_fmt"].apply(parse_brl)
+                )
 
-                # Atualiza estado corretamente (sem erro de widget)
+                # -----------------------------------
+                # Calcular valor total
+                # -----------------------------------
+                df_temp["valor_total"] = (
+                    df_temp["quantidade"]
+                    * df_temp["valor_unitario"]
+                )
+
+                # -----------------------------------
+                # Formatar valor total
+                # -----------------------------------
+                df_temp["valor_total_fmt"] = (
+                    df_temp["valor_total"].apply(format_brl)
+                )
+
+                # -----------------------------------
+                # Garantir índice padrão após todos
+                # os processamentos do DataFrame
+                # -----------------------------------
+                df_temp.index = pd.RangeIndex(
+                    start=0,
+                    stop=len(df_temp)
+                )
+
+                # -----------------------------------
+                # Atualizar estado visual do editor
+                # -----------------------------------
                 st.session_state["df_orcamento_editor"] = df_temp
 
+                # -----------------------------------
+                # Recarregar a página
+                # -----------------------------------
                 st.rerun()
 
-            
+
+
+
+
+
 
 
 
