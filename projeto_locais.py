@@ -838,10 +838,10 @@ def dialog_mapas():
         st.write('**Selecione os arquivos de mapa**')
 
         arquivos = st.file_uploader(
-            "Tamanho máximo: 25MB. Formatos de arquivo aceitos: jpg, png, pdf, jpeg, webp, docx",
+            "Tamanho máximo: 100 MB. Formatos de arquivo aceitos: jpg, png, pdf, jpeg, webp, docx, kmz, kml, shapefile (zip)",
             accept_multiple_files=True,
-            type=["jpg", "png", "pdf", "jpeg", "webp", "docx"],
-            max_upload_size=25
+            type=["jpg", "png", "pdf", "jpeg", "webp", "docx", "kmz", "kml", "zip"],
+            max_upload_size=100
         )
 
         if arquivos and st.button(":material/save: Enviar arquivos", type="primary"):
