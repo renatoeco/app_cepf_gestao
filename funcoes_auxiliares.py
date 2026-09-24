@@ -1752,5 +1752,5 @@ def sidebar_projeto():
     st.write('')
 
     st.sidebar.markdown(
-        "[**Área do parceiro**](https://cepfcerrado.iieb.org.br/area-do-parceiro/)"
+        "[Área do parceiro](https://cepfcerrado.iieb.org.br/area-do-parceiro/)"
     )
