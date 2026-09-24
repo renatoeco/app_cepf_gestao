@@ -1749,5 +1749,8 @@ def sidebar_projeto():
 
         st.sidebar.caption("Em caso de dúvidas, sugestões ou comentários, entre em contato com cepfcerrado@iieb.org.br")
 
+    st.write('')
 
-
+    st.sidebar.markdown(
+        "[**Área do parceiro**](https://cepfcerrado.iieb.org.br/area-do-parceiro/)"
+    )
