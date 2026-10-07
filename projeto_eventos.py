@@ -438,7 +438,7 @@ abas = [
     sac.TabsItem(label="Agenda")
 ]
 
-if st.session_state.get("tipo_usuario") != "visitante":
+if st.session_state.get("tipo_usuario") == "beneficiario":
 
     abas.append(
         sac.TabsItem(label="Divulgar eventos")
