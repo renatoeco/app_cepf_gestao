@@ -15,7 +15,14 @@ from email.utils import formataddr
 st.set_page_config(layout="wide", page_title="Veredas - IEB", page_icon=":material/login:")
 
 
-
+st.markdown("""
+    <style>
+        /* Cor de fundo do sidebar */
+        [data-testid="stSidebar"] {
+            background-color: #eaeaea;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 
 ##############################################################################################################
