@@ -2320,7 +2320,7 @@ else:
 
                 arquivo_contrato = st.file_uploader(
                     "Selecione o arquivo *",
-                    type=["pdf", "docx", "doc", "jpg", "png"]
+                    type=["pdf", "docx", "doc", "jpg", "png", "xls", "xlsx", "csv"]
                 )
 
                 # ---------------------------------------------------------------------
