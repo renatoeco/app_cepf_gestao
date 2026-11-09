@@ -3100,6 +3100,7 @@ with plano_trabalho:
 
 
 
+
             if salvar:
 
                 nova_lista = []
@@ -3107,22 +3108,34 @@ with plano_trabalho:
 
                 entregas_existentes = componente.get("entregas", [])
 
+                # Verifica se todas as linhas estão completamente vazias
+                todas_vazias = True
+
                 for idx, row in df_editado.iterrows():
 
                     nome_entrega = str(row["entrega"]).strip()
-                    indicadores_linha = row.get("Indicadores") or []
 
+                    indicadores_linha = row.get("Indicadores", [])
+
+                    # Trata valores vazios do campo Indicadores
+                    if not isinstance(indicadores_linha, list):
+                        indicadores_linha = []
+
+                    # Se houver qualquer conteúdo na linha, não está totalmente vazia
+                    if nome_entrega or indicadores_linha:
+                        todas_vazias = False
+
+                    # Ignora linhas completamente vazias
+                    if not nome_entrega and not indicadores_linha:
+                        continue
+
+                    # Se houver indicador, mas não houver nome da entrega
                     if not nome_entrega:
-                        continue
-
-                    if not indicadores_linha:
-                        st.error(f"A entrega '{nome_entrega}' deve ter ao menos um indicador.")
+                        st.error("Preencha a entrega em todas as linhas.")
                         erro_validacao = True
-                        continue
+                        break
 
-                    # --------------------------------------------------
-                    # Preserva entrega existente se existir
-                    # --------------------------------------------------
+                    # Recupera a entrega existente para preservar seus outros campos
                     if idx < len(entregas_existentes):
                         entrega_antiga = entregas_existentes[idx]
 
@@ -3133,7 +3146,6 @@ with plano_trabalho:
                         })
 
                     else:
-                        # Nova entrega criada
                         nova_lista.append({
                             "id": str(bson.ObjectId()),
                             "entrega": nome_entrega,
@@ -3142,7 +3154,16 @@ with plano_trabalho:
                             "indicadores_projeto": []
                         })
 
-                if not erro_validacao:
+                # Se todas as linhas estiverem vazias, não faz nada
+                if todas_vazias:
+                    pass
+
+                # Se houver erro de validação, não salva
+                elif erro_validacao:
+                    pass
+
+                # Se estiver tudo correto, salva
+                else:
 
                     for c in componentes:
                         if c["componente"] == nome:
@@ -3150,12 +3171,20 @@ with plano_trabalho:
 
                     col_projetos.update_one(
                         {"codigo": codigo_projeto_atual},
-                        {"$set": {"plano_trabalho.componentes": componentes}}
+                        {
+                            "$set": {
+                                "plano_trabalho.componentes": componentes
+                            }
+                        }
                     )
 
-                    st.success("Entregas atualizadas com sucesso!", icon=":material/check:")
+                    st.success("Entregas atualizadas com sucesso!")
                     time.sleep(3)
+
                     st.rerun()
+
+
+
 
 
 
