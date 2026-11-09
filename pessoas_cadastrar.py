@@ -128,34 +128,29 @@ def validar_email(email):
 
 
 
-
 # normaliza e valida telefone
 def formatar_telefone(telefone):
 
     # remove qualquer caractere não numérico
-    telefone = re.sub(r"\D", "", telefone)
+    telefone = re.sub(r"\D", "", str(telefone))
 
-    # deve conter:
-    # 3 dígitos de DDD
-    # + 8 ou 9 dígitos de telefone
-    if len(telefone) not in [11, 12]:
+    # formato esperado:
+    # 2 dígitos de DDD + 8 ou 9 dígitos de telefone
+    if len(telefone) not in [10, 11]:
         return None
 
-    ddd = telefone[:3]
-    numero = telefone[3:]
+    ddd = telefone[:2]
+    numero = telefone[2:]
 
-    # telefone com 9 dígitos
+    # telefone celular com 9 dígitos
     if len(numero) == 9:
-        telefone_formatado = f"({ddd}) {numero[:5]}-{numero[5:]}"
+        return f"({ddd}) {numero[:5]}-{numero[5:]}"
 
-    # telefone com 8 dígitos
-    elif len(numero) == 8:
-        telefone_formatado = f"({ddd}) {numero[:4]}-{numero[4:]}"
+    # telefone fixo com 8 dígitos
+    if len(numero) == 8:
+        return f"({ddd}) {numero[:4]}-{numero[4:]}"
 
-    else:
-        return None
-
-    return telefone_formatado
+    return None
 
 
 
