@@ -280,7 +280,7 @@ def recuperar_senha_dialog():
 
                                 # mantém compatibilidade com outras partes do sistema
                                 st.session_state["email"] = usuario.get("e_mail", "")
-                                st.session_state["projetos"] = usuario.get("projetos", [])
+                                st.session_state["projetos"] = usuario.get("projetos_ids", [])
 
                                 # reseta navegação para forçar fluxo correto
                                 st.session_state["pagina_atual"] = None
@@ -382,7 +382,7 @@ def login():
                     st.session_state["nome"] = usuario_encontrado.get("nome_completo")
                     # st.session_state["cpf"] = usuario_encontrado.get("CPF")
                     st.session_state["id_usuario"] = usuario_encontrado.get("_id")
-                    st.session_state["projetos"] = usuario_encontrado.get("projetos", [])
+                    st.session_state["projetos"] = usuario_encontrado.get("projetos_ids", [])
                     st.rerun()
                 else:
                     # Senha inválida ou não hashada corretamente

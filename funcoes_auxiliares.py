@@ -1739,8 +1739,23 @@ def sidebar_projeto():
     elif tipo_usuario == 'visitante':
         st.sidebar.caption("Tipo: visitante")
 
-    st.sidebar.caption("Projeto: " + st.session_state.get("projeto_atual", "-"))
+    # Recupera o código do projeto atual pelo ObjectId
+    projeto_atual = st.session_state.get("projeto_atual")
 
+    codigo_projeto = "-"
+
+    if projeto_atual:
+        db = conectar_mongo_cepf_gestao()
+
+        projeto = db["projetos"].find_one(
+            {"_id": projeto_atual},
+            {"codigo": 1}
+        )
+
+        if projeto:
+            codigo_projeto = projeto.get("codigo", "-")
+
+    st.sidebar.caption(f"Projeto: {codigo_projeto}")
 
 
     if tipo_usuario == 'beneficiario':

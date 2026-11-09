@@ -48,21 +48,21 @@ col_organizacoes = db["organizacoes"]
 ###########################################################################################################
 
 
-# Capturando o código do projeto e os dados do projeto
-codigo_projeto_atual = st.session_state.get("projeto_atual")
+# Capturando o ID do projeto e os dados do projeto
+id_projeto_atual = st.session_state.get("projeto_atual")
 
 
 df_projeto = pd.DataFrame(
     list(
         col_projetos.find(
-            {"codigo": codigo_projeto_atual}
+            {"_id": id_projeto_atual}
         )
     )
 )
 
 
 projeto = col_projetos.find_one(
-    {"codigo": codigo_projeto_atual},
+    {"_id": id_projeto_atual},
     {
         "codigo": 1,
         "sigla": 1,
@@ -135,6 +135,7 @@ def montar_eventos_calendario():
 
     for projeto in projetos_edital:
 
+        id_projeto = projeto.get("_id")
         codigo_projeto = projeto.get("codigo")
         sigla = projeto.get("sigla", codigo_projeto)
 
@@ -152,7 +153,7 @@ def montar_eventos_calendario():
 
         cor = (
             cor_meu_projeto
-            if codigo_projeto == codigo_projeto_atual
+            if id_projeto == id_projeto_atual
             else cor_demais_projetos
         )
 
@@ -713,7 +714,7 @@ elif aba_selecionada == "Divulgar eventos":
                     ###################################################################################################
 
                     col_projetos.update_one(
-                        {"codigo": codigo_projeto_atual},
+                        {"_id": id_projeto_atual},
                         {
                             "$push": {
                                 "eventos": novo_evento
@@ -803,7 +804,7 @@ elif aba_selecionada == "Divulgar eventos":
                             ###################################################################################################
 
                             col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
+                                {"_id": id_projeto_atual},
                                 {
                                     "$pull": {
                                         "eventos": {

@@ -152,9 +152,9 @@ if not st.session_state["ultimo_acesso_atualizado"]:
     # OBTÉM CÓDIGO DO PROJETO
     #######################################################################################################
 
-    projeto_codigo = st.session_state.get("projeto_atual")
+    id_projeto = st.session_state.get("projeto_atual")
 
-    if projeto_codigo:
+    if id_projeto:
 
         ###################################################################################################
         # GERA DATA NO FUSO AMERICA/SAO_PAULO (FORMATO STRING)
@@ -170,7 +170,7 @@ if not st.session_state["ultimo_acesso_atualizado"]:
         ###################################################################################################
 
         col_projetos.update_one(
-            {"codigo": projeto_codigo},
+            {"_id": id_projeto},
             {
                 "$set": {
                     "ultimo_acesso": data_formatada
@@ -220,17 +220,18 @@ usuario_interno = st.session_state.tipo_usuario in ["admin", "equipe"]
 ###########################################################################################################
 
 
+
 # Projeto
 
-# Código do projeto atual
-codigo_projeto_atual = st.session_state.get("projeto_atual")
+# ID do projeto atual
+id_projeto_atual = st.session_state.get("projeto_atual")
 
-if not codigo_projeto_atual:
+if not id_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
 
 df_projeto = pd.DataFrame(
-    list(col_projetos.find({"codigo": codigo_projeto_atual}))
+    list(col_projetos.find({"_id": id_projeto_atual}))
 )
 
 if df_projeto.empty:
@@ -294,6 +295,7 @@ df_organizacoes = normalizar_id(df_organizacoes)
 df_projeto = calcular_status_projetos(df_projeto)
 
 
+
 ###########################################################################################################
 # RELACIONAMENTO: PADRINHOS DO PROJETO
 ###########################################################################################################
@@ -304,29 +306,34 @@ df_pessoas_internos = df_pessoas[
 ].copy()
 
 # Seleciona apenas colunas necessárias
-df_pessoas_proj = df_pessoas_internos[["nome_completo", "projetos"]].copy()
+df_pessoas_proj = df_pessoas_internos[
+    ["nome_completo", "projetos_ids"]
+].copy()
 
-# Garante que "projetos" seja lista
-df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
+# Garante que "projetos_ids" seja lista
+df_pessoas_proj["projetos_ids"] = df_pessoas_proj["projetos_ids"].apply(
     lambda x: x if isinstance(x, list) else []
 )
 
 # Explode para uma linha por projeto
-df_pessoas_proj = df_pessoas_proj.explode("projetos")
+df_pessoas_proj = df_pessoas_proj.explode("projetos_ids")
 
 # Remove registros inválidos
-df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
+df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos_ids"])
+
+# Converte os ObjectIds para string, para compatibilizar com df_projeto
+df_pessoas_proj["projetos_ids"] = df_pessoas_proj["projetos_ids"].astype(str)
 
 # Renomeia colunas
 df_pessoas_proj = df_pessoas_proj.rename(columns={
-    "projetos": "codigo",
+    "projetos_ids": "_id",
     "nome_completo": "padrinho"
 })
 
 # Agrupa padrinhos por projeto
 df_padrinhos = (
     df_pessoas_proj
-    .groupby("codigo")["padrinho"]
+    .groupby("_id")["padrinho"]
     .apply(lambda nomes: ", ".join(sorted(set(nomes))))
     .reset_index()
 )
@@ -334,10 +341,9 @@ df_padrinhos = (
 # Junta com o dataframe principal
 df_projeto = df_projeto.merge(
     df_padrinhos,
-    on="codigo",
+    on="_id",
     how="left"
 )
-
 
 
 
@@ -455,13 +461,14 @@ if not editar_cadastro:
 
         # ---------- RESPONSÁVEL(IS) (DERIVADO DA COLEÇÃO DE PESSOAS | SOMENTE BENEFICIÁRIOS) ----------
 
-        codigo_projeto = projeto["codigo"]
+        id_projeto = str(projeto["_id"])
 
         df_responsaveis = df_pessoas[
-            (df_pessoas["tipo_usuario"] == "beneficiario") &   # 👈 filtra tipo
+            (df_pessoas["tipo_usuario"] == "beneficiario") &
             (
-                df_pessoas["projetos"].apply(
-                    lambda x: isinstance(x, list) and codigo_projeto in x
+                df_pessoas["projetos_ids"].apply(
+                    lambda x: isinstance(x, list) and
+                    id_projeto in [str(item) for item in x]
                 )
             )
         ]
@@ -808,7 +815,7 @@ if not editar_cadastro:
                 }
 
                 resultado = col_projetos.update_one(
-                    {"codigo": st.session_state.projeto_atual},
+                    {"_id": st.session_state.projeto_atual},
                     {"$push": {"anotacoes": anotacao}}
                 )
 
@@ -887,16 +894,14 @@ if not editar_cadastro:
 
                 resultado = col_projetos.update_one(
                     {
-                        "codigo": st.session_state.projeto_atual,
+                        "_id": st.session_state.projeto_atual,
                         "anotacoes.id": anotacao_selecionada["id"],
                     },
                     {
-
                         "$set": {
                             "anotacoes.$.texto": novo_texto.strip(),
                             "anotacoes.$.tipo": tipo_anotacao_edicao.lower()
                         }
-
                     }
                 )
 
@@ -1024,7 +1029,7 @@ if not editar_cadastro:
                 }
 
                 resultado = col_projetos.update_one(
-                    {"codigo": st.session_state.projeto_atual},
+                    {"_id": st.session_state.projeto_atual},
                     {"$push": {"visitas": visita}}
                 )
 
@@ -1092,7 +1097,7 @@ if not editar_cadastro:
 
                 resultado = col_projetos.update_one(
                     {
-                        "codigo": st.session_state.projeto_atual,
+                        "_id": st.session_state.projeto_atual,
                         "visitas.id": visita_selecionada["id"],
                     },
                     {
@@ -1228,7 +1233,7 @@ if not editar_cadastro:
 
                 # Insere o contato no projeto
                 resultado = col_projetos.update_one(
-                    {"codigo": st.session_state.projeto_atual},
+                    {"_id": st.session_state.projeto_atual},
                     {"$push": {"contatos": contato}}
                 )
 
@@ -1250,7 +1255,7 @@ if not editar_cadastro:
 
                     pasta_id = obter_pasta_projeto(
                         servico_drive,
-                        st.session_state.projeto_atual,
+                        df_projeto["codigo"].values[0],
                         sigla
                     )
 
@@ -1365,7 +1370,7 @@ if not editar_cadastro:
 
 
                         filtro = {
-                            "codigo": st.session_state.projeto_atual,
+                            "_id": st.session_state.projeto_atual,
                             "contatos.nome": contato_selecionado["nome"],
                             "contatos.funcao": contato_selecionado["funcao"],
                         }
@@ -1406,7 +1411,7 @@ if not editar_cadastro:
                                 # Obtém (ou cria) a pasta do projeto
                                 pasta_id = obter_pasta_projeto(
                                     servico_drive,
-                                    st.session_state.projeto_atual,
+                                    df_projeto["codigo"].values[0],
                                     sigla
                                 )
 
@@ -1510,7 +1515,7 @@ if not editar_cadastro:
                     ):
 
                         filtro = {
-                            "codigo": st.session_state.projeto_atual
+                            "_id": st.session_state.projeto_atual
                         }
 
                         contato_remover = {
@@ -1751,7 +1756,7 @@ else:
 
             # ---------- RESPONSÁVEL(IS) (VINCULADO ÀS PESSOAS) ----------
 
-            codigo_projeto = projeto["codigo"]
+            id_projeto = str(projeto["_id"])
 
             # Filtra apenas beneficiários
             df_pessoas_benef = df_pessoas[
@@ -1762,8 +1767,9 @@ else:
 
             # Responsáveis atuais = pessoas que já têm o projeto no array
             responsaveis_atuais = df_pessoas_benef[
-                df_pessoas_benef["projetos"].apply(
-                    lambda x: isinstance(x, list) and codigo_projeto in x
+                df_pessoas_benef["projetos_ids"].apply(
+                    lambda x: isinstance(x, list) and
+                    id_projeto in [str(item) for item in x]
                 )
             ]["nome_completo"].tolist()
 
@@ -1781,11 +1787,12 @@ else:
             opcoes_padrinho_madrinha = sorted(df_pessoas_internos["nome_completo"].tolist())
 
             # Pessoas atualmente associadas a este projeto
-            codigo_projeto = projeto["codigo"]
+            id_projeto = str(projeto["_id"])
 
             padrinhos_atuais = df_pessoas_internos[
-                df_pessoas_internos["projetos"].apply(
-                    lambda x: isinstance(x, list) and codigo_projeto in x
+                df_pessoas_internos["projetos_ids"].apply(
+                    lambda x: isinstance(x, list) and
+                    id_projeto in [str(item) for item in x]
                 )
             ]["nome_completo"].tolist()
 
@@ -1939,15 +1946,16 @@ else:
                             for nome in remover:
                                 col_pessoas.update_one(
                                     {"nome_completo": nome},
-                                    {"$pull": {"projetos": codigo}}
+                                    {"$pull": {"projetos_ids": projeto_id}}
                                 )
 
                             # Adiciona projeto às pessoas novas
                             for nome in adicionar:
                                 col_pessoas.update_one(
                                     {"nome_completo": nome},
-                                    {"$addToSet": {"projetos": codigo}}
+                                    {"$addToSet": {"projetos_ids": projeto_id}}
                                 )
+
 
                             # --------------------------------------------------
                             # ATUALIZA RESPONSÁVEIS DO PROJETO (NAS PESSOAS)
@@ -1969,18 +1977,15 @@ else:
                             for nome in remover:
                                 col_pessoas.update_one(
                                     {"nome_completo": nome},
-                                    {"$pull": {"projetos": codigo}}
+                                    {"$pull": {"projetos_ids": projeto_id}}
                                 )
 
                             # Adiciona projeto às pessoas novas
                             for nome in adicionar:
                                 col_pessoas.update_one(
                                     {"nome_completo": nome},
-                                    {"$addToSet": {"projetos": codigo}}
+                                    {"$addToSet": {"projetos_ids": projeto_id}}
                                 )
-
-                  
-
 
                         st.success("Projeto atualizado com sucesso!", icon=":material/check:")
                         time.sleep(3)
