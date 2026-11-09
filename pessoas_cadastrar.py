@@ -95,18 +95,6 @@ def enviar_email_convite(nome_completo, email_destino, codigo):
 
 
 
-
-
-        # corpo_html = f"""
-        # <p>Olá {nome_completo},</p>
-        # <p>Você foi convidado para utilizar o <strong>Sistema Veredas</strong>, a plataforma de gestão de projetos do IEB.</p>
-        # <p>Para realizar seu cadastro, acesse o link abaixo e clique no botão <strong>"Primeiro acesso"</strong>:</p>
-        # <p><a href="https://valid-veredas.streamlit.app/">Acesse aqui a Plataforma</a></p>
-        # <p>Insira o seu <strong>e-mail</strong> e o <strong>código</strong> que te enviamos abaixo:</p>
-        # <h2>{codigo}</h2>
-        # <p>Se tiver alguma dúvida, entre em contato com a equipe do IEB.</p>
-        # """
-
         msg.attach(MIMEText(corpo_html, 'html'))
 
         server = smtplib.SMTP(smtp_server, port)
@@ -256,7 +244,6 @@ if opcao_cadastro == "Convite individual":
     col1, col2 = st.columns(2)
 
     e_mail = col1.text_input("E-mail *", key="e_mail")
-    e_mail = e_mail.strip()
     
     telefone = col2.text_input("Telefone *", key="telefone")
 
@@ -282,10 +269,12 @@ if opcao_cadastro == "Convite individual":
 
         with st.spinner("Cadastrando pessoa... aguarde..."):
 
+            # remove espaços no início e no final do e-mail
+            e_mail = st.session_state["e_mail"].strip()
 
             # 1) Validações
             if not st.session_state["nome_completo_novo"] or not st.session_state["tipo_novo_usuario"] \
-            or not st.session_state["e_mail"] or not st.session_state["telefone"]:
+            or not e_mail or not st.session_state["telefone"]:
                 st.error(":material/error: Todos os campos obrigatórios devem ser preenchidos.")
                 st.stop()
 
@@ -293,12 +282,12 @@ if opcao_cadastro == "Convite individual":
                 st.error(":material/error: O campo 'Tipo de beneficiário' é obrigatório para beneficiários.")
                 st.stop()
 
-            if not validar_email(st.session_state["e_mail"]):
+            if not validar_email(e_mail):
                 st.error(":material/error: E-mail inválido.")
                 st.stop()
 
-            if col_pessoas.find_one({"e_mail": st.session_state["e_mail"]}):
-                st.error(f":material/error: O e-mail '{st.session_state['e_mail']}' já está cadastrado.")
+            if col_pessoas.find_one({"e_mail": e_mail}):
+                st.error(f":material/error: O e-mail '{e_mail}' já está cadastrado.")
                 st.stop()
 
 
@@ -323,7 +312,7 @@ if opcao_cadastro == "Convite individual":
             novo_doc = {
                 "nome_completo": st.session_state["nome_completo_novo"],
                 "tipo_usuario": st.session_state["tipo_novo_usuario"],
-                "e_mail": st.session_state["e_mail"],
+                "e_mail": e_mail,
                 "telefone": telefone_formatado,
                 "status": "convidado",
                 "projetos": st.session_state.get("projetos_escolhidos", []),
@@ -345,7 +334,7 @@ if opcao_cadastro == "Convite individual":
             # ==========================================================
 
             # Só executa se houver e-mail válido
-            if st.session_state.get("e_mail"):
+            if e_mail:
 
                 # Inicializa serviço do Drive sob demanda
                 servico_drive = obter_servico_drive()
@@ -370,7 +359,7 @@ if opcao_cadastro == "Convite individual":
 
                         # Estrutura mínima esperada pela função
                         contato_drive = {
-                            "email": st.session_state["e_mail"]
+                            "email": e_mail
                         }
 
                         # Aplica permissão de leitura
@@ -402,7 +391,7 @@ if opcao_cadastro == "Convite individual":
 
                     # verifica se já existe contato com o mesmo e-mail
                     ja_existe = any(
-                        c.get("email", "").lower() == st.session_state["e_mail"].lower()
+                        c.get("email", "").lower() == e_mail.lower()
                         for c in contatos
                     )
 
@@ -412,7 +401,7 @@ if opcao_cadastro == "Convite individual":
                             "nome": st.session_state["nome_completo_novo"],
                             "funcao": "Usuário(a) do sistema",
                             "telefone": st.session_state["telefone"],
-                            "email": st.session_state["e_mail"],
+                            "email": e_mail,
                             "assina_docs": False
                         }
 
@@ -430,7 +419,7 @@ if opcao_cadastro == "Convite individual":
             # 5) Envio do e-mail de convite
             enviado = enviar_email_convite(
                 nome_completo=st.session_state["nome_completo_novo"],
-                email_destino=st.session_state["e_mail"],
+                email_destino=e_mail,
                 codigo=codigo_6_digitos
             )
 
