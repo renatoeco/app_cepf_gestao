@@ -63,9 +63,6 @@ if not df_projetos.empty:
     df_projetos = calcular_status_projetos(df_projetos)
 
 
-    # Converter object_id para string
-    df_pessoas['_id'] = df_pessoas['_id'].astype(str)
-    df_projetos['_id'] = df_projetos['_id'].astype(str)
 
     # Convertendo datas de string para datetime
     df_projetos['data_inicio_contrato_dtime'] = pd.to_datetime(
@@ -85,42 +82,55 @@ if not df_projetos.empty:
     # Filtar somente tipos de usuário admin e equipe em df_pessoas
     df_pessoas = df_pessoas[(df_pessoas["tipo_usuario"] == "admin") | (df_pessoas["tipo_usuario"] == "equipe")]
 
+
+
+
+
     # Incluir padrinho no dataframe de projetos
     # Fazendo um dataframe auxiliar de relacionamento
     # Seleciona apenas colunas necessárias
-    df_pessoas_proj = df_pessoas[["nome_completo", "projetos"]].copy()
+    df_pessoas_proj = df_pessoas[["nome_completo", "projetos_ids"]].copy()
 
-    # Garante que "projetos" seja sempre lista
-    df_pessoas_proj["projetos"] = df_pessoas_proj["projetos"].apply(
+    # Garante que "projetos_ids" seja sempre lista
+    df_pessoas_proj["projetos_ids"] = df_pessoas_proj["projetos_ids"].apply(
         lambda x: x if isinstance(x, list) else []
     )
 
     # Explode: uma linha por projeto
-    df_pessoas_proj = df_pessoas_proj.explode("projetos")
+    df_pessoas_proj = df_pessoas_proj.explode("projetos_ids")
 
-    # Remove linhas sem código de projeto
-    df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos"])
+    # Remove linhas sem ID de projeto
+    df_pessoas_proj = df_pessoas_proj.dropna(subset=["projetos_ids"])
 
     # Renomeia para facilitar o merge
     df_pessoas_proj = df_pessoas_proj.rename(columns={
-        "projetos": "codigo",
+        "projetos_ids": "_id",
         "nome_completo": "padrinho"
     })
 
     # Agrupar (caso haja mais de um padrinho por projeto)
     df_padrinhos = (
         df_pessoas_proj
-        .groupby("codigo")["padrinho"]
+        .groupby("_id")["padrinho"]
         .apply(lambda nomes: ", ".join(sorted(set(nomes))))
         .reset_index()
     )
 
-    # Fazer o merge
+    # Fazer o merge usando o ObjectId do projeto
     df_projetos = df_projetos.merge(
         df_padrinhos,
-        on="codigo",
+        on="_id",
         how="left"
     )
+
+
+
+
+
+
+
+
+
 
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
@@ -276,18 +286,24 @@ if ver_meus_projetos:
         st.warning("Usuário não encontrado no cadastro de pessoas.")
         st.stop()
 
-    # Pega a lista de projetos da primeira linha encontrada
-    codigos_projetos = pessoa.iloc[0].get("projetos", [])
+
+
+
+    # Pega a lista de ObjectIds dos projetos da primeira linha encontrada
+    projetos_ids = pessoa.iloc[0].get("projetos_ids", [])
 
     # Garante que seja uma lista
-    if not isinstance(codigos_projetos, list) or len(codigos_projetos) == 0:
+    if not isinstance(projetos_ids, list) or len(projetos_ids) == 0:
         st.divider()
         st.caption("Nenhum projeto associado a você.")
         st.stop()
 
+    # Filtra pelos ObjectIds dos projetos
     df_meus = df_filtrado[
-        df_filtrado["codigo"].isin(codigos_projetos)
+        df_filtrado["_id"].isin(projetos_ids)
     ]
+
+
 
     if df_meus.empty:
         st.divider()
@@ -427,9 +443,10 @@ for index, projeto in df_filtrado.iterrows():
 
 
     # Botão “Ver projeto”
-    if cols[6].button("Ver projeto", key=f"ver_{projeto['codigo']}"):
+    if cols[6].button("Ver projeto", key=f"ver_{projeto['_id']}"):
         st.session_state.pagina_atual = "ver_projeto"
-        st.session_state.projeto_atual = projeto["codigo"]
+        st.session_state.projeto_atual = projeto["_id"]
         st.rerun()
+
 
 
