@@ -2297,97 +2297,162 @@ with cron_desemb:
             st.write(f"**Total das parcelas:** {soma_fmt.replace('$', '\\$')}")
             st.write(f"**Valor total ajustado do projeto:** {total_fmt.replace('$', '\\$')}")
 
+
+
+
+
+
             # -----------------------------------
-            # Salvar
+            # Salvar parcelas
             # -----------------------------------
             if st.button("Salvar parcelas", icon=":material/save:", type="primary"):
 
-                df_salvar = df_parcelas.dropna(
-                    subset=["valor", "data_prevista"],
-                    how="any"
-                ).copy()
-
                 # -----------------------------------
-                # Validar soma
+                # Identificar linhas de parcelas preenchidas
                 # -----------------------------------
-                soma_valores = df_salvar["valor"].sum()
-
-                if round(soma_valores, 2) != round(valor_total, 2):
-
-                    soma_fmt = (
-                        f"R$ {soma_valores:,.2f}"
-                        .replace(",", "X")
-                        .replace(".", ",")
-                        .replace("X", ".")
+                linhas_preenchidas = (
+                    df_parcelas["numero"].notna()
+                    | df_parcelas["valor_fmt"].fillna("").astype(str).str.strip().ne("")
+                    | df_parcelas["entregas"].apply(
+                        lambda x: isinstance(x, list) and len(x) > 0
                     )
-
-                    total_fmt = (
-                        f"R$ {valor_total:,.2f}"
-                        .replace(",", "X")
-                        .replace(".", ",")
-                        .replace("X", ".")
-                    )
-
-                    st.error(
-                        f"Erro: A soma das parcelas ({soma_fmt.replace('$', '\\$')}) deve ser igual ao valor total do projeto ({total_fmt.replace('$', '\\$')}).",
-                        icon=":material/error:"
-                    )
-                    st.stop()
-
-                # Ordenar por número (não por data)
-                df_salvar = df_salvar.sort_values(
-                    by="numero",
-                    ascending=True
-                ).reset_index(drop=True)
-
-                # -----------------------------------
-                # Preservar dados antigos
-                # -----------------------------------
-                mapa_existente = {
-                    p.get("numero"): p
-                    for p in parcelas
-                    if p.get("numero") is not None
-                }
-
-                parcelas_final = []
-
-                for _, row in df_salvar.iterrows():
-
-                    numero = int(row["numero"]) if not pd.isna(row["numero"]) else None
-
-                    parcela_antiga = mapa_existente.get(numero, {})
-
-                    parcela_atualizada = parcela_antiga.copy()
-
-                    parcela_atualizada.update({
-                        "numero": numero,
-                        "percentual": float(row["percentual"]),
-                        "valor": float(row["valor"]),
-                        "entregas": row.get("entregas", []),
-                        "data_prevista": (
-                            pd.to_datetime(row["data_prevista"])
-                            .strftime("%d/%m/%Y")
-                        ),
-                    })
-
-                    parcelas_final.append(parcela_atualizada)
-
-                col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
-                    {
-                        "$set": {
-                            "financeiro.parcelas": parcelas_final
-                        }
-                    }
+                    | df_parcelas["data_prevista"].notna()
                 )
 
-                st.success("Parcelas salvas com sucesso!", icon=":material/check:")
-                time.sleep(3)
-                st.rerun()
+                # -----------------------------------
+                # Validar entregas obrigatórias
+                # -----------------------------------
+                parcelas_sem_entregas = (
+                    linhas_preenchidas
+                    & df_parcelas["entregas"].apply(
+                        lambda x: not isinstance(x, list) or len(x) == 0
+                    )
+                )
 
+                if parcelas_sem_entregas.any():
 
+                    st.error(
+                        "Selecione pelo menos uma entrega em cada parcela.",
+                        icon=":material/error:"
+                    )
 
+                else:
 
+                    # -----------------------------------
+                    # Validar data prevista
+                    # -----------------------------------
+                    parcelas_sem_data = (
+                        linhas_preenchidas
+                        & df_parcelas["data_prevista"].isna()
+                    )
+
+                    if parcelas_sem_data.any():
+
+                        st.error(
+                            "Informe a data prevista em todas as parcelas.",
+                            icon=":material/error:"
+                        )
+
+                    else:
+
+                        # -----------------------------------
+                        # Preparar parcelas para validação
+                        # -----------------------------------
+                        df_salvar = df_parcelas.loc[
+                            linhas_preenchidas
+                        ].copy()
+
+                        # -----------------------------------
+                        # Validar soma dos valores
+                        # -----------------------------------
+                        soma_valores = df_salvar["valor"].sum()
+
+                        if round(soma_valores, 2) != round(valor_total, 2):
+
+                            soma_fmt = (
+                                f"R$ {soma_valores:,.2f}"
+                                .replace(",", "X")
+                                .replace(".", ",")
+                                .replace("X", ".")
+                            )
+
+                            total_fmt = (
+                                f"R$ {valor_total:,.2f}"
+                                .replace(",", "X")
+                                .replace(".", ",")
+                                .replace("X", ".")
+                            )
+
+                            st.error(
+                                f"Erro: A soma das parcelas ({soma_fmt.replace('$', '\\$')}) deve ser igual ao valor total do projeto ({total_fmt.replace('$', '\\$')}).",
+                                icon=":material/error:"
+                            )
+
+                        else:
+
+                            # -----------------------------------
+                            # Ordenar por número da parcela
+                            # -----------------------------------
+                            df_salvar = df_salvar.sort_values(
+                                by="numero",
+                                ascending=True
+                            ).reset_index(drop=True)
+
+                            # -----------------------------------
+                            # Preservar dados antigos
+                            # -----------------------------------
+                            mapa_existente = {
+                                p.get("numero"): p
+                                for p in parcelas
+                                if p.get("numero") is not None
+                            }
+
+                            parcelas_final = []
+
+                            for _, row in df_salvar.iterrows():
+
+                                numero = (
+                                    int(row["numero"])
+                                    if not pd.isna(row["numero"])
+                                    else None
+                                )
+
+                                parcela_antiga = mapa_existente.get(numero, {})
+
+                                parcela_atualizada = parcela_antiga.copy()
+
+                                parcela_atualizada.update({
+                                    "numero": numero,
+                                    "percentual": float(row["percentual"]),
+                                    "valor": float(row["valor"]),
+                                    "entregas": row.get("entregas", []),
+                                    "data_prevista": (
+                                        pd.to_datetime(row["data_prevista"])
+                                        .strftime("%d/%m/%Y")
+                                    ),
+                                })
+
+                                parcelas_final.append(parcela_atualizada)
+
+                            # -----------------------------------
+                            # Atualizar banco de dados
+                            # -----------------------------------
+                            col_projetos.update_one(
+                                {"codigo": codigo_projeto_atual},
+                                {
+                                    "$set": {
+                                        "financeiro.parcelas": parcelas_final
+                                    }
+                                }
+                            )
+
+                            st.success(
+                                "Parcelas salvas com sucesso!",
+                                icon=":material/check:"
+                            )
+
+                            time.sleep(3)
+                            st.rerun()
 
 
 
