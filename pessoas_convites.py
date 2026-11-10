@@ -72,6 +72,23 @@ df_pendentes = df_pessoas[df_pessoas["status"] == "convidado"]
 
 
 
+# Cria um dicionário para relacionar ObjectIds aos códigos dos projetos
+mapa_projetos = dict(
+    zip(df_projetos["_id"], df_projetos["codigo"])
+)
+
+# Recupera os códigos dos projetos associados a cada pessoa
+df_pendentes["Projetos"] = df_pendentes.get(
+    "projetos_ids",
+    pd.Series([[] for _ in range(len(df_pendentes))], index=df_pendentes.index)
+).apply(
+    lambda ids: [
+        mapa_projetos[str(id_projeto)]
+        for id_projeto in ids
+        if str(id_projeto) in mapa_projetos
+    ] if isinstance(ids, list) else []
+)
+
 # Renomeia as colunas
 df_pendentes = df_pendentes.rename(columns={
     "nome_completo": "Nome",
@@ -80,13 +97,11 @@ df_pendentes = df_pendentes.rename(columns={
     "e_mail": "E-mail",
     "telefone": "Telefone",
     "status": "Status",
-    "projetos": "Projetos",
     "data_convite": "Data do convite"
 })
 
 # Ordena por Nome
 df_pendentes = df_pendentes.sort_values(by="Nome")
-
 
 
 
@@ -142,10 +157,19 @@ def editar_pessoa(_id: str):
     # )
 
     # Projetos
+    ids_projetos_pessoa = [
+        str(id_projeto)
+        for id_projeto in pessoa.get("projetos_ids", [])
+    ]
+
+    projetos_padrao = df_projetos[
+        df_projetos["_id"].isin(ids_projetos_pessoa)
+    ]["codigo"].tolist()
+
     projetos = st.multiselect(
         "Projetos",
         options=df_projetos["codigo"].tolist(),
-        default=pessoa.get("projetos", []),
+        default=projetos_padrao,
     )
 
     st.write("")
@@ -159,7 +183,13 @@ def editar_pessoa(_id: str):
             "telefone": telefone,
             "tipo_usuario": tipo_usuario,
             # "status": status,
-            "projetos": projetos
+            "projetos_ids": [
+                projeto["_id"]
+                for projeto in col_projetos.find(
+                    {"codigo": {"$in": projetos}},
+                    {"_id": 1}
+                )
+            ],
         }
 
         # Adiciona tipo_beneficiario apenas se aplicável

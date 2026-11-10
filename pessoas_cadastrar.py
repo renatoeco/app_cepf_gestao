@@ -304,13 +304,21 @@ if opcao_cadastro == "Convite individual":
             codigo_6_digitos = gerar_codigo_aleatorio()
 
             # 3) Monta documento a inserir no MongoDB
+
+            # Converte os códigos selecionados em ObjectIds dos projetos
+            projetos_ids = df_projetos[
+                df_projetos["codigo"].isin(
+                    st.session_state.get("projetos_escolhidos", [])
+                )
+            ]["_id"].tolist()
+
             novo_doc = {
                 "nome_completo": st.session_state["nome_completo_novo"],
                 "tipo_usuario": st.session_state["tipo_novo_usuario"],
                 "e_mail": e_mail,
                 "telefone": telefone_formatado,
                 "status": "convidado",
-                "projetos": st.session_state.get("projetos_escolhidos", []),
+                "projetos_ids": projetos_ids,
                 "data_convite": datetime.datetime.now().strftime("%d/%m/%Y"),
                 "senha": None,
                 "codigo_convite": codigo_6_digitos
@@ -670,7 +678,8 @@ elif opcao_cadastro == "Convite em massa":
 
                 with st.spinner("Enviando e-mails... Aguarde..."):
 
-
+                    registros = []
+                    projetos_codigos_drive = []
 
                     registros = []
                     for _, row in df_upload.iterrows():
@@ -700,11 +709,17 @@ elif opcao_cadastro == "Convite em massa":
 
                             doc["telefone"] = telefone_formatado
 
-                        # if pd.notna(row["telefone (opcional)"]) and str(row["telefone (opcional)"]).strip():
-                        #     doc["telefone"] = str(row["telefone (opcional)"]).strip()
 
-                        if row["projetos"]:
-                            doc["projetos"] = row["projetos"]
+                        # Converte os códigos dos projetos em ObjectIds
+                        projetos_ids = df_projetos[
+                            df_projetos["codigo"].isin(row["projetos"])
+                        ]["_id"].tolist()
+
+                        if projetos_ids:
+                            doc["projetos_ids"] = projetos_ids
+
+                        # Mantém os códigos para a configuração das permissões no Google Drive
+                        projetos_codigos_drive.append(row["projetos"])
 
                         registros.append(doc)
 
@@ -761,7 +776,7 @@ elif opcao_cadastro == "Convite em massa":
 
                         if email:
 
-                            for codigo_projeto in pessoa.get("projetos", []):
+                            for codigo_projeto in projetos_codigos_drive[i]:
 
                                 try:
                                     # Busca o projeto para obter a sigla

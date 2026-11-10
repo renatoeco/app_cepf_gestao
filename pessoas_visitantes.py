@@ -34,6 +34,30 @@ df_pessoas = pd.DataFrame(list(col_pessoas.find({}, {"senha": 0})))
 # Converte ObjectId para string
 df_pessoas["_id"] = df_pessoas["_id"].astype(str)
 
+# Projetos
+col_projetos = db["projetos"]
+df_projetos = pd.DataFrame(list(col_projetos.find()))
+
+# Converte ObjectId para string
+df_projetos["_id"] = df_projetos["_id"].astype(str)
+
+# Cria um dicionário para relacionar ObjectIds aos códigos dos projetos
+mapa_projetos = dict(
+    zip(df_projetos["_id"], df_projetos["codigo"])
+)
+
+# Recupera os códigos dos projetos associados a cada pessoa
+df_pessoas["Projetos"] = df_pessoas.get(
+    "projetos_ids",
+    pd.Series([[] for _ in range(len(df_pessoas))], index=df_pessoas.index)
+).apply(
+    lambda ids: [
+        mapa_projetos[str(id_projeto)]
+        for id_projeto in ids
+        if str(id_projeto) in mapa_projetos
+    ] if isinstance(ids, list) else []
+)
+
 # Renomeia as colunas
 df_pessoas = df_pessoas.rename(columns={
     "nome_completo": "Nome",
@@ -41,8 +65,7 @@ df_pessoas = df_pessoas.rename(columns={
     "tipo_beneficiario": "Tipo de beneficiário",
     "e_mail": "E-mail",
     "telefone": "Telefone",
-    "status": "Status",
-    "projetos": "Projetos"
+    "status": "Status"
 })
 
 # Ordena por Nome
@@ -109,10 +132,41 @@ def editar_pessoa(_id: str):
     )
 
     # Projetos
+    ids_projetos_pessoa = [
+        str(id_projeto)
+        for id_projeto in pessoa.get("projetos_ids", [])
+    ]
+
+    # Filtra somente projetos que ainda existem
+    projetos_default_validos = [
+        id_projeto
+        for id_projeto in ids_projetos_pessoa
+        if id_projeto in df_projetos["_id"].tolist()
+    ]
+
+    # Detecta projetos removidos
+    projetos_invalidos = [
+        id_projeto
+        for id_projeto in ids_projetos_pessoa
+        if id_projeto not in df_projetos["_id"].tolist()
+    ]
+
+    # Aviso ao usuário
+    if projetos_invalidos:
+        st.warning(
+            "Existem vínculos com projetos que não existem mais no banco de dados. "
+            "Eles serão removidos desse usuário ao salvar."
+        )
+
+    # Converte os ObjectIds válidos em códigos para exibição
+    projetos_default = df_projetos[
+        df_projetos["_id"].isin(projetos_default_validos)
+    ]["codigo"].tolist()
+
     projetos = st.multiselect(
         "Projetos",
         options=df_projetos["codigo"].tolist(),
-        default=pessoa.get("projetos", []),
+        default=projetos_default,
     )
 
     st.write("")
@@ -126,7 +180,13 @@ def editar_pessoa(_id: str):
             "telefone": telefone,
             "tipo_usuario": tipo_usuario,
             "status": status,
-            "projetos": projetos
+            "projetos_ids": [
+                projeto["_id"]
+                for projeto in col_projetos.find(
+                    {"codigo": {"$in": projetos}},
+                    {"_id": 1}
+                )
+            ]
         }
 
         # Adiciona tipo_beneficiario apenas se aplicável
