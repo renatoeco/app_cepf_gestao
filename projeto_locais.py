@@ -109,10 +109,10 @@ col_kbas = db["kbas"]
 ###########################################################################################################
 
 
-# Capturando o código do projeto e os dados do projeto
-codigo_projeto_atual = st.session_state.get("projeto_atual")
+# Capturando o ID do projeto e os dados do projeto
+id_projeto_atual = st.session_state.get("projeto_atual")
 
-if not codigo_projeto_atual:
+if not id_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
 
@@ -120,15 +120,14 @@ if not codigo_projeto_atual:
 df_projeto = pd.DataFrame(
     list(
         col_projetos.find(
-            {"codigo": codigo_projeto_atual}
+            {"_id": id_projeto_atual}
         )
     )
 )
 
 
-
 projeto = col_projetos.find_one(
-    {"codigo": codigo_projeto_atual},
+    {"_id": id_projeto_atual},
     {"codigo": 1, "sigla": 1, "locais": 1}
 ) or {}
 
@@ -252,7 +251,7 @@ def dialog_editar_estados():
         ]
 
         col_projetos.update_one(
-            {"codigo": codigo_projeto_atual},
+            {"_id": id_projeto_atual},
             {
                 "$set": {
                     "locais.estados": estados_para_salvar
@@ -321,7 +320,7 @@ def dialog_editar_municipios():
                 })
 
         col_projetos.update_one(
-            {"codigo": codigo_projeto_atual},
+            {"_id": id_projeto_atual},
             {
                 "$set": {
                     "locais.municipios": municipios_para_salvar
@@ -469,7 +468,7 @@ def dialog_editar_localidades():
             localidades_atual.append(nova_localidade)
 
             col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
+                {"_id": id_projeto_atual},
                 {
                     "$set": {
                         "locais.localidades": localidades_atual
@@ -523,7 +522,7 @@ def dialog_editar_localidades():
             ]
 
             col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
+                {"_id": id_projeto_atual},
                 {
                     "$set": {
                         "locais.localidades": novas_localidades
@@ -610,7 +609,7 @@ def dialog_editar_areas_protegidas():
             areas_atual.append(nova_area)
 
             col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
+                {"_id": id_projeto_atual},
                 {
                     "$set": {
                         "locais.areas_protegidas": areas_atual
@@ -664,7 +663,7 @@ def dialog_editar_areas_protegidas():
             ]
 
             col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
+                {"_id": id_projeto_atual},
                 {
                     "$set": {
                         "locais.areas_protegidas": novas_areas
@@ -731,7 +730,7 @@ def dialog_editar_corredores():
         ]
 
         col_projetos.update_one(
-            {"codigo": codigo_projeto_atual},
+            {"_id": id_projeto_atual},
             {
                 "$set": {
                     "locais.corredores": corredores_para_salvar
@@ -806,7 +805,7 @@ def dialog_editar_kbas():
                 })
 
         col_projetos.update_one(
-            {"codigo": codigo_projeto_atual},
+            {"_id": id_projeto_atual},
             {
                 "$set": {
                     "locais.kbas": kbas_para_salvar
@@ -882,7 +881,7 @@ def dialog_mapas():
 
                 # Salva os links no MongoDB
                 col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
+                    {"_id": id_projeto_atual},
                     {"$push": {"locais.arquivos": {"$each": novos}}}
                 )
 
@@ -930,7 +929,7 @@ def dialog_mapas():
             # Spinner para a remoção (mesmo sendo rápida)
             with st.spinner("Removendo mapa..."):
                 col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
+                    {"_id": id_projeto_atual},
                     {
                         "$pull": {
                             "locais.arquivos": {

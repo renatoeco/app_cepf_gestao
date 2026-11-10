@@ -92,14 +92,14 @@ def coletar_fotos_projeto(projeto):
 # CARREGAMENTO DO PROJETO
 ###########################################################################################################
 
-codigo_projeto_atual = st.session_state.get("projeto_atual")
+id_projeto_atual = st.session_state.get("projeto_atual")
 
-if not codigo_projeto_atual:
+if not id_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
 
 df_projeto = pd.DataFrame(
-    list(col_projetos.find({"codigo": codigo_projeto_atual}))
+    list(col_projetos.find({"_id": id_projeto_atual}))
 )
 
 if df_projeto.empty:

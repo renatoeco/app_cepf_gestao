@@ -94,21 +94,25 @@ col_organizacoes = db["organizacoes"]
 ###########################################################################################################
 
 
-# Capturando o código do projeto e os dados do projeto
-codigo_projeto_atual = st.session_state.get("projeto_atual")
+id_projeto_atual = st.session_state.get("projeto_atual")
 
-if not codigo_projeto_atual:
+if not id_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
-
 
 df_projeto = pd.DataFrame(
     list(
         col_projetos.find(
-            {"codigo": codigo_projeto_atual}
+            {"_id": id_projeto_atual}
         )
     )
 )
+
+if df_projeto.empty:
+    st.error("Projeto não encontrado no banco de dados.")
+    st.stop()
+
+codigo_projeto_atual = df_projeto["codigo"].values[0]
 
 
 # ###################################################################################################
@@ -147,7 +151,7 @@ def renderizar_plano_mitigacao(
     salvaguardas_doc,
     mapa_politicas,
     nome_politica,
-    codigo_projeto_atual,
+    id_projeto_atual,
     col_projetos
 ):
     """
@@ -226,7 +230,7 @@ def renderizar_plano_mitigacao(
                 )
 
                 col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
+                    {"_id": id_projeto_atual},
                     {
                         "$set": {
                             f"{caminho_politica}.verificado_por": texto_verificacao
@@ -240,7 +244,7 @@ def renderizar_plano_mitigacao(
             elif not checkbox_verificado and verificado_por:
 
                 col_projetos.update_one(
-                    {"codigo": codigo_projeto_atual},
+                    {"_id": id_projeto_atual},
                     {
                         "$unset": {
                             f"{caminho_politica}.verificado_por": ""
@@ -1836,7 +1840,7 @@ if st.session_state.tipo_usuario == "beneficiario":
 
                                 # Atualiza o documento no MongoDB
                                 col_projetos.update_one(
-                                    {"codigo": codigo_projeto_atual},
+                                    {"_id": id_projeto_atual},
                                     {
                                         "$set": {
                                             f"salvaguardas.{chave_politica}.plano_mitigacao": {
@@ -1855,7 +1859,7 @@ if st.session_state.tipo_usuario == "beneficiario":
 
                                 # Atualiza o documento no MongoDB
                                 col_projetos.update_one(
-                                    {"codigo": codigo_projeto_atual},
+                                    {"_id": id_projeto_atual},
                                     {
                                         "$set": {
                                             f"salvaguardas.{chave_politica}.plano_mitigacao": {
@@ -2020,7 +2024,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "2. Condições de Trabalho e Trabalhistas",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2100,7 +2104,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "3. Eficiência de Recursos e Prevenção de Poluição",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2199,7 +2203,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "4. Saúde, Segurança e Proteção da Comunidade",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2258,7 +2262,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "5. Restrições de Uso da Terra e Reassentamento Involuntário",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2339,7 +2343,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "6. Conservação da Biodiversidade e Gestão Sustentável de Recursos Naturais Vivos",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2410,7 +2414,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "7. Povos Indígenas",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2475,7 +2479,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "8. Patrimônio Cultural",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2537,7 +2541,7 @@ else:
         salvaguardas_doc,
         mapa_politicas,
         "9. Igualdade de Gênero",
-        codigo_projeto_atual,
+        id_projeto_atual,
         col_projetos
     )
 
@@ -2795,7 +2799,7 @@ else:
 
             # Atualiza apenas os campos editáveis
             resultado = col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
+                {"_id": id_projeto_atual},
                 {
                     "$set": dados_update
                 }

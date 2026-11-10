@@ -79,9 +79,9 @@ logo_ieb = "https://iieb.org.br/wp-content/uploads/2021/02/IEB-logo.svg"
 
 
 
-codigo_projeto_atual = st.session_state.get("projeto_atual")
+id_projeto_atual = st.session_state.get("projeto_atual")
 
-if not codigo_projeto_atual:
+if not id_projeto_atual:
     st.error("Nenhum projeto selecionado.")
     st.stop()
 
@@ -89,7 +89,7 @@ if not codigo_projeto_atual:
 df_projeto = pd.DataFrame(
     list(
         col_projetos.find(
-            {"codigo": codigo_projeto_atual}
+            {"_id": id_projeto_atual}
         )
     )
 )
@@ -98,6 +98,7 @@ if df_projeto.empty:
     st.error("Projeto não encontrado no banco de dados.")
     st.stop()
 
+codigo_projeto_atual = df_projeto["codigo"].values[0]
 
 # Transformar o id em string
 df_projeto = df_projeto.copy()
@@ -214,7 +215,7 @@ def notifica_parcelas_desencontradas():
 # • efetiva orçamento
 # ==================================================
 def aprovar_remanejamento(
-    codigo_projeto,
+    id_projeto,
     idx,
     item
 ):
@@ -222,7 +223,7 @@ def aprovar_remanejamento(
     Aprova o remanejamento selecionado.
     """
 
-    projeto = col_projetos.find_one({"codigo": codigo_projeto})
+    projeto = col_projetos.find_one({"_id": id_projeto})
     financeiro = projeto.get("financeiro", {})
     lista = financeiro.get("remanejamentos_financeiros", [])
 
@@ -236,7 +237,7 @@ def aprovar_remanejamento(
     lista[idx]["data_aprov_remanej"] = datetime.datetime.now(datetime.UTC)
 
     col_projetos.update_one(
-        {"codigo": codigo_projeto},
+        {"_id": id_projeto},
         {
             "$set": {
                 "financeiro.remanejamentos_financeiros": lista
@@ -249,14 +250,14 @@ def aprovar_remanejamento(
     # --------------------------------------------------
     efetivar_remanejamento(
         col_projetos,
-        codigo_projeto,
+        id_projeto,
         financeiro,
         lista[idx].get("reduzidas", []),
         lista[idx].get("aumentadas", [])
     )
 
 
-    projeto_atualizado = col_projetos.find_one({"codigo": codigo_projeto})
+    projeto_atualizado = col_projetos.find_one({"_id": id_projeto})
     enviar_email_remanejamento_aprovado(
         projeto_atualizado,
         lista[idx]
@@ -278,7 +279,7 @@ def aprovar_remanejamento(
 # (mesmo padrão usado nos relatórios)
 # ==================================================
 def atualizar_aceite_remanejamento(
-    projeto_codigo,
+    id_projeto,
     idx,
     campo,          # "aceite_tecnico" ou "aceite_financeiro"
     checkbox_key
@@ -299,7 +300,7 @@ def atualizar_aceite_remanejamento(
     # --------------------------------------------------
     # Carrega documento atualizado do banco
     # --------------------------------------------------
-    projeto = col_projetos.find_one({"codigo": projeto_codigo})
+    projeto = col_projetos.find_one({"_id": id_projeto})
     financeiro = projeto.get("financeiro", {})
     lista = financeiro.get("remanejamentos_financeiros", [])
 
@@ -318,7 +319,7 @@ def atualizar_aceite_remanejamento(
     # Salva lista inteira (Mongo não atualiza por índice)
     # --------------------------------------------------
     col_projetos.update_one(
-        {"codigo": projeto_codigo},
+        {"_id": id_projeto},
         {
             "$set": {
                 "financeiro.remanejamentos_financeiros": lista
@@ -695,6 +696,7 @@ def enviar_email_remanejamento_aprovado(
 # ==================================================
 def enviar_email_remanejamento(
     db,
+    id_projeto,
     codigo_projeto,
     sigla,
     nome_projeto,
@@ -716,7 +718,7 @@ def enviar_email_remanejamento(
         col_pessoas.find({
             "status": "ativo",
             "tipo_usuario": {"$in": ["admin", "equipe"]},
-            "projetos": codigo_projeto
+            "projetos_ids": id_projeto
         })
     )
 
@@ -875,7 +877,7 @@ def enviar_email_remanejamento(
 
 def efetivar_remanejamento(
     col_projetos,
-    codigo_projeto_atual,
+    id_projeto,
     financeiro,
     reduzidas,
     aumentadas
@@ -922,7 +924,7 @@ def efetivar_remanejamento(
     # Salva orçamento atualizado
     # --------------------------------------------------
     col_projetos.update_one(
-        {"codigo": codigo_projeto_atual},
+        {"_id": id_projeto},
         {
             "$set": {
                 "financeiro.orcamento": orcamento_atual
@@ -1980,7 +1982,7 @@ with cron_desemb:
                     # -----------------------------------
                     if salvar:
                         col_projetos.update_one(
-                            {"codigo": codigo_projeto_atual},
+                            {"_id": id_projeto_atual},
                             {
                                 "$set": {
                                     "financeiro.valor_total": float(valor_total),
@@ -2438,7 +2440,7 @@ with cron_desemb:
                             # Atualizar banco de dados
                             # -----------------------------------
                             col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
+                                {"_id": id_projeto_atual},
                                 {
                                     "$set": {
                                         "financeiro.parcelas": parcelas_final
@@ -2629,7 +2631,7 @@ with cron_desemb:
 
 
                     col_projetos.update_one(
-                        {"codigo": codigo_projeto_atual},
+                        {"_id": id_projeto_atual},
                         {
                             "$set": {
                                 "relatorios": relatorios_salvar
@@ -3710,7 +3712,7 @@ with orcamento_tab:
             # Persistência
             # -----------------------------------
             col_projetos.update_one(
-                {"codigo": codigo_projeto_atual},
+                {"_id": id_projeto_atual},
                 {"$set": {"financeiro.orcamento": novo_orcamento}}
             )
 
@@ -4059,7 +4061,7 @@ if usuario_interno:
                             # -----------------------------------
                             col_projetos.update_one(
                                 {
-                                    "codigo": codigo_projeto_atual,
+                                    "_id": id_projeto_atual,
                                     "financeiro.parcelas.numero": numero
                                 },
                                 {
@@ -4776,7 +4778,7 @@ with remanejamentos:
                             # Salvar no banco
                             # --------------------------------------
                             col_projetos.update_one(
-                                {"codigo": codigo_projeto_atual},
+                                {"_id": id_projeto_atual},
                                 {
                                     "$push": {
                                         "financeiro.remanejamentos_financeiros": registro
@@ -4794,7 +4796,7 @@ with remanejamentos:
 
                                 efetivar_remanejamento(
                                     col_projetos,
-                                    codigo_projeto_atual,
+                                    id_projeto_atual,
                                     financeiro,
                                     reduzidas,
                                     aumentadas
@@ -4813,6 +4815,7 @@ with remanejamentos:
                             # -----------------------------------
                             enviar_email_remanejamento(
                                 db,
+                                id_projeto_atual,
                                 projeto["codigo"],
                                 projeto["sigla"],
                                 projeto["nome_do_projeto"],
@@ -5283,7 +5286,7 @@ with remanejamentos:
                             "Aceite técnico",
                             key=tec_key,
                             on_change=atualizar_aceite_remanejamento,
-                            args=(codigo_projeto_atual, idx, "aceite_tecnico", tec_key)
+                            args=(id_projeto_atual, idx, "aceite_tecnico", tec_key)
                         )
 
                         if item.get("aceite_tecnico"):
@@ -5297,7 +5300,7 @@ with remanejamentos:
                             "Aceite financeiro",
                             key=fin_key,
                             on_change=atualizar_aceite_remanejamento,
-                            args=(codigo_projeto_atual, idx, "aceite_financeiro", fin_key)
+                            args=(id_projeto_atual, idx, "aceite_financeiro", fin_key)
                         )
 
                         if item.get("aceite_financeiro"):
@@ -5320,7 +5323,7 @@ with remanejamentos:
                             width="stretch"
                         ):
                             aprovar_remanejamento(
-                                codigo_projeto_atual,
+                                id_projeto_atual,
                                 idx,
                                 item
                             )
@@ -5373,7 +5376,7 @@ with remanejamentos:
                                     log_recusa = f"Recusado por {nome} em {data}"
 
                                     col_projetos.update_one(
-                                        {"codigo": codigo_projeto_atual},
+                                        {"_id": id_projeto_atual},
                                         {
                                             "$set": {
                                                 f"financeiro.remanejamentos_financeiros.{idx}.status_remanejamento": "recusado",
@@ -5383,7 +5386,7 @@ with remanejamentos:
                                         }
                                     )
 
-                                    projeto_atualizado = col_projetos.find_one({"codigo": codigo_projeto_atual})
+                                    projeto_atualizado = col_projetos.find_one({"_id": id_projeto_atual})
 
                                     enviar_email_remanejamento_recusado(
                                         projeto_atualizado,
