@@ -3,7 +3,7 @@ from funcoes_auxiliares import conectar_mongo_cepf_gestao, calcular_status_proje
 import plotly.express as px
 import pandas as pd
 import datetime
-# import locale
+from bson import ObjectId
 
 
 st.set_page_config(page_title="Visão Geral", page_icon=":material/analytics:")
@@ -351,6 +351,7 @@ for _, projeto in df_filtrado.iterrows():
         continue
 
     lista_demandas.append({
+        "id_projeto": projeto["_id"],
         "codigo": projeto["codigo"],
         "sigla": projeto["sigla"],
         "padrinho": (
@@ -374,6 +375,7 @@ for _, projeto in df_filtrado.iterrows():
         continue
 
     lista_demandas.append({
+        "id_projeto": projeto["_id"],
         "codigo": projeto["codigo"],
         "sigla": projeto["sigla"],
         "padrinho": (
@@ -412,6 +414,7 @@ for _, projeto in df_filtrado.iterrows():
             continue
 
         lista_demandas.append({
+            "id_projeto": projeto["_id"],
             "codigo": projeto["codigo"],
             "sigla": projeto["sigla"],
             "padrinho": (
@@ -454,6 +457,7 @@ for _, projeto in df_filtrado.iterrows():
             continue
 
         lista_demandas.append({
+            "id_projeto": projeto["_id"],
             "codigo": projeto["codigo"],
             "sigla": projeto["sigla"],
             "padrinho": (
@@ -494,6 +498,7 @@ for _, projeto in df_filtrado.iterrows():
             continue
 
         lista_demandas.append({
+            "id_projeto": projeto["_id"],
             "codigo": projeto["codigo"],
             "sigla": projeto["sigla"],
             "padrinho": (
@@ -593,7 +598,7 @@ if lista_demandas:
             key=f"demanda_{demanda['codigo']}_{idx}"
         ):
             st.session_state.pagina_atual = "ver_projeto"
-            st.session_state.projeto_atual = demanda["codigo"]
+            st.session_state.projeto_atual = ObjectId(demanda["id_projeto"])
             st.rerun()
 
 
