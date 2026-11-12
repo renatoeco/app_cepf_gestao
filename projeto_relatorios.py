@@ -12,6 +12,7 @@ import tempfile
 import os
 from st_rsuite import date_picker
 import copy
+from bson import ObjectId
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -39,55 +40,6 @@ from funcoes_auxiliares import (
 st.set_page_config(page_title="Relatórios", page_icon=":material/edit_note:")
 
 
-
-
-
-# ###########################################################################################################
-# # CONFIGURAÇÕES DO STREAMLIT
-# ###########################################################################################################
-
-
-# # Traduzindo o texto do st.file_uploader
-# # Texto interno
-# st.markdown("""
-# <style>
-# /* Esconde o texto padrão */
-# [data-testid="stFileUploaderDropzone"] div div::before {
-#     content: "";
-#     color: rgba(49, 51, 63, 0.7);
-#     font-size: 0.9rem;
-#     font-weight: 400;
-#     position: absolute;
-#     top: 50px;              /* fixa no topo */
-#     left: 50%;
-#     transform: translate(-50%, 10%);
-#     pointer-events: none;
-# }
-# /* Esconde o texto original */
-# [data-testid="stFileUploaderDropzone"] div div span {
-#     visibility: hidden !important;
-# }
-# </style>
-# """, unsafe_allow_html=True)
-
-# # Traduzindo Botão do file_uploader
-# st.markdown("""
-# <style>
-# /* Alvo: apenas o botão dentro do componente de upload */
-# section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"] {
-#     font-size: 0px !important;   /* esconde o texto original */
-#     padding-left: 14px !important;
-#     padding-right: 14px !important;
-#     min-width: 160px !important;
-# }
-# /* Insere o texto traduzido */
-# section[data-testid="stFileUploaderDropzone"] button[data-testid="stBaseButton-secondary"]::after {
-#     content: "Selecionar arquivo";
-#     font-size: 14px !important;
-#     color: inherit;
-# }
-# </style>
-# """, unsafe_allow_html=True)
 
 
 ###########################################################################################################
@@ -120,29 +72,32 @@ lista_publicos = list(col_publicos.find({}, {"_id": 0, "publico": 1}))
 opcoes_publicos = sorted({p["publico"] for p in lista_publicos} - {"Outros"})
 opcoes_publicos.append("Outros")
 
-codigo_projeto_atual = st.session_state.projeto_atual
+# Identificador do projeto selecionado
+id_projeto_atual = st.session_state.get("projeto_atual")
 
-df_projeto = pd.DataFrame(
-    list(
-        col_projetos.find(
-            {"codigo": codigo_projeto_atual}
-        )
-    )
-)
+if not id_projeto_atual:
+    st.error("Nenhum projeto selecionado.")
+    st.stop()
 
-if df_projeto.empty:
+# Recupera o documento pelo identificador MongoDB
+documento_projeto = col_projetos.find_one({"_id": id_projeto_atual})
+
+if not documento_projeto:
     st.error("Projeto não encontrado.")
     st.stop()
 
+df_projeto = pd.DataFrame([documento_projeto])
+
 projeto = df_projeto.iloc[0]
+
+# Código mantido para identificação e integração com o Google Drive
+codigo_projeto_atual = projeto["codigo"]
 
 relatorios = projeto.get("relatorios", [])
 
 edital = col_editais.find_one({"codigo_edital": projeto["edital"]})
 
 tipo_usuario = st.session_state.get("tipo_usuario")
-
-
 
 
 ###########################################################################################################
@@ -1281,18 +1236,20 @@ def texto_verificacao():
 
 
 # Atualiza o status da avaliação de Relatos de Atividades ou de Despesas
-def atualizar_verificacao_relatorio(projeto_codigo, relatorio_numero, campo, checkbox_key):
+def atualizar_verificacao_relatorio(id_projeto, relatorio_numero, campo, checkbox_key):
     marcado = st.session_state.get(checkbox_key, False)
 
     nome = st.session_state.get("nome", "Usuário")
     data = datetime.datetime.now().strftime("%d/%m/%Y")
 
+    filtro = {
+        "_id": id_projeto,
+        "relatorios.numero": relatorio_numero
+    }
+
     if marcado:
         col_projetos.update_one(
-            {
-                "codigo": projeto_codigo,
-                "relatorios.numero": relatorio_numero
-            },
+            filtro,
             {
                 "$set": {
                     f"relatorios.$.{campo}": f"Verificado por {nome} em {data}"
@@ -1301,18 +1258,13 @@ def atualizar_verificacao_relatorio(projeto_codigo, relatorio_numero, campo, che
         )
     else:
         col_projetos.update_one(
-            {
-                "codigo": projeto_codigo,
-                "relatorios.numero": relatorio_numero
-            },
+            filtro,
             {
                 "$unset": {
                     f"relatorios.$.{campo}": ""
                 }
             }
         )
-
-
 
 
 
@@ -2099,7 +2051,7 @@ def render_registro_despesa(relatorio_numero, projeto, col_projetos):
                 # Persistência no MongoDB
                 # -------------------------------
                 col_projetos.update_one(
-                    {"codigo": projeto["codigo"]},
+                    {"_id": id_projeto_atual},
                     {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
                 )
 
@@ -2420,7 +2372,7 @@ def salvar_relato():
     atividade_mongo.setdefault("relatos", []).append(novo_relato)
 
     col_projetos.update_one(
-        {"codigo": codigo},
+        {"_id": projeto["_id"]},
         {
             "$set": {
                 "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
@@ -2804,7 +2756,7 @@ def render_relato_atividade(relatorio_numero, projeto, col_projetos):
 
 
 # Função para liberar o próximo relatório quando o relatório anterior for aprovado
-def liberar_proximo_relatorio(projeto_codigo, relatorios):
+def liberar_proximo_relatorio(id_projeto, relatorios):
     """
     Se um relatório estiver aprovado, libera o próximo
     caso ele esteja como 'aguardando'.
@@ -2816,7 +2768,7 @@ def liberar_proximo_relatorio(projeto_codigo, relatorios):
         if status_atual == "aprovado" and status_proximo == "aguardando":
             col_projetos.update_one(
                 {
-                    "codigo": projeto_codigo,
+                    "_id": id_projeto,
                     "relatorios.numero": relatorios[i + 1]["numero"]
                 },
                 {
@@ -2850,8 +2802,7 @@ STATUS_UI_TO_DB = {
 
 STATUS_DB_TO_UI = {v: k for k, v in STATUS_UI_TO_DB.items()}
 
-
-def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
+def atualizar_status_relatorio(idx, relatorio_numero, id_projeto):
     """
     Atualiza o status do relatório no MongoDB quando o segmented_control muda.
 
@@ -2871,14 +2822,14 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     status_novo = STATUS_UI_TO_DB.get(status_ui)
 
     if not status_novo:
-        return  # segurança extra
+        return
 
     # --------------------------------------------------
     # 2. BUSCA STATUS ATUAL DO RELATÓRIO NO BANCO
     # --------------------------------------------------
     projeto = col_projetos.find_one(
         {
-            "codigo": projeto_codigo,
+            "_id": id_projeto,
             "relatorios.numero": relatorio_numero
         },
         {
@@ -2891,9 +2842,6 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
 
     relatorio = projeto["relatorios"][0]
     status_anterior = relatorio.get("status_relatorio")
-
-
-
 
     # --------------------------------------------------
     # 3. PREPARA CAMPOS A ATUALIZAR
@@ -2917,7 +2865,7 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     # --------------------------------------------------
     col_projetos.update_one(
         {
-            "codigo": projeto_codigo,
+            "_id": id_projeto,
             "relatorios.numero": relatorio_numero
         },
         {
@@ -2925,29 +2873,8 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
         }
     )
 
-
-
-
-
-
-
-    # # --------------------------------------------------
-    # # 3. ATUALIZA STATUS DO RELATÓRIO
-    # # --------------------------------------------------
-    # col_projetos.update_one(
-    #     {
-    #         "codigo": projeto_codigo,
-    #         "relatorios.numero": relatorio_numero
-    #     },
-    #     {
-    #         "$set": {
-    #             "relatorios.$.status_relatorio": status_novo
-    #         }
-    #     }
-    # )
-
     # --------------------------------------------------
-    # 4. VERIFICA SE ALGUMA REGRA DE RELATOS SE APLICA
+    # 5. VERIFICA SE ALGUMA REGRA DE RELATOS SE APLICA
     # --------------------------------------------------
     aplica_regra_a = (
         status_novo == "modo_edicao"
@@ -2960,65 +2887,44 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
     )
 
     if not (aplica_regra_a or aplica_regra_b):
-        return  # nada a fazer nos relatos
+        return
 
     # --------------------------------------------------
-    # 5. RECARREGA O PROJETO COMPLETO
+    # 6. RECARREGA O PROJETO COMPLETO
     # --------------------------------------------------
     projeto_atualizado = col_projetos.find_one(
-        {"codigo": projeto_codigo}
+        {"_id": id_projeto}
     )
 
     componentes = projeto_atualizado["plano_trabalho"]["componentes"]
     houve_alteracao = False
 
     # --------------------------------------------------
-    # 6. APLICA AS REGRAS NOS RELATOS
+    # 7. APLICA AS REGRAS NOS RELATOS
     # --------------------------------------------------
-    # ------------------------------------------------------------------
-    # Percorre todos os componentes
-    # ------------------------------------------------------------------
     for componente in componentes:
 
-        # Recupera entregas de forma segura
         entregas = componente.get("entregas", [])
 
-        # Se não houver entregas, continua
         if not entregas:
             continue
 
-        # ------------------------------------------------------------------
-        # Percorre entregas
-        # ------------------------------------------------------------------
         for entrega in entregas:
 
-            # Recupera atividades de forma segura
             atividades = entrega.get("atividades", [])
 
-            # --------------------------------------------------------------
-            # Se a entrega não tiver atividades, apenas ignora
-            # --------------------------------------------------------------
             if not atividades:
                 continue
 
-            # --------------------------------------------------------------
-            # Percorre atividades
-            # --------------------------------------------------------------
             for atividade in atividades:
 
-                # Recupera relatos de forma segura
                 relatos = atividade.get("relatos", [])
 
-                # Se não houver relatos, continua
                 if not relatos:
                     continue
 
-                # ----------------------------------------------------------
-                # Percorre relatos
-                # ----------------------------------------------------------
                 for relato in relatos:
 
-                    # Apenas relatos do relatório atual
                     if relato.get("relatorio_numero") != relatorio_numero:
                         continue
 
@@ -3032,19 +2938,20 @@ def atualizar_status_relatorio(idx, relatorio_numero, projeto_codigo):
                         relato["status_relato"] = "em_analise"
                         houve_alteracao = True
 
-
     # --------------------------------------------------
-    # 7. SALVA NO BANCO APENAS SE HOUVE ALTERAÇÃO
+    # 8. SALVA NO BANCO APENAS SE HOUVE ALTERAÇÃO
     # --------------------------------------------------
     if houve_alteracao:
         col_projetos.update_one(
-            {"codigo": projeto_codigo},
+            {"_id": id_projeto},
             {
                 "$set": {
                     "plano_trabalho.componentes": componentes
                 }
             }
         )
+
+
 
 
 def extrair_atividades(projeto):
@@ -3160,10 +3067,10 @@ mapa_categoria_id_nome = {
 
 
 # Libera automaticamente o próximo relatório, se aplicável
-liberar_proximo_relatorio(projeto["codigo"], relatorios)
+liberar_proximo_relatorio(id_projeto_atual, relatorios)
 
 # Recarrega o projeto para refletir possíveis mudanças
-projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
+projeto = col_projetos.find_one({"_id": id_projeto_atual})
 relatorios = projeto.get("relatorios", [])
 
 
@@ -3182,6 +3089,17 @@ if "step_relatorio" not in st.session_state:
 ###########################################################################################################
 # INTERFACE PRINCIPAL DA PÁGINA
 ###########################################################################################################
+
+
+
+
+# ###################################################################################################
+# SIDEBAR DA PÁGINA DO PROJETO
+# ###################################################################################################
+
+sidebar_projeto()
+
+
 
 # Logo hospedada no site do IEB para renderizar nos e-mails.
 logo_ieb = "https://iieb.org.br/wp-content/uploads/2021/02/IEB-logo.svg"
@@ -3386,7 +3304,7 @@ if idx > 0:
 
         col_projetos.update_one(
             {
-                "codigo": projeto_codigo,
+                "_id": id_projeto_atual,
                 "relatorios.numero": relatorio_numero,
                 "relatorios.status_relatorio": {"$ne": "aguardando"}
             },
@@ -3435,7 +3353,7 @@ if tipo_usuario in ["equipe", "admin"]:
             key=f"status_relatorio_{idx}",
             disabled=aguardando,
             on_change=atualizar_status_relatorio if not aguardando else None,
-            args=(idx, relatorio_numero, projeto_codigo) if not aguardando else None
+            args=(idx, relatorio_numero, id_projeto_atual) if not aguardando else None
         )
 
 
@@ -3831,7 +3749,7 @@ if step_selecionado == "Atividades":
                                             relato["status_aprovacao"] = f"Devolvido por {nome} em {data}"
 
                                             col_projetos.update_one(
-                                                {"codigo": projeto["codigo"]},
+                                                {"_id": id_projeto_atual},
                                                 {
                                                     "$set": {
                                                         "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
@@ -3877,7 +3795,7 @@ if step_selecionado == "Atividades":
                                         relato.pop("status_aprovacao", None)
 
                                     col_projetos.update_one(
-                                        {"codigo": projeto["codigo"]},
+                                        {"_id": id_projeto_atual},
                                         {
                                             "$set": {
                                                 "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
@@ -4553,7 +4471,7 @@ if step_selecionado == "Atividades":
                                         # SALVA NO MONGO
                                         # ==================================================
                                         col_projetos.update_one(
-                                            {"codigo": projeto["codigo"]},
+                                            {"_id": id_projeto_atual},
                                             {"$set": {
                                                 "plano_trabalho.componentes": projeto["plano_trabalho"]["componentes"]
                                             }}
@@ -4699,7 +4617,7 @@ if step_selecionado == "Despesas":
 
                                 # Salva no MongoDB
                                 col_projetos.update_one(
-                                    {"codigo": projeto["codigo"]},
+                                    {"_id": id_projeto_atual},
                                     {
                                         "$set": {
                                             "relatorios": projeto["relatorios"]
@@ -4838,11 +4756,12 @@ if step_selecionado == "Despesas":
 
                                         break
 
+
                                 # --------------------------------------
                                 # Persistência Mongo
                                 # --------------------------------------
                                 col_projetos.update_one(
-                                    {"codigo": projeto["codigo"]},
+                                    {"_id": id_projeto_atual},
                                     {
                                         "$set": {
                                             "relatorios": projeto["relatorios"]
@@ -5774,16 +5693,15 @@ if step_selecionado == "Despesas":
                                     # --------------------------------------------------
                                     # Persistência no Mongo
                                     # --------------------------------------------------
+
                                     col_projetos.update_one(
-                                        {"codigo": projeto["codigo"]},
+                                        {"_id": id_projeto_atual},
                                         {
                                             "$set": {
                                                 "financeiro.orcamento": projeto["financeiro"]["orcamento"]
                                             }
                                         }
                                     )
-
-
 
                                 # Limpa estado
                                 st.session_state["despesa_editando_id"] = None
@@ -5862,9 +5780,9 @@ if step_selecionado == "Despesas":
 
                                                     # Salva no Mongo
                                                     col_projetos.update_one(
-                                                        {"codigo": projeto["codigo"]},
+                                                        {"_id": id_projeto_atual},
                                                         {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
-                                                    )
+                                                    )                                                    
 
                                                 # Limpa estados
                                                 st.session_state["despesa_editando_id"] = None
@@ -5984,7 +5902,7 @@ if step_selecionado == "Despesas":
                                 lanc["status_aprovacao"] = f"Devolvido por {nome} em {data}"
 
                                 col_projetos.update_one(
-                                    {"codigo": projeto["codigo"]},
+                                    {"_id": id_projeto_atual},
                                     {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
                                 )
 
@@ -6013,7 +5931,7 @@ if step_selecionado == "Despesas":
                             lanc.pop("status_aprovacao", None)
 
                         col_projetos.update_one(
-                            {"codigo": projeto["codigo"]},
+                            {"_id": id_projeto_atual},
                             {"$set": {"financeiro.orcamento": projeto["financeiro"]["orcamento"]}}
                         )
 
@@ -6126,7 +6044,7 @@ if step_selecionado == "Resultados":
 
 
 
-                # Botão secondary conforme solicitado
+                # Botão secondary 
                 if st.button(
                     "Salvar devolutiva",
                     icon=":material/save:",
@@ -6149,7 +6067,7 @@ if step_selecionado == "Resultados":
 
                         col_projetos.update_one(
                             {
-                                "codigo": projeto_codigo,
+                                "_id": id_projeto_atual,
                                 "relatorios.numero": relatorio_numero
                             },
                             {
@@ -6228,9 +6146,8 @@ if step_selecionado == "Resultados":
                                     # Atualiza em memória
                                     relatorio["devolutiva_resultados"][idx_real]["status_devolutiva_resultado"] = novo_status
 
-                                    # Persiste no Mongo
                                     col_projetos.update_one(
-                                        {"codigo": projeto_codigo},
+                                        {"_id": id_projeto_atual},
                                         {
                                             "$set": {
                                                 "relatorios": projeto["relatorios"]
@@ -6280,7 +6197,7 @@ if step_selecionado == "Resultados":
 
                                         # Salva no Mongo
                                         col_projetos.update_one(
-                                            {"codigo": projeto_codigo},
+                                            {"_id": id_projeto_atual},
                                             {
                                                 "$set": {
                                                     "relatorios": projeto["relatorios"]
@@ -6533,7 +6450,7 @@ if step_selecionado == "Resultados":
                         # Atualiza no MongoDB
                         col_projetos.update_one(
                             {
-                                "codigo": projeto_codigo
+                                "_id": id_projeto_atual
                             },
                             {
                                 "$set": {
@@ -6682,7 +6599,7 @@ if step_selecionado == "Beneficiários":
 
                         col_projetos.update_one(
                             {
-                                "codigo": projeto_codigo,
+                                "_id": id_projeto_atual,
                                 "relatorios.numero": relatorio_numero
                             },
                             {
@@ -6766,7 +6683,7 @@ if step_selecionado == "Beneficiários":
 
                                     # Persiste no Mongo
                                     col_projetos.update_one(
-                                        {"codigo": projeto_codigo},
+                                        {"_id": id_projeto_atual},
                                         {
                                             "$set": {
                                                 "relatorios": projeto["relatorios"]
@@ -6819,7 +6736,7 @@ if step_selecionado == "Beneficiários":
 
                                         # Atualiza no Mongo
                                         col_projetos.update_one(
-                                            {"codigo": projeto_codigo},
+                                            {"_id": id_projeto_atual},
                                             {
                                                 "$set": {
                                                     "relatorios": projeto["relatorios"]
@@ -6856,7 +6773,7 @@ if step_selecionado == "Beneficiários":
     # TOTALIZADOR GERAL DE BENEFICIÁRIOS
     # ======================================================
 
-    projeto = col_projetos.find_one({"codigo": projeto["codigo"]})
+    projeto = col_projetos.find_one({"_id": id_projeto_atual})
     localidades = projeto.get("locais", {}).get("localidades", [])
 
 
@@ -7393,56 +7310,6 @@ if step_selecionado == "Beneficiários":
 
                 st.write("")
 
-                # if st.button(
-                #     f"Atualizar {nome_localidade}",
-                #     # "Atualizar beneficiários",
-                #     type="primary",
-                #     key=f"salvar_benef_{nome_localidade}",
-                #     icon=":material/save:"
-                # ):
-
-                #     novo_quant = {
-                #         "mulheres": {
-                #             "jovens": mulheres_jovens,
-                #             "adultas": mulheres_adultas,
-                #             "idosas": mulheres_idosas
-                #         },
-                #         "homens": {
-                #             "jovens": homens_jovens,
-                #             "adultos": homens_adultos,
-                #             "idosos": homens_idosos
-                #         },
-                #         "nao_binarios": {
-                #             "jovens": nb_jovens,
-                #             "adultos": nb_adultos,
-                #             "idosos": nb_idosos
-                #         }
-                #     }
-
-                #     # -------------------------------------------------
-                #     # Atualiza somente a chave beneficiarios_quant
-                #     # sem recriar objetos da localidade
-                #     # -------------------------------------------------
-
-                #     col_projetos.update_one(
-                #         {
-                #             "codigo": projeto["codigo"],
-                #             "locais.localidades.nome_localidade": nome_localidade
-                #         },
-                #         {
-                #             "$set": {
-                #                 "locais.localidades.$.beneficiarios_quant": novo_quant
-                #             }
-                #         }
-                #     )
-
-                #     st.success(
-                #         "Beneficiários atualizados com sucesso.",
-                #         icon=":material/check:"
-                #     )
-
-                #     time.sleep(3)
-                #     st.rerun()
 
             # =====================================================
             # MODO VISUALIZAÇÃO
@@ -7642,7 +7509,7 @@ if step_selecionado == "Beneficiários":
                 # -----------------------------------------
                 col_projetos.update_one(
                     {
-                        "codigo": projeto["codigo"],
+                        "_id": id_projeto_atual,
                         "locais.localidades.nome_localidade": nome_localidade
                     },
                     {
@@ -7655,12 +7522,7 @@ if step_selecionado == "Beneficiários":
                         }
                     }
 
-                    # {
-                    #     "$set": {
-                    #         "locais.localidades.$.beneficiarios":
-                    #             beneficiarios_para_salvar
-                    #     }
-                    # }
+
                 )
 
                 st.success(
@@ -7906,7 +7768,7 @@ if step_selecionado == "Pesquisas":
                     # -------------------------------------------------
                     existe = col_projetos.count_documents(
                         {
-                            "codigo": codigo_projeto_atual,
+                            "_id": id_projeto_atual,
                             "pesquisas.id_pesquisa": pesquisa["id"]
                         }
                     ) > 0
@@ -7915,7 +7777,7 @@ if step_selecionado == "Pesquisas":
 
                         col_projetos.update_one(
                             {
-                                "codigo": codigo_projeto_atual,
+                                "_id": id_projeto_atual,
                                 "pesquisas.id_pesquisa": pesquisa["id"]
                             },
                             {
@@ -7928,7 +7790,7 @@ if step_selecionado == "Pesquisas":
                     else:
 
                         col_projetos.update_one(
-                            {"codigo": codigo_projeto_atual},
+                            {"_id": id_projeto_atual},
                             {
                                 "$push": {
                                     "pesquisas": pesquisa_obj
@@ -8045,7 +7907,7 @@ if step_selecionado == "Formulário":
 
                         col_projetos.update_one(
                             {
-                                "codigo": projeto_codigo,
+                                "_id": id_projeto_atual,
                                 "relatorios.numero": relatorio_numero
                             },
                             {
@@ -8114,7 +7976,7 @@ if step_selecionado == "Formulário":
 
                                     # Persiste no Mongo
                                     col_projetos.update_one(
-                                        {"codigo": projeto_codigo},
+                                        {"_id": id_projeto_atual},
                                         {
                                             "$set": {
                                                 "relatorios": projeto["relatorios"]
@@ -8163,7 +8025,7 @@ if step_selecionado == "Formulário":
 
                                         # Atualiza no Mongo
                                         col_projetos.update_one(
-                                            {"codigo": projeto_codigo},
+                                            {"_id": id_projeto_atual},
                                             {
                                                 "$set": {
                                                     "relatorios": projeto["relatorios"]
@@ -8610,7 +8472,7 @@ if step_selecionado == "Formulário":
                 # ---------------------------------------------------------
                 col_projetos.update_one(
                     {
-                        "codigo": projeto["codigo"],
+                        "_id": id_projeto_atual,
                         "relatorios.numero": relatorio_numero
                     },
                     {
@@ -8995,7 +8857,7 @@ if step_selecionado == "Enviar":
                     # --------------------------------------------------
                     col_projetos.update_one(
                         {
-                            "codigo": projeto_codigo,
+                            "_id": id_projeto_atual,
                             "relatorios.numero": relatorio_numero
                         },
                         {
@@ -9011,7 +8873,7 @@ if step_selecionado == "Enviar":
                     #    (somente os relatos deste relatório)
                     # --------------------------------------------------
                     projeto_atualizado = col_projetos.find_one(
-                        {"codigo": projeto_codigo}
+                        {"_id": id_projeto_atual}
                     )
 
                     componentes = projeto_atualizado["plano_trabalho"]["componentes"]
@@ -9079,7 +8941,7 @@ if step_selecionado == "Enviar":
                     # Salva no Mongo apenas se houve mudança
                     if houve_alteracao:
                         col_projetos.update_one(
-                            {"codigo": projeto_codigo},
+                            {"_id": id_projeto_atual},
                             {
                                 "$set": {
                                     "plano_trabalho.componentes": componentes
@@ -9180,7 +9042,7 @@ if step_selecionado == "Avaliação":
             key=res_key,
             on_change=atualizar_verificacao_relatorio,
             args=(
-                projeto_codigo,
+                id_projeto_atual,
                 relatorio_numero,
                 "res_verif_por",
                 res_key
@@ -9207,7 +9069,7 @@ if step_selecionado == "Avaliação":
             key=benef_key,
             on_change=atualizar_verificacao_relatorio,
             args=(
-                projeto_codigo,
+                id_projeto_atual,
                 relatorio_numero,
                 "benef_verif_por",
                 benef_key
@@ -9227,7 +9089,7 @@ if step_selecionado == "Avaliação":
             key=pesq_key,
             on_change=atualizar_verificacao_relatorio,
             args=(
-                projeto_codigo,
+                id_projeto_atual,
                 relatorio_numero,
                 "pesq_verif_por",
                 pesq_key
@@ -9247,7 +9109,7 @@ if step_selecionado == "Avaliação":
             key=form_key,
             on_change=atualizar_verificacao_relatorio,
             args=(
-                projeto_codigo,
+                id_projeto_atual,
                 relatorio_numero,
                 "form_verif_por",
                 form_key
@@ -9287,7 +9149,7 @@ if step_selecionado == "Avaliação":
 
                 col_projetos.update_one(
                     {
-                        "codigo": projeto_codigo,
+                        "_id": id_projeto_atual,
                         "relatorios.numero": relatorio_numero
                     },
                     {
@@ -9390,7 +9252,7 @@ if step_selecionado == "Avaliação":
                                 del projeto["relatorios"][idx]["anotacoes_avaliacao"][idx_real]
 
                                 col_projetos.update_one(
-                                    {"codigo": projeto_codigo},
+                                    {"_id": id_projeto_atual},
                                     {"$set": {"relatorios": projeto["relatorios"]}}
                                 )
 
@@ -9433,7 +9295,7 @@ if step_selecionado == "Avaliação":
                                 projeto["relatorios"][idx]["anotacoes_avaliacao"][idx_real]["texto_anotacao"] = novo_texto
 
                                 col_projetos.update_one(
-                                    {"codigo": projeto_codigo},
+                                    {"_id": id_projeto_atual},
                                     {"$set": {"relatorios": projeto["relatorios"]}}
                                 )
 
@@ -9564,7 +9426,7 @@ if step_selecionado == "Avaliação":
 
                 col_projetos.update_one(
                     {
-                        "codigo": projeto_codigo,
+                        "_id": id_projeto_atual,
                         "relatorios.numero": relatorio_numero
                     },
                     {
@@ -9659,7 +9521,7 @@ if step_selecionado == "Avaliação":
                 projeto["relatorios"][idx]["aprovado_por"] = nome_aprovador
 
                 col_projetos.update_one(
-                    {"codigo": projeto_codigo},
+                    {"_id": id_projeto_atual},
                     {"$set": {"relatorios": projeto["relatorios"]}}
                 )
 
@@ -9818,7 +9680,7 @@ if step_selecionado == "Avaliação":
                                 # ATUALIZA NO MONGO
                                 # --------------------------------------------------
                                 col_projetos.update_one(
-                                    {"codigo": projeto_codigo},
+                                    {"_id": id_projeto_atual},
                                     {
                                         "$set": {
                                             "relatorios": projeto["relatorios"]
@@ -9843,11 +9705,3 @@ if step_selecionado == "Avaliação":
 
 
 
-
-
-
-# ###################################################################################################
-# SIDEBAR DA PÁGINA DO PROJETO
-# ###################################################################################################
-
-sidebar_projeto()
