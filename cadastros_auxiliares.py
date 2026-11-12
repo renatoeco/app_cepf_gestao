@@ -517,18 +517,6 @@ with aba_perguntas:
 
 
 
-                    # if tipo in [
-                    #     "Resposta curta",
-                    #     "Resposta longa",
-                    #     "Número",
-                    #     "Título",
-                    #     "Subtítulo"
-                    # ]:
-                    #     texto = st.text_input(
-                    #         label_texto,
-                    #         value=pergunta_atual.get("pergunta", "")
-                    #     )
-
                     elif tipo == "Parágrafo":
                         texto = st.text_area(
                             label_texto,
