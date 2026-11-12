@@ -287,8 +287,10 @@ if submit:
         # INSERE PROJETO
         ###################################################################################################
 
+        id_projeto = bson.ObjectId()
+
         col_projetos.insert_one({
-            "_id": bson.ObjectId(),
+            "_id": id_projeto,
             "edital": edital,
             "codigo": codigo_projeto,
             "sigla": sigla_projeto,
@@ -314,7 +316,7 @@ if submit:
                 {"_id": {"$in": responsaveis_ids}},
                 {
                     "$addToSet": {
-                        "projetos": codigo_projeto
+                        "projetos_ids": id_projeto
                     }
                 }
             )
