@@ -61,7 +61,23 @@ doc_municipios = col_uf_municipios.find_one({"municipios": {"$exists": True}})
 df_municipios = pd.DataFrame(doc_municipios["municipios"])
 
 
+# FORMATAÇÃO DOS NOMES DOS MUNICÍPIOS COM A SIGLA DA UF
 
+# Cria um dicionário para relacionar o código da UF à respectiva sigla
+sigla_por_codigo_uf = {
+    str(int(row["codigo_uf"])).zfill(2): row["sigla_uf"]
+    for _, row in df_ufs.iterrows()
+}
+
+# Identifica a UF de cada município a partir dos dois primeiros dígitos do código IBGE
+df_municipios["sigla_uf"] = df_municipios["codigo_municipio"].apply(
+    lambda codigo: sigla_por_codigo_uf.get(str(int(codigo)).zfill(7)[:2], "")
+)
+
+# Cria o nome formatado para exibição nas listas
+df_municipios["nome_municipio_uf"] = (
+    df_municipios["nome_municipio"] + " - " + df_municipios["sigla_uf"]
+)
 
 
 
@@ -78,9 +94,12 @@ df_municipios = pd.DataFrame(doc_municipios["municipios"])
 # Lista de UFs com opção vazia no topo
 lista_ufs = [""] + sorted(df_ufs["sigla_uf"].tolist())
 
-# Lista de municípios com opção vazia
 
-lista_municipios = [""] + sorted(df_municipios["nome_municipio"].tolist())
+# Lista de municípios com opção vazia e identificação da UF
+lista_municipios = [""] + sorted(
+    df_municipios["nome_municipio_uf"].tolist(),
+    key=lambda x: x.lower()
+)
 
 
 
@@ -389,9 +408,9 @@ if opcao_cadastro == "Cadastro individual":
                     # Busca UF selecionada
                     uf_doc = df_ufs[df_ufs["sigla_uf"] == uf].iloc[0]
 
-                    # Busca município selecionado
+                    # Busca município selecionado pelo nome formatado
                     municipio_doc = df_municipios[
-                        df_municipios["nome_municipio"] == municipio_nome
+                        df_municipios["nome_municipio_uf"] == municipio_nome
                     ].iloc[0]
 
 
@@ -479,7 +498,11 @@ elif opcao_cadastro == "Cadastro em massa":
     # LISTAS PARA SELECTBOX
     # ---------------------------------------------------------------------------------------------
     lista_ufs = [""] + sorted(df_ufs["sigla_uf"].tolist())
-    lista_municipios = [""] + df_municipios["nome_municipio"].sort_values().tolist()
+
+    lista_municipios = [""] + sorted(
+        df_municipios["nome_municipio_uf"].tolist(),
+        key=lambda x: x.lower()
+    )
 
     # ---------------------------------------------------------------------------------------------
     # DATA EDITOR
@@ -627,7 +650,7 @@ elif opcao_cadastro == "Cadastro em massa":
             # MUNICÍPIO
             # -----------------------------
             mun_match = df_municipios[
-                df_municipios["nome_municipio"] == municipio_nome
+                df_municipios["nome_municipio_uf"] == municipio_nome
             ]
 
             if mun_match.empty:
